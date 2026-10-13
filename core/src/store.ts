@@ -1,7 +1,8 @@
 // Data layer "buckets in memory" (backend contract: docs/architecture/backend.md).
 //
 // - Subscriptions: meta.get (metadata), meta.counter (highest seq → number of buckets),
-//   issues.bucket per bucket (64 issues), sprints.items for the active sprint, agents.list.
+//   issues.bucket per bucket (64 issues), inbox.list (open inbox entries, merged into their
+//   issue as `issue.inbox`), sprints.items for the active sprint, agents.list.
 // - All issues live frozen in a Map. Convex resends the whole bucket on every change; unchanged
 //   issues keep their old object (compared over ALL fields) and only real changes are reported.
 //   Otherwise 64 rows would repaint instead of one.
@@ -28,6 +29,7 @@ import type {
   CommentDoc,
   DetailDoc,
   Issue,
+  InboxEntry,
   IssueDoc,
   IssueId,
   IssuePatch,
@@ -42,7 +44,7 @@ import type {
 type ChangeListener = (ids: ReadonlySet<IssueId>) => void;
 
 /** Derived fields that do not come from the server. */
-const DERIVED = new Set(['key', 'pending']);
+const DERIVED = new Set(['key', 'pending', 'inbox']);
 /** After this long without a connection the app shows "Offline", also during start. */
 const OFFLINE_AFTER = 3000;
 
@@ -92,6 +94,10 @@ export interface DebugHooks {
 
 declare global {
   var __xlr8: DebugHooks | undefined;
+}
+
+function omitRead({ readAt: _, ...entry }: InboxEntry): InboxEntry {
+  return entry;
 }
 
 /** Splits into chunks the server accepts in one call (LIMITS.bulkUpdateMax). */
@@ -155,6 +161,13 @@ export class IssueStore {
   readonly maxSeq = new Slice(-1);
 
   #teams = new Map<string, TeamDoc>();
+  /** Open inbox entries by issue; an issue picks its entry up when it arrives (#enrich) */
+  #entries = new Map<IssueId, InboxEntry>();
+  #inboxFromServer = false;
+  /** Entries that vanished in this session (removed): when, for closing their notifications */
+  #entryGone = new Map<IssueId, number>();
+  /** Entries removed by the owner, so "Undo" can show them again before the server answers */
+  #removed = new Map<IssueId, InboxEntry>();
   // Sidebar counters, updated on every change instead of counting over all issues
   #inbox = 0;
   #triage = new Map<string, number>();
@@ -209,6 +222,9 @@ export class IssueStore {
       this.client.onUpdate(api.meta.counter, {}, (counter) => {
         if (counter) this.#applyCounter(counter.maxSeq, true);
       }),
+      this.client.onUpdate(api.inbox.list, {}, (list) => {
+        if (list) this.#applyInbox(list as InboxEntry[], true);
+      }),
       // Newest bucket right with the first response (instead of after meta.counter): the list is
       // ready one round trip earlier. Only once; the bucket subscriptions take over afterwards.
       this.#watchHead(),
@@ -221,6 +237,7 @@ export class IssueStore {
     if (!snapshot) return;
     if (snapshot.meta && !this.#metaFromServer) this.#applyMeta(snapshot.meta as Meta, false);
     if (snapshot.maxSeq !== null && !this.#counterFromServer) this.#applyCounter(snapshot.maxSeq, false);
+    if (snapshot.inbox && !this.#inboxFromServer) this.#applyInbox(snapshot.inbox as InboxEntry[], false);
     for (const [bucket, docs] of Object.entries(snapshot.buckets)) {
       const b = Number(bucket);
       // Only buckets the server has not sent anything for yet.
@@ -490,7 +507,58 @@ export class IssueStore {
     const issue = (Object.isFrozen(doc) ? { ...doc } : doc) as Issue & { key: string };
     issue.key = key;
     if (pending) issue.pending = true;
+    const entry = this.#entries.get(doc._id);
+    if (entry) issue.inbox = entry;
+    else if ('inbox' in issue) delete issue.inbox; // a copy of an issue that had one
     return Object.freeze(issue);
+  }
+
+  /** Has the inbox list arrived (from the server or the cache)? Before that, "no entry" means nothing. */
+  inboxLoaded() {
+    return this.#inboxFromServer || this.#entries.size > 0;
+  }
+
+  /** When the entry of an issue vanished in this session (removed), if it did. */
+  entryGoneAt(id: IssueId): number | undefined {
+    return this.#entryGone.get(id);
+  }
+
+  /**
+   * The open inbox entries arrived. An issue whose entry is new, gone or different is replaced by a
+   * copy with the new `inbox`, so views and counters follow through the normal change path.
+   */
+  #applyInbox(list: InboxEntry[], fromServer: boolean) {
+    if (fromServer) {
+      this.#inboxFromServer = true;
+      this.#mirror.setInbox(list);
+    }
+    const next = new Map<IssueId, InboxEntry>();
+    for (const entry of list) next.set(entry.issueId, entry);
+    const now = Date.now();
+    const touched = new Set<IssueId>();
+    for (const [id, entry] of this.#entries) {
+      if (!next.has(id)) {
+        touched.add(id);
+        if (fromServer) this.#entryGone.set(id, now);
+        this.#removed.set(id, entry);
+      }
+    }
+    for (const [id, entry] of next) {
+      if (!sameValue(this.#entries.get(id), entry)) touched.add(id);
+      this.#entryGone.delete(id);
+      this.#removed.delete(id);
+    }
+    this.#entries = next;
+    for (const id of touched) {
+      const current = this.issues.get(id);
+      if (!current) continue;
+      const issue = this.#enrich(current);
+      this.#count(current, -1);
+      this.#count(issue, 1);
+      this.issues.set(id, issue);
+      this.#changed.add(id);
+    }
+    this.#scheduleFlush();
   }
 
   #ingest(bucket: number, docs: IssueDoc[], fromServer: boolean) {
@@ -749,7 +817,6 @@ export class IssueStore {
         labelIds: item.labelIds ?? [],
         rank: `~${String(n).padStart(6, '0')}`,
         createdBy: { kind: OWNER_KIND },
-        reviewedAt: now,
         createdAt: now,
         updatedAt: now,
         ...(item.projectId ? { projectId: item.projectId } : {}),
@@ -843,30 +910,40 @@ export class IssueStore {
     );
   }
 
+  /** Optimistic update of the open entries (`inbox.list`) in the Convex client. */
+  #optimisticInbox(fn: (list: InboxEntry[]) => InboxEntry[]) {
+    return (store: OptimisticLocalStore) => {
+      const current = store.getQuery(api.inbox.list, {});
+      if (current) store.setQuery(api.inbox.list, {}, fn(current as InboxEntry[]));
+    };
+  }
+
   /**
-   * Removes inbox entries, at most 500 per call (server limit). Does not change the issue, hence
-   * optimistic without `updatedAt` too.
+   * Removes inbox entries, at most 500 per call (server limit). Only the entry changes, never the
+   * issue, so there is nothing to patch in the buckets.
    */
   async markReviewed(ids: IssueId[]) {
-    const targets = (await this.#resolveAll(ids)).filter((id) => this.issues.get(id)?.reviewedAt === undefined);
-    const now = Date.now();
+    const targets = (await this.#resolveAll(ids)).filter((id) => this.#entries.has(id));
+    for (const id of targets) this.#removed.set(id, this.#entries.get(id)!);
     let reviewed = 0;
     for (const chunk of chunks(targets)) {
+      const set = new Set(chunk);
       const result = await this.#save(chunk.length, () =>
-        this.client.mutation(api.issues.markReviewed, { ids: chunk }, { optimisticUpdate: this.#optimisticBuckets(chunk, (doc) => ({ ...doc, reviewedAt: now })) }),
+        this.client.mutation(api.issues.markReviewed, { ids: chunk }, { optimisticUpdate: this.#optimisticInbox((list) => list.filter((e) => !set.has(e.issueId))) }),
       );
       reviewed += result.reviewed;
     }
     return { reviewed };
   }
 
-  /** Undo of "remove from inbox": back in the inbox. */
+  /** Undo of "remove from inbox": the entries are back. */
   async markUnreviewed(ids: IssueId[]) {
-    const targets = (await this.#resolveAll(ids)).filter((id) => this.issues.get(id)?.reviewedAt !== undefined);
+    const targets = (await this.#resolveAll(ids)).filter((id) => !this.#entries.has(id));
     let unreviewed = 0;
     for (const chunk of chunks(targets)) {
+      const back = chunk.flatMap((id) => this.#removed.get(id) ?? []);
       const result = await this.#save(chunk.length, () =>
-        this.client.mutation(api.issues.markUnreviewed, { ids: chunk }, { optimisticUpdate: this.#optimisticBuckets(chunk, ({ reviewedAt: _, ...doc }) => doc) }),
+        this.client.mutation(api.issues.markUnreviewed, { ids: chunk }, { optimisticUpdate: this.#optimisticInbox((list) => [...back, ...list].sort((a, b) => b.updatedAt - a.updatedAt)) }),
       );
       unreviewed += result.unreviewed;
     }
@@ -876,14 +953,15 @@ export class IssueStore {
   /** Marks inbox entries read or unread again. */
   async markRead(ids: IssueId[], read: boolean) {
     const targets = (await this.#resolveAll(ids)).filter((id) => {
-      const issue = this.issues.get(id);
-      return issue !== undefined && (issue.readAt !== undefined) !== read;
+      const entry = this.#entries.get(id);
+      return entry !== undefined && (entry.readAt !== undefined) !== read;
     });
     const now = Date.now();
     let changed = 0;
     for (const chunk of chunks(targets)) {
+      const set = new Set(chunk);
       const result = await this.#save(chunk.length, () =>
-        this.client.mutation(api.issues.markRead, { ids: chunk, read }, { optimisticUpdate: this.#optimisticBuckets(chunk, ({ readAt: _, ...doc }) => (read ? { ...doc, readAt: now } : doc)) }),
+        this.client.mutation(api.issues.markRead, { ids: chunk, read }, { optimisticUpdate: this.#optimisticInbox((list) => list.map((e) => (set.has(e.issueId) ? { ...omitRead(e), ...(read ? { readAt: now } : {}) } : e))) }),
       );
       changed += result.changed;
     }

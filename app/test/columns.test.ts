@@ -25,6 +25,7 @@ const row = (over: Partial<RowState> = {}): RowState => ({
   age: '',
   deleted: null,
   unread: false,
+  inboxText: '',
   pending: false,
   createdBy: 'You',
   decision: null,

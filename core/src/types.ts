@@ -4,6 +4,8 @@ import type { Priority, Status } from '@xlr8/backend/constants';
 export type { Priority, Status };
 export type IssueDoc = Doc<'issues'>;
 export type IssueId = Id<'issues'>;
+/** An open inbox entry (`inbox.list`). */
+export type InboxEntry = Doc<'inboxEntries'>;
 export type TeamId = Id<'teams'>;
 export type LabelId = Id<'labels'>;
 export type ProjectId = Id<'projects'>;
@@ -41,9 +43,11 @@ export interface Meta {
  * Provisional issues (not yet confirmed by the server) carry `pending` and an
  * id `tmp:…` as `_id`.
  */
-export interface Issue extends IssueDoc {
+export interface Issue extends Omit<IssueDoc, 'reviewedAt' | 'readAt'> {
   /** e.g. "KIU-12" */
   key: string;
+  /** The issue's open inbox entry, merged in by the store; the old markers on the document are not used any more */
+  inbox?: InboxEntry;
   /** Created provisionally, not yet confirmed by the server */
   pending?: true;
 }
@@ -249,8 +253,10 @@ export interface RowState {
   /** "3 hours ago" (inbox) */
   age: string;
   deleted: string | null;
-  /** Unread inbox entry: created by an agent, not yet looked at by the owner */
+  /** Unread inbox entry: an agent created or changed the issue, the owner has not looked at it yet */
   unread: boolean;
+  /** What the inbox entry says ("Aleister set the status to Done"); empty outside the inbox */
+  inboxText: string;
   /** Still being saved */
   pending: boolean;
   createdBy: string;

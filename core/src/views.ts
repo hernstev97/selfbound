@@ -35,6 +35,8 @@ export interface ViewDef {
   display(route: ViewRoute): Display;
   groupings: Grouping[];
   orderings: Ordering[];
+  /** Other names for orderings in this view (translated on read) */
+  readonly orderingLabels?: Partial<Record<Ordering, string>>;
   style: RowStyle;
   /** Are closed issues relevant here at all (option "Show closed")? */
   closedOption: boolean;
@@ -75,11 +77,15 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     includes: (i) => inInbox(i),
     display: () => display('none', 'created', ['status', 'id']),
     groupings: ['none', 'team'],
+    // 'created' is the stored value of the default; in the inbox it means the entry's latest change.
     orderings: ['created', 'updated', 'priority'],
+    get orderingLabels() {
+      return { created: t('Newest activity') };
+    },
     style: 'inbox',
     closedOption: false,
     get emptyText() {
-      return t('The inbox is empty. Issues that agents create show up here until you remove the entry.');
+      return t('The inbox is empty. Issues that agents create or change show up here until you remove the entry.');
     },
   },
   triage: {

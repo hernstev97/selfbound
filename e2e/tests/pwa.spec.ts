@@ -75,7 +75,7 @@ test('Sharing from another app creates exactly one issue in the inbox', async ({
   const key = (await toast.textContent())!.match(/[A-Z]+-\d+/)![0];
   const issue = await issueDoc((await resolve(key))!.id);
   expect(issue).toMatchObject({ title: text.replace(' https://example.com/article', ''), status: 'triage', createdBy: { kind: OWNER_KIND } });
-  expect(issue!.reviewedAt).toBeUndefined();
+  expect((await backend().query(api.inbox.list, {})).filter((e) => e.issueId === issue!._id)).toHaveLength(1);
   await expect(page.locator(`[data-testid="issue-row"][data-key="${key}"]`)).toBeVisible();
   // Triggered twice (e.g. shared twice): no second issue
   await page.goto(shareUrl);

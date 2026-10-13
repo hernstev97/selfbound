@@ -23,7 +23,8 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/githubPr.ts`, `convex/ops/githubPr.ts`, `convex/lib/githubApi.ts`, `convex/lib/githubMedia.ts`, `convex/shared/pullRequests.ts` | Pull requests in XLR8: fetching via the GitHub API, view, actions, media proxy, webhooks in all repos ([below](#githubpr-pull-requests-in-xlr8)) |
 | `convex/importer.ts`, `convex/ops/import.ts` | Linear import: staging → tables ([`import.md`](import.md)) |
 | `convex/opsStatus.ts` | Reports for the ops page (backup) |
-| `convex/migrations.ts` | One-off data migrations (internal, safe to rerun), e.g. `workflowBackfill`/`workflowVerify` ([statuses](#statuses-per-team)) |
+| `convex/migrations.ts` | One-off data migrations (internal, safe to rerun), e.g. `workflowBackfill`/`workflowVerify` ([statuses](#statuses-per-team)), `inboxBackfill` ([inbox](#inbox)) |
+| `convex/inbox.ts`, `convex/ops/inbox.ts`, `convex/ops/inboxChanges.ts` | Inbox entries: list, read, remove, undo, cleanup (`inbox.ts`); what makes an entry and how changes are grouped (`inboxChanges.ts`, called from `record`) ([below](#inbox)) |
 | `convex/shared/workflow.ts`, `convex/lib/workflow.ts` | Statuses per team: types, ordering, status kind, strict order (also run in the browser); loading, creating and resolving in the backend |
 | `data/generate.ts` | Deterministic test data generator |
 | `scripts/seed.ts` | Loads test data into a local backend |
@@ -42,7 +43,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `labelGroups` | Name, `exclusive` (single choice), `hue`, optional `teamId` | |
 | `labels` | Name, `hue`, optional `groupId`, optional `teamId` (missing = workspace label), `archived` | |
 | `counters` | `seq`, `team:<teamId>`, `sprint`: the last value handed out for each | `by_name` |
-| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `parentId`, `sprintId`, `rank`, `createdBy`, `reviewedAt` and `readAt` (inbox), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
+| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `parentId`, `sprintId`, `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
 | `identifierAliases` | Old identifier (upper case, "ACME-106") → issue | `by_key`, `by_issue` |
 | `issueBodies` | Markdown, `version`, `updatedAt`, `updatedBy` | `by_issue` |
 | `bodySearch` | Search text of the description: the first 8000 characters (`BODY_SEARCH_CHARS`). Written only through `ops/bodies.ts`, together with `issueBodies` | `by_issue`, search `search_text` |
@@ -50,6 +51,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `comments` | `body`, `author`, `createdAt`, `editedAt`, `deletedAt` (soft delete) | `by_issue`, search `search_comment` |
 | `relations` | `fromId`, `toId`, `type` (blocks: from blocks to; duplicate: from is a duplicate of to; related) | `by_from`, `by_to` |
 | `history` | One row per change: `field`, `from`, `to`, `actor`, `at`, `requestId` | `by_issue` |
+| `inboxEntries` | The owner's inbox: `issueId`, `kind` (`created` \| `changed`), `actor` (latest), `changes` (latest change per field: `field`, `actor`, `at`, `value?`, `from?`), `createdAt`, `updatedAt`, `readAt?`, `removedAt?`. At most one open entry (no `removedAt`) per issue | `by_issue` (`issueId`, `removedAt`), `by_removed` (`removedAt`, `updatedAt`) |
 | `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`xlr8`/`linear`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
 | `sprintItems` | Sprint, issue, `kind` (planned/late/imported), `carriedFrom`, `addedAt`, `addedBy`, `removedAt`, `outcome`, `points` (estimate at close) | `by_sprint`, `by_issue` |
 | `agents` | Name, `keyHash` (SHA-256 hex), `keyPrefix` (both only for keys), `connector` (`{ app, clientId }` for connectors), `revokedAt`, `revokedReason`, `lastUsedAt` | `by_hash` |
@@ -97,6 +99,7 @@ This document is the contract between the backend and the UI. It describes the t
 9. **Status:** `issue.stateId` belongs to the issue's team, and `issue.status === statusOfState(state)`. Only `ops/issues.ts` (create, `applyPatch`), `ops/move.ts`, the import, the seed and the migration write both fields. Checked by `migrations.workflowVerify`.
 10. **Priority belongs to open work:** when an issue moves into a status of kind `done`, `canceled` or `duplicate`, `applyPatch` sets the priority to 0, even if the same patch sends a different one. This applies to every path through `applyPatch` (UI, bulk edit, undo/redo, MCP, GitHub merge, sprint close with "cancel", "duplicate of", moving issues when a status is archived) and to creating an issue in a final status (`createIssues`; `ops/workflow.ts` also applies it to issues in the trash). History: a separate `priority` row (old → 0) with the same actor, `requestId` and timestamp as the status row; on create only the `created` row. Reopening does not change the priority. The UI puts the priority into the same undo step (`before`/`after`), so Ctrl Z restores both; `issues.revert` itself only knows fields and restores nothing on its own. Not affected: the Linear import and moving to another team (the status kind stays the same).
 11. **Knowledge base:** pages exist only in teams with `wiki`. The parent page belongs to the same team, is not in the trash, no cycle is created, at most 20 levels. Project and topics belong to the page's team; archived topics cannot be newly assigned. Only `ops/wiki.ts` writes text, search text, revisions and image references. A delete gives all pages of the subtree the same `deletedAt` (unique per team); restore brings back exactly those pages. `teams.wiki` can only be turned off while no page exists outside the trash. **Knowledge only** (`wiki: 'only'`): the team gets no new issues (`createIssuesCore`, so also MCP, recurrences and sharing), no issues can be moved into it (`ops/move.ts`) and no recurrences can be created (`assertIssuesAllowed` in `ops/validate.ts`). Switching to "knowledge only" requires no open issues (triage through in review, counted via `by_team_priority`) and no active recurrences; completed issues stay. Switching back to `'on'` always works.
+12. **Inbox:** an issue has at most one open `inboxEntries` row. Every history row with an agent as actor adds to it or opens one (`record` → `noteChange`, except `created`, `rank`, `deleted`, `reviewed`, `unreviewed`); creating an issue as an agent, or sharing it into the inbox, opens a `created` entry. Entries never change the issue document. Permanently deleting an issue deletes its entries.
 
 ## Actors
 
@@ -115,7 +118,7 @@ Permissions that depend on the actor:
 | Create and revoke agent keys | owner only |
 | Edit and remove comments | owner for all, otherwise only the author |
 | Delete and restore knowledge pages | owner only (all actors may create and edit) |
-| Issues created by agents | stay in the inbox while `reviewedAt` is missing (until `issues.markReviewed`, "remove from inbox"); `readAt` = read. Both are markers on the inbox entry: no status, no `updatedAt`, reading writes no history |
+| Inbox entries | Agents that create an issue or change an existing one open an entry or add to the open one ([below](#inbox)); the owner's own changes never do. The owner removes (`issues.markReviewed`), reads (`issues.markRead`) and restores (`issues.markUnreviewed`) them. These only touch the entry: no status, no `updatedAt`, reading writes no history |
 
 ## Errors
 
@@ -180,9 +183,9 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 | `issues.setDescription` | `{ id, markdown, baseVersion, requestId? }` | `{ version, changed }` |
 | `issues.remove` | `{ ids, requestId? }` | `{ removed, deletedAt }` |
 | `issues.restore` | `{ ids, requestId? }` | `{ restored }` |
-| `issues.markReviewed` | `{ ids, requestId? }` | `{ reviewed }`: remove from the inbox (already removed ones don't count), history `reviewed`, issue otherwise unchanged |
-| `issues.markUnreviewed` | `{ ids, requestId? }` | `{ unreviewed }`: undo of the above, back in the inbox |
-| `issues.markRead` | `{ ids, read, requestId? }` | `{ changed }`: mark the inbox entry read or unread (`readAt`), no history |
+| `issues.markReviewed` | `{ ids, requestId? }` (issue IDs) | `{ reviewed }`: remove the open entries from the inbox (issues without one don't count), history `reviewed`, issue unchanged |
+| `issues.markUnreviewed` | `{ ids, requestId? }` | `{ unreviewed }`: undo of the above, the entry removed last comes back (not if a newer one is open) |
+| `issues.markRead` | `{ ids, read, requestId? }` | `{ changed }`: mark the open entry read or unread (`readAt`), no history |
 | `issues.reorder` | `{ id, beforeId?, afterId?, requestId? }`: at least one neighbour | `{ rank }` |
 | `issues.moveTeam` | `{ ids, teamId, requestId? }` (used by the UI, e.g. triage "accept into …"; MCP: `move_issues`) | `{ moved: [{ id, identifier, previous }] }` |
 
@@ -202,6 +205,18 @@ Rules for changes:
 - **Move to another team** (`issues.moveTeam`, `ops/move.ts`): new status in the target team (same default status, otherwise same name, otherwise same status kind; history `stateId`), new number in the target team, the old identifier becomes an alias (`identifierAliases`), seq and bucket stay. A project of another team and team labels of the old team are dropped (history `teamId`, and `projectId`, `labelIds` if affected). Same team: nothing happens; trash: `invalid`.
 - **Trash:** `remove` sets `deletedAt` and takes the issue out of a sprint that is not closed (`restore` does not put it back). After 30 days the cron deletes permanently: issue, description (including search text and earlier revisions), image references (the files follow one day later unless another text uses them), comments, relations, entries of sprints not closed, PR links, aliases and history. Sub-issues lose their parent (actor `system`). **Kept:** entries of closed sprints (frozen, with `points`, so capacity doesn't change) and the Linear link, marked with `purgedAt`, so a later import doesn't recreate the issue.
 - **Archived labels:** see invariant 7.
+
+### inbox
+
+| Function | Arguments | Result |
+|---|---|---|
+| `inbox.list` (query) | – | The open entries, newest change first (`updatedAt`), at most 1000 (`INBOX_LIST_MAX`). One subscription per client; the client merges each entry into its issue |
+
+**Entries.** One open entry per issue. Reasons (`kind`): `created` (an agent created the issue, or it was shared into the inbox) and `changed` (an agent changed an issue that was not in the inbox). A further reason, e.g. a snoozed issue coming back, is one more `kind` value plus the code that opens the entry. A change by an agent to an issue with an open entry joins it whatever the kind: `changes` keeps the latest change per field (at most 16), `actor` and `updatedAt` are those of the latest change, and `readAt` is cleared so the entry is unread again. `value` is what the field became (IDs for references, a 120-character preview for comments, `type:direction:otherId` for relations), missing if the field was cleared; `from` only for labels and team moves. The owner, GitHub, the import and system jobs make no entries. Removing sets `removedAt`; the daily cleanup deletes entries removed more than 90 days ago.
+
+**Idempotent writes.** `record` is the only place that notices changes, so every path with an agent as actor (MCP, the shared operations) is covered, including a retried request: the stored result is returned and nothing is noted twice.
+
+**Migration `inboxBackfill`** (from the old markers on issues, safe to rerun): every issue without `reviewedAt` (trash included, so a restored issue comes back as before) gets one `created` entry with `createdAt` as its time and its `readAt`. Issues are not touched; `reviewedAt`/`readAt` stay in the schema, and `reviewedAt` is still written at creation for issues that do not start in the inbox, which is what lets the migration run before, during or after the deploy. Without `apply: true` it counts only (`missing` = issues that would get an entry, `existing` = issues that already have one; `missing: 0` after the run). With `apply: true` it works in pages of 500 and reschedules itself; issues with any entry (open or removed) are skipped; after the last page a note in `opsStatus` (`inboxBackfill`) makes later runs do nothing, so removed entries never come back (`force: true` ignores the note). How to run it: [`operations.md`](../operations.md#inbox-entries-migration).
 
 ### Statuses per team
 

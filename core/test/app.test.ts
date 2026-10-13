@@ -4,7 +4,7 @@ import { App } from '../src/app/index.ts';
 import { ACTIONS, KEYMAP, actionById } from '../src/app/actions.ts';
 import { Auth } from '../src/auth.ts';
 import { OWNER_KIND, type IssueId } from '../src/types.ts';
-import { callName, doc, fakeClient, flush, meta } from './helpers.ts';
+import { callName, doc, entry, fakeClient, flush, meta } from './helpers.ts';
 
 let n = 0;
 async function setup(maxSeq = 127) {
@@ -291,6 +291,7 @@ describe('description by keyboard', () => {
   test('E in the inbox stays "Remove", also with the issue on the right in the split view', async () => {
     const { client, app } = await setup(3);
     client.push('issues:bucket', { bucket: 0 }, [doc(0, { reviewedAt: undefined })]);
+    client.push('inbox:list', {}, [entry('i0')]);
     await flush();
     app.wide.set(true);
     app.nav.goView({ kind: 'inbox', team: null });

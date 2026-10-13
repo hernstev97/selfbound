@@ -16,6 +16,8 @@ export interface MirrorSnapshot {
   schema: number;
   meta: unknown | null;
   maxSeq: number | null;
+  /** Open inbox entries (missing in mirrors written before inbox entries had their own table) */
+  inbox: unknown[] | null;
   buckets: Record<number, unknown[]>;
 }
 
@@ -23,6 +25,7 @@ interface Head {
   schema: number;
   meta: unknown | null;
   maxSeq: number | null;
+  inbox?: unknown[] | null;
 }
 
 function promisify<T>(request: IDBRequest<T>): Promise<T> {
@@ -83,8 +86,8 @@ export class Mirror {
       const buckets: Record<number, unknown[]> = {};
       keys.forEach((key, i) => (buckets[Number(key)] = values[i] as unknown[]));
       // Whatever the server sent in the meantime wins on the next write.
-      this.#head = { schema: MIRROR_SCHEMA, meta: this.#head.meta ?? head.meta, maxSeq: this.#head.maxSeq ?? head.maxSeq };
-      return { schema: head.schema, meta: head.meta, maxSeq: head.maxSeq, buckets };
+      this.#head = { schema: MIRROR_SCHEMA, meta: this.#head.meta ?? head.meta, maxSeq: this.#head.maxSeq ?? head.maxSeq, inbox: this.#head.inbox ?? head.inbox ?? null };
+      return { schema: head.schema, meta: head.meta, maxSeq: head.maxSeq, inbox: head.inbox ?? null, buckets };
     } catch {
       return null;
     }
@@ -92,6 +95,12 @@ export class Mirror {
 
   setMeta(meta: unknown) {
     this.#head.meta = meta;
+    this.#headDirty = true;
+    this.#schedule();
+  }
+
+  setInbox(inbox: unknown[]) {
+    this.#head.inbox = inbox;
     this.#headDirty = true;
     this.#schedule();
   }
