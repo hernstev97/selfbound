@@ -146,7 +146,6 @@ footer { width: 100%; max-width: 1200px; margin: auto auto 0; padding: 28px; dis
 footer a { color: var(--muted); text-decoration: none; }
 footer a:hover { color: var(--strong); }
 .foot-links { display: flex; gap: 20px; }
-.legal { flex-basis: 100%; margin: 0; font-size: 13px; }
 
 @media (max-width: 1000px) {
   .points { grid-template-columns: repeat(2, minmax(0, 1fr)); }

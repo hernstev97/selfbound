@@ -60,6 +60,9 @@ describe('index.html', () => {
     expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/);
     expect(html).not.toMatch(/\sstyle="|<style/);
   });
+  it('names no competitor (the comparison is about "most popular trackers", basis in CLAIMS.md)', () => {
+    expect(html).not.toMatch(/linear|jira|asana|clickup|trello/i);
+  });
   it('has one h1 and keeps the credit line', () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Product, design and review by <strong>Steven Hernandez</strong>');
