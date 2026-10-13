@@ -66,7 +66,7 @@ intended mentions (copyright line, author credit, the legacy stored owner value 
 | Dependabot alerts and security updates; version updates grouped weekly with a 7-day cooldown (`.github/dependabot.yml`) | active | active |
 | Ruleset `main`: PRs only, required check `check` and CodeQL results, no force push, no deletion, linear history; admins may bypass only when merging a PR | not available (GitHub Free) | `tooling/github-repo-settings.sh` |
 | Issue-first contributions: PRs from non-collaborators without an issue labeled `accepted` are closed with a friendly note (`.github/workflows/pr-policy.yml`, `pull_request_target`, never checks out PR code) | active once the repository is public and Actions minutes exist | same |
-| Branch names `<type>/<issue>-<slug>`: CI check `branch-name` (required in ruleset `main`) and ruleset `branch names` (may be refused on a personal Free account; the check covers it) | check runs with Actions | `tooling/github-repo-settings.sh` |
+| Branch names `<type>/<issue>-<slug>`: CI check `branch-name`, required in ruleset `main`. No GitHub branch-name ruleset: GitHub rejects `branch_name_pattern` (HTTP 422) for a personal account's repository, so the check is the enforcement | check runs with Actions | `tooling/github-repo-settings.sh` |
 | Secret scanning with push protection (incl. non-provider patterns, validity checks) | not available | same script |
 | Private vulnerability reporting | not available | same script |
 | CodeQL (`security-extended`, JavaScript/TypeScript and Actions) | workflow skips itself | runs on push, PR and weekly |
