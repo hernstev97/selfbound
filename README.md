@@ -1,16 +1,50 @@
 # XLR8
 
-XLR8 is a fast, keyboard-first issue tracker for solo developers and small teams. It keeps issues,
-projects, sprints and a knowledge base in one place, answers within a frame, and is open to AI agents
-through MCP.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/list-dark.webp">
+    <img src="docs/images/list-light.webp" alt="XLR8 issue list with sidebar, grouped by status" width="900">
+  </picture>
+</p>
+
+XLR8 is a fast, keyboard-first issue tracker built for solo developers and their AI agents. One person, no
+assignees, no permissions to configure. It keeps issues, projects, sprints and a knowledge base in one
+place, answers within a frame, and is open to AI agents through MCP.
 
 > **Status: early, not announced.** XLR8 runs in daily use for one person. Expect rough edges, breaking
-> changes and missing docs. Issues are welcome; for larger pull requests, please open an issue first.
+> changes and missing docs. Issues are welcome; code contributions are issue-first, see
+> [CONTRIBUTING.md](CONTRIBUTING.md).
+
+<table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/detail-dark.webp">
+        <img src="docs/images/detail-light.webp" alt="Issue detail with description, properties and activity">
+      </picture>
+      <sub>Issue detail: description, properties, activity</sub>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/command-dark.webp">
+        <img src="docs/images/command-light.webp" alt="Command menu opened with Ctrl K">
+      </picture>
+      <sub>Command menu (Ctrl K)</sub>
+    </td>
+  </tr>
+</table>
+
+The screenshots show the sample data of `pnpm dev`, in the light or dark theme of your GitHub settings.
+
+**Teams are areas, not people.** As in Linear, a team in XLR8 is a workspace for one area of work (a
+product, a client, a private project) with its own key such as `ORB-12`, statuses, labels and
+knowledge pages. XLR8 has one user; its teams are never groups of people. Why it is built this way:
+[docs/decisions.md](docs/decisions.md).
 
 ## What it does
 
 - Issues with statuses per team, priorities, labels, projects, estimates, due dates, sub-issues and relations
-- One sprint that spans all teams, with planning and closing
+- One sprint that spans all teams (one person, one week, one capacity), with planning and closing
 - List and board views, command menu (Ctrl K), search (/) and shortcuts for nearly everything
 - Knowledge pages per team, linked with issues
 - GitHub pull requests on the issue, live via webhooks
@@ -35,7 +69,7 @@ Svelte 5 SPA (`app/`), a framework-neutral core with data layer, views, keyboard
 | `e2e/` | browser tests (Playwright) |
 | `perf/` | performance regression harness with budget |
 | `tooling/` | local start, local sign-in, Linear import, backup, deploy |
-| `docs/` | architecture, operations, self-hosting |
+| `docs/` | architecture, design decisions, operations, self-hosting |
 
 ## Try it locally
 
