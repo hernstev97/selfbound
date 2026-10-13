@@ -2,6 +2,10 @@ name: Feature request
 description: Suggest an idea or an improvement.
 labels: [enhancement]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea! XLR8 works issue-first: if you want to build it yourself, please wait until the maintainer has added the label `accepted` to this issue before opening a pull request. See [CONTRIBUTING.md](https://github.com/hernstev97/xlr8-public/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: problem
     attributes:
@@ -12,6 +16,12 @@ body:
     id: idea
     attributes:
       label: What do you have in mind?
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to fix this myself. I will wait for the label `accepted` before opening a pull request.
   - type: markdown
     attributes:
       value: XLR8 is early and maintained by one person, so not every idea will be picked up. Speed and keyboard use come first.
