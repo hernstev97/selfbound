@@ -4,32 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <!-- Start page and sign-in. A separate entry that loads nothing from the app.
-         Embedded: Clerk's bot protection on sign-in. Absolute URLs (canonical, og:*) come from
-         XLR8_PUBLIC_URL at build time (vite.plugins.ts publicUrl). -->
+    <!-- Sign-in page. A separate entry that loads nothing from the app. Embedded: Clerk's bot
+         protection on sign-in. No marketing here: the public landing page lives in site/. -->
     <meta http-equiv="Content-Security-Policy" content="frame-src https://challenges.cloudflare.com https://*.protect.clerk.com; object-src 'none'; base-uri 'self'" />
-    <title>XLR8 · A personal issue tracker, built for speed</title>
-    <meta name="description" content="XLR8 keeps issues, projects and one sprint for every team in one place. Fast with 10,000 issues, built for the keyboard, open to AI agents over MCP." />
-    <link rel="canonical" href="/" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Sign in · XLR8</title>
     <meta name="theme-color" content="#070709" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="XLR8" />
-    <meta property="og:url" content="/" />
-    <meta property="og:title" content="XLR8 · A personal issue tracker, built for speed" />
-    <meta property="og:description" content="Issues, projects and one sprint for every team. Fast with 10,000 issues, built for the keyboard, open to AI agents over MCP." />
-    <meta property="og:image" content="/brand/og-welcome.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="XLR8 start page: the headline “A personal issue tracker, built for speed.” over a grid of dots." />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/brand/og-welcome.png" />
     <script>
-      // Set color scheme and view before the first paint (no flash). Same preferences as the app.
+      // Set the color scheme before the first paint (no flash). Same preference as the app.
       (function () {
         var d = document.documentElement;
         var dark = matchMedia('(prefers-color-scheme: dark)').matches;
@@ -38,83 +25,23 @@
           if (t !== 'system') dark = t === 'dark';
         } catch (e) {}
         d.dataset.theme = dark ? 'dark' : 'light';
-        if (/^\/sign-in\/?$/.test(location.pathname)) d.dataset.view = 'sign-in';
       })();
     </script>
   </head>
   <body>
-    <a class="skip" href="#main">Skip to content</a>
     <header class="top">
-      <a class="brand" href="/" aria-label="XLR8, home"><span class="logo" aria-hidden="true"></span></a>
-      <a class="btn btn-ghost btn-sm" href="/sign-in" data-sign-in>Sign in</a>
+      <span class="brand" role="img" aria-label="XLR8"><span class="logo" aria-hidden="true"></span></span>
     </header>
 
-    <main id="main" class="landing">
-      <section class="hero" aria-labelledby="title">
-        <div class="fx-wrap" aria-hidden="true"></div>
-        <div class="hero-inner">
-          <p class="eyebrow">Issue tracker</p>
-          <h1 id="title">A personal issue tracker, built for speed.</h1>
-          <p class="lead">XLR8 keeps issues, projects and one sprint for every team in one place. It answers within a frame, works from the keyboard and is open to AI agents.</p>
-          <div class="actions">
-            <a class="btn btn-primary" href="/sign-in" data-sign-in>Sign in</a>
-          </div>
-        </div>
-        <figure class="shot">
-          <img class="dark" src="./src/welcome/assets/app-dark-1280.webp" srcset="./src/welcome/assets/app-dark-1280.webp 1280w, ./src/welcome/assets/app-dark-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" width="2560" height="1600" loading="lazy" decoding="async" alt="XLR8 issue list grouped by status, with the team sidebar on the left. Sample data." />
-          <img class="light" src="./src/welcome/assets/app-light-1280.webp" srcset="./src/welcome/assets/app-light-1280.webp 1280w, ./src/welcome/assets/app-light-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" width="2560" height="1600" loading="lazy" decoding="async" alt="XLR8 issue list grouped by status, with the team sidebar on the left. Sample data." />
-          <figcaption>Sample data, shown with the German interface.</figcaption>
-        </figure>
-      </section>
-
-      <section class="block" aria-labelledby="what">
-        <h2 id="what" class="center">What it does</h2>
-        <div class="points">
-          <article class="point">
-            <p class="stat" aria-hidden="true">18–34 ms<small>p95</small></p>
-            <h3>Fast with 10,000 issues</h3>
-            <p>The workspace lives in memory and syncs in the background. Opening, filtering and changing issues takes 18–34 ms at the 95th percentile, measured with 10,000 issues.</p>
-          </article>
-          <article class="point">
-            <p class="keys"><kbd>J</kbd><kbd>K</kbd><span>move</span><kbd>S</kbd><span>status</span><kbd>C</kbd><span>create</span><kbd aria-label="Command">⌘</kbd><kbd>K</kbd></p>
-            <h3>Runs on the keyboard</h3>
-            <p>Every action has a key, and undo covers nearly everything. The mouse is optional.</p>
-          </article>
-          <article class="point">
-            <p class="tools"><code>search_issues</code><code>create_issues</code><code>set_status</code><code>add_comment</code></p>
-            <h3>Agents work in it over MCP</h3>
-            <p>Claude, ChatGPT and coding agents read and update issues through MCP, each with its own key or connector. The history shows which agent changed what.</p>
-          </article>
-          <article class="point">
-            <div class="sprint" aria-hidden="true"><span>ORBIT<i style="--p: 72%"></i></span><span>NOVA<i style="--p: 45%"></i></span><span>FLUX<i style="--p: 88%"></i></span></div>
-            <h3>One sprint across all teams</h3>
-            <p>Two weeks are planned once, for every team at the same time. A sprint only closes when each open issue has a decision: next sprint, backlog or cancel.</p>
-          </article>
-        </div>
-      </section>
-
-      <section class="block built" aria-labelledby="built">
-        <p class="label">How it was built</p>
-        <h2 id="built">Written by AI agents, directed by a person.</h2>
-        <p>XLR8 was built with AI coding agents. Product, design and review by <strong>Steven Hernandez</strong>, who decided what to build and how it should feel, and checked every change before it shipped.</p>
-      </section>
-    </main>
-
-    <main id="sign-in" class="sign-in" aria-labelledby="sign-in-title" hidden>
+    <main id="sign-in" class="sign-in" aria-labelledby="sign-in-title">
       <div class="sign-in-inner">
         <h1 id="sign-in-title" class="sr-only">Sign in to XLR8</h1>
         <div class="clerk" data-state="loading" aria-busy="true">
           <p class="clerk-note" role="status">Loading sign-in…</p>
         </div>
-        <p class="private">Only the owner of XLR8 can sign in. <a href="/">Back to the start page</a></p>
+        <p class="private">XLR8 has one owner. Only the owner of this instance can sign in.</p>
       </div>
     </main>
-
-    <footer>
-      <span>© 2026 Steven Hernandez</span>
-      <span>XLR8 is private. Only its owner can sign in.</span>
-      <a href="/sign-in" data-sign-in>Sign in</a>
-    </footer>
     <script type="module" src="/src/welcome/main.ts"></script>
   </body>
 </html>
