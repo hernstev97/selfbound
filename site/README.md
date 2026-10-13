@@ -40,13 +40,13 @@ node tooling/deploy-site.mjs --prod    # production deployment (to the project's
 node tooling/deploy-site.mjs --build   # build into deploy/site/ only
 ```
 
-The first deployment of a new Vercel project becomes its production deployment. The project `xlr8-landing`
-(team kiumu) has Vercel Authentication on for **all** deployments, so until launch only team members can
-open it. For the launch, add the domain and set the protection to "Standard" (only previews protected).
+The landing page project serves the site's own domains. Vercel Authentication on it covers
+previews only ("all except custom domains"), so the custom domains and the production `vercel.app` address are
+public but unlisted (see above). Moving a domain between projects is a manual step (dashboard or
+`POST /v1/projects/<project>/domains/<domain>/move`); the deploy script never touches domains or DNS.
 
 Needs `vercelScope` and `siteVercelProject` (optional: `siteUrl`) in the instance settings, see
-[docs/operations.md](../docs/operations.md#instance-settings). Pointing a domain at the project is a
-manual step in the Vercel dashboard; the deploy script never touches domains or DNS.
+[docs/operations.md](../docs/operations.md#instance-settings).
 
 ## Checks
 
