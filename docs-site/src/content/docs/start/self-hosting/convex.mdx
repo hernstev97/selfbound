@@ -32,8 +32,8 @@ You need the **Frontend API URL** and your **user id** from [Clerk](/start/self-
    mkdir -p ~/.config/xlr8 && (umask 077; cat > ~/.config/xlr8/convex-deploy-key)
    ```
 
-   Paste the key, press Enter, then Ctrl+D. The deploy script refuses a key file that others can read,
-   and a key that belongs to a different deployment than `convexDeployment`. To keep the key somewhere
+   Paste the key, press Enter, then Ctrl+D. `tooling/cloud.mjs` (below) refuses a key file that other
+   users can read, and a key that belongs to a different deployment than `convexDeployment`. To keep the key somewhere
    else, point the environment variable `XLR8_CONVEX_DEPLOY_KEY_FILE` at the file.
 
 </Steps>
@@ -85,7 +85,7 @@ npx convex deploy
 Open `https://happy-otter-123.convex.site/health`. It returns the backend's status as JSON, without any
 of your data:
 
-| Field | Expected in production | Meaning |
+| Field | Expected in production | `true` means |
 |---|---|---|
 | `ok` | `true` | the backend answers |
 | `clerk` | `true` | `CLERK_JWT_ISSUER_DOMAIN` is set |
@@ -103,7 +103,9 @@ anyway, because the backend rejects its tokens on any deployment that is not on 
 ## Environment variables
 
 All variables the backend reads. Set them with `node tooling/cloud.mjs env set NAME value` or in the
-Convex dashboard. Changes take effect right away, except for `CLERK_JWT_ISSUER_DOMAIN` (see below).
+Convex dashboard. Changes take effect right away, except for `CLERK_JWT_ISSUER_DOMAIN` and
+`XLR8_DEV_JWKS`: Convex reads these two only when the functions are pushed, so redeploy the backend after
+changing them.
 
 ### Sign-in and access
 
@@ -146,7 +148,7 @@ Details: [Notifications](/using/notifications/).
 | `GITHUB_WEBHOOK_SECRET_PREVIOUS` | no | the old secret, only while you rotate it |
 | `GITHUB_TOKEN` | no | fine-grained personal access token for the pull request view (description, checks, comments, merging) and for managing webhooks. Without it, XLR8 shows only title and state. |
 | `GITHUB_MANAGE_WEBHOOKS` | no | `1`: XLR8 creates missing webhooks in the token's repositories and fixes their events. Needs `GITHUB_WEBHOOK_SECRET`. |
-| `GITHUB_REPOS` | no | manage only these repositories, `owner/name` or `owner/*`, comma-separated. Default: all the token can reach. |
+| `GITHUB_REPOS` | no | manage only these repositories, `owner/name` or `owner/*`, comma-separated. Default: all repositories owned by the token's account. |
 
 Details: [GitHub](/integrations/github/).
 

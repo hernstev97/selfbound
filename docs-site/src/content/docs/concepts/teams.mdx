@@ -95,11 +95,10 @@ When an issue moves:
 
 - **It gets a new identifier** in the target team, for example `OPS-24` becomes `ACME-120`. The old
   identifier keeps working: links, search and agents still find the issue under it.
-- **Its status** becomes the matching status of the target team: the same default status if there is one,
-  otherwise a status with the same name, otherwise one of the same type. The
+- **Its status** becomes the matching status of the target team: the same built-in status (such as Todo) if
+  there is one, otherwise a status with the same name, otherwise one of the same type. The
   [fixed order](/concepts/workflow/#fixed-order) does not apply to moves.
-- **Its project is removed** unless it belongs to the target team, because a project belongs to exactly one
-  team.
+- **Its project is removed**, because a project belongs to exactly one team.
 - **Labels of the old team are removed.** Workspace labels stay.
 - Everything else stays: priority, estimate, due date, sprint, parent, description, comments and history.
 

@@ -81,8 +81,9 @@ still expects all instance settings, including the two Vercel fields.
 
    1. `/` **without** the cookie `xlr8_signed_in` → serve `/welcome.html` (landing page).
    2. `/sign-in` → serve `/welcome.html` (it shows the embedded Clerk form on this path).
-   3. Every other path except `/assets/…` → serve `/app.html`. Deep links such as `/issue/ACME-42`
-      must work.
+   3. Every other path → serve `/app.html`. Deep links such as `/issue/ACME-42` must work. Files that
+      exist in the build (`/sw.js`, `/version.json`, icons) are served as they are, and a missing file
+      under `/assets/…` must return a 404, not the app.
 
 5. **Set the headers:**
 
@@ -91,7 +92,7 @@ still expects all instance settings, including the two Vercel fields.
    | `/assets/*` | `Cache-Control: public, max-age=31536000, immutable` |
    | `/` | `Cache-Control: no-cache` and `Vary: Cookie` |
    | `/app.html`, `/welcome.html`, `/sw.js`, `/version.json`, `/site.webmanifest` | `Cache-Control: no-cache` |
-   | all responses (recommended) | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security` |
+   | all responses (recommended) | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Strict-Transport-Security` |
 
 </Steps>
 

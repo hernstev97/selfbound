@@ -32,7 +32,7 @@ and the old one keeps working as a link and in search.
 | Labels | Any number of labels, see [Labels](/concepts/labels/) | <Kbd keys="l" /> |
 | Project | At most one project of the issue's team, see [Projects](/concepts/projects/) | <Kbd keys="shift+p" /> |
 | Sprint | At most one open sprint, see [Sprints](/concepts/sprints/) | <Kbd keys="shift+c" /> |
-| Estimate | Points; the picker offers 1, 2, 3, 5 and 8 | <Kbd keys="shift+e" /> |
+| Estimate | Points; the picker offers 1, 2, 3, 5 and 8, or type another number | <Kbd keys="shift+e" /> |
 | Due date | A calendar day | <Kbd keys="shift+d" /> |
 | Parent | Another issue this one is a sub-issue of | <Kbd keys="mod+shift+p" /> |
 
@@ -139,7 +139,8 @@ For work that comes back regularly, such as "Test-decrypt a backup", make an iss
 
 XLR8 saves a template with the issue's team, title, description, priority, labels, project and estimate. On
 each due day it creates a new issue from the template with the status Todo (or the team's matching status) and
-that day as its due date. The original issue stays as it is.
+that day as its due date. The original issue stays as it is. Days are counted in the Europe/Berlin time zone;
+there is no time zone setting yet.
 
 Manage templates under **Settings → Recurrences**: create one from scratch with **New recurrence**, **Pause**
 and **Resume** it, or **Delete** it. Deleting a template only stops new issues; issues it already created stay.

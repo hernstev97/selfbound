@@ -29,7 +29,7 @@ Details that matter in practice:
 - **Old identifiers work.** If an issue moved to another team and got a new identifier, the old one still links to it.
 - **Links are never removed.** Removing the identifier from the pull request later leaves the link in place. A link that once closes keeps closing.
 
-A pull request appears in XLR8 when GitHub sends an event for it after the webhook is installed. For a pull request opened before that, editing its title or description is enough.
+A pull request appears in XLR8 once it is opened, edited, reopened, closed or switched between draft and ready after the webhook is installed. New commits or comments alone do not add it. For a pull request opened before that, editing its title or description is enough.
 
 ### Status changes
 
@@ -53,7 +53,7 @@ An issue with linked pull requests has a **Pull requests** section. Each row sho
 
 Click a row to open the pull request beside the issue. On a narrow window or a phone it opens as its own page. The buttons at the end of the row open it full size (**Open full size**) or on GitHub (**Open on GitHub**). <Kbd keys="escape" /> closes the pull request beside the issue.
 
-<Screenshot name="pr" alt="A pull request opened beside its issue: title and state, a collapsed list of passing checks, merge controls, the description and the activity timeline" />
+<Screenshot name="pr" alt="A pull request in XLR8: title, state and branches, the change size, the list of checks with one failed, the mergeability line and the description" />
 
 ## The pull request view
 
@@ -77,7 +77,7 @@ Comments, merges and state changes are made through the GitHub token of your XLR
 
 ### How current the data is
 
-Every webhook event (new commits, comments, reviews, check results) makes XLR8 fetch the pull request again from GitHub a few seconds later. Opening a pull request also refreshes it when the stored state is older than 30 seconds. **Reload from GitHub** in the header fetches it right away, and the footer says when it was last fetched.
+Every webhook event (new commits, comments, reviews, check results) makes XLR8 fetch a linked pull request again from GitHub a few seconds later, or about 20 seconds later for check results, which arrive in bursts. Opening a pull request also refreshes it when the stored state is older than 30 seconds. **Reload from GitHub** in the header fetches it right away, and the footer says when it was last fetched.
 
 Without a GitHub token on the server, XLR8 only knows the title and state from the webhook and says so in the view.
 
@@ -119,7 +119,7 @@ This part is for whoever runs the XLR8 instance. You need a webhook secret, a Gi
 
 </Steps>
 
-With `GITHUB_MANAGE_WEBHOOKS=1`, XLR8 checks all repositories again every day at 03:30 UTC and installs the webhook in new ones. It only covers repositories owned by the token's account, skips archived ones, and never creates webhooks from a local development backend. Repositories that belong to an organization need the webhook by hand.
+XLR8 checks all repositories again every day at 03:30 UTC. With `GITHUB_MANAGE_WEBHOOKS=1` and `GITHUB_WEBHOOK_SECRET` set, it also installs the webhook in new ones. It only covers repositories owned by the token's account, skips archived ones, and never creates webhooks from a local development backend. Repositories that belong to an organization need the webhook by hand.
 
 GitHub tokens expire after at most a year, and GitHub emails you before that. Create a new one with the same permissions and replace `GITHUB_TOKEN`.
 

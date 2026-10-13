@@ -66,4 +66,4 @@ An AI agent connected to XLR8 over MCP can read any issue with its full descript
 
 > Write every open issue of team ACME to a Markdown file, one section per issue, with its description and comments.
 
-This is not a complete export. Lists and searches leave out issues in the trash and return at most 100 issues per call, so large exports take many calls. For everything, use the database export.
+This is not a complete export. Lists and searches leave out issues in the trash, return at most 100 issues per call (searches 50) and cannot page further, so split a large export by team, status, label or project. For everything, use the database export.

@@ -66,8 +66,7 @@ The issue then gets the team's status with the same name, or the default status 
 
   ```sh
   mkdir -p ~/.config/xlr8
-  # paste the key into the file, then:
-  chmod 600 ~/.config/xlr8/linear-api-key
+  (umask 077; cat > ~/.config/xlr8/linear-api-key)   # paste the key, then Enter and Ctrl+D
   ```
 
   The importer refuses to run if the file is readable by others, empty or a symlink.
@@ -123,7 +122,7 @@ If an issue you created in XLR8 has the same identifier as one coming from Linea
 
 ### Closed issues and priority
 
-In XLR8, completing an issue clears its priority. Issues that were already closed in Linear keep their priority after the import. To clear it on your production instance, run a one-off migration; the first command only counts, the second applies:
+In XLR8, completing an issue clears its priority. Issues that were already closed in Linear keep their priority after the import. To clear it on your production instance, run a one-off migration. The first command only counts, 500 issues per call (call it again with the `cursor` it returns to see the rest); the second applies to all issues:
 
 ```sh
 node tooling/cloud.mjs run migrations:priorityClearClosed

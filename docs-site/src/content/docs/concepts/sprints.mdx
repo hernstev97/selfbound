@@ -38,11 +38,15 @@ next sprint while the current one is still running.
 1. Choose **Plan sprint** in the command menu (<Kbd keys="mod+k" />), or click **Plan sprint** in the sprint view
    (<Kbd keys="g s" />).
 2. If no sprint is in planning yet, fill in **Create sprint**: **Name**, **Start**, **End** and an optional
-   **Goal**. By default a sprint runs two weeks from next Monday.
+   **Goal**. By default a sprint runs two weeks, starting the day after the current sprint ends, or next
+   Monday if no sprint is open.
 3. On the planning page, move issues from the **Backlog** column on the left into the sprint on the right.
 4. Set a **Capacity** and check the planned points against it.
 5. Click **Start sprint** when you're ready.
 </Steps>
+
+If you start a sprint before its planned start date, it starts today and keeps its length, so its end moves
+forward too. If you complete a sprint before its planned end, its end date becomes today.
 
 <Screenshot name="sprint-plan" alt="Sprint planning: the backlog of all teams on the left, the planned sprint with points and capacity on the right" />
 

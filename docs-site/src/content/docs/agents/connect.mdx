@@ -8,8 +8,8 @@ import { Aside, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 import Screenshot from '../../../components/Screenshot.astro';
 
 There are two ways in. Coding agents and other MCP clients you configure yourself use a **key**. Claude
-(claude.ai, desktop, mobile) and ChatGPT only accept servers that let you sign in, so they connect as a
-**custom connector** through OAuth. Both end up as an entry under **Settings → Agents**.
+(claude.ai, desktop, mobile) and ChatGPT cannot send a key, so they connect as a **custom connector** and
+sign in through OAuth. Both end up as an entry under **Settings → Agents**.
 
 ## The MCP address
 
@@ -107,14 +107,15 @@ environment variable, use that.
 
 ### Test the connection
 
-Ask your agent something like "List my XLR8 teams". If you have the XLR8 repository checked out, you can
-also test from the command line:
+Ask your agent something like "List my XLR8 teams". If you have the XLR8 repository checked out and
+installed (`pnpm install`), you can also test from the command line:
 
 ```sh
 XLR8_MCP_KEY=xlr8_… node backend/scripts/mcp-smoke.ts --url https://happy-otter-123.convex.site/mcp
 ```
 
-It prints the server name, the protocol version, the tools and the result of one read call. Pass the key
+It prints the server name, the protocol version, the tools and whether one read call (`list_teams`)
+succeeded, without printing any of your data. Pass the key
 through the environment, never as an argument, so it doesn't show up in the process list.
 
 ### Revoke a key
@@ -150,7 +151,7 @@ reports `"oauth": true`.
    The menus of both products change from time to time; look for "custom connector" or "MCP server".
 
 3. A window opens with the XLR8 sign-in (if you aren't signed in) and the consent page **Connect … to
-   XLR8?**. Check that the app and the **Returns to** address (claude.ai or chatgpt.com) are what you
+   XLR8?**. Check that the app and the **Returns to** address (claude.ai, claude.com or chatgpt.com) are what you
    expect. Adjust the **Name in the history** if you like, then click **Allow**.
 
 4. The window returns to Claude or ChatGPT and the XLR8 tools appear. In XLR8 the connector shows up in the

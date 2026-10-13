@@ -1,6 +1,7 @@
 ---
 // Marks a feature that does not exist yet. `issue` is the internal tracking id, kept as an
-// attribute for maintainers; readers cannot open it, so it is not shown.
+// attribute for maintainers; readers cannot open it, so it is not shown. role="note": an inline
+// remark, not a landmark (two untitled ones on a page would be indistinguishable landmarks).
 interface Props {
   issue?: string;
   title?: string;
@@ -8,7 +9,7 @@ interface Props {
 const { issue, title = 'Planned' } = Astro.props;
 ---
 
-<aside class="xl-planned" data-issue={issue} aria-label={title}>
+<aside class="xl-planned" role="note" data-issue={issue} aria-label={title}>
   <p class="xl-planned-title"><span class="xl-planned-badge">Planned</span>{title !== 'Planned' && <span>{title}</span>}</p>
   <div class="xl-planned-body"><slot /></div>
 </aside>

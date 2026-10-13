@@ -23,7 +23,7 @@ Every XLR8 instance belongs to one person. There are no user accounts to manage,
 
 ### Sign-in: one owner
 
-You sign in through Clerk. Convex checks the sign-in token, and then XLR8 checks the account against an allowlist: only the accounts in the `XLR8_OWNER_IDS` environment variable get in. If the list is empty, nobody gets in. Every public backend function goes through this check.
+You sign in through Clerk. Convex checks the sign-in token, and then XLR8 checks the account against an allowlist: only the accounts in the `XLR8_OWNER_IDS` environment variable get in. If the list is empty, nobody gets in. Every public backend function goes through this check, except the health status, which returns no data.
 
 Also set the sign-up mode of your Clerk application to **Restricted**, so strangers cannot even create an account. [Set up Clerk](/start/self-hosting/clerk/) walks you through it.
 
@@ -59,4 +59,4 @@ When you deploy the web app with the included Vercel configuration (`deploy/verc
 
 ### Backups
 
-The repository includes a nightly backup workflow for GitHub Actions. Once you set it up, it exports the whole database, tests that the export can be restored, and encrypts it with [age](https://age-encryption.org) before storing it. Only the holder of your private age key can open a backup; the unencrypted export never leaves the runner. Setup and restore are described in [docs/backup.md](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md).
+The repository includes a nightly backup workflow for GitHub Actions. Once you set it up, it exports the whole database, tests that the export can be restored, and encrypts it with [age](https://age-encryption.org) before storing it. Only the holder of your private age key can open a backup; the unencrypted export never leaves the runner. In a public repository, workflow logs and artifacts are public: the archive stays encrypted, but table names, document counts and sizes are visible, so run the backup from a private copy if that matters to you. Setup and restore are described in [docs/backup.md](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md).

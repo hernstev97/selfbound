@@ -21,7 +21,7 @@ A chat app, claude.ai or ChatGPT, connected to XLR8 by signing in rather than wi
 
 ## Dormant team
 
-A team you are not actively working in. It moves to **More** in the sidebar and is left out of sprint planning. Its issues stay as they are. See [Teams](/concepts/teams/).
+A team you are not actively working in. It moves to the **Inactive** section of the sidebar and is left out of sprint planning. Its issues stay as they are. See [Teams](/concepts/teams/).
 
 ## Identifier
 
@@ -61,7 +61,7 @@ A larger piece of work that groups issues, such as a release or a feature. Every
 
 ## Sprint
 
-A fixed stretch of time with a set of issues you plan to finish. XLR8 has one sprint at a time that spans all teams: you plan it, start it, and complete it, deciding what happens with unfinished issues.
+A fixed stretch of time with a set of issues you plan to finish. XLR8 runs one sprint at a time, and it spans all teams: you plan it, start it, and complete it, deciding what happens with unfinished issues.
 
 ## Team key
 

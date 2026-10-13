@@ -45,7 +45,7 @@ and is recorded in the history just like one you make yourself.
 
 The full list with parameters is in the [MCP tools reference](/agents/tools/).
 
-Two safeguards are built into every write tool:
+Two safeguards protect writes:
 
 - **`requestId` makes retries safe.** Agents pass their own key with a call. If the response gets lost and
   the agent sends the same call again, XLR8 returns the original result instead of acting twice. Creating
@@ -75,7 +75,7 @@ Agents never see secrets: keys are stored only as hashes, and no tool returns se
 environment variables.
 
 Each agent may make up to **120 calls per minute and 5,000 per day**. Above that, the call fails with a
-message saying how long to wait. Failed calls count too.
+`rate_limited` error; for the per-minute limit it says how long to wait. Failed calls count too.
 
 ## Agent issues land in triage and your inbox
 

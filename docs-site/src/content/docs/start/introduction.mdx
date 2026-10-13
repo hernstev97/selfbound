@@ -9,8 +9,8 @@ import Kbd from '../../../components/Kbd.astro';
 import Screenshot from '../../../components/Screenshot.astro';
 
 XLR8 is a fast, keyboard-first issue tracker for solo developers and their AI agents. You run your own
-copy of it: it is open source (AGPL-3.0), self-hosted, and keeps issues, sprints, projects and notes for
-one person in one place.
+copy of it: it is open source (AGPL-3.0), self-hosted, and keeps issues, sprints, projects and knowledge
+pages for one person in one place.
 
 <Screenshot name="list" alt="The XLR8 issue list with teams in the sidebar and issues grouped by status" />
 
@@ -41,12 +41,13 @@ all act as the same owner: XLR8 does not tell people apart. Small teams are not 
 ## Speed
 
 The app keeps all data of your workspace in memory and renders from there, so most actions do not wait
-for the network. The budget is 100 ms at the 95th percentile for every interaction with 10,000 issues.
-A quick performance run checks every change in CI.
+for the network. The budget is 100 ms at the 95th percentile for every interaction with 10,000 issues,
+measured on an idle machine. CI runs a quick performance check on every change with a looser limit
+(250 ms), which catches larger slowdowns.
 
 ## What you can do with it
 
-- **[Teams](/concepts/teams/):** separate areas of work, each with its own key (`ACME-42`), statuses and
+- **[Teams](/concepts/teams/):** separate areas of work, each with its own key (`ACME` in `ACME-42`), statuses and
   optional knowledge area.
 - **[Issues](/concepts/issues/):** priorities, labels, estimates, due dates, sub-issues and relations
   such as "blocks" or "duplicate of".

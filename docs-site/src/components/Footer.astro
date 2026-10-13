@@ -14,3 +14,17 @@ import { LANDING_URL, REPO_URL } from '../../launch.mjs';
     <a href={REPO_URL}>GitHub</a>
   </nav>
 </div>
+
+<script>
+  // Wide tables scroll sideways (theme.css); like Expressive Code does for code blocks, make the
+  // ones that overflow focusable so keyboard users can scroll them.
+  const tables = document.querySelectorAll<HTMLTableElement>('.sl-markdown-content table');
+  const mark = () => {
+    for (const t of tables) {
+      if (t.scrollWidth > t.clientWidth) t.tabIndex = 0;
+      else t.removeAttribute('tabindex');
+    }
+  };
+  mark();
+  addEventListener('resize', mark, { passive: true });
+</script>
