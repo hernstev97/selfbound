@@ -42,20 +42,32 @@ export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'estimate', 'due'] as
 /** At the far right, at any width: date columns. */
 export const ROW_END = ['created', 'updated'] as const satisfies readonly DisplayProp[];
 
-/** Labels: at most three, each with "+n" for those dropped to its left (see app.css `.lp`). */
-function labelsHtml(r: RowState) {
-  const shown = r.labels.slice(0, 3);
-  const hidden = r.labels.length - shown.length;
+/** Labels per stack; any further ones only count towards "+n". */
+const STACK_MAX = 3;
+
+/**
+ * Label stack (list column and board card, styles: app.css "Label stack"): first label, then as
+ * many more as fit as whole chips. Each label is followed by a "+n" chip for everything after it;
+ * the next label covers that chip (negative margin), so it only shows once that label no longer
+ * fits and wraps into the clipped second line. No label is ever cut mid-word. `cls` goes on the wrapper; a tap on it opens the label picker
+ * (`data-cell`, see `cellOf`: how touch screens get to the full names).
+ */
+export function labelStackHtml(labels: RowState['labels'], cls: string) {
+  const n = labels.length;
+  if (!n) return `<span class="${cls}"></span>`;
   let html = '';
-  // Visible order left → right: shown[0], shown[1], shown[2]; reversed in the DOM (row-reverse).
-  for (let j = shown.length - 1; j >= 0; j--) {
-    const label = shown[j];
-    const more = j + hidden;
-    const pill = `<span class="pill label" style="--hue:${label.hue}" title="${esc(label.name)}">${esc(label.name)}</span>`;
-    const covers = j < shown.length - 1;
-    html += `<span class="lp${covers ? ' covers' : ''}">${more > 0 ? `<span class="pill more" title="${esc(t('{count} more', { count: more }))}">+${more}</span>` : ''}${pill}</span>`;
+  for (let k = 0, shown = Math.min(n, STACK_MAX); k < shown; k++) {
+    const label = labels[k];
+    html += `<span class="pill label" style="--hue:${label.hue}" title="${esc(label.name)}">${esc(label.name)}</span>`;
+    const rest = n - 1 - k;
+    if (rest <= 0) continue;
+    let hues = '';
+    for (let i = 0; i < Math.min(rest, 3); i++) hues += `--c${i}:${labels[k + 1 + i].hue};`;
+    let names = labels[k + 1].name;
+    for (let i = k + 2; i < n; i++) names += `, ${labels[i].name}`;
+    html += `<span class="more d${Math.min(rest, 3)}" style="--n:${String(rest).length};${hues}" title="${esc(names)}">+${rest}</span>`;
   }
-  return html;
+  return `<span class="${cls} lstack${n === 1 ? ' one' : ` d${Math.min(n - 1, 3)}`}" data-cell="labels" style="--n:${String(n - 1).length}">${html}</span>`;
 }
 
 /**
@@ -77,7 +89,7 @@ function colsHtml(r: RowState, props: ReadonlySet<DisplayProp>) {
     } else html += '<span class="c c-sprint"></span>';
   }
   if (props.has('project')) html += r.project ? `<span class="c c-project"><span class="pill project" title="${esc(t('Project of {team}', { team: r.team.name }))}">${teamLogoHtml(r.team, '', 14)}${esc(r.project)}</span></span>` : '<span class="c c-project"></span>';
-  if (props.has('labels')) html += `<span class="c c-labels">${labelsHtml(r)}</span>`;
+  if (props.has('labels')) html += labelStackHtml(r.labels, 'c c-labels');
   return html;
 }
 

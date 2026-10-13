@@ -3,7 +3,7 @@ import type { DisplayProp, IssueId, RowState } from '@xlr8/core';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { COLUMN_WIDTH, columnPlan, groupColsHtml, stageOf } from '../src/lib/columns.ts';
-import { rowRestHtml } from '../src/lib/rowHtml.ts';
+import { labelStackHtml, rowRestHtml } from '../src/lib/rowHtml.ts';
 
 const row = (over: Partial<RowState> = {}): RowState => ({
   id: 'i1' as IssueId,
@@ -109,5 +109,42 @@ describe('rowRestHtml: decision', () => {
   it('sits left of the dates (after them in the DOM) so the dates stay aligned', () => {
     const html = rowRestHtml(row({ decision: { outcome: 'next', label: 'Next sprint' } }), props('created'), false);
     expect(html.indexOf('title="Created"')).toBeLessThan(html.indexOf('row-decision'));
+  });
+});
+
+describe('labelStackHtml', () => {
+  const labels = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `l${i}`, name: `Label ${i}`, hue: i * 10 }));
+  const count = (html: string, cls: string) => html.split(`class="${cls}`).length - 1;
+
+  it('no labels: empty cell, one label: no "+n" chip', () => {
+    expect(labelStackHtml([], 'c c-labels')).toBe('<span class="c c-labels"></span>');
+    const one = labelStackHtml(labels(1), 'c c-labels');
+    expect(one).toContain('c c-labels lstack one');
+    expect(one).not.toContain('class="more');
+  });
+
+  it('at most three chips, each followed by a "+n" chip for everything after it (names in the tooltip, dots in their colors)', () => {
+    const html = labelStackHtml(labels(5), 'c c-labels');
+    expect(count(html, 'pill label')).toBe(3);
+    expect([...html.matchAll(/class="more d(\d)" style="--n:1;([^"]*)" title="([^"]*)">\+(\d)</g)].map((m) => [m[1], m[2], m[3], m[4]])).toEqual([
+      ['3', '--c0:10;--c1:20;--c2:30;', 'Label 1, Label 2, Label 3, Label 4', '4'],
+      ['3', '--c0:20;--c1:30;--c2:40;', 'Label 2, Label 3, Label 4', '3'],
+      ['2', '--c0:30;--c1:40;', 'Label 3, Label 4', '2'],
+    ]);
+    // The wrapper sizes the room kept for the first chip.
+    expect(html).toContain('lstack d3" data-cell="labels" style="--n:1"');
+  });
+
+  it('three labels: no chip behind the last one; every chip has its full name as tooltip', () => {
+    const html = labelStackHtml(labels(3), 'card-labels');
+    expect(html.endsWith('Label 2</span></span>')).toBe(true);
+    for (let i = 0; i < 3; i++) expect(html).toContain(`title="Label ${i}">Label ${i}</span>`);
+  });
+
+  it('two digit counts are announced for the chip width; names are escaped', () => {
+    const html = labelStackHtml([...labels(12), { id: 'x', name: '<b>"x"</b>', hue: 1 }], 'c c-labels');
+    expect(html).toContain('style="--n:2;--c0:10;');
+    expect(html).toContain('&lt;b&gt;&quot;x&quot;&lt;/b&gt;');
+    expect(html).not.toContain('<b>');
   });
 });

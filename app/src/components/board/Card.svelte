@@ -1,12 +1,12 @@
 <script lang="ts">
-  // Card: identifier with team logo, title (two lines), priority, status, labels, estimate,
-  // due date. Reads the same row state as the list (one slice per issue).
+  // Card: identifier with team logo, title (two lines), priority, status, labels (stack as in the
+  // list, `labelStackHtml`), estimate, due date. Reads the same row state as the list (one slice per issue).
   import type { IssueId, PaletteKind } from '@xlr8/core';
   import { t } from '@xlr8/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
-  import { anchorOf, tip } from '../../lib/ui.ts';
-  import { teamLogoHtml } from '../../lib/rowHtml.ts';
+  import { anchorOf, cellOf, tip } from '../../lib/ui.ts';
+  import { labelStackHtml, teamLogoHtml } from '../../lib/rowHtml.ts';
   import { drag } from './drag.svelte.ts';
 
   let { id, top }: { id: IssueId; top: number } = $props();
@@ -25,7 +25,7 @@
   }
 
   function click(e: MouseEvent) {
-    const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-cell]');
+    const cell = cellOf(e);
     if (cell) {
       e.stopPropagation();
       if (cell.dataset.cell === 'check') list.toggleSelect(id);
@@ -70,7 +70,7 @@
     <div class="card-bottom">
       <button class="cell mi p-priority p-{r.priority}" data-testid="row-priority" data-cell="priority" aria-label={r.priorityLabel} title={PRIORITY_TIP}></button>
       <button class="cell mi p-status s-{r.status}" style:color={r.statusColor} data-testid="row-status" data-cell="status" aria-label={r.statusLabel} title={STATUS_TIP}></button>
-      {#each r.labels.slice(0, 2) as label (label.id)}<span class="pill label" style:--hue={label.hue}>{label.name}</span>{/each}
+      {#if r.labels.length}{@html labelStackHtml(r.labels, 'card-labels')}{/if}
       {#if r.estimate !== null}<span class="row-est mi i-estimate">{r.estimate}</span>{/if}
       {#if r.due}<span class={['pill', 'p-due', 'mi', 'i-calendar', r.due.overdue && 'overdue']}>{r.due.label}</span>{/if}
     </div>

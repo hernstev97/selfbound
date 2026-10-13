@@ -11,7 +11,7 @@
   import type { ListController } from '@xlr8/core/app/list';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
-  import { anchorOf, tip } from '../lib/ui.ts';
+  import { anchorOf, cellOf, tip } from '../lib/ui.ts';
   import { rowLeadHtml, rowRestHtml } from '../lib/rowHtml.ts';
 
   interface Props {
@@ -44,7 +44,7 @@
   }
 
   function click(e: MouseEvent) {
-    const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-cell]');
+    const cell = cellOf(e);
     app.setPane(pane);
     if (cell) {
       e.stopPropagation();

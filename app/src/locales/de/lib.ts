@@ -145,7 +145,6 @@ export default {
   Updated: 'Geändert',
   Created: 'Erstellt',
   saving: 'wird gespeichert',
-  '{count} more': '{count} weitere',
   'Project of {team}': 'Projekt von {team}',
   'deleted {date}': 'gelöscht {date}',
   'Created by {name}, still unread in the inbox': 'Von {name} angelegt, im Eingang noch ungelesen',
