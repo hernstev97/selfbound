@@ -136,7 +136,7 @@
           <div class="cal-grid">
             {#each WEEKDAYS as wd (wd)}<span class="cal-wd">{wd}</span>{/each}
             {#each monthDays(cal.month) as d (d.day)}
-              <button class={['cal-day', d.other && 'other', d.day === todayDay && 'today', d.day === cal.selected && 'sel']} data-day={d.day} disabled={p.kind === 'snooze' && d.day <= todayDay} onclick={() => app.palette.pickDay(d.day)}>{parseDay(d.day).getDate()}</button>
+              <button class={['cal-day', d.other && 'other', d.day === todayDay && 'today', d.day === cal.selected && 'sel']} data-day={d.day} disabled={!!cal.min && d.day < cal.min} onclick={() => app.palette.pickDay(d.day)}>{parseDay(d.day).getDate()}</button>
             {/each}
           </div>
         </div>

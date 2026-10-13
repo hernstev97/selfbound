@@ -9,6 +9,7 @@ import {
   PRIORITY_ORDER,
   STATUS_KEYWORDS,
   addDays,
+  berlinToday,
   dayLabel,
   dayOf,
   parseDay,
@@ -218,8 +219,9 @@ export class PaletteController {
       }
       if (s.kind === 'snooze') {
         // Only a day after today makes sense: "today" and past days are not offered.
-        const day = parseDueInput(q);
-        if (day && day > today()) {
+        const base = berlinToday();
+        const day = parseDueInput(q, undefined, base);
+        if (day && day > base) {
           const id = `snooze:${day}`;
           hint = `${q} → ${dayLabel(day)}`;
           this.#run.set(id, () => this.app.edit.snooze(this.#snoozeIds(), day));
@@ -568,7 +570,8 @@ export class PaletteController {
       }
       case 'snooze': {
         const current = values((i) => i.snoozedUntil ?? null, () => null);
-        const now = today();
+        // The server counts days in Europe/Berlin.
+        const now = berlinToday();
         const monday = addDays(now, ((1 - parseDay(now).getDay() + 7) % 7) || 7);
         const month = parseDay(now);
         month.setMonth(month.getMonth() + 1);
@@ -1011,7 +1014,7 @@ export class PaletteController {
       selected = days.length && days.every((d) => d === days[0]) ? days[0] : null;
     }
     const month = this.#calendarMonth ?? (selected ?? today()).slice(0, 7);
-    return { month, selected };
+    return kind === 'snooze' ? { month, selected, min: addDays(berlinToday(), 1) } : { month, selected };
   }
 
   shiftMonth(delta: number) {
@@ -1026,7 +1029,7 @@ export class PaletteController {
   pickDay(day: string) {
     const target = this.#target;
     const snooze = this.state.get()?.kind === 'snooze';
-    if (snooze && day <= today()) return;
+    if (snooze && day <= berlinToday()) return;
     this.close();
     if (snooze) this.app.edit.snooze(target.kind === 'issues' ? target.ids : [], day);
     else this.apply({ dueDate: day }, target);

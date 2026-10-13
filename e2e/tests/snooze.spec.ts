@@ -6,14 +6,23 @@ async function fresh(title: string, status: 'todo' | 'backlog' = 'todo') {
   const meta = await backend().query(api.meta.get, {});
   const team = meta.teams.find((t) => t.key === 'ORB')!;
   const { issues } = await backend().mutation(api.issues.create, { issues: [{ teamId: team._id, title, status }] });
+  created.push(issues[0].id);
   return issues[0];
 }
 
+// The server counts days in Europe/Berlin, whatever the time zone of the machine running the test.
 const dayAfter = (n: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const berlin = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  const d = new Date(`${berlin}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 };
+
+// The tests leave no issue behind: a newest issue in status Done would break later specs (sound.spec).
+const created: string[] = [];
+test.afterAll(async () => {
+  if (created.length) await backend().mutation(api.issues.remove, { ids: created as never });
+});
 
 const snoozedUntil = async (identifier: string) => {
   const found = await resolve(identifier);

@@ -382,7 +382,7 @@ export interface PaletteState {
   /** Second level: name of the first (for "‹ Status") */
   parent: string | null;
   /** Calendar for the due date */
-  calendar: { month: string; selected: string | null } | null;
+  calendar: { month: string; selected: string | null; /** First day that can be picked (snooze: the day after today) */ min?: string } | null;
   /** Hint below the input (e.g. "tomorrow → Fri, Oct 10") */
   hint: string | null;
   /** Counts every opening: the UI then rebuilds the picker (focus, position), even while the previous one is still fading out. */

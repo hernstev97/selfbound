@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
 import { ACTIONS, KEYMAP, actionById } from '../src/app/actions.ts';
 import { Auth } from '../src/auth.ts';
-import { addDays, today } from '../src/format.ts';
+import { addDays, berlinToday, berlinToday as today } from '../src/format.ts';
 import { emptyFilters } from '../src/query.ts';
 import { parsePath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import type { IssueId } from '../src/types.ts';
@@ -25,6 +25,15 @@ async function setup(maxSeq = 63) {
 const calls = (client: ReturnType<typeof fakeClient>, name: string) => client.mutation.mock.calls.filter((c) => callName(c) === name);
 const tomorrow = () => addDays(today(), 1);
 const visible = (app: App) => app.main.list.get().rows.flatMap((r) => (r.kind === 'issue' ? [r.id as string] : []));
+
+describe('days count in Europe/Berlin', () => {
+  test('the picker uses the server\'s day, not the device\'s', () => {
+    // 22:12 UTC is already the next day in Berlin (summer and winter time).
+    expect(berlinToday(Date.UTC(2026, 9, 13, 22, 12))).toBe('2026-10-14');
+    expect(berlinToday(Date.UTC(2026, 11, 1, 22, 59))).toBe('2026-12-01');
+    expect(berlinToday(Date.UTC(2026, 11, 1, 23, 0))).toBe('2026-12-02');
+  });
+});
 
 describe('snoozed issues in the lists', () => {
   test('hidden everywhere except the Snoozed view, the trash and the filter; counted separately', async () => {
