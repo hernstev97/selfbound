@@ -15,8 +15,7 @@ pnpm --filter @xlr8/site preview   # http://127.0.0.1:5403/
 
 - Text and structure: `index.html`. Styles: `src/style.css`. Background: `src/raster.ts` (a dot grid as one
   WebGL 2 fragment shader with the XLR8 star; a still image with reduced motion or without WebGL 2).
-- `site.config.json`: `listed` (see below), `github` (repository) and `docs` (documentation, a placeholder
-  until the docs site exists) are filled into the links of `index.html`.
+- `site.config.json`: `listed` (see below), `github` (repository) and `docs` (documentation site, base URL; a few links point to pages below it) are filled into the links of `index.html`.
 - Screenshots in `src/assets/` show the app with the sample data of `pnpm dev` (English UI), 1280 and
   2560 px wide, dark and light. `public/` holds copies of the logo, mark and icons from
   `app/public/`; refresh them there when the brand files change.
