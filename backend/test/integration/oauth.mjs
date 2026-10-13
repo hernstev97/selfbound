@@ -71,7 +71,7 @@ export async function oauthSuite(backend, log) {
   const client = new Client({ name: 'xlr8-oauth', version: '1' });
   await client.connect(new StreamableHTTPClientTransport(url, { authProvider: p }));
   const { tools } = await client.listTools();
-  assert.equal(tools.length, 18);
+  assert.equal(tools.length, 19);
   const { teamId } = await admin.mutation(api.teams.create, { key: 'OAU', name: 'OAuth' });
   assert.ok(teamId);
   const created = await client.callTool({ name: 'create_issues', arguments: { requestId: 'integration-oauth-0001', issues: [{ team: 'OAU', title: 'From the connector' }] } });

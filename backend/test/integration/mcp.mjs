@@ -21,7 +21,7 @@ export async function mcpSuite(backend, log) {
   const smoke = await runMcpSmoke({ url, key });
   assert.equal(smoke.serverName, 'xlr8');
   assert.equal(smoke.instructions, true);
-  assert.equal(smoke.tools.length, 18);
+  assert.equal(smoke.tools.length, 19);
   assert.deepEqual(smoke.call, { tool: 'list_teams', isError: false, textBytes: smoke.call.textBytes, structuredKeys: ['teams'] });
   const list = await runMcpSmoke({ url, key, tool: 'list_issues', args: { filter: 'assigned', team: 'INT' } });
   assert.equal(list.call.isError, false);
