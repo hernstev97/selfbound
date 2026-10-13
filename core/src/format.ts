@@ -131,6 +131,15 @@ export function today(now = Date.now()) {
   return dayOf(new Date(now));
 }
 
+/**
+ * Calendar day in Europe/Berlin, which is what the server uses (the morning job, the check that a
+ * snooze day lies in the future). The picker for snoozing counts from this day, not from the day on
+ * the device, so "tomorrow" is never rejected when the device is on another time zone.
+ */
+export function berlinToday(now = Date.now()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
 export function parseDay(day: string): Date {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(y, m - 1, d);
@@ -210,10 +219,9 @@ function monthOf(word: string): number | null {
  * "übermorgen", "fri"/"fr" (next Friday), "next week"/"nächste woche", "+3", "in 3 days"/"in 3 tagen",
  * "2w"/"2 weeks"/"2 wochen", "2026-10-12", "12.10.", "12.10.2027", "oct 12", "12 oct", "12. okt".
  */
-export function parseDueInput(input: string, now = Date.now()): string | null {
+export function parseDueInput(input: string, now = Date.now(), base = today(now)): string | null {
   const s = input.trim().toLowerCase().replace(/\s+/g, ' ');
   if (!s) return null;
-  const base = today(now);
   if (s === 'heute' || s === 'today') return base;
   if (s === 'morgen' || s === 'tomorrow') return addDays(base, 1);
   if (s === 'übermorgen' || s === 'uebermorgen' || s === 'day after tomorrow') return addDays(base, 2);

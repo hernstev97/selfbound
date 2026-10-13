@@ -4,7 +4,7 @@
 // when opened); the focused issue is prefetched.
 import { api } from '@xlr8/backend/api';
 import { workflowsOf } from '../workflow.ts';
-import { PRIORITY_LABEL, STATUS_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
+import { CLOSED, PRIORITY_LABEL, STATUS_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
 import { intlLocale, t, tc, translated } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import { OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type HistoryDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
@@ -68,6 +68,10 @@ export interface DetailState {
   sprint: { id: string; name: string; late: boolean; state: string } | null;
   estimate: number | null;
   due: { day: string; label: string; long: string; overdue: boolean } | null;
+  /** Snoozed until this day */
+  snoozed: { day: string; long: string } | null;
+  /** Open issues can be snoozed */
+  snoozable: boolean;
   parent: IssueBrief | null;
   children: IssueBrief[];
   created: string;
@@ -345,6 +349,8 @@ export class DetailController {
       sprint: sprint ? { id: sprint._id, name: sprint.name, late: store.sprintKinds.get().get(issue._id) === 'late', state: sprint.state } : null,
       estimate: issue.estimate ?? null,
       due: issue.dueDate && due ? { day: issue.dueDate, label: due.label, long: dayLabel(issue.dueDate), overdue: due.overdue } : null,
+      snoozed: issue.snoozedUntil ? { day: issue.snoozedUntil, long: dayLabel(issue.snoozedUntil) } : null,
+      snoozable: !CLOSED.has(issue.status),
       parent: parent ? brief(parent) : null,
       children,
       created: shortDate(issue.createdAt),
@@ -400,7 +406,7 @@ export class DetailController {
       const text = this.#historyText(h);
       if (!text) continue;
       const field = (h.field === 'sprint' ? 'sprintId' : h.field) as PatchField;
-      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title';
+      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title' && !(field === 'snoozedUntil' && h.actor.kind === 'system');
       items.push({ id: h._id, kind: 'event', at: h.at, ago: relativeTime(h.at), full: fullDate(h.at), actor: h.actor.kind, actorName: actorName(h.actor, agents), text, ...(revertable ? { revert: { field, from: h.from ?? null, to: h.to ?? null } } : {}) });
     }
     const older = this.#older.get(doc.id)?.comments ?? [];
@@ -488,6 +494,14 @@ export class DetailController {
         if (typeof h.to !== 'string') return say(tc('you', 'removed the due date'), t('removed the due date'));
         const date = dayLabel(h.to);
         return say(tc('you', 'set the due date to {date}', { date }), t('set the due date to {date}', { date }));
+      }
+      case 'snoozedUntil': {
+        if (typeof h.to !== 'string') {
+          if (h.actor.kind === 'system') return t('brought it back from the snooze');
+          return say(tc('you', 'ended the snooze'), t('ended the snooze'));
+        }
+        const date = dayLabel(h.to);
+        return say(tc('you', 'snoozed it until {date}', { date }), t('snoozed it until {date}', { date }));
       }
       case 'parentId': {
         if (!h.to) return say(tc('you', 'removed the parent'), t('removed the parent'));

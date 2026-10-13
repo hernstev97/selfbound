@@ -2,7 +2,7 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { SEQ, takeCounter, teamCounter } from '../lib/counters';
-import { DAY_MS } from '../lib/dates';
+import { berlinDay, DAY_MS } from '../lib/dates';
 import { sameValue } from '../lib/equal';
 import { fail, invalid } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
@@ -324,6 +324,21 @@ export async function applyPatch(
   }
   if (patch.estimate !== undefined) set('estimate', patch.estimate === null ? undefined : checkEstimate(patch.estimate));
   if (patch.dueDate !== undefined) set('dueDate', patch.dueDate === null ? undefined : checkDay(patch.dueDate, 'The due date'));
+  // Snooze belongs to open work, like the priority: closing an issue ends it.
+  if (closing) {
+    if (issue.snoozedUntil !== undefined) set('snoozedUntil', undefined);
+  } else if (patch.snoozedUntil !== undefined) {
+    if (patch.snoozedUntil === null) set('snoozedUntil', undefined);
+    else {
+      const until = checkDay(patch.snoozedUntil, 'The snooze date');
+      // Undo may bring back a day that has passed; the morning job then returns the issue.
+      if (!opts.undo) {
+        if (until <= berlinDay(now)) invalid('Snooze until a day after today.');
+        if (CLOSED_STATUSES.includes(changes.status ?? issue.status)) invalid('Only open issues can be snoozed.');
+      }
+      set('snoozedUntil', until);
+    }
+  }
   if (patch.parentId !== undefined) {
     set('parentId', patch.parentId === null ? undefined : (await checkParent(ctx, issue._id, patch.parentId))._id);
   }

@@ -31,6 +31,7 @@ export const issuePatchValidator = v.object({
   projectId: v.optional(v.union(v.id('projects'), v.null())),
   estimate: v.optional(v.union(v.number(), v.null())),
   dueDate: v.optional(v.union(v.string(), v.null())),
+  snoozedUntil: v.optional(v.union(v.string(), v.null())), // day after today; hides the issue until then
   parentId: v.optional(v.union(v.id('issues'), v.null())),
   sprintId: v.optional(v.union(v.id('sprints'), v.null())),
 });
@@ -45,6 +46,7 @@ export const PATCH_FIELDS: PatchField[] = [
   'projectId',
   'estimate',
   'dueDate',
+  'snoozedUntil',
   'parentId',
   'sprintId',
 ];

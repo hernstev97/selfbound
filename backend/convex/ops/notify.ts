@@ -6,6 +6,7 @@ import { addDays, berlinDay, berlinOffsetMinutes, DAY_MS } from '../lib/dates';
 import { pushText } from '../lib/pushText';
 import type { VapidKeys } from '../lib/webpush';
 import { identifierOf, OPEN_STATUSES } from '../shared/constants';
+import { record } from './history';
 import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage } from '../shared/notifyEvents';
 
 // Notifications: collect events, bundle them and prepare them for delivery (push.ts).
@@ -26,6 +27,7 @@ export const EVENTS_KEEP_DAYS = 7;
 /** The morning notification is still sent up to this hour (Europe/Berlin) if the cron missed it. */
 const MORNING_LAST_HOUR = 21;
 const BUNDLE_LINES = 4;
+const SYSTEM: Actor = { kind: 'system' };
 
 export async function readPushSettings(ctx: QueryCtx) {
   const row = await ctx.db.query('pushSettings').first();
@@ -228,6 +230,9 @@ export async function morning(ctx: MutationCtx, now = Date.now()) {
     if (message && (await notify(ctx, { kind: 'due', key: `due:${today}`, tag: 'due', ...message }, now))) sent.push('due');
   }
 
+  // Snoozed issues come back every day, whether or not the push is switched on.
+  if (await returnSnoozed(ctx, today, now)) sent.push('snooze');
+
   if (settings.events.sprint_end) {
     const active = await ctx.db
       .query('sprints')
@@ -263,6 +268,49 @@ export async function morning(ctx: MutationCtx, now = Date.now()) {
   return { sent };
 }
 
+/**
+ * Snoozed issues whose day has come (also earlier ones the job missed) leave the snooze and
+ * land in the inbox again as unread, with a push (bundled into one). Closed and deleted issues
+ * only lose the snooze. Returns whether a push was recorded.
+ */
+export async function returnSnoozed(ctx: MutationCtx, today: string, now: number): Promise<boolean> {
+  const rows = await ctx.db
+    .query('issues')
+    .withIndex('by_snoozed', (q) => q.gt('snoozedUntil', '').lte('snoozedUntil', today))
+    .take(500);
+  let pushed = false;
+  for (const issue of rows) {
+    const until = issue.snoozedUntil!;
+    await ctx.db.patch('issues', issue._id, { snoozedUntil: undefined, updatedAt: now });
+    await record(ctx, SYSTEM, now, undefined, { issueId: issue._id, field: 'snoozedUntil', from: until });
+    if (issue.deletedAt !== undefined || !(OPEN_STATUSES as readonly string[]).includes(issue.status)) continue;
+    if (issue.reviewedAt !== undefined) {
+      await ctx.db.patch('issues', issue._id, { reviewedAt: undefined, readAt: undefined });
+      await record(ctx, SYSTEM, now, undefined, { issueId: issue._id, field: 'unreviewed', from: issue.reviewedAt });
+    } else if (issue.readAt !== undefined) await ctx.db.patch('issues', issue._id, { readAt: undefined });
+    const team = await ctx.db.get('teams', issue.teamId);
+    if (!team || team.dormant) continue;
+    const id = identifierOf(team.key, issue.number);
+    const ok = await notify(
+      ctx,
+      {
+        kind: 'snooze',
+        key: `snooze:${issue._id}:${until}`,
+        group: `snooze:${today}`,
+        tag: `snooze:${issue._id}`,
+        title: pushText('{id} is back from snooze', { id }),
+        body: issue.title,
+        url: `/issue/${id}`,
+        issueId: issue._id,
+        bundle: { title: pushText('{n} snoozed issues are back', {}), url: '/inbox' },
+      },
+      now,
+    );
+    pushed ||= ok;
+  }
+  return pushed;
+}
+
 /** Text of the combined "due" notification; null if nothing is due. Dormant teams do not count. */
 export async function dueMessage(ctx: QueryCtx, today: string) {
   const found: (Doc<'issues'> & { identifier: string })[] = [];
@@ -273,7 +321,7 @@ export async function dueMessage(ctx: QueryCtx, today: string) {
       .withIndex('by_status_due', (q) => q.eq('status', status).gt('dueDate', '').lte('dueDate', today))
       .take(200);
     for (const issue of rows) {
-      if (issue.deletedAt !== undefined) continue;
+      if (issue.deletedAt !== undefined || issue.snoozedUntil !== undefined) continue;
       if (!teams.has(issue.teamId)) teams.set(issue.teamId, await ctx.db.get('teams', issue.teamId));
       const team = teams.get(issue.teamId);
       if (!team || team.dormant) continue;

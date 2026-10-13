@@ -85,6 +85,8 @@ export interface SidebarState {
   /** e.g. 'inbox', 'all', 'team:KIU:active', 'team:KIU:backlog', 'team:KIU:projects' */
   active: string;
   inbox: number;
+  /** Snoozed issues; the entry shows only when there are some */
+  snoozed: number;
   triage: number;
   drafts: number;
   /** Name of the active sprint */
@@ -137,7 +139,7 @@ export class App {
   readonly create: CreateController;
   readonly keys: KeyController;
   readonly shell = new Slice<ShellState>({ page: 'home', issue: 'ok', peek: false, split: false, mobile: false, sidebarHidden: false });
-  readonly sidebar = new Slice<SidebarState>({ active: '', inbox: 0, triage: 0, drafts: 0, sprint: null, planning: false, current: null, teams: [], dormant: [], teamsCollapsed: false, dormantCollapsed: false, teamSize: 'small' });
+  readonly sidebar = new Slice<SidebarState>({ active: '', inbox: 0, snoozed: 0, triage: 0, drafts: 0, sprint: null, planning: false, current: null, teams: [], dormant: [], teamsCollapsed: false, dormantCollapsed: false, teamSize: 'small' });
   /** Team card numbers by team key, recomputed in batches (STATS_DELAY) */
   readonly teamStats = new Slice<Readonly<Record<string, TeamStats>>>({});
   readonly displayOpen = new Slice(false);
@@ -671,7 +673,7 @@ export class App {
   #updateSidebar() {
     const meta = this.store.meta.get();
     const prefs = this.prefs.state.get();
-    const { inbox, triage, triageByTeam } = this.store.counts();
+    const { inbox, triage, triageByTeam, snoozed } = this.store.counts();
     const page = this.nav.page.get();
     let active: string = page.name;
     if (page.name === 'view') active = page.view.team ? `team:${page.view.team}:${page.view.kind === 'all' || page.view.kind === 'project' ? 'active' : page.view.kind}` : page.view.kind;
@@ -695,6 +697,7 @@ export class App {
     const next: SidebarState = {
       active,
       inbox,
+      snoozed,
       triage,
       drafts: this.create.draftCount(),
       sprint: sprint?.name ?? null,

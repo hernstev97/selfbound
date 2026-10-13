@@ -24,6 +24,8 @@ const DE: Record<string, string> = {
   '{id} is overdue': '{id} ist überfällig',
   '{count} due today': '{count} heute fällig',
   '{count} overdue': '{count} überfällig',
+  '{id} is back from snooze': '{id} ist zurück aus der Zurückstellung',
+  '{n} snoozed issues are back': '{n} zurückgestellte Issues sind zurück',
   'and {count} more': 'und {count} weitere',
   '[Image]': '[Bild]',
   'Test notification: notifications work on this device.': 'Testmeldung: Benachrichtigungen funktionieren auf diesem Gerät.',

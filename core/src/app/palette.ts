@@ -9,7 +9,9 @@ import {
   PRIORITY_ORDER,
   STATUS_KEYWORDS,
   addDays,
+  berlinToday,
   dayLabel,
+  dayOf,
   parseDay,
   parseDueInput,
   today,
@@ -59,6 +61,7 @@ const TITLES: Record<PaletteKind, [string, string]> = {
   sprint: [msg('Sprint'), msg('Sprint …')],
   estimate: [msg('Estimate'), msg('Estimate …')],
   due: [msg('Due date'), msg('e.g. tomorrow, next week, 12.10. …')],
+  snooze: [msg('Snooze until'), msg('e.g. tomorrow, next week, 12.10. …')],
   parent: [msg('Parent'), msg('Search parent issue …')],
   team: [msg('Team'), msg('Team …')],
   relation: [msg('Relation'), msg('Search issue …')],
@@ -146,7 +149,7 @@ export class PaletteController {
       multi: set.multi,
       anchor: opts.anchor ?? null,
       parent: null,
-      calendar: kind === 'due' ? this.#calendar() : null,
+      calendar: kind === 'due' || kind === 'snooze' ? this.#calendar(kind) : null,
       hint: this.#baseHint,
       seq: ++this.#seq,
     });
@@ -214,6 +217,18 @@ export class PaletteController {
         this.#run.set(id, () => this.apply({ estimate: n }));
         items = [{ id, label: t('Estimate: {n} points', { n }), icon: ICON.estimate }, ...items.filter((i) => i.id !== id)];
       }
+      if (s.kind === 'snooze') {
+        // Only a day after today makes sense: "today" and past days are not offered.
+        const base = berlinToday();
+        const day = parseDueInput(q, undefined, base);
+        if (day && day > base) {
+          const id = `snooze:${day}`;
+          hint = `${q} → ${dayLabel(day)}`;
+          this.#run.set(id, () => this.app.edit.snooze(this.#snoozeIds(), day));
+          items = [{ id, label: dayLabel(day), detail: q, icon: ICON.calendar }, ...items.filter((i) => i.id !== id)];
+          this.#calendarMonth = day.slice(0, 7);
+        }
+      }
       if (s.kind === 'due') {
         const day = parseDueInput(q);
         if (day) {
@@ -226,7 +241,7 @@ export class PaletteController {
       }
     }
     if (q) items = items.map((i) => (i.section ? { ...i, section: undefined } : i));
-    this.state.set({ ...s, query, items: items.slice(0, s.kind === 'help' ? 200 : MAX_ITEMS), active: 0, hint, calendar: s.kind === 'due' ? this.#calendar() : null });
+    this.state.set({ ...s, query, items: items.slice(0, s.kind === 'help' ? 200 : MAX_ITEMS), active: 0, hint, calendar: s.kind === 'due' || s.kind === 'snooze' ? this.#calendar(s.kind) : null });
     this.#preview();
   }
 
@@ -428,12 +443,12 @@ export class PaletteController {
       case 'article':
         return { items: [], run: new Map(), multi: false, hint: t('Type a title or text') };
       default:
-        return this.pickerItems(kind, this.#target);
+        return this.pickerItems(kind, this.#target, '', true);
     }
   }
 
-  /** Values of a property, for pickers, context submenus and the command menu. */
-  pickerItems(kind: PaletteKind, target: PickerTarget, prefix = ''): ItemSet {
+  /** Values of a property, for pickers, context submenus and the command menu. `inPicker`: the picker itself (with calendar) shows them. */
+  pickerItems(kind: PaletteKind, target: PickerTarget, prefix = '', inPicker = false): ItemSet {
     const run = new Map<string, Run>();
     const items: MenuItem[] = [];
     const store = this.app.store;
@@ -551,6 +566,26 @@ export class PaletteController {
         ];
         for (const [id, label, day] of options) add({ id: `d:${id}`, label, detail: dayLabel(day), icon: ICON.calendar, checked: all(current, day as string | null) }, () => this.apply({ dueDate: day }, target));
         add({ id: 'd:none', label: t('No due date'), icon: ICON.close, checked: all(current, null) }, () => this.apply({ dueDate: null }, target));
+        break;
+      }
+      case 'snooze': {
+        const current = values((i) => i.snoozedUntil ?? null, () => null);
+        // The server counts days in Europe/Berlin.
+        const now = berlinToday();
+        const monday = addDays(now, ((1 - parseDay(now).getDay() + 7) % 7) || 7);
+        const month = parseDay(now);
+        month.setMonth(month.getMonth() + 1);
+        const options: [string, string, string][] = [
+          ['1', t('Tomorrow'), addDays(now, 1)],
+          ['mo', t('Next week'), monday],
+          ['2w', t('In two weeks'), addDays(now, 14)],
+          ['1m', t('In a month'), dayOf(month)],
+        ];
+        const target_ = target.kind === 'issues' ? target.ids : [];
+        for (const [id, label, day] of options) add({ id: `sn:${id}`, label, detail: dayLabel(day), icon: ICON.snooze, checked: all(current, day as string | null) }, () => this.app.edit.snooze(target_, day));
+        // The calendar is part of the picker itself; in a context submenu this item opens it.
+        if (!prefix && !inPicker) add({ id: 'sn:pick', label: t('Pick a date …'), icon: ICON.calendar }, () => this.open('snooze', { target, anchor: this.#anchor }));
+        if (current.some((day) => day !== null)) add({ id: 'sn:none', label: t('Unsnooze'), icon: ICON.close }, () => this.app.edit.snooze(target_, null));
         break;
       }
       case 'team': {
@@ -704,6 +739,7 @@ export class PaletteController {
         ['sprint', t('Sprint')],
         ['estimate', t('Estimate')],
         ['due', t('Due date')],
+        ['snooze', t('Snooze')],
       ];
       for (const [kind, field] of second) {
         const set = this.pickerItems(kind, this.#target, `${field}: `);
@@ -770,6 +806,8 @@ export class PaletteController {
     }
     items.push({ id: 'ff:unreviewed', label: t('Unread (in inbox)'), icon: ICON.agent, checkbox: true, checked: filters.unreviewed });
     run.set('ff:unreviewed', () => this.app.list.toggleUnreviewed());
+    items.push({ id: 'ff:snoozed', label: t('Include snoozed'), icon: ICON.snooze, checkbox: true, checked: filters.snoozed });
+    run.set('ff:snoozed', () => this.app.list.toggleSnoozed());
     return { items, run, multi: false };
   }
 
@@ -832,7 +870,8 @@ export class PaletteController {
   #issueItems(kind: PaletteKind, query: string): MenuItem[] {
     const store = this.app.store;
     this.#search.prepare(store.version.get(), store.all());
-    const exclude = new Set(this.#target.kind === 'issues' ? this.#target.ids : []);
+    // Pickers leave out the issue they act on; search and the command menu find every issue (also the focused one).
+    const exclude = new Set(this.#target.kind === 'issues' && kind !== 'search' && kind !== 'command' ? this.#target.ids : []);
     const hits = query ? this.#search.search(query, MAX_ITEMS) : kind === 'search' ? this.recent() : this.recent().filter((i) => !exclude.has(i._id));
     const items: MenuItem[] = [];
     // "No parent" on top only without a query; with a query the first hit is active (Enter sets it).
@@ -967,15 +1006,15 @@ export class PaletteController {
 
   // ---------------------------------------------------------------- Calendar (due date)
 
-  #calendar(): PaletteState['calendar'] {
+  #calendar(kind: PaletteKind): PaletteState['calendar'] {
     let selected: string | null = null;
     if (this.#target.kind === 'draft') selected = this.app.create.state.get().draft.dueDate;
     else {
-      const days = this.#target.ids.map((id) => this.app.store.get(id)?.dueDate ?? null);
+      const days = this.#target.ids.map((id) => (kind === 'snooze' ? this.app.store.get(id)?.snoozedUntil : this.app.store.get(id)?.dueDate) ?? null);
       selected = days.length && days.every((d) => d === days[0]) ? days[0] : null;
     }
     const month = this.#calendarMonth ?? (selected ?? today()).slice(0, 7);
-    return { month, selected };
+    return kind === 'snooze' ? { month, selected, min: addDays(berlinToday(), 1) } : { month, selected };
   }
 
   shiftMonth(delta: number) {
@@ -984,13 +1023,20 @@ export class PaletteController {
     const [y, m] = s.calendar.month.split('-').map(Number);
     const d = new Date(y, m - 1 + delta, 1);
     this.#calendarMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    this.state.set({ ...s, calendar: this.#calendar() });
+    this.state.set({ ...s, calendar: this.#calendar(s.kind) });
   }
 
   pickDay(day: string) {
     const target = this.#target;
+    const snooze = this.state.get()?.kind === 'snooze';
+    if (snooze && day <= berlinToday()) return;
     this.close();
-    this.apply({ dueDate: day }, target);
+    if (snooze) this.app.edit.snooze(target.kind === 'issues' ? target.ids : [], day);
+    else this.apply({ dueDate: day }, target);
+  }
+
+  #snoozeIds() {
+    return this.#target.kind === 'issues' ? this.#target.ids : [];
   }
 }
 

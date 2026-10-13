@@ -2,6 +2,7 @@
 //
 //   /                      inbox or the last visited view
 //   /inbox                 inbox
+//   /snoozed               snoozed issues            /team/KIU/snoozed
 //   /triage                triage (all teams)        /team/KIU/triage
 //   /all /active /backlog  all teams                 /team/KIU/all, /team/KIU (= active), /team/KIU/backlog
 //   /team/KIU/projects     a team's projects         /team/KIU/project/<id>
@@ -49,10 +50,10 @@ export interface Location {
   params: Record<string, string>;
 }
 
-const GLOBAL: Record<string, ViewKind> = { inbox: 'inbox', triage: 'triage', all: 'all', active: 'active', backlog: 'backlog', sprint: 'sprint', trash: 'trash' };
-const TEAM_TABS: Record<string, ViewKind> = { '': 'active', all: 'all', active: 'active', backlog: 'backlog', triage: 'triage', sprint: 'sprint' };
+const GLOBAL: Record<string, ViewKind> = { inbox: 'inbox', snoozed: 'snoozed', triage: 'triage', all: 'all', active: 'active', backlog: 'backlog', sprint: 'sprint', trash: 'trash' };
+const TEAM_TABS: Record<string, ViewKind> = { '': 'active', all: 'all', active: 'active', backlog: 'backlog', triage: 'triage', sprint: 'sprint', snoozed: 'snoozed' };
 const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'project', 'sprint', 'scope', 'none'];
-const ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due', 'status'];
+const ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due', 'status', 'snoozed'];
 /** Settings section shown for /settings */
 export const DEFAULT_SETTINGS_SECTION = 'general';
 /** Older (German) settings section ids → current ids, so saved links keep working */
@@ -165,6 +166,7 @@ export function readLocation(url: URL): Location {
     project: list(p.get('project')),
     sprint: list(p.get('sprint')),
     unreviewed: p.get('unreviewed') === '1',
+    snoozed: p.get('snoozed') === '1',
   };
   const group = p.get('group') as Grouping | null;
   const order = p.get('order') as Ordering | null;
@@ -207,7 +209,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
   const url = new URL(base);
   url.pathname = pagePath(loc.page);
   const p = url.searchParams;
-  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'unreviewed', 'q', 'group', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
+  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'unreviewed', 'snoozed', 'q', 'group', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
   if (loc.page.name === 'view') {
     const set = (key: string, value: string | null | undefined) => (value ? p.set(key, value) : p.delete(key));
     const f = loc.filters;
@@ -218,6 +220,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
     set('project', f.project.join(','));
     set('sprint', f.sprint.join(','));
     set('unreviewed', f.unreviewed ? '1' : null);
+    set('snoozed', f.snoozed ? '1' : null);
     set('q', loc.quick);
     set('group', loc.group);
     set('order', loc.order);

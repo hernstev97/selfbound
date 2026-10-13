@@ -234,6 +234,9 @@ export default defineSchema({
     projectId: v.optional(v.id('projects')),
     estimate: v.optional(v.number()),
     dueDate: v.optional(day),
+    // Snoozed: hidden from the lists until this day (Europe/Berlin). The morning job clears it and
+    // puts the issue back into the inbox. Missing = not snoozed (no migration needed).
+    snoozedUntil: v.optional(day),
     parentId: v.optional(v.id('issues')),
     sprintId: v.optional(v.id('sprints')),
     rank: v.string(), // order in the backlog (fractional-indexing)
@@ -257,6 +260,7 @@ export default defineSchema({
     .index('by_status', ['status', 'updatedAt'])
     .index('by_sprint', ['sprintId'])
     .index('by_due', ['dueDate'])
+    .index('by_snoozed', ['snoozedUntil'])
     .index('by_completed', ['completedAt'])
     // For MCP list_issues (due/overdue, done today): read only the wanted statuses.
     .index('by_status_due', ['status', 'dueDate'])

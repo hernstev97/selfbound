@@ -20,6 +20,7 @@ const row = (over: Partial<RowState> = {}): RowState => ({
   sprint: null,
   estimate: null,
   due: null,
+  snoozed: null,
   created: 'Oct 1',
   updated: 'Oct 2',
   age: '',

@@ -6,7 +6,8 @@
 import { msg, t, tn, translated } from '../i18n.ts';
 import type { IconName } from '../icons.ts';
 import { inInbox, unread } from '../inbox.ts';
-import type { Issue, IssueId, PaletteKind } from '../types.ts';
+import { CLOSED } from '../format.ts';
+import type { Issue, IssueId, PaletteKind, Status } from '../types.ts';
 import { VIEWS, addTarget, planSprint } from '../views.ts';
 import type { App } from './index.ts';
 
@@ -57,6 +58,9 @@ const route = (a: App) => a.list.view.get().route;
 // Triage actions apply in triage and in the inbox (reviewing issues created by agents).
 const inTriage = (a: App) => listPage(a) && (route(a).kind === 'triage' || route(a).kind === 'inbox');
 const notDeleted = (a: App) => hasTarget(a) && a.targets().every((id) => a.store.get(id)?.deletedAt === undefined);
+/** Open issues only: a closed issue is not snoozed (the backend refuses it). */
+const snoozable = (a: App) => notDeleted(a) && a.targets().every((id) => !CLOSED.has(a.store.get(id)?.status as Status));
+const someSnoozed = (a: App) => a.targets().some((id) => a.store.get(id)?.snoozedUntil !== undefined);
 const deleted = (a: App) => hasTarget(a) && a.targets().every((id) => a.store.get(id)?.deletedAt !== undefined);
 const picker = (kind: PaletteKind) => (a: App) => a.palette.open(kind);
 const viewKind = (a: App) => (listPage(a) ? a.main.view.get().route.kind : null);
@@ -121,6 +125,8 @@ export const ACTIONS: Action[] = [
   { id: 'issue.sprint', label: msg('Sprint …'), section: 'Issue', keys: ['shift+c'], icon: 'sprint', keywords: 'cycle zyklus', picker: 'sprint', context: [1, 5], when: notDeleted, run: picker('sprint') },
   { id: 'issue.project', label: msg('Project …'), section: 'Issue', keys: ['shift+p'], icon: 'projects', keywords: 'project projekt', picker: 'project', context: [1, 6], when: notDeleted, run: picker('project') },
   { id: 'issue.due', label: msg('Due date …'), section: 'Issue', keys: ['shift+d'], icon: 'calendar', keywords: 'due date deadline fälligkeit datum termin', picker: 'due', context: [1, 7], when: notDeleted, run: picker('due') },
+  { id: 'issue.snooze', label: msg('Snooze …'), section: 'Issue', keys: ['h'], icon: 'snooze', top: true, keywords: 'snooze later hide remind defer hold zurückstellen wiedervorlage später verschieben erinnern', picker: 'snooze', context: [1, 10], when: snoozable, run: picker('snooze') },
+  { id: 'issue.unsnooze', label: msg('Unsnooze'), section: 'Issue', keys: ['shift+h'], icon: 'snooze', keywords: 'unsnooze wake back zurückholen aufwecken wiedervorlage', context: [1, 11], when: (a) => notDeleted(a) && someSnoozed(a), run: (a) => a.edit.snooze(a.targets(), null) },
   { id: 'issue.parent', label: msg('Set parent …'), section: 'Issue', keys: ['mod+shift+p'], icon: 'parent', keywords: 'parent eltern übergeordnet', context: [1, 8], when: notDeleted, run: picker('parent') },
   { id: 'issue.team', label: msg('Move to team …'), section: 'Issue', keys: ['mod+shift+m'], icon: 'team', top: true, keywords: 'team move switch verschieben wechseln umziehen', picker: 'team', context: [1, 9], when: (a) => realTarget(a) && notDeleted(a), run: picker('team') },
   { id: 'issue.subissue', label: msg('Create sub-issue'), section: 'Issue', keys: ['mod+shift+o'], icon: 'subissue', keywords: 'sub child unter anlegen', context: [2, 1], when: (a) => single(a) && notDeleted(a), run: (a) => a.create.openSubIssue(a.targets()[0]) },
@@ -237,6 +243,7 @@ export const ACTIONS: Action[] = [
   { id: 'nav.first', label: msg('First issue'), section: 'Navigation', keys: ['home'], hidden: true, when: listPage, run: (a) => a.list.focusEdge(false) },
   { id: 'nav.last', label: msg('Last issue'), section: 'Navigation', keys: ['end'], hidden: true, when: listPage, run: (a) => a.list.focusEdge(true) },
   { id: 'go.inbox', label: msg('Go to: Inbox'), section: 'Navigation', keys: ['g i'], icon: 'inbox', top: true, keywords: 'inbox eingang', run: (a) => a.nav.goView({ kind: 'inbox', team: null }) },
+  { id: 'go.snoozed', label: msg('Go to: Snoozed'), section: 'Navigation', keys: ['g h'], icon: 'snooze', keywords: 'snoozed zurückgestellt wiedervorlage later hidden', run: (a) => a.nav.goView({ kind: 'snoozed', team: a.contextTeam() }) },
   { id: 'go.triage', label: msg('Go to: Triage'), section: 'Navigation', keys: ['g t'], icon: 'triage', keywords: 'triage', run: (a) => a.nav.goView({ kind: 'triage', team: null }) },
   { id: 'go.all', label: msg('Go to: All issues'), section: 'Navigation', keys: ['g a'], icon: 'issues', top: true, keywords: 'all alle', run: (a) => a.nav.goView({ kind: 'all', team: null }) },
   { id: 'go.active', label: msg('Go to: Active issues'), section: 'Navigation', keys: ['g e'], icon: 'active', keywords: 'active aktiv', run: (a) => a.nav.goView({ kind: 'active', team: a.contextTeam() }) },

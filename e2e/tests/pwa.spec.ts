@@ -124,7 +124,7 @@ test('Settings › Notifications: toggle events, list and remove devices', async
   // The test backend has no VAPID key: notice instead of a switch
   await expect(page.getByTestId('push-status')).toContainText('Not set up on the server');
   const events = page.getByTestId('push-event');
-  await expect(events).toHaveCount(6);
+  await expect(events).toHaveCount(7);
   const linked = events.filter({ hasText: 'PR linked' });
   await expect(linked.getByRole('button', { name: 'Off' })).toHaveClass(/on/);
   await linked.getByRole('button', { name: 'On' }).click();
