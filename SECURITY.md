@@ -4,7 +4,7 @@
 
 Please do not open a public issue. Report it privately through GitHub:
 **Security → Report a vulnerability** on this repository
-(<https://github.com/hernstev97/xlr8/security/advisories/new>).
+(<https://github.com/hernstev97/xlr8-public/security/advisories/new>).
 
 Include what you found, how to reproduce it, and what an attacker could do with it. You will get an
 answer within a week. XLR8 is maintained by one person in their spare time, so fixes may take a while;
