@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clerk/clerk-js": "6.34.1",
-    "@clerk/ui": "1.36.0",
+    "@clerk/clerk-js": "6.38.0",
+    "@clerk/ui": "1.39.0",
     "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
     "@fontsource-variable/cascadia-code": "5.3.0",
     "@fontsource-variable/figtree": "5.3.0",

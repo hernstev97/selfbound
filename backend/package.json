@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "convex": "1.46.0",
-    "convex-helpers": "0.1.125",
+    "convex-helpers": "0.1.127",
     "fractional-indexing": "4.0.0"
   },
   "devDependencies": {
