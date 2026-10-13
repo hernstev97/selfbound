@@ -41,6 +41,9 @@ function main() {
 
   if (!existsSync(join(out, '.vercel', 'project.json'))) {
     run('vercel', ['link', '--yes', '--project', instance.siteVercelProject, '--scope', instance.vercelScope], { cwd: out });
+    // `vercel link` inside a Git checkout connects the repository; Git pushes would then try to build the
+    // whole repo on Vercel and fail. The site is only ever uploaded from here.
+    run('vercel', ['git', 'disconnect', '--yes', '--scope', instance.vercelScope], { cwd: out });
   }
   run('vercel', ['deploy', ...(process.argv.includes('--prod') ? ['--prod'] : []), '--yes', '--scope', instance.vercelScope], { cwd: out });
 }

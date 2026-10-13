@@ -31,7 +31,7 @@ single build.
 
 ## Deploy
 
-A separate Vercel project that only serves the built files (no build on Vercel):
+A separate Vercel project that only serves the built files (no build on Vercel, not connected to the Git repository):
 
 ```sh
 node tooling/deploy-site.mjs           # preview deployment, prints the preview URL
