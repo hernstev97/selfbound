@@ -16,7 +16,12 @@
 # - secret scanning with push protection, private vulnerability reporting
 # - ruleset "main" on the default branch: changes only through pull requests, required status check
 #   `check` (CI) and CodeQL results, no force pushes, no deletion, linear history; repository admins
-#   may bypass, but only when merging a pull request, never with a direct push
+#   may bypass, but only when merging a pull request, never with a direct push; also required: the
+#   check `branch-name` (.github/workflows/pr-policy.yml)
+# - no ruleset for branch names: GitHub rejects the rule `branch_name_pattern` for repositories of a
+#   personal account (HTTP 422, tried 2026-10-13, public repository, Free plan; it seems to need an
+#   organization). The CI check `branch-name` (required in ruleset "main") enforces the rule instead.
+# - label `accepted` (the maintainer's approval of an issue; the PR policy workflow looks for it)
 set -u
 repo=${1:?usage: tooling/github-repo-settings.sh OWNER/REPO}
 
@@ -88,7 +93,7 @@ ruleset=$(cat <<'EOF'
       "parameters": {
         "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
-        "required_status_checks": [{ "context": "check", "integration_id": 15368 }]
+        "required_status_checks": [{ "context": "check", "integration_id": 15368 }, { "context": "branch-name", "integration_id": 15368 }]
       }
     },
     {
@@ -101,9 +106,18 @@ ruleset=$(cat <<'EOF'
 }
 EOF
 )
-id=$(gh api "repos/$repo/rulesets" --jq '.[] | select(.name == "main") | .id' 2>/dev/null) || id=
-if [ -n "$id" ]; then
-  printf '%s' "$ruleset" | try "ruleset main (update)" -X PUT "repos/$repo/rulesets/$id" --input -
-else
-  printf '%s' "$ruleset" | try "ruleset main (create)" -X POST "repos/$repo/rulesets" --input -
-fi
+# upsert_ruleset <name> <json>: create or update the ruleset with that name.
+upsert_ruleset() {
+  id=$(gh api "repos/$repo/rulesets" --jq ".[] | select(.name == \"$1\") | .id" 2>/dev/null) || id=
+  if [ -n "$id" ]; then
+    printf '%s' "$2" | try "ruleset $1 (update)" -X PUT "repos/$repo/rulesets/$id" --input -
+  else
+    printf '%s' "$2" | try "ruleset $1 (create)" -X POST "repos/$repo/rulesets" --input -
+  fi
+}
+
+upsert_ruleset main "$ruleset"
+
+# Label for approved issues (--force updates colour and description if it exists).
+step "label accepted"
+if out=$(gh label create accepted -R "$repo" --color 0e8a16 --description "Approved by the maintainer: a pull request is welcome" --force 2>&1); then ok; else skip "$out"; fi

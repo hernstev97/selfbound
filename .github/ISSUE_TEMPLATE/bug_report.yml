@@ -2,6 +2,10 @@ name: Bug report
 description: Something does not work as expected.
 labels: [bug]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! XLR8 works issue-first: if you want to send a pull request, please wait until the maintainer has added the label `accepted` to this issue. See [CONTRIBUTING.md](https://github.com/hernstev97/xlr8-public/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: what
     attributes:
@@ -28,6 +32,12 @@ body:
     attributes:
       label: Browser and OS
       placeholder: Chrome 140 on Windows 11
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contributing
+      options:
+        - label: I would like to fix this myself. I will wait for the label `accepted` before opening a pull request.
   - type: markdown
     attributes:
       value: Please remove tokens, keys and personal data from logs and screenshots before posting.
