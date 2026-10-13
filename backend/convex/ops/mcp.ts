@@ -246,6 +246,7 @@ class Lookup {
     if (project) out.project = project;
     if (issue.estimate !== undefined) out.estimate = issue.estimate;
     if (issue.dueDate) out.dueDate = issue.dueDate;
+    if (issue.snoozedUntil) out.snoozedUntil = issue.snoozedUntil;
     if (issue.sprintId) {
       const sprint = await this.sprint(issue.sprintId);
       if (sprint) out.sprint = sprint.name;
@@ -397,6 +398,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
     (!filter || filter.matches(issue)) &&
     (!labelIds || issue.labelIds.some((id) => labelIds!.has(id))) &&
     (!projectIds || (issue.projectId !== undefined && projectIds.includes(issue.projectId))) &&
+    (args.snoozed === undefined || (issue.snoozedUntil !== undefined) === args.snoozed) &&
     preset(issue);
 
   let scanned = 0;
@@ -465,6 +467,8 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
               )
             : [() => take(ctx.db.query('issues').withIndex('by_project', (q) => q.eq('projectId', projectId)).take(budget()))],
         );
+      } else if (args.snoozed === true) {
+        sources = [() => take(ctx.db.query('issues').withIndex('by_snoozed', (q) => q.gt('snoozedUntil', '')).take(budget()))];
       }
   }
 
@@ -1217,6 +1221,9 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
     if (expected.dueDate !== undefined) {
       check('dueDate', (expected.dueDate ?? null) === (issue.dueDate ?? null), expected.dueDate, issue.dueDate ?? null);
     }
+    if (expected.snoozedUntil !== undefined) {
+      check('snoozedUntil', (expected.snoozedUntil ?? null) === (issue.snoozedUntil ?? null), expected.snoozedUntil, issue.snoozedUntil ?? null);
+    }
     if (expected.parent !== undefined) {
       let ok = expected.parent === null ? issue.parentId === undefined : false;
       if (expected.parent !== null) {
@@ -1239,6 +1246,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
     }
     if (args.estimate !== undefined && !blocked.has('estimate')) patch.estimate = args.estimate;
     if (args.dueDate !== undefined && !blocked.has('dueDate')) patch.dueDate = args.dueDate;
+    if (args.snoozedUntil !== undefined && !blocked.has('snoozedUntil')) patch.snoozedUntil = args.snoozedUntil;
     if (args.parent !== undefined && !blocked.has('parent')) {
       patch.parentId = args.parent === null ? null : (await issueByIdentifier(ctx, args.parent))._id;
     }
@@ -1255,6 +1263,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       projectId: 'project',
       estimate: 'estimate',
       dueDate: 'dueDate',
+      snoozedUntil: 'snoozedUntil',
       parentId: 'parent',
     } as const;
     for (const [field, name] of Object.entries(FIELD_NAMES) as [keyof typeof FIELD_NAMES, string][]) {

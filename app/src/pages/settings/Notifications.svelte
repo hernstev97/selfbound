@@ -123,7 +123,7 @@
   {#each NOTIFY_EVENTS as event (event.id)}
     {@const enabled = config.current?.events[event.id] ?? event.default}
     <div class="card-row" data-testid="push-event" data-kind={event.id}>
-      <span class="t">{t(event.label)}<div class="sub">{event.id === 'due' || event.id === 'sprint_end' ? `${t(event.hint)} ${t('At {hour}:00.', { hour })}` : t(event.hint)}</div></span>
+      <span class="t">{t(event.label)}<div class="sub">{event.id === 'due' || event.id === 'sprint_end' || event.id === 'snooze' ? `${t(event.hint)} ${t('At {hour}:00.', { hour })}` : t(event.hint)}</div></span>
       <span class="seg">
         <button class={[enabled && 'on']} disabled={config.current === undefined} onclick={() => setEvent(event.id, true)}>{t('On')}</button><button class={[!enabled && 'on']} disabled={config.current === undefined} onclick={() => setEvent(event.id, false)}>{t('Off')}</button>
       </span>

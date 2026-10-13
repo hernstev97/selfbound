@@ -319,4 +319,6 @@ export default {
   // main.ts
   Offline: 'Ohne Verbindung',
   'You are seeing the last saved state on this device. Editing works again once XLR8 is connected.': 'Du siehst den letzten Stand auf diesem Gerät. Ändern geht wieder, sobald XLR8 verbunden ist.',
+  // Properties.svelte, Sidebar.svelte
+  'Snoozed until {date}': 'Zurückgestellt bis {date}',
 } satisfies Dictionary;

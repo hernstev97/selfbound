@@ -90,6 +90,7 @@ export const ICON = {
   label: stroke('M2.5 4v3.6a1 1 0 0 0 .3.7l5 5a1 1 0 0 0 1.4 0l3.6-3.6a1 1 0 0 0 0-1.4l-5-5a1 1 0 0 0-.7-.3H3.5a1 1 0 0 0-1 1ZM5.5 6h.01'),
   estimate: svg16('<path d="M8 2.75 13.5 12.5h-11Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6v6.5" stroke="currentColor" stroke-width="1.3"/>'),
   calendar: stroke('M3.5 3.5h9a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1ZM2.5 6.5h11M5.5 2v2.5M10.5 2v2.5'),
+  snooze: stroke('M13 9.2A5.5 5.5 0 1 1 6.8 3 4.3 4.3 0 0 0 13 9.2Z'),
   parent: stroke('M4 3v4a2 2 0 0 0 2 2h6m-2.5-2.5L12 9l-2.5 2.5'),
   subissue: stroke('M4 3v6a2 2 0 0 0 2 2h6m-2.5-2.5L12 11l-2.5 2.5'),
   relation: stroke('M6.5 9.5 9.5 6.5M7 4.5l1-1a2.5 2.5 0 0 1 3.5 3.5l-1 1M9 11.5l-1 1A2.5 2.5 0 0 1 4.5 9l1-1'),

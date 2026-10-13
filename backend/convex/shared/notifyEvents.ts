@@ -27,6 +27,12 @@ export const NOTIFY_EVENTS = [
     default: true,
   },
   {
+    id: 'snooze',
+    label: 'Snoozed issue is back',
+    hint: 'In the morning of the chosen day a snoozed issue returns to the inbox.',
+    default: true,
+  },
+  {
     id: 'pr_merged',
     label: 'PR merged',
     hint: 'A pull request linked to an issue was merged (GitHub webhook).',

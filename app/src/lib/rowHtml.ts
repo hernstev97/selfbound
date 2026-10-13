@@ -16,6 +16,7 @@ let fixed: ReturnType<typeof fixedTexts> | null = null;
 function fixedTexts() {
   return {
     due: esc(t('Due')),
+    snoozed: esc(t('Snoozed until')),
     estimate: esc(t('Estimate')),
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
@@ -40,7 +41,7 @@ export function teamLogoHtml(team: TeamBadge, cls = '', size?: 14) {
 /** Row columns: aligned under each other when wide, right after the title when narrow. */
 export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'estimate', 'due'] as const satisfies readonly DisplayProp[];
 /** At the far right, at any width: date columns. */
-export const ROW_END = ['created', 'updated'] as const satisfies readonly DisplayProp[];
+export const ROW_END = ['snoozed', 'created', 'updated'] as const satisfies readonly DisplayProp[];
 
 /** Labels: at most three, each with "+n" for those dropped to its left (see app.css `.lp`). */
 function labelsHtml(r: RowState) {
@@ -93,6 +94,7 @@ function endHtml(r: RowState, props: ReadonlySet<DisplayProp>, trash: boolean) {
   } else {
     if (props.has('updated')) html += `<span class="row-date" title="${tx.updated}">${esc(r.updated)}</span>`;
     if (props.has('created')) html += `<span class="row-date" title="${tx.created}">${esc(r.created)}</span>`;
+    if (props.has('snoozed')) html += `<span class="row-date" title="${tx.snoozed}">${esc(r.snoozed ?? '')}</span>`;
   }
   if (r.decision) html += `<span class="pill decision ${r.decision.outcome}" data-testid="row-decision">${esc(r.decision.label)}</span>`;
   return html;

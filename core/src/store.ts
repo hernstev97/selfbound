@@ -157,6 +157,7 @@ export class IssueStore {
   #teams = new Map<string, TeamDoc>();
   // Sidebar counters, updated on every change instead of counting over all issues
   #inbox = 0;
+  #snoozed = 0;
   #triage = new Map<string, number>();
   /** Per team: unstarted, started, and per sprint its issues (without canceled ones) and how many are done */
   #teamCounts = new Map<string, TeamCounts>();
@@ -291,11 +292,11 @@ export class IssueStore {
     return this.#pending.has(id);
   }
 
-  /** Unread inbox entries and triage issues (without deleted and pending ones), triage per team. */
-  counts(): { inbox: number; triage: number; triageByTeam: ReadonlyMap<string, number> } {
+  /** Unread inbox entries, triage issues (per team) and snoozed issues (without deleted and pending ones). */
+  counts(): { inbox: number; triage: number; triageByTeam: ReadonlyMap<string, number>; snoozed: number } {
     let triage = 0;
     for (const n of this.#triage.values()) triage += n;
-    return { inbox: this.#inbox, triage, triageByTeam: this.#triage };
+    return { inbox: this.#inbox, triage, triageByTeam: this.#triage, snoozed: this.#snoozed };
   }
 
   /** A team's numbers for its sidebar card; `sprint` is the active sprint. */
@@ -329,7 +330,10 @@ export class IssueStore {
     }
     if (!issue || issue.deletedAt !== undefined) return;
     if (unread(issue)) this.#inbox += sign;
-    if (issue.status === 'triage') {
+    // Snoozed issues are hidden from the lists, so they stay out of the counts too.
+    const snoozed = issue.snoozedUntil !== undefined;
+    if (snoozed) this.#snoozed += sign;
+    if (issue.status === 'triage' && !snoozed) {
       const next = (this.#triage.get(issue.teamId) ?? 0) + sign;
       if (next) this.#triage.set(issue.teamId, next);
       else this.#triage.delete(issue.teamId);
@@ -338,8 +342,8 @@ export class IssueStore {
     const type = TYPE_OF_STATUS[issue.status];
     let team = this.#teamCounts.get(issue.teamId);
     if (!team) this.#teamCounts.set(issue.teamId, (team = { todo: 0, started: 0, sprints: new Map() }));
-    if (type === 'unstarted') team.todo += sign;
-    else if (type === 'started') team.started += sign;
+    if (!snoozed && type === 'unstarted') team.todo += sign;
+    else if (!snoozed && type === 'started') team.started += sign;
     if (issue.sprintId && type !== 'canceled') {
       let s = team.sprints.get(issue.sprintId);
       if (!s) team.sprints.set(issue.sprintId, (s = { issues: 0, done: 0 }));
@@ -1190,7 +1194,10 @@ export function applyPatch(doc: IssueDoc, patch: IssuePatch, now: number, workfl
     }
   }
   // Moving to done/canceled/duplicate clears the priority, as in the backend.
-  if (next.stateId !== doc.stateId && CLOSED_STATUSES.includes(next.status as Status)) next.priority = 0;
+  if (next.stateId !== doc.stateId && CLOSED_STATUSES.includes(next.status as Status)) {
+    next.priority = 0;
+    delete next.snoozedUntil;
+  }
   next.updatedAt = now;
   return next as unknown as IssueDoc;
 }

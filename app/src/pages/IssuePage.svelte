@@ -135,6 +135,9 @@
           <button class={['chip', !d.project && 'unset']} onclick={(e) => open('project', e)}><span class="icon">{@html ICON.projects}</span>{d.project?.name ?? t('Project')}</button>
           <button class={['chip', !d.sprint && 'unset']} onclick={(e) => open('sprint', e)}><span class="icon">{@html ICON.sprint}</span>{d.sprint?.name ?? t('Sprint')}</button>
           <button class={['chip', !d.due && 'unset']} onclick={(e) => open('due', e)}><span class="icon">{@html ICON.calendar}</span>{d.due?.long ?? t('Due date')}</button>
+          {#if d.snoozable || d.snoozed}
+            <button class={['chip', !d.snoozed && 'unset']} data-testid="issue-snooze" onclick={(e) => open('snooze', e)}><span class="icon">{@html ICON.snooze}</span>{d.snoozed ? t('Snoozed until {date}', { date: d.snoozed.long }) : t('Snooze')}</button>
+          {/if}
           <button class={['chip', d.estimate === null && 'unset']} onclick={(e) => open('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
         </div>
 

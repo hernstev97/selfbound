@@ -2177,8 +2177,13 @@ button.crumb:hover {
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-mini);
 }
-.cal-day:hover {
+.cal-day:hover:not(:disabled) {
   background: var(--bg-control);
+}
+.cal-day:disabled {
+  color: var(--text-subtle);
+  opacity: 0.45;
+  cursor: default;
 }
 .cal-day.other {
   color: var(--text-subtle);

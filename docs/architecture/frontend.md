@@ -118,6 +118,13 @@ The board is a **layout** of every list view that has `boardTypes` (All, Active,
 - **Motion (FLIP):** Elements with `data-flip="<key>"` are measured before the change (`$effect.pre`) and, in the next frame before painting, put back at their old position (`$effect` schedules `requestAnimationFrame`; by then the content on the right is in place too, and layout runs once). The same key at a different place slides (`translate`), new keys fade in staggered, removed ones stay briefly as a static, inert snapshot. Measuring only happens when the structure changes (other team, section expanded or collapsed), not on every page change and not on data changes (triage entry, new team). Nothing moves during loading until the app is in sync. The current team's block is rebuilt per team (`{#key}`), so the old team's snapshot shows its own entries.
 - **One frame later:** On a team switch, the sidebar shows the new state only after the frame with the new content on the right (`deferredSidebar`). Rebuilding and starting the motion in the response frame otherwise cost about 3 ms (Chrome trace: painting and layers of the moving cards). Other sidebar changes (active entry, counts, section expanded/collapsed) apply immediately.
 
+### Snooze
+
+An issue with `snoozedUntil` is hidden until the server's morning job returns it ([backend.md](backend.md#invariants), rule 12). The client only needs the field, no clock: `VIEWS[kind].snoozed` is `'hide'` (inbox, triage, all, active, backlog, sprint, plan, project) or `'show'` (the Snoozed view, trash, sprint planning's right column and sprint completion, which must still decide on every open issue). `visibleFilter` applies it as one property check per issue, unless the filter **Include snoozed** (`Filters.snoozed`, URL `snoozed=1`, chip “With snoozed”) is on. `inInbox`/`unread`, the sidebar counts (inbox, triage) and the team card numbers (to do, started) leave snoozed issues out; the counter for the sidebar entry **Snoozed** (shown only while something is snoozed) is kept incrementally in `IssueStore.#count`. Search (`/`, command menu) and the issue page ignore the snooze.
+
+- **Snoozing:** action `issue.snooze` (**H**, context menu “Snooze”, command menu, “Snooze” in the issue page properties and chips) opens the picker `snooze` (`palette.ts`): Tomorrow, Next week (Monday), In two weeks, In a month, the calendar (days up to today are disabled) and free input in the due date syntax (“+3”, “fri”, “12.10.”; today and earlier are not offered). In the context submenu, “Pick a date …” opens the picker with the calendar. All of them go through `Editor.snooze(ids, day)`, which is `patch({ snoozedUntil })` with a toast “KIU-12 snoozed until Mon, Oct 19” and Undo; a selection is one call and one undo step. `issue.unsnooze` (**Shift H**) clears it; **G H** goes to the Snoozed view. Closed issues are skipped (the backend refuses them); a status change to done also ends the snooze, and `patchEach` puts that into the same undo step as the priority.
+- **Snoozed view:** `ViewKind` `snoozed`, ordering `snoozed` (day, then priority), column “Snoozed until” (`DisplayProp` `snoozed`, with the dates at the far right). History shows “snoozed it until …”, “ended the snooze” and, for the morning job, “brought it back from the snooze”.
+
 ### Inbox as split view (`inbox.ts`, `InboxSplit.svelte`)
 
 - **Entries are flags on the issue**, not a separate table: an issue is in the inbox as long as `reviewedAt` is unset (`inInbox`); `readAt` means read (`unread` = neither). Removing (`Editor.removeFromInbox`, `issues.markReviewed`) and reading (`Editor.markRead`, `issues.markRead`) change nothing on the issue itself, not even `updatedAt`. The sidebar count counts unread entries.
@@ -153,7 +160,7 @@ Esc closes as before (dialogs in `core/app/keys.ts`, the settings dialog on the 
 
 ### Undo/redo (`edit.ts`)
 
-Entries: `patch` (before/after per issue), `move`, `remove`, `restore`, `create`, `review` (removed from the inbox), `read` (read/unread), `relation` (add/remove; for “Duplicate of” including the old status, which undo resets via compare-and-set). In the UI, redo is called “Redo” (not to be confused with “Repeat …” for recurring issues). An “Undo” toast belongs to exactly one entry: it disappears once that entry is undone, and a click only affects that entry. Undo sends `issues.revert` with `expect` = the app's own value (compare-and-set). If the server reports `conflict`, the app reads the issue's history and says who changed it in the meantime (“… was changed by Claude Code in the meantime”). Undoing “Create” moves the issue to the trash; redo brings it back. Every entry remembers page, filters, selection and focus; undo jumps back there.
+Entries: `patch` (before/after per issue; snooze is a patch of `snoozedUntil`), `move`, `remove`, `restore`, `create`, `review` (removed from the inbox), `read` (read/unread), `relation` (add/remove; for “Duplicate of” including the old status, which undo resets via compare-and-set). In the UI, redo is called “Redo” (not to be confused with “Repeat …” for recurring issues). An “Undo” toast belongs to exactly one entry: it disappears once that entry is undone, and a click only affects that entry. Undo sends `issues.revert` with `expect` = the app's own value (compare-and-set). If the server reports `conflict`, the app reads the issue's history and says who changed it in the meantime (“… was changed by Claude Code in the meantime”). Undoing “Create” moves the issue to the trash; redo brings it back. Every entry remembers page, filters, selection and focus; undo jumps back there.
 
 ### Description with version check (`detail.ts`, `bodyEdit.ts`)
 
@@ -209,7 +216,8 @@ The placeholder alt texts come from `app/src/lib/uploadNote.ts` and are stored i
 | `/` | Inbox or the last visited view (`localStorage xlr8:lastView`). In production only with the `xlr8_signed_in` marker, otherwise the landing page (see [Landing page and sign-in](#landing-page-and-sign-in-welcomehtml-srcwelcome)) |
 | `/sign-in?redirect_url=/issue/KIU-106` | Sign-in (welcome.html), then back to `redirect_url` |
 | `/welcome` | Landing page, local only (dev and `vite preview`); in production at `/` |
-| `/inbox` | Inbox (created by agents, until the user removes the entry); split view on wide screens |
+| `/inbox` | Inbox (created by agents and snoozed issues that came back, until the user removes the entry); split view on wide screens |
+| `/snoozed`, `/team/KIU/snoozed` | Snoozed issues, soonest return first ([below](#snooze)) |
 | `/triage`, `/team/KIU/triage` | Triage |
 | `/all`, `/active`, `/backlog` | Across teams |
 | `/team/KIU` (= active), `/team/KIU/all`, `/team/KIU/backlog` | Team |
@@ -227,7 +235,7 @@ The placeholder alt texts come from `app/src/lib/uploadNote.ts` and are stored i
 | `/share?title=…&text=…&url=…` | Share from another app (Web Share Target): creates an issue in the inbox, then `/inbox` |
 | `/oauth/consent?request=…` | Consent page for connectors (claude.ai, ChatGPT), outside the app shell; old path `/oauth/freigabe?anfrage=…` still works |
 
-Filters and display as query parameters: `status`, `prio`, `fteam`, `label` (name if unique, otherwise ID; both are read), `project`, `sprint`, `unreviewed=1`, `q` (quick search), `group`, `order` (only when different from the view's default). Vite dev and `vite preview` serve `index.html` for all paths (`appType: 'spa'`); on Vercel the app is renamed to `app.html` at deploy time (`deploy/web/vercel.json`, see [Landing page and sign-in](#landing-page-and-sign-in-welcomehtml-srcwelcome)).
+Filters and display as query parameters: `status`, `prio`, `fteam`, `label` (name if unique, otherwise ID; both are read), `project`, `sprint`, `unreviewed=1`, `snoozed=1`, `q` (quick search), `group`, `order` (only when different from the view's default). Vite dev and `vite preview` serve `index.html` for all paths (`appType: 'spa'`); on Vercel the app is renamed to `app.html` at deploy time (`deploy/web/vercel.json`, see [Landing page and sign-in](#landing-page-and-sign-in-welcomehtml-srcwelcome)).
 
 ## Extension points
 

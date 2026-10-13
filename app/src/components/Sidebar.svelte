@@ -27,9 +27,10 @@
     e.preventDefault();
     app.nav.go(page);
   }
-  const view = (kind: 'inbox' | 'triage' | 'all' | 'sprint' | 'trash' | 'active' | 'backlog', team: string | null = null): Page => ({ name: 'view', view: { kind, team } });
+  const view = (kind: 'inbox' | 'snoozed' | 'triage' | 'all' | 'sprint' | 'trash' | 'active' | 'backlog', team: string | null = null): Page => ({ name: 'view', view: { kind, team } });
   const P = {
     inbox: view('inbox'),
+    snoozed: view('snoozed'),
     triage: view('triage'),
     all: view('all'),
     sprint: view('sprint'),
@@ -177,6 +178,11 @@
     <a class={['nav-item', sb.active === 'sprint' && 'active']} href={pagePath(sprintPage)} onclick={(e) => go(e, sprintPage)} data-testid="nav-sprint" title={tip(sb.sprint ? t('Current sprint') : t('Sprint planning'), 'go.sprint')}>
       <span class="icon mi ui-sprint"></span><span class="label">{sb.sprint ?? (sb.planning ? t('Planning') : t('Sprint'))}</span>
     </a>
+    {#if sb.snoozed > 0}
+      <a class={['nav-item', sb.active === 'snoozed' && 'active']} href={pagePath(P.snoozed)} onclick={(e) => go(e, P.snoozed)} data-testid="nav-snoozed" title={tip(t('Snoozed'), 'go.snoozed')}>
+        <span class="icon mi ui-snooze"></span><span class="label">{t('Snoozed')}</span><span class="count" data-testid="snoozed-count">{sb.snoozed}</span>
+      </a>
+    {/if}
     {#if sb.drafts > 0}
       <a class={['nav-item', sb.active === 'drafts' && 'active']} href={pagePath(P.drafts)} onclick={(e) => go(e, P.drafts)} data-testid="nav-drafts">
         <span class="icon mi ui-compose"></span><span class="label">{t('Drafts')}</span><span class="count">{sb.drafts}</span>
