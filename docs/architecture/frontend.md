@@ -213,9 +213,9 @@ The placeholder alt texts come from `app/src/lib/uploadNote.ts` and are stored i
 
 | Path | Page |
 |---|---|
-| `/` | Inbox or the last visited view (`localStorage xlr8:lastView`). In production only with the `xlr8_signed_in` marker, otherwise the landing page (see [Landing page and sign-in](#landing-page-and-sign-in-welcomehtml-srcwelcome)) |
+| `/` | Inbox or the last visited view (`localStorage xlr8:lastView`). In production only with the `xlr8_signed_in` marker, otherwise the sign-in page (see [Sign-in page](#sign-in-page-welcomehtml-srcwelcome)) |
 | `/sign-in?redirect_url=/issue/KIU-106` | Sign-in (welcome.html), then back to `redirect_url` |
-| `/welcome` | Landing page, local only (dev and `vite preview`); in production at `/` |
+| `/welcome` | Sign-in page, local only (dev and `vite preview`); in production at `/` |
 | `/inbox` | Inbox (created by agents and snoozed issues that came back, until the user removes the entry); split view on wide screens |
 | `/snoozed`, `/team/KIU/snoozed` | Snoozed issues, soonest return first ([below](#snooze)) |
 | `/triage`, `/team/KIU/triage` | Triage |
@@ -331,17 +331,16 @@ Tokens in `app/src/styles/app.css`: colours from base hue/chroma, accent and con
 
 `core/src/auth.ts`: locally `VITE_DEV_TOKEN` (only set by `tooling/local.mjs`), otherwise Clerk through `@clerk/clerk-js/no-rhc` (headless) with `VITE_CLERK_PUBLISHABLE_KEY` and the JWT template `convex`. The value is a single key or a list `host=key,…`; `app/src/publishableKey.ts` picks the key for the current host (useful during a domain change, when two Clerk instances run side by side). When signed out, the app goes straight to the sign-in page `/sign-in?redirect_url=<url>` (`auth.signIn`); `LoginScreen.svelte` only shows “not set up” and “no access”. When signed in, the app sets the cookie `xlr8_signed_in=1` (not a secret, only a marker for routing); it deletes it when signed out, rejected or on sign-out.
 
-## Landing page and sign-in (`welcome.html`, `src/welcome/`)
+## Sign-in page (`welcome.html`, `src/welcome/`)
 
-A separate entry next to `index.html`, without Svelte, Convex or the core: the landing page loads nothing from the app's start bundle, and the app nothing from it. The content is HTML in `welcome.html` (readable without script, metadata and `og:image` for sharing). `src/welcome/main.ts` adds the background, switching between landing page and sign-in (same page, `pushState`) and the sign-in form.
+A separate entry next to `index.html`, without Svelte, Convex or the core: the sign-in page loads nothing from the app's start bundle, and the app nothing from it. It is deliberately plain: a logo, the Clerk form and one line of text, on a static dot grid (CSS), no marketing. `noindex`. The public landing page is a separate static site, see [site/README.md](../../site/README.md). `src/welcome/main.ts` loads the sign-in form right away.
 
 - **Routing:** in production Vercel decides: `/` without the `xlr8_signed_in` cookie → `welcome.html`, otherwise `app.html` (the app; `deploy-web.mjs` renames `index.html` at deploy time, because Vercel always serves an existing `index.html` at `/`). `/sign-in` → `welcome.html`, all other paths → `app.html`. Deep links therefore keep working.
 - **Signed out on a deep link:** a small script in the head of `index.html` (only in the production build with Clerk, `signedOutGuard` in `vite.config.ts`) checks the marker and, without it, goes straight to `/sign-in?redirect_url=…` before the app loads. If the marker is stale, the app notices after Clerk has loaded and takes the same route.
-- **Sign-in form:** `src/welcome/signin.ts`. Since version 6, clerk-js ships no UI; `@clerk/ui` (with React) provides it and is loaded only here, preloaded on hovering “Sign in”. `mountSignIn` with `routing: 'hash'` (no subpaths needed), `withSignUp: false`, styled through `appearance` with the page's colours, light and dark. Clerk's redirects go through `routerPush`/`routerReplace`: set the marker first, then navigate, otherwise `/` would show the landing page again. `safeRedirect` (`session.ts`) only allows same-origin paths.
+- **Sign-in form:** `src/welcome/signin.ts`. Since version 6, clerk-js ships no UI; `@clerk/ui` (with React) provides it and is loaded only here, dynamically after the page script. `mountSignIn` with `routing: 'hash'` (no subpaths needed), `withSignUp: false`, styled through `appearance` with the page's colours, light and dark. Clerk's redirects go through `routerPush`/`routerReplace`: set the marker first, then navigate, otherwise `/` would show the sign-in page again. `safeRedirect` (`session.ts`) only allows same-origin paths.
 - **Consent page for connectors** (`/oauth/consent`): uses the same sign-in (signed out → `/sign-in?redirect_url=/oauth/consent?…` → back).
-- **Background:** `src/welcome/raster.ts`, a dot grid as one fragment shader (WebGL 2). Per frame the main thread only sets uniforms. Runs only while the tab is visible and the canvas is on screen (`visibilitychange`, `IntersectionObserver`); with `prefers-reduced-motion` a still image; without WebGL 2 the same grid as a still image via Canvas 2D; before that and underneath, a dot pattern in CSS. If frames take more than 24 ms for over a second, first the resolution drops to 1×, then the frame rate to 30. Starts only after the first frame, when idle.
-- **Local:** the dev and preview servers serve `welcome.html` at `/welcome` and `/sign-in` (`welcomeRoutes`); `/` stays the app. Without Clerk (test sign-in), `/sign-in` shows a hint with a link into the app.
-- **Separate build:** `pnpm build` first builds the app (`vite.config.ts`), then the landing page (`vite.welcome.config.ts`) into the same output. Built together, both shared chunks (Vite's preload helper ended up in the app's start chunk and the landing page loaded it too). In the landing page build, Clerk sits in two chunks (`clerk-js`, `clerk-ui`) instead of over a hundred small files. Shared plugins: `vite.plugins.ts`.
+- **Local:** the dev and preview servers serve `welcome.html` at `/welcome` and `/sign-in` (`welcomeRoutes`); `/` stays the app. Without Clerk (test sign-in), the page shows a hint with a link into the app.
+- **Separate build:** `pnpm build` first builds the app (`vite.config.ts`), then the sign-in page (`vite.welcome.config.ts`) into the same output. Built together, both shared chunks (Vite's preload helper ended up in the app's start chunk and the sign-in page loaded it too). In the sign-in page build, Clerk sits in two chunks (`clerk-js`, `clerk-ui`) instead of over a hundred small files. Shared plugins: `vite.plugins.ts`.
 
 ## Installable app, service worker and notifications
 

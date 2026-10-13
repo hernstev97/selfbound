@@ -1,0 +1,110 @@
+---
+title: Teams
+description: Teams are the workspaces in XLR8. Each one has its own key, statuses and projects, and optionally a knowledge area.
+sidebar:
+  order: 1
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+
+A team is a workspace for one area of your work: a product, a client, a side project. Every issue belongs
+to exactly one team, and the team's key is the first part of the issue's identifier. Issue 42 in the team
+with the key `ACME` is `ACME-42`.
+
+## What belongs to a team
+
+Each team has:
+
+- **A name and a key.** The key has 2 to 6 characters (capital letters and digits, starting with a letter)
+  and appears in every identifier. You can change it until the team has its first issue; after that it is
+  fixed, so identifiers stay stable.
+- **A logo and a color.** The logo is an SVG or PNG, square, at most 256 KB. You can add a second logo for
+  dark backgrounds. Without a logo, XLR8 shows a placeholder made from the key and the team's color.
+- **Its own statuses.** Every team has its own workflow, see [Statuses and workflow](/concepts/workflow/).
+- **Its own projects.** A project belongs to exactly one team, see [Projects](/concepts/projects/).
+- **Optionally, a knowledge area** with pages for notes and documentation, see [Knowledge](/concepts/knowledge/).
+
+Some things span all teams: [sprints](/concepts/sprints/), workspace [labels](/concepts/labels/), the
+[inbox and the triage view](/concepts/triage-and-inbox/), and search.
+
+## Add a team
+
+<Steps>
+1. Press <Kbd keys="o n" /> or click the plus next to the teams in the sidebar. The **Add team** dialog opens.
+2. Enter a **Name**. XLR8 suggests a **Key** from the first letters of the name; change it if you like.
+3. Under **Content**, choose **Issues**, **Issues and knowledge** or **Knowledge only**.
+4. Optionally upload a **Logo**.
+5. Click **Create team**.
+</Steps>
+
+You can also add a team under **Settings → Teams → New team**. A new team starts with eight default
+statuses (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), which you can rename,
+extend or archive later.
+
+## The current team
+
+The sidebar shows one team at the top as the **Current team**, with links to its Issues, Backlog, Projects,
+Knowledge (if turned on) and Settings, plus Triage while the team has issues waiting there. The other teams
+are listed below under **Teams**.
+
+- Press <Kbd keys="o t" /> (**Switch team …**) to pick another team. You stay on the same kind of page where
+  that makes sense: from the projects overview you land on the other team's projects, from a knowledge page in
+  the other team's knowledge area.
+- Press <Kbd keys="o s" /> (**Current team settings**) to open the settings of the current team.
+
+## Team settings
+
+Open a team under **Settings → Teams**, press <Kbd keys="o s" />, or click **Settings** under the current team
+in the sidebar. There you change:
+
+- **Name**, **Key** (only while the team has no issues) and **Color**.
+- **Dormant**: see below.
+- **Knowledge**: **Off**, **Alongside issues** or **Knowledge only**.
+- **Logo** and **Logo for dark backgrounds**.
+- **Workflow** and **Fixed order**: the team's statuses, see [Statuses and workflow](/concepts/workflow/).
+
+The order of teams under **Settings → Teams** is the order in the sidebar; use the arrows to move a team up
+or down.
+
+## Dormant teams
+
+Turn on **Dormant** for a team you are not actively working on. A dormant team:
+
+- moves out of the main team list in the sidebar into the collapsible **Inactive** section,
+- is left out of [sprint planning](/concepts/sprints/),
+- still appears in search, in lists such as **All issues**, and in the team switcher.
+
+Nothing is deleted, and you can turn **Dormant** off again at any time.
+
+## Knowledge-only teams
+
+A team set to **Knowledge only** holds pages instead of issues, for example sources and notes on a topic.
+It has no issues and no workflow: it is left out when you create or move issues, accept from triage, set up
+recurrences and plan sprints. Opening such a team takes you straight to its knowledge area.
+
+You can switch a team to **Knowledge only** only while it has no open issues and no active recurrences;
+completed issues stay. Switching back to **Alongside issues** always works. **Off** is only possible while the
+knowledge area has no pages. More in [Knowledge](/concepts/knowledge/).
+
+## Move issues to another team
+
+Press <Kbd keys="mod+shift+m" /> (**Move to team …**) on an issue or a selection and pick the target team.
+You can also click the team in the issue's properties.
+
+When an issue moves:
+
+- **It gets a new identifier** in the target team, for example `OPS-24` becomes `ACME-120`. The old
+  identifier keeps working: links, search and agents still find the issue under it.
+- **Its status** becomes the matching status of the target team: the same built-in status (such as Todo) if
+  there is one, otherwise a status with the same name, otherwise one of the same type. The
+  [fixed order](/concepts/workflow/#fixed-order) does not apply to moves.
+- **Its project is removed**, because a project belongs to exactly one team.
+- **Labels of the old team are removed.** Workspace labels stay.
+- Everything else stays: priority, estimate, due date, sprint, parent, description, comments and history.
+
+If the move would remove a project or labels, XLR8 lists what changes and asks you to confirm first.
+Afterwards a message such as "OPS-24 is now ACME-120" appears with **Undo**.
+
+<Aside type="note">
+Teams cannot be deleted in the app. If you no longer need one, mark it as dormant.
+</Aside>

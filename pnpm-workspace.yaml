@@ -4,6 +4,8 @@ packages:
   - app
   - e2e
   - perf
+  - site
+  - docs-site
 allowBuilds:
   browser-tabs-lock: false
   bufferutil: false

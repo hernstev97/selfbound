@@ -1,0 +1,50 @@
+---
+// Keyboard shortcuts straight from the app's action list (core/src/app/actions.ts), so this
+// page changes with the code. Hidden actions and actions without keys are left out.
+import { ACTIONS, SECTION_LABEL, type ActionSection } from '@xlr8/core/app/actions';
+// The sprint pages register their keys when their chunk loads; import it so they are listed too.
+import '@xlr8/core/app/sprints';
+import Kbd from './Kbd.astro';
+
+interface Props {
+  /** Only these sections, in this order; default: all with shortcuts */
+  sections?: ActionSection[];
+}
+const ORDER: ActionSection[] = ['General', 'Navigation', 'Issue', 'Selection', 'View', 'Triage', 'Inbox', 'Wiki', 'Sprint'];
+const sections = Astro.props.sections ?? ORDER;
+const groups = sections
+  .map((section) => ({
+    section,
+    title: SECTION_LABEL[section],
+    actions: ACTIONS.filter((a) => a.section === section && !a.hidden && a.keys?.length),
+  }))
+  .filter((g) => g.actions.length > 0);
+// Same label twice (Mark as read / unread share U) stays as two rows on purpose.
+const clean = (label: string) => label.replace(/\s*…$/, '');
+---
+
+{
+  groups.map((g) => (
+    <section class="xl-shortcuts">
+      {!Astro.props.sections || Astro.props.sections.length > 1 ? <h3 id={`keys-${g.section.toLowerCase()}`}>{g.title}</h3> : null}
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Action</th>
+            <th scope="col">Shortcut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {g.actions.map((a) => (
+            <tr>
+              <td>{clean(a.label)}</td>
+              <td>
+                <Kbd keys={a.keys!} />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  ))
+}

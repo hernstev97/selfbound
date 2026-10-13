@@ -1,0 +1,58 @@
+---
+title: XLR8
+description: XLR8 is a fast, keyboard-first issue tracker for solo developers and their AI agents. Self-hosted, open source.
+template: splash
+editUrl: false
+hero:
+  title: XLR8
+  tagline: A fast, keyboard-first issue tracker for solo developers and their AI agents. Self-hosted, open source.
+  actions:
+    - text: Get started
+      link: /start/introduction/
+      icon: right-arrow
+    - text: Self-host it
+      link: /start/self-hosting/
+      variant: secondary
+    - text: GitHub
+      link: https://github.com/hernstev97/xlr8-public
+      variant: minimal
+      icon: external
+---
+
+import Kbd from '../../components/Kbd.astro';
+import HomeCard from '../../components/HomeCard.astro';
+import Screenshot from '../../components/Screenshot.astro';
+
+<Screenshot name="list" alt="The XLR8 issue list: team sidebar on the left, issues grouped by status with labels, projects and due dates" />
+
+<ul class="xl-home-points not-content">
+  <li>
+    <strong>Fast</strong>
+    <span>A budget of 100 ms (p95) per interaction at 10,000 issues, with a performance check in CI.</span>
+  </li>
+  <li>
+    <strong>Keyboard-first</strong>
+    <span>Command menu on <Kbd keys="mod+k" />, search on <Kbd keys="/" /> and shortcuts for nearly everything.</span>
+  </li>
+  <li>
+    <strong>Open to agents</strong>
+    <span>An MCP endpoint and OAuth connector for Claude, ChatGPT and coding agents.</span>
+  </li>
+</ul>
+
+## Explore the docs
+
+<div class="xl-home-cards not-content">
+  <HomeCard title="Concepts" href="/concepts/teams/" icon="book">
+    Teams, issues, projects and the one sprint that spans all teams.
+  </HomeCard>
+  <HomeCard title="Working with agents" href="/agents/overview/" icon="bot">
+    Connect Claude, ChatGPT or a coding agent through MCP.
+  </HomeCard>
+  <HomeCard title="Keyboard shortcuts" href="/reference/keyboard-shortcuts/" icon="keyboard">
+    Every shortcut, generated from the app's own list of actions.
+  </HomeCard>
+  <HomeCard title="GitHub integration" href="/integrations/github/" icon="pull-request">
+    Pull requests on their issue, live via webhooks.
+  </HomeCard>
+</div>

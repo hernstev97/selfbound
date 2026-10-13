@@ -1,0 +1,50 @@
+---
+title: MCP tools
+description: Reference of every tool the XLR8 MCP server offers, with its purpose and parameters.
+sidebar:
+  order: 3
+---
+import McpTools from '../../../components/McpTools.astro';
+
+These are all the tools XLR8's MCP server offers. The page is generated from the server's tool list, so
+the descriptions below are the same ones your agent sees. Tools marked **read** never change anything; tools
+marked **write** do.
+
+## How agents refer to things
+
+- **Issues** by identifier, such as `ACME-42`. Spelling is forgiving (`acme42` and `acme 42` work), and
+  old identifiers of issues that moved to another team still resolve.
+- **Teams** by key, such as `ACME`.
+- **Labels, projects and statuses** by name, case-insensitive. Each team has its own statuses; agents
+  can also use a status key (`triage`, `backlog`, `todo`, `in_progress`, `in_review`, `done`, `canceled`,
+  `duplicate`), which maps to the team's matching status.
+- **Priorities** as a word (`urgent`, `high`, `medium`, `low`, `none`) or a number from 0 to 4.
+
+Errors such as an unknown label or a status the workflow doesn't allow come back as a readable message,
+so the agent can correct itself and try again.
+
+## Find and read issues
+
+<McpTools group="find" />
+
+## Create and change issues
+
+<McpTools group="change" />
+
+## Comments
+
+<McpTools group="comments" />
+
+## Sprints
+
+<McpTools group="sprints" />
+
+## Knowledge pages
+
+These tools work in teams that have a knowledge area.
+
+<McpTools group="knowledge" />
+
+## Look up teams, projects, labels and statuses
+
+<McpTools group="lookup" />

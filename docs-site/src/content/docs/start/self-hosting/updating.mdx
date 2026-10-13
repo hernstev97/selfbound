@@ -1,0 +1,69 @@
+---
+title: Update your instance
+description: Pull a new version of XLR8 and deploy the backend and the web app in the right order.
+sidebar:
+  label: Updating
+  order: 4
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+XLR8 is early and changes often. New versions come from the `main` branch of the repository. An update
+means pulling the code and deploying the backend first, the web app second.
+
+<Aside type="caution">
+Breaking changes can happen at this stage. Before larger updates, make sure you have a recent backup
+(see [docs/backup.md](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md)).
+</Aside>
+
+## Update
+
+<Steps>
+
+1. **Pull the new version** and install its dependencies:
+
+   ```sh
+   git pull
+   pnpm install
+   ```
+
+2. **Deploy the backend:**
+
+   ```sh
+   node tooling/cloud.mjs deploy
+   ```
+
+3. **Check the health** at `https://happy-otter-123.convex.site/health`: `"ok": true`, `"devAuth": false`,
+   `"local": false`.
+
+4. **Deploy the web app:**
+
+   ```sh
+   node tooling/deploy-web.mjs
+   ```
+
+   If you host elsewhere, build and upload as described in
+   [Hosting elsewhere](/start/self-hosting/web-app/#hosting-elsewhere).
+
+</Steps>
+
+## Why the backend goes first
+
+An app that is still open keeps working against a newer backend. The other way round is not
+guaranteed: a new app may call backend functions that the old backend does not have yet. So the backend
+is always deployed before the web app when a change touches both.
+
+## What open apps do
+
+Open tabs and installed apps notice a new version when you return to them, at most every 10 minutes.
+
+- If nothing unsaved is open (no dialog, no text field in use, no changes waiting to be sent), the app
+  reloads by itself.
+- Otherwise it shows **New version of XLR8** with a **Reload** button, so you can finish first.
+
+If an old tab tries to load a part of the app that the new deploy removed, it reloads once.
+
+## Next steps
+
+- Changed something in the backend's environment variables? See the
+  [list of variables](/start/self-hosting/convex/#environment-variables). After changing
+  `CLERK_JWT_ISSUER_DOMAIN`, deploy the backend again.

@@ -7,7 +7,7 @@
 //
 // Signing in happens on the own sign-in page `/sign-in` (welcome.html, embedded Clerk form), which
 // returns to the same address. The app itself only loads clerk-js without UI. Once signed in, the
-// browser remembers it in the cookie SIGNED_IN_COOKIE; Vercel then picks between landing page and
+// browser remembers it in the cookie SIGNED_IN_COOKIE; Vercel then picks between sign-in page and
 // app under `/`.
 //
 // Offline: Clerk needs the network for `load()`. If the marker is set, the app shows the cache right
@@ -278,10 +278,10 @@ export class Auth {
     else location.assign(target);
   }
 
-  /** When signing out: no detour via the sign-in page, go to the landing page. */
+  /** When signing out: no detour via the sign-in page, go to `/`. */
   leaving = false;
 
-  /** Sign out and go to the landing page (without the marker Vercel serves the landing page under `/`). */
+  /** Sign out and go to `/` (without the marker Vercel serves the sign-in page there). */
   async signOut() {
     this.leaving = true;
     markSignedIn(false);

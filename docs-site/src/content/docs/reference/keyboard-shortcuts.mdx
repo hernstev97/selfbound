@@ -1,0 +1,131 @@
+---
+title: Keyboard shortcuts
+description: Every keyboard shortcut in XLR8, by area, plus the keys for menus, dialogs and text fields.
+sidebar:
+  order: 1
+---
+import { Aside } from '@astrojs/starlight/components';
+import ShortcutTable from '../../../components/ShortcutTable.astro';
+import Kbd from '../../../components/Kbd.astro';
+
+Nearly everything in XLR8 has a shortcut. The tables below come straight from the app's action list, so they match the version this site was built from. In the app, press <Kbd keys="?" /> to search the same list.
+
+<Aside type="note">
+**On a Mac, ⌘ takes the place of Ctrl** and ⌥ the place of Alt. The key caps on this page switch automatically when you read it on a Mac.
+</Aside>
+
+## How shortcuts work
+
+- **Single keys** like <Kbd keys="c" /> or <Kbd keys="s" /> act on what is focused or selected. In a list, that is the focused row, or all selected rows if you have selected some.
+- **Sequences** like <Kbd keys="g i" /> are two keys in a row: press G, release it, then press I within about 1.2 seconds.
+- **Context matters.** A shortcut only does something where its action makes sense. <Kbd keys="e" />, for example, edits the description on an issue page, edits the text on a knowledge page, and removes an entry on the inbox page.
+- **While you type** in a text field, letters stay letters. Press <Kbd keys="escape" /> to leave the field; the shortcuts work again.
+
+## General
+
+<ShortcutTable sections={['General']} />
+
+<Kbd keys="mod+k" /> opens the command menu. Every action on this page is also there, so you can search for it by name if you forget the key.
+
+## Navigation
+
+<ShortcutTable sections={['Navigation']} />
+
+On an issue page, <Kbd keys="j" /> and <Kbd keys="k" /> step to the next and previous issue of the list you came from. In a list, <Kbd keys="home" /> and <Kbd keys="end" /> jump to the first and last issue.
+
+## Issue
+
+<ShortcutTable sections={['Issue']} />
+
+**Peek:** a short press on <Kbd keys="space" /> opens a floating preview of the focused issue and leaves it open; press it again to close it. Hold <Kbd keys="space" /> instead, and the preview closes when you let go.
+
+**Move issue up/down** only works when the list is sorted manually and not grouped.
+
+## Selection
+
+<ShortcutTable sections={['Selection']} />
+
+## View
+
+<ShortcutTable sections={['View']} />
+
+On a board, <Kbd keys="arrowleft" /> and <Kbd keys="arrowright" /> move the focus between columns. <Kbd keys="t" /> collapses or expands the group of the focused issue when the list is grouped.
+
+## Triage
+
+These keys work in Triage and in the Inbox.
+
+<ShortcutTable sections={['Triage']} />
+
+<Kbd keys="1" /> asks for the status the issue should get after triage, or for another team to accept it into. <Kbd keys="2" /> marks the issue as a duplicate and asks for the original. <Kbd keys="3" /> declines it: the issue is canceled and marked as read.
+
+## Inbox
+
+These keys work on the inbox page and in the context menu of an inbox entry. Removing an entry only takes it out of the inbox; the issue itself stays as it is.
+
+<ShortcutTable sections={['Inbox']} />
+
+## Knowledge
+
+<ShortcutTable sections={['Wiki']} />
+
+For formatting while you write (bold, lists, links and so on), see [Editing text](/using/editing-text/).
+
+## Sprint planning and completion
+
+These keys work on the sprint planning page and on the page where you complete a sprint. See
+[Sprints](/concepts/sprints/).
+
+<ShortcutTable sections={['Sprint']} />
+
+## In the command menu and pickers
+
+The command menu, the issue search and the pickers for status, priority, labels and so on share these keys:
+
+| Key | Effect |
+|---|---|
+| <Kbd keys={['arrowdown', 'tab', 'mod+j']} /> | next entry |
+| <Kbd keys={['arrowup', 'shift+tab', 'mod+p']} /> | previous entry |
+| <Kbd keys="enter" /> | choose the entry |
+| <Kbd keys="1" /> to <Kbd keys="9" /> | status picker: pick a status directly, in workflow order (only while the search field is empty) |
+| <Kbd keys="0" /> to <Kbd keys="4" /> | priority picker: 0 No priority, 1 Urgent, 2 High, 3 Medium, 4 Low (only while the search field is empty) |
+| <Kbd keys="backspace" /> | in the filter menu, with an empty search field: back from a field's values to the list of fields |
+| <Kbd keys="escape" /> | one level back, or close the menu |
+
+## In the context menu
+
+Right-click an issue to open its context menu. Then:
+
+| Key | Effect |
+|---|---|
+| <Kbd keys={['arrowdown', 'arrowup']} /> | move through the entries |
+| <Kbd keys="arrowright" /> | open the submenu (status, priority, labels …) |
+| <Kbd keys="arrowleft" /> | back out of the submenu |
+| <Kbd keys="enter" /> | choose the entry |
+| <Kbd keys="escape" /> | close the menu |
+
+## In the New issue dialog
+
+| Key | Effect |
+|---|---|
+| <Kbd keys="mod+enter" /> | create the issue and close the dialog |
+| <Kbd keys="mod+shift+enter" /> | create the issue and keep the dialog open for the next one; team, status, labels and the other properties stay |
+| <Kbd keys="escape" /> | close the dialog. If you typed something, it is kept as a draft (Go to: Drafts in the command menu). |
+
+## In text fields
+
+<Kbd keys="escape" /> leaves a text field (title, description, comment) and keeps what you typed.
+
+In **Search in this view** (<Kbd keys="mod+f" />), <Kbd keys="enter" /> or <Kbd keys="arrowdown" /> goes back to the list and keeps the search; <Kbd keys="escape" /> closes the search and clears it.
+
+## What Escape does
+
+<Kbd keys="escape" /> always closes the innermost thing first: an open menu, picker or dialog. Outside of those, each press undoes one step, in this order:
+
+1. close the navigation drawer (on a phone)
+2. close the issue shown next to the inbox (on wide screens)
+3. close the peek
+4. close the pull request shown next to the issue
+5. leave the issue page and go back to the list
+6. clear the selection
+7. close Search in this view

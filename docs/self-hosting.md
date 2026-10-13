@@ -126,7 +126,7 @@ node tooling/deploy-web.mjs
 
 It builds the app with `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`,
 `VITE_XLR8_BRANCH_PREFIX` and `XLR8_PUBLIC_URL` derived from the instance settings, checks the bundle (no
-local test token or local address, production URL present, landing page does not load the app), copies
+local test token or local address, production URL present, sign-in page does not load the app), copies
 the result to `deploy/web/`, writes `deploy/web/vercel.json` from `deploy/vercel.base.json` plus the host
 rules for `mcpHosts` and `redirectHosts`, links the folder to your Vercel project on first use and deploys it to
 production as a static site. `--build` stops after building. Then add `xlr8.example.com` as a domain of
@@ -149,9 +149,9 @@ Make sure `app/.env.local` (written by `pnpm dev`) does not leak a `VITE_DEV_TOK
 `VITE_DEV_TOKEN=` (empty) in the build command or delete the file. Upload `app/dist/` and reproduce the
 rules from `deploy/vercel.base.json`:
 
-1. `/` **without** the cookie `xlr8_signed_in` → serve `/welcome.html` (landing page). The app sets the
+1. `/` **without** the cookie `xlr8_signed_in` → serve `/welcome.html` (the sign-in page). The app sets the
    cookie after sign-in and removes it on sign-out; it only selects the page and is not a credential.
-2. `/sign-in` → serve `/welcome.html` (its script shows the embedded Clerk form on this path).
+2. `/sign-in` → serve `/welcome.html` (the same page: the embedded Clerk form).
 3. Every other path except `/assets/…` → serve `/app.html` (single-page app fallback; deep links such as
    `/issue/ACME-106` must work).
 4. Optional: a custom MCP host proxied to `https://happy-otter-123.convex.site/<path>`
@@ -167,7 +167,7 @@ The app is named `app.html` instead of `index.html` because many hosts (Vercel i
 
 ## 5. First sign-in
 
-1. Open `https://xlr8.example.com/`: the landing page appears. Click "Sign in" and sign in with the user
+1. Open `https://xlr8.example.com/`: the sign-in page appears. Sign in with the user
    from step 1.4.
 2. You land in the app with an empty workspace. Create a team to start, or import from Linear
    ([architecture/import.md](architecture/import.md)).

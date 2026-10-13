@@ -262,7 +262,7 @@ Relations: no self-reference, no second relation of the same type between the sa
 
 **Sprint rules:**
 
-- Sprints span all teams. A new sprint is in state `planning`, by default 14 days from the next Monday (Europe/Berlin), named "Sprint <number>", numbered sequentially.
+- Sprints span all teams, on purpose (one person, one week, one capacity; [decisions](../decisions.md#one-sprint-for-all-teams)). A new sprint is in state `planning`, by default 14 days from the next Monday (Europe/Berlin), named "Sprint <number>", numbered sequentially.
 - **Start:** only `sprints.start` makes a sprint active, and only from `planning`. If one is already running → `conflict`. Without a start there is no running sprint.
 - **Adding:** in `planning` → `kind: 'planned'`, in `active` → `'late'` (whether the owner or an agent adds it), `closed` → `invalid`. An issue belongs to at most one sprint that is not closed; moving it closes the old entry (`removedAt`), unless the old sprint is closed: then its entry stays unchanged. Deleted issues cannot be added.
 - **Reopened:** an issue that still points to a closed sprint can be detached with `issues.update` `{ sprintId: null }` or put into a new sprint via `sprints.add`. The entry in the closed sprint (`outcome`, `points`) stays as it is in both cases. `sprints.remove` on a closed sprint stays `invalid`.

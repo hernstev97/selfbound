@@ -1,0 +1,110 @@
+---
+title: Knowledge
+description: Each team can have a knowledge area, a tree of Markdown pages with topics and sources, linked with issues in both directions.
+sidebar:
+  order: 8
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+Next to its issues, a team can keep a knowledge area: pages for documentation, decisions, research notes and
+how-tos. Pages are Markdown, nest into a tree, and link to issues and to each other. Agents can read and write
+them too, so what one session found out is there for the next.
+
+<Screenshot name="knowledge" alt="A team's knowledge area: the page tree on the left, a page with title, topics, text and sources on the right" />
+
+## Turn on knowledge for a team
+
+The knowledge area is off for a new team unless you chose **Issues and knowledge** or **Knowledge only** when
+you [added it](/concepts/teams/#add-a-team). To turn it on later:
+
+<Steps>
+1. Open the team's settings (<Kbd keys="o s" /> for the current team).
+2. Under **Knowledge**, choose **Alongside issues**. **Knowledge only** turns the team into a pure knowledge
+   team without issues, see [Knowledge-only teams](/concepts/teams/#knowledge-only-teams).
+</Steps>
+
+If you press <Kbd keys="g w" /> in a team without a knowledge area, XLR8 says so and offers a shortcut to the
+team settings. Once it is on, **Knowledge** appears under the team in the sidebar. You can switch it **Off** again only while the area has no
+pages.
+
+## Open it
+
+Press <Kbd keys="g w" /> (**Go to: Knowledge**) to open the knowledge area of the current team, or click
+**Knowledge** under the team in the sidebar. The left side shows the team's **Pages** as a tree; the right side
+shows what was **Recently changed**, or the page you opened.
+
+Every page has a permanent link that does not change when you move it in the tree. **Copy link** on the page
+copies it.
+
+## Pages
+
+Click **New page** to create a page at the top level, or the plus on a row in the tree (**Create subpage**) to
+create one below it. A page has:
+
+- **A title.** Click it to rename; <Kbd keys="enter" /> saves.
+- **Text** in Markdown, edited like an issue description: click into the text or press <Kbd keys="e" />. Type `/`
+  for blocks, paste images with <Kbd keys="mod+v" />. XLR8 saves automatically.
+- **A project** (optional), one of the team's [projects](/concepts/projects/). The projects overview counts the
+  pages per project and links to them.
+- **Topics** (optional), see below.
+- **Sources** (optional), see below.
+- **Subpages**, listed below the text.
+
+Drag pages in the tree to reorder them: drop on the upper or lower edge of a row to place the page before or
+after it, or on the middle to make it a subpage.
+
+### Topics
+
+Topics tag pages, much like [labels](/concepts/labels/) tag issues, but they are separate from labels and belong
+to one team. Add a topic below the page title; type a name that doesn't exist yet and choose **Create topic** to
+make a new one.
+
+Filter the tree by project or topic with the filters above it (**All projects**, **All topics**). While a filter
+is set, the tree becomes a flat list of matching pages.
+
+### Sources
+
+Under **Sources**, record where the knowledge comes from: a **URL** or a title, plus optionally the author or
+publisher, the publication date, the date you accessed it, and a note on what the source supports. Sources can
+be edited, reordered and removed.
+
+### Revisions
+
+**Revisions** in the page header lists earlier versions of the text. Before the text is overwritten, XLR8 saves
+the old version: at most every 10 minutes while one author keeps editing, and always when a different author or
+an agent changes it. Open one to preview it, and click
+**Restore this revision** to make it the current text again. The text it replaces becomes a revision itself, so
+nothing is lost.
+
+## Links between pages and issues
+
+To link to a page from an issue description, a comment or another page, type `/` in the editor and choose **Link
+wiki page**, or type `[[`. Pick the page, and XLR8 inserts a link with its title.
+
+In page text, you can mention issues by their identifier, such as `ACME-42`; it becomes a link.
+
+XLR8 tracks these links in both directions:
+
+- An issue shows a **Knowledge** section with the pages it links to (**linked**) and the pages that mention it
+  (**mentions this issue**).
+- A page shows where it is **Mentioned in**, and lists its **Mentioned issues**.
+
+Links keep working when an issue moves to another team or a page moves in the tree.
+
+## Search
+
+Search (<Kbd keys="/" />) also finds pages: by title and by text. Page hits appear in their own **Knowledge**
+section.
+
+## Trash
+
+**Move to trash** on a page deletes it together with all its subpages, with **Undo** right after. **Deleted** in
+the knowledge area lists what is in the trash; **Restore** brings a page back with its subpages. After 30 days,
+pages in the trash are deleted for good.
+
+<Aside type="note">
+Agents can create pages, add to them and edit them through MCP, but only you can delete and restore pages. See
+[Agents](/agents/overview/).
+</Aside>
