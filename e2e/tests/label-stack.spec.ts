@@ -13,7 +13,8 @@ let two = ''; // two short ones
 let one = ''; // one label
 let labelIds: string[] = [];
 
-test.beforeEach(async () => {
+// Once per file: removed issues stay in their bucket, and other specs only look at the first eight.
+test.beforeAll(async () => {
   const client = backend();
   const meta = await client.query(api.meta.get, {});
   const team = meta.teams.find((t) => t.key === 'ORB')!;
@@ -35,6 +36,9 @@ test.beforeEach(async () => {
 
 test.afterEach(async ({ page }) => {
   if (!page.isClosed()) await settled(page);
+});
+
+test.afterAll(async () => {
   const client = backend();
   for (let bucket = 0; ; bucket++) {
     const docs = await client.query(api.issues.bucket, { bucket });
