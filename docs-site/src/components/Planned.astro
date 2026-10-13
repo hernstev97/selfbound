@@ -1,0 +1,14 @@
+---
+// Marks a feature that does not exist yet. `issue` is the internal tracking id, kept as an
+// attribute for maintainers; readers cannot open it, so it is not shown.
+interface Props {
+  issue?: string;
+  title?: string;
+}
+const { issue, title = 'Planned' } = Astro.props;
+---
+
+<aside class="xl-planned" data-issue={issue} aria-label={title}>
+  <p class="xl-planned-title"><span class="xl-planned-badge">Planned</span>{title !== 'Planned' && <span>{title}</span>}</p>
+  <div class="xl-planned-body"><slot /></div>
+</aside>
