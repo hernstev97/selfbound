@@ -8,5 +8,7 @@
     "mcp.xlr8.example.com"
   ],
   "redirectHosts": [],
-  "branchPrefix": "your-github-login"
+  "branchPrefix": "your-github-login",
+  "siteUrl": "https://example.com",
+  "siteVercelProject": "xlr8-landing"
 }

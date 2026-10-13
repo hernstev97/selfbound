@@ -15,6 +15,8 @@
 //   mcpHosts              XLR8_MCP_HOSTS               mcp.xlr8.example.com (comma-separated)
 //   redirectHosts         XLR8_REDIRECT_HOSTS          old-domain.example (comma-separated, redirected to appUrl)
 //   branchPrefix          VITE_XLR8_BRANCH_PREFIX      your GitHub login (prefix of suggested branch names; optional)
+//   siteUrl               XLR8_SITE_URL                https://example.com (public landing page, site/; optional)
+//   siteVercelProject     XLR8_SITE_VERCEL_PROJECT     xlr8-landing (Vercel project of the landing page; optional)
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -25,7 +27,7 @@ export const INSTANCE_FILE = existsSync(LOCAL_FILE) || !existsSync(USER_FILE) ? 
 
 const list = (value) => (Array.isArray(value) ? value : String(value ?? '').split(',')).map((s) => String(s).trim()).filter(Boolean);
 
-/** @returns {{ convexDeployment?: string, appUrl?: string, clerkPublishableKey?: string, vercelProject?: string, vercelScope?: string, branchPrefix?: string, mcpHosts: string[], redirectHosts: string[] }} */
+/** @returns {{ convexDeployment?: string, appUrl?: string, clerkPublishableKey?: string, vercelProject?: string, vercelScope?: string, branchPrefix?: string, siteUrl?: string, siteVercelProject?: string, mcpHosts: string[], redirectHosts: string[] }} */
 export function loadInstance(env = process.env, file = INSTANCE_FILE) {
   const json = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
   const pick = (name, key) => env[name] || json[key] || undefined;
@@ -36,6 +38,8 @@ export function loadInstance(env = process.env, file = INSTANCE_FILE) {
     vercelProject: pick('XLR8_VERCEL_PROJECT', 'vercelProject'),
     vercelScope: pick('XLR8_VERCEL_SCOPE', 'vercelScope'),
     branchPrefix: pick('VITE_XLR8_BRANCH_PREFIX', 'branchPrefix'),
+    siteUrl: pick('XLR8_SITE_URL', 'siteUrl')?.replace(/\/$/, ''),
+    siteVercelProject: pick('XLR8_SITE_VERCEL_PROJECT', 'siteVercelProject'),
     mcpHosts: list(env.XLR8_MCP_HOSTS ?? json.mcpHosts),
     redirectHosts: list(env.XLR8_REDIRECT_HOSTS ?? json.redirectHosts),
   };

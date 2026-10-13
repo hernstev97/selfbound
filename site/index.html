@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <!--robots-->
+    <title>XLR8 · A keyboard-first issue tracker for solo developers and their AI agents</title>
+    <meta name="description" content="XLR8 is a fast, keyboard-first issue tracker for solo developers and their AI agents. MCP for agents, an inbox for their changes, GitHub pull requests on the issue. Self-hosted and open source (AGPL-3.0)." />
+    <link rel="canonical" href="__SITE_URL__/" />
+    <meta name="theme-color" content="#070709" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="XLR8" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:title" content="XLR8 · A keyboard-first issue tracker for solo developers and their AI agents" />
+    <meta property="og:description" content="Fast, keyboard-first, open to AI agents over MCP. Self-hosted and open source." />
+    <meta property="og:image" content="__SITE_URL__/brand/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="XLR8: the headline “The issue tracker for solo developers and their AI agents.” over a grid of dots." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="__SITE_URL__/brand/og.png" />
+    <script type="module" src="/src/main.ts"></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="top">
+      <a class="brand" href="/" aria-label="XLR8, home"><span class="logo" aria-hidden="true"></span></a>
+      <nav class="nav" aria-label="Links">
+        <a href="__DOCS__">Docs</a>
+        <a class="btn btn-ghost btn-sm" href="__GITHUB__">GitHub</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="title">
+        <div class="fx-wrap" aria-hidden="true"></div>
+        <div class="hero-inner">
+          <p class="eyebrow">Open source · Self-hosted</p>
+          <h1 id="title">The issue tracker for solo developers and their AI agents.</h1>
+          <p class="lead">XLR8 answers within a frame and runs from the keyboard. Your agents read and change issues over MCP, and every change lands in an inbox for you to review.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="__GITHUB__">View on GitHub</a>
+            <a class="btn btn-ghost" href="__DOCS__">Read the docs</a>
+          </div>
+        </div>
+        <figure class="shot">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="./src/assets/list-dark-1280.webp 1280w, ./src/assets/list-dark-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" />
+            <img src="./src/assets/list-light-1280.webp" srcset="./src/assets/list-light-1280.webp 1280w, ./src/assets/list-light-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" width="2560" height="1600" decoding="async" fetchpriority="low" alt="XLR8 issue list for one team, grouped by status, with the team sidebar on the left. Sample data." />
+          </picture>
+          <figcaption>Sample data.</figcaption>
+        </figure>
+      </section>
+
+      <section class="block" aria-labelledby="what">
+        <h2 id="what" class="center">Built for one person and the agents who work for them</h2>
+        <div class="points">
+          <article class="point">
+            <p class="stat" aria-hidden="true">20–35 ms<small>p95</small></p>
+            <h3>Fast with 10,000 issues</h3>
+            <p>The workspace lives in memory and syncs in the background. Opening, filtering and changing issues takes 20–35 ms at the 95th percentile, measured with 10,000 issues. The budget is 100 ms.</p>
+          </article>
+          <article class="point">
+            <p class="keys"><kbd>J</kbd><kbd>K</kbd><span>move</span><kbd>S</kbd><span>status</span><kbd>C</kbd><span>create</span><kbd aria-label="Control">Ctrl</kbd><kbd>K</kbd></p>
+            <h3>Runs on the keyboard</h3>
+            <p>Every action has a key and a command menu entry, and undo covers nearly everything. The mouse is optional.</p>
+          </article>
+          <article class="point">
+            <p class="tools"><code>search_issues</code><code>create_issues</code><code>set_status</code><code>add_comment</code></p>
+            <h3>Agents work in it over MCP</h3>
+            <p>Claude, ChatGPT and coding agents read and update issues through MCP, each with its own key or connector. The history shows which agent changed what.</p>
+          </article>
+          <article class="point">
+            <div class="inbox" aria-hidden="true"><span><b></b>Agent created ORB-81</span><span><b></b>Agent created FLUX-44</span><span class="read"><b></b>Agent created PX-74</span></div>
+            <h3>An inbox for agent changes</h3>
+            <p>Issues that agents create wait in your inbox until you have looked at them. Read them, mark them read or remove them with a key.</p>
+          </article>
+          <article class="point">
+            <p class="pr" aria-hidden="true"><span class="pr-dot"></span>#51 <small>merged</small></p>
+            <h3>GitHub pull requests on the issue</h3>
+            <p>Linked pull requests show their state, checks and reviews on the issue, live through webhooks, and open full size inside XLR8.</p>
+          </article>
+          <article class="point">
+            <div class="sprint" aria-hidden="true"><span>ORBIT<i class="p72"></i></span><span>NOVA<i class="p45"></i></span><span>FLUX<i class="p88"></i></span></div>
+            <h3>One sprint across all projects</h3>
+            <p>Plan two weeks once, for every team at the same time. A sprint only closes when each open issue has a decision: next sprint, backlog or cancel.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="block agents" aria-labelledby="agents">
+        <div class="agents-copy">
+          <p class="label">Agents</p>
+          <h2 id="agents">Hand work to agents and keep the decisions.</h2>
+          <p>Point Claude Code, Codex or any MCP client at your instance. Agents create and update issues, comment, search and write knowledge pages; there is no tool for teams. Each one has its own key, its own rate limit and its own name in the history.</p>
+          <p>What they create goes to your inbox. You step through it with <kbd>J</kbd> and <kbd>K</kbd>, remove what is done with <kbd>Backspace</kbd>, and move on.</p>
+        </div>
+        <figure class="shot shot-narrow">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="./src/assets/inbox-dark-1280.webp 1280w, ./src/assets/inbox-dark-2560.webp 2560w" sizes="(max-width: 900px) calc(100vw - 44px), 640px" />
+            <img src="./src/assets/inbox-light-1280.webp" srcset="./src/assets/inbox-light-1280.webp 1280w, ./src/assets/inbox-light-2560.webp 2560w" sizes="(max-width: 900px) calc(100vw - 44px), 640px" width="2560" height="1600" loading="lazy" decoding="async" alt="XLR8 inbox with issues created by coding agents on the left and the selected issue on the right. Sample data." />
+          </picture>
+          <figcaption>The inbox. Sample data.</figcaption>
+        </figure>
+      </section>
+
+      <section class="block" aria-labelledby="linear">
+        <h2 id="linear" class="center">How XLR8 differs from Linear</h2>
+        <p class="sub center">Linear is a polished tracker for teams. XLR8 borrows the speed and the keyboard and makes different choices elsewhere.</p>
+        <div class="table-wrap">
+          <table class="compare">
+            <thead>
+              <tr><th scope="col"><span class="sr-only">Topic</span></th><th scope="col">Linear</th><th scope="col">XLR8</th></tr>
+            </thead>
+            <tbody>
+              <tr><th scope="row">Where it runs</th><td>Hosted service</td><td>On your own accounts: your Convex project, your Clerk application, your static host</td></tr>
+              <tr><th scope="row">Source</th><td>Closed</td><td>Open, AGPL-3.0</td></tr>
+              <tr><th scope="row">Built for</th><td>Teams: members, assignees, seats</td><td>One owner and their agents: no assignees, no seats</td></tr>
+              <tr><th scope="row">Sprints</th><td>Cycles per team</td><td>One sprint across all teams</td></tr>
+              <tr><th scope="row">Cost</th><td>Free and paid plans, priced per seat</td><td>No licence fee; you pay only for the services you host on</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="block host" aria-labelledby="host">
+        <div>
+          <p class="label">Self-hosted</p>
+          <h2 id="host">Run it on your own accounts.</h2>
+          <p>Each instance belongs to one owner and uses its own Convex project, Clerk application and static host. Nothing is shared with anyone else, and your data stays in your account. To try it first, one command starts a local backend with sample data and no account.</p>
+          <div class="actions start">
+            <a class="btn btn-primary" href="__GITHUB__">Get the code</a>
+            <a class="btn btn-ghost" href="__DOCS__">Self-hosting guide</a>
+          </div>
+        </div>
+        <pre class="code" tabindex="0"><code>git clone __GITHUB__.git xlr8
+cd xlr8
+pnpm install
+pnpm dev</code></pre>
+      </section>
+
+      <section class="block built" aria-labelledby="built">
+        <p class="label">How it was built</p>
+        <h2 id="built">Written by AI agents, directed by a person.</h2>
+        <p>XLR8 was built with AI coding agents. Product, design and review by <strong>Steven Hernandez</strong>, who decided what to build and how it should feel, and checked every change before it shipped.</p>
+      </section>
+    </main>
+
+    <footer>
+      <span>© 2026 Steven Hernandez and contributors · <a href="__GITHUB__/blob/main/LICENSE">AGPL-3.0</a></span>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="__GITHUB__">GitHub</a>
+        <a href="__DOCS__">Docs</a>
+      </nav>
+      <p class="legal">Linear is a trademark of its owner. XLR8 is an independent project and is not affiliated with or endorsed by Linear.</p>
+    </footer>
+  </body>
+</html>
