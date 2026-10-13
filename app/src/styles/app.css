@@ -1322,8 +1322,6 @@ button.crumb:hover {
 .group-cols > .c-labels {
   width: var(--cw-labels, 0px);
   margin-left: calc(var(--labels, 0) * 8px);
-  /* Hidden: no padding either, it would keep the cell open. */
-  padding-right: calc(var(--w) * var(--labels, 0));
   opacity: var(--labels, 0);
 }
 .row-end {
@@ -1388,50 +1386,36 @@ button.crumb:hover {
   margin-right: 5px;
 }
 /* ---- Label stack (list column and board card; markup: `labelStackHtml`, lib/rowHtml.ts).
-   Whole chips in label order, as many as fit; the rest wraps into the clipped second line, so no
-   label is ever cut mid-word (only a first label wider than the whole cell ends in "…"). Each
-   label is followed by a "+n" chip (dots in the colors of the labels it stands for, then the
-   count). That chip takes no room (negative margin) and the next label covers it; it shows once
-   that label has wrapped away. The cell's right padding is the room for it.
-   `d1…d3`: dots on the chip, `--n`: digits of the count, `--w`: width of the chip. */
+   Up to three chips in their natural width, each one covering the end of the one before it
+   (the chip's right padding is the part that disappears under it). When the room is short the
+   chips shrink (flex) and slide further under their right neighbor, down to the dot; the last one
+   stays whole and gets the "…" if it alone is too wide. More labels: one "+n" chip with dots at
+   the end. `d1…d3`: dots on that chip, `--n`: digits of its count, `--w`: its width. */
 .lstack {
-  --w: calc(var(--dw, 0px) + 18px + (var(--n, 1) + 1) * 1ch);
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
   align-items: center;
   height: 24px;
-  padding-right: var(--w);
   overflow: hidden;
-}
-.lstack.d1 {
-  --dw: 8px;
-}
-.lstack.d2 {
-  --dw: 14px;
-}
-.lstack.d3 {
-  --dw: 20px;
-}
-/* One label: nothing to count, the whole cell is for it. */
-.lstack.one,
-.lstack:empty {
-  --w: 0px;
 }
 .lstack .label {
-  position: relative;
   display: block;
-  flex: none;
-  width: fit-content;
-  /* Margin included at most the full width, otherwise the "+n" chip behind a long first label would wrap away with it. */
-  max-width: calc(100% - 4px);
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 30px;
+  max-width: none;
   height: 24px;
-  margin-right: 4px;
-  padding: 0 8px 0 6px;
+  padding: 0 12px 0 6px;
   line-height: 24px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
   background: var(--row-bg);
+}
+.lstack .label:last-child {
+  padding-right: 8px;
+  text-overflow: ellipsis;
+}
+.lstack > :not(:first-child) {
+  margin-left: -8px;
 }
 .lstack .label::before {
   content: '';
@@ -1442,17 +1426,13 @@ button.crumb:hover {
   border-radius: 50%;
   background: oklch(0.66 0.16 var(--hue));
 }
-/* The last label has no chip behind it: it may use the room kept for the chip. */
-.lstack .label:last-child {
-  margin-right: calc(-1 * var(--w));
-}
 .lstack .more {
+  --w: calc(var(--dw, 0px) + 18px + (var(--n, 1) + 1) * 1ch);
   position: relative;
   flex: none;
   box-sizing: border-box;
   width: var(--w);
   height: 24px;
-  margin-right: calc(-1 * var(--w));
   padding-right: 7px;
   border-radius: 9999px;
   box-shadow: inset 0 0 0 1px var(--border-strong);
@@ -1465,6 +1445,15 @@ button.crumb:hover {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
+}
+.lstack .more.d1 {
+  --dw: 8px;
+}
+.lstack .more.d2 {
+  --dw: 14px;
+}
+.lstack .more.d3 {
+  --dw: 20px;
 }
 .lstack .more::before {
   content: '';
@@ -1489,14 +1478,9 @@ button.crumb:hover {
     radial-gradient(circle at 10px 6px, oklch(0.66 0.16 var(--c1)) 3.7px, var(--row-bg) 4.3px 5.3px, transparent 5.8px),
     radial-gradient(circle at 16px 6px, oklch(0.66 0.16 var(--c2)) 4px, transparent 4.5px);
 }
-/* In the list column the chips sit left-aligned like the other columns. */
-.c-labels.lstack {
-  justify-content: flex-start;
-}
+/* On the board card the stack takes its content width and gives way when other chips need room. */
 .card-labels {
-  /* Takes what the other chips leave (definite width, so the percentage below resolves), but no more than its content. */
-  flex: 1 1 0;
-  max-width: max-content;
+  flex: 0 1 auto;
   min-width: 0;
   /* The card's bottom row is 18 px high and clips. */
   height: 18px;
@@ -1507,7 +1491,13 @@ button.crumb:hover {
   line-height: 18px;
 }
 .card-bottom .card-labels .label {
-  max-width: calc(100% - 4px);
+  flex: 0 1 auto;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.card-bottom .card-labels .label:last-child {
+  text-overflow: ellipsis;
 }
 .card-labels .more::before {
   top: 3px;

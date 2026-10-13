@@ -42,32 +42,35 @@ export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'estimate', 'due'] as
 /** At the far right, at any width: date columns. */
 export const ROW_END = ['created', 'updated'] as const satisfies readonly DisplayProp[];
 
-/** Labels per stack; any further ones only count towards "+n". */
+/** Label chips per stack; any further labels are counted in one "+n" chip. */
 const STACK_MAX = 3;
 
 /**
- * Label stack (list column and board card, styles: app.css "Label stack"): first label, then as
- * many more as fit as whole chips. Each label is followed by a "+n" chip for everything after it;
- * the next label covers that chip (negative margin), so it only shows once that label no longer
- * fits and wraps into the clipped second line. No label is ever cut mid-word. `cls` goes on the wrapper; a tap on it opens the label picker
- * (`data-cell`, see `cellOf`: how touch screens get to the full names).
+ * Label stack (list column and board card, styles: app.css "Label stack"): up to three chips in
+ * their natural width, each overlapping the end of the one before it. When the room is short the
+ * chips shrink and slide under their right neighbor (the last one stays whole), down to the colored
+ * dot. More than three labels end in one "+n" chip with overlapping dots; the names of those are its
+ * tooltip. `cls` goes on the wrapper; a tap on it opens the label picker (`data-cell`, see `cellOf`:
+ * how touch screens get to the full names).
  */
 export function labelStackHtml(labels: RowState['labels'], cls: string) {
   const n = labels.length;
   if (!n) return `<span class="${cls}"></span>`;
+  const shown = Math.min(n, STACK_MAX);
   let html = '';
-  for (let k = 0, shown = Math.min(n, STACK_MAX); k < shown; k++) {
+  for (let k = 0; k < shown; k++) {
     const label = labels[k];
     html += `<span class="pill label" style="--hue:${label.hue}" title="${esc(label.name)}">${esc(label.name)}</span>`;
-    const rest = n - 1 - k;
-    if (rest <= 0) continue;
+  }
+  const rest = n - shown;
+  if (rest > 0) {
     let hues = '';
-    for (let i = 0; i < Math.min(rest, 3); i++) hues += `--c${i}:${labels[k + 1 + i].hue};`;
-    let names = labels[k + 1].name;
-    for (let i = k + 2; i < n; i++) names += `, ${labels[i].name}`;
+    for (let i = 0; i < Math.min(rest, 3); i++) hues += `--c${i}:${labels[shown + i].hue};`;
+    let names = labels[shown].name;
+    for (let i = shown + 1; i < n; i++) names += `, ${labels[i].name}`;
     html += `<span class="more d${Math.min(rest, 3)}" style="--n:${String(rest).length};${hues}" title="${esc(names)}">+${rest}</span>`;
   }
-  return `<span class="${cls} lstack${n === 1 ? ' one' : ` d${Math.min(n - 1, 3)}`}" data-cell="labels" style="--n:${String(n - 1).length}">${html}</span>`;
+  return `<span class="${cls} lstack" data-cell="labels">${html}</span>`;
 }
 
 /**

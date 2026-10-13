@@ -1,13 +1,16 @@
-// Label chips in list rows and board cards (XLR8-60): whole chips as long as they fit, never cut
-// mid-word; what no longer fits is counted in a "+n" chip whose tooltip names the rest; a click on
-// the labels opens the label picker (touch screens have no tooltip).
-import { expect, test, type Locator, type Page } from '@playwright/test';
+// Label chips in list rows and board cards (XLR8-60): up to three chips in their natural width, each
+// overlapping the end of the one before it; when the room is short they shrink and slide under
+// their neighbor, never truncated while there is room; further labels in one "+n" chip whose tooltip
+// names them; a tap on the labels opens the label picker (touch has no tooltip).
+import { expect, test, type Locator } from '@playwright/test';
 import { api, backend, open, settled } from '../support/helpers.ts';
 
 const TAG = 'Label-stack-test';
 const NAMES = ['Alpha', 'Beta Testing', 'Gamma', 'Delta Longer Name', 'Epsilon'];
 
-let title = '';
+let many = ''; // all five labels
+let two = ''; // two short ones
+let one = ''; // one label
 let labelIds: string[] = [];
 
 test.beforeEach(async () => {
@@ -19,8 +22,15 @@ test.beforeEach(async () => {
   // Short suffix: label names stay unique but about as wide as real ones.
   const suffix = (stamp % 1296).toString(36);
   for (const [i, name] of NAMES.entries()) labelIds.push((await client.mutation(api.labels.create, { name: `${name} ${suffix}`, hue: 40 + i * 60 })).labelId);
-  title = `Stack ${stamp} ${TAG}`;
-  await client.mutation(api.issues.create, { issues: [{ teamId: team._id, title, status: 'todo', labelIds: labelIds as never }] });
+  [many, two, one] = [`Many ${stamp} ${TAG}`, `Two ${stamp} ${TAG}`, `One ${stamp} ${TAG}`];
+  const ids = (...i: number[]) => i.map((n) => labelIds[n]) as never;
+  await client.mutation(api.issues.create, {
+    issues: [
+      { teamId: team._id, title: many, status: 'todo', labelIds: ids(0, 1, 2, 3, 4) },
+      { teamId: team._id, title: two, status: 'todo', labelIds: ids(0, 2) },
+      { teamId: team._id, title: one, status: 'todo', labelIds: ids(0) },
+    ],
+  });
 });
 
 test.afterEach(async ({ page }) => {
@@ -35,65 +45,60 @@ test.afterEach(async ({ page }) => {
   for (const labelId of labelIds) await client.mutation(api.labels.update, { labelId: labelId as never, archived: true });
 });
 
-/** What a stack shows: whole chips, the "+n" chip that is not covered, and anything cut. */
+/** What a stack shows: its chips, whether their text is cut, and whether the next chip covers the cut. */
 async function inspect(stack: Locator) {
   return await stack.evaluate((el) => {
     const box = el.getBoundingClientRect();
-    const visible = (chip: Element) => {
-      const b = chip.getBoundingClientRect();
-      // Wrapped into the clipped second line, or squeezed out of the cell.
-      return b.width > 0 && b.top < box.bottom - 1;
-    };
-    const labels = [...el.querySelectorAll<HTMLElement>('.label')].filter(visible);
-    const covered = (chip: Element) => {
-      const b = chip.getBoundingClientRect();
-      const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
-      return !hit || !chip.contains(hit);
-    };
-    const more = [...el.querySelectorAll<HTMLElement>('.more')].filter((chip) => visible(chip) && !covered(chip));
+    const chips = [...el.children] as HTMLElement[];
     return {
-      total: el.querySelectorAll('.label').length,
-      labels: labels.map((l) => l.textContent),
-      cut: labels.filter((l) => l.scrollWidth > l.clientWidth || l.getBoundingClientRect().right > box.right + 0.5).map((l) => l.textContent),
-      more: more.map((m) => ({ text: m.textContent, title: m.title, outside: m.getBoundingClientRect().right > box.right + 0.5 })),
+      labels: chips.filter((c) => c.classList.contains('label')).map((c) => c.textContent),
+      more: chips.filter((c) => c.classList.contains('more')).map((c) => ({ text: c.textContent, title: c.title })),
+      outside: chips.filter((c) => c.getBoundingClientRect().right > box.right + 0.5 || c.getBoundingClientRect().left < box.left - 0.5).map((c) => c.textContent),
+      // Text cut off: allowed only under the next chip (that is the overlap), never in the open.
+      cutInTheOpen: chips
+        .filter((c, i) => c.classList.contains('label') && c.scrollWidth > c.clientWidth && !(chips[i + 1] && chips[i + 1].getBoundingClientRect().left < c.getBoundingClientRect().right - 0.5))
+        .map((c) => c.textContent),
+      cut: chips.filter((c) => c.classList.contains('label') && c.scrollWidth > c.clientWidth).map((c) => c.textContent),
     };
   });
 }
 
-async function expectStack(stack: Locator) {
-  const s = await inspect(stack);
-  expect(s.cut, 'no label cut mid-word').toEqual([]);
-  expect(s.labels.length).toBeGreaterThan(0);
-  const dropped = NAMES.length - s.labels.length;
-  if (dropped === 0) expect(s.more).toEqual([]);
-  else {
-    expect(s.more).toHaveLength(1);
-    expect(s.more[0].text).toBe(`+${dropped}`);
-    expect(s.more[0].outside).toBe(false);
-    // The tooltip names everything that is not shown as a chip.
-    expect(s.more[0].title.split(', ')).toHaveLength(dropped);
-    for (const name of NAMES.slice(NAMES.length - dropped)) expect(s.more[0].title).toContain(name);
-  }
-  return s;
-}
+const rowStack = (page: Parameters<typeof open>[0], title: string) => page.getByTestId('issue-row').filter({ hasText: title }).locator('.c-labels');
+const cardStack = (page: Parameters<typeof open>[0], title: string) => page.getByTestId('issue-card').filter({ hasText: title }).locator('.lstack');
 
 for (const fontSize of ['normal', 'large']) {
-  test(`List row (${fontSize} font): whole chips, "+n" for the rest`, async ({ page }) => {
+  test(`List row, five labels (${fontSize} font): three chips overlap, "+2" names the rest`, async ({ page }) => {
     await page.addInitScript((size) => localStorage.setItem('xlr8:prefs', JSON.stringify({ fontSize: size })), fontSize);
     await open(page);
-    const stack = page.getByTestId('issue-row').filter({ hasText: title }).locator('.c-labels');
+    const stack = rowStack(page, many);
     await expect(stack).toBeVisible();
-    const s = await expectStack(stack);
-    // In 184 px not all five fit.
-    expect(s.labels.length).toBeLessThan(NAMES.length);
-    // The first label always stays.
-    expect(s.labels[0]).toContain(NAMES[0]);
+    const s = await inspect(stack);
+    expect(s.labels).toHaveLength(3);
+    expect(s.outside).toEqual([]);
+    expect(s.cutInTheOpen).toEqual([]);
+    // Three chips do not fit in 184 px: the first ones are cut under their neighbor.
+    expect(s.cut.length).toBeGreaterThan(0);
+    expect(s.more).toHaveLength(1);
+    expect(s.more[0].text).toBe('+2');
+    expect(s.more[0].title).toContain(NAMES[3]);
+    expect(s.more[0].title).toContain(NAMES[4]);
   });
 }
+
+test('Room enough: nothing is truncated (list row and card)', async ({ page }) => {
+  await open(page);
+  for (const stack of [rowStack(page, two), rowStack(page, one)]) expect((await inspect(stack)).cut).toEqual([]);
+  await open(page, '/team/ORB?layout=board');
+  for (const stack of [cardStack(page, two), cardStack(page, one)]) {
+    const s = await inspect(stack);
+    expect(s.labels.length).toBeGreaterThan(0);
+    expect(s.cut).toEqual([]);
+  }
+});
 
 test('List row: a mouse click on the labels is a click on the row, no picker', async ({ page }) => {
   await open(page);
-  await page.getByTestId('issue-row').filter({ hasText: title }).locator('.c-labels').click();
+  await rowStack(page, many).click();
   await expect(page.getByTestId('palette')).toHaveCount(0);
 });
 
@@ -102,27 +107,30 @@ test.describe('Touch', () => {
 
   test('List row: a tap on the labels opens the label picker with the full names', async ({ page }) => {
     await open(page);
-    await page.getByTestId('issue-row').filter({ hasText: title }).locator('.c-labels').tap();
+    await rowStack(page, many).tap();
     await expect(page.getByTestId('palette')).toBeVisible();
     await expect(page.getByTestId('palette-item').filter({ hasText: NAMES[3] })).toBeVisible();
   });
 
   test('Board card: a tap on the labels opens the label picker', async ({ page }) => {
     await open(page, '/team/ORB?layout=board');
-    await page.getByTestId('issue-card').filter({ hasText: title }).locator('.lstack').tap();
+    await cardStack(page, many).tap();
     await expect(page.getByTestId('palette')).toBeVisible();
     await expect(page.getByTestId('palette-item').filter({ hasText: NAMES[4] })).toBeVisible();
   });
 });
 
 for (const width of [1440, 412, 360]) {
-  test(`Board card at ${width} px: whole chips, "+n" for the rest`, async ({ page }) => {
+  test(`Board card at ${width} px: chips stay inside the card, overlap instead of truncating`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await open(page, '/team/ORB?layout=board');
-    const card = page.getByTestId('issue-card').filter({ hasText: title });
+    const card = page.getByTestId('issue-card').filter({ hasText: many });
     await expect(card).toBeVisible();
-    const s = await expectStack(card.locator('.lstack'));
-    expect(s.labels[0]).toContain(NAMES[0]);
+    const s = await inspect(cardStack(page, many));
+    expect(s.labels).toHaveLength(3);
+    expect(s.outside).toEqual([]);
+    expect(s.cutInTheOpen).toEqual([]);
+    expect(s.more.map((m) => m.text)).toEqual(['+2']);
     // Priority, status and the other chips of the bottom row stay inside the card.
     const inside = await card.evaluate((el) => {
       const box = el.getBoundingClientRect();
@@ -132,12 +140,8 @@ for (const width of [1440, 412, 360]) {
   });
 }
 
-async function hoverNames(page: Page) {
-  const row = page.getByTestId('issue-row').filter({ hasText: title });
-  return await row.locator('.label').evaluateAll((els) => els.map((e) => [e.textContent, e.getAttribute('title')]));
-}
-
 test('Every chip has its full name as tooltip', async ({ page }) => {
   await open(page);
-  for (const [text, tip] of await hoverNames(page)) expect(tip).toBe(text);
+  const tips = await rowStack(page, many).locator('.label').evaluateAll((els) => els.map((e) => [e.textContent, e.getAttribute('title')]));
+  for (const [text, tip] of tips) expect(tip).toBe(text);
 });
