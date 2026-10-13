@@ -1,0 +1,121 @@
+---
+title: Self-hosting
+description: What an XLR8 instance consists of, what you need, and the order of the setup steps.
+sidebar:
+  label: Overview
+  order: 0
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import Planned from '../../../../components/Planned.astro';
+
+Each XLR8 instance belongs to one owner and runs on accounts you control: a Convex project for the
+backend, a Clerk application for sign-in, and a static host for the web app. This page gives you the
+overview; the pages after it walk through each part.
+
+<Planned issue="XLR8-47">
+The setup is manual today: you create the accounts, copy values between them and run a few scripts. A
+guided setup script that does most of this for you is planned.
+</Planned>
+
+## What an instance consists of
+
+| Part | Service | Example address | What it does |
+|---|---|---|---|
+| Web app | a static host, for example Vercel | `https://xlr8.example.com` | serves the landing page, the sign-in page and the app |
+| Sign-in | a Clerk application (production instance) | `https://clerk.xlr8.example.com` | shows the sign-in form, issues tokens |
+| Backend | a Convex project (production deployment) | `https://happy-otter-123.convex.cloud` | database and backend functions |
+| HTTP endpoints | the same Convex deployment | `https://happy-otter-123.convex.site` | MCP for agents, GitHub webhook, health check |
+| Domain | yours | `xlr8.example.com` | points to the static host; Clerk needs DNS records under it |
+
+The examples in these docs use `xlr8.example.com` for the app, `clerk.xlr8.example.com` for Clerk and
+`happy-otter-123` for the Convex deployment. Replace them with your own values.
+
+## How the parts work together
+
+- Your browser loads the app as static files from your domain.
+- If you are not signed in, `/` shows the landing page. **Sign in** leads to `/sign-in`, where Clerk's
+  sign-in form is embedded in the page.
+- After sign-in, the app asks Clerk for a token and sends it with every request to Convex.
+- Convex checks that the token comes from your Clerk instance, and XLR8 checks that your account is in
+  the `XLR8_OWNER_IDS` list. Anyone else is turned away.
+- Agents talk to the Convex HTTP endpoint (`…convex.site/mcp`) directly, with their own key or as an
+  OAuth connector.
+
+## What you need
+
+- **Node.js 24 and pnpm 11** (`corepack enable` provides the pinned pnpm version), and a clone of the
+  repository with `pnpm install` done. The deploy scripts run from it.
+- **A [Convex](https://convex.dev) account.** The free plan is enough for one person.
+- **A [Clerk](https://clerk.com) account.** A Clerk production instance needs a domain you control,
+  because Clerk serves its sign-in API from `clerk.<your domain>`.
+- **A static host.** The repository ships a deploy script for [Vercel](https://vercel.com). Any host
+  that can rewrite paths based on a cookie works too.
+- **Optional:** a GitHub token for the [pull request integration](/integrations/github/) and a GitHub
+  repository for nightly backups.
+
+## The instance settings file
+
+The deploy scripts read the non-secret settings of your instance from a JSON file. Copy the example
+and fill it in as you go through the setup:
+
+```sh
+cp deploy/instance.example.json deploy/instance.json
+```
+
+`deploy/instance.json` is ignored by Git. If it does not exist, the scripts read
+`~/.config/xlr8/instance.json` instead, which is handy if you work with several checkouts. Every field
+can also be overridden with an environment variable.
+
+| Field | Environment variable | Example | Used for |
+|---|---|---|---|
+| `convexDeployment` | `XLR8_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex addresses in the build, deploy key check |
+| `appUrl` | `XLR8_APP_URL` | `https://xlr8.example.com` | absolute links in the build, target of redirects |
+| `clerkPublishableKey` | `XLR8_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Clerk in the browser |
+| `vercelProject` | `XLR8_VERCEL_PROJECT` | `xlr8` | Vercel project to deploy to |
+| `vercelScope` | `XLR8_VERCEL_SCOPE` | your Vercel team slug | Vercel team to deploy to |
+| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.xlr8.example.com"]` | optional custom address for MCP |
+| `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
+| `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
+
+<Aside type="caution">
+The example file contains `mcp.xlr8.example.com` in `mcpHosts`. Set `mcpHosts` to `[]` unless you set up
+a custom MCP address (see [Connect an agent](/agents/connect/)).
+</Aside>
+
+Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Deploy keys
+and tokens never go into it.
+
+## Order of the steps
+
+<Steps>
+
+1. **[Clerk](/start/self-hosting/clerk/):** create the application, the JWT template and your user. Note
+   the publishable key, the Frontend API URL and your user id.
+
+2. **[Convex](/start/self-hosting/convex/):** create the project, store the deploy key, set the
+   environment variables and deploy the backend. Check `/health`.
+
+3. **[Web app](/start/self-hosting/web-app/):** build and deploy the app to Vercel or another static
+   host, and point your domain at it.
+
+4. **[First sign-in](/start/first-steps/):** open your domain, sign in and create your first team.
+
+</Steps>
+
+Afterwards, add what you need:
+
+- [Connect agents](/agents/connect/) over MCP or as connectors in claude.ai and ChatGPT.
+- [Push notifications](/using/notifications/) on your phone and desktop.
+- [GitHub pull requests](/integrations/github/) on their issues.
+- Nightly encrypted backups with a restore test, described in
+  [docs/backup.md](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md).
+
+To keep your instance current, see [Updating](/start/self-hosting/updating/).
+
+## Limitations to know
+
+- **One owner per instance.** All accounts in `XLR8_OWNER_IDS` act as the same owner.
+- **Fixed time zone.** Calendar days (due dates, sprints, recurring issues, the morning notifications)
+  are computed in Europe/Berlin. There is no setting for this yet.
+
+<Planned issue="XLR8-53">A configurable time zone per instance is planned.</Planned>

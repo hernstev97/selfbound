@@ -1,0 +1,97 @@
+---
+title: Selection and bulk edits
+description: Select several issues and change their status, priority, labels or team at once, with undo for every step.
+sidebar:
+  order: 5
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+
+Most actions in XLR8 work on one issue or on many. Select the issues first, then use the same shortcut
+you would use for a single one: <Kbd keys="s" /> sets the status of all of them, <Kbd keys="l" /> adds a
+label to all of them. Every change can be undone with <Kbd keys="mod+z" />.
+
+## Selecting issues
+
+With the keyboard:
+
+| Keys | Effect |
+|---|---|
+| <Kbd keys="x" /> | select or deselect the focused issue |
+| <Kbd keys={['shift+j', 'shift+arrowdown']} /> | extend the selection downward |
+| <Kbd keys={['shift+k', 'shift+arrowup']} /> | extend the selection upward |
+| <Kbd keys="mod+a" /> | select all issues in the view |
+| <Kbd keys="escape" /> | clear the selection |
+
+With the mouse:
+
+- <Kbd keys="mod" />-click a row to add it to the selection or remove it.
+- <Kbd keys="shift" />-click a row to select everything between the last issue and this one.
+- Click the checkbox at the start of a row.
+
+**Select** in the right-click menu and **Clear selection** in the command menu do the same.
+
+To narrow down first and select afterwards, [filter the view](/using/views-and-filters/#filters) or
+search in it with <Kbd keys="mod+f" />, then press <Kbd keys="mod+a" />.
+
+## What a selection applies to
+
+As long as issues are selected, actions apply to the selection, not to the focused issue. The pickers
+show how many issues they will change, like "3 issues". Without a selection, the same keys act on the
+focused issue.
+
+A right click on a selected issue opens the menu for the whole selection. A right click on any other
+issue acts on that issue alone.
+
+## Changing many issues
+
+| Keys | Change |
+|---|---|
+| <Kbd keys="s" /> | status |
+| <Kbd keys="p" /> | priority |
+| <Kbd keys="l" /> | labels |
+| <Kbd keys="shift+e" /> | estimate |
+| <Kbd keys="shift+c" /> | sprint |
+| <Kbd keys="shift+p" /> | project |
+| <Kbd keys="shift+d" /> | due date |
+| <Kbd keys="mod+shift+m" /> | move to another team |
+| <Kbd keys={['mod+backspace', 'mod+delete']} /> | move to the trash |
+
+A few things behave differently when the selection is mixed:
+
+- **Status**: if the issues belong to several teams, the picker lists the statuses all of them have
+  (same name and kind). Each issue gets its own team's status of that name.
+- **Labels**: the picker shows a check mark only if all selected issues have the label. Choosing it then
+  removes the label from all; otherwise it adds the label to all. In a label group that allows only one
+  label, the new label replaces the old one.
+- **Project**: projects belong to one team, so the picker offers projects only when all selected issues
+  are in the same team.
+- **Move to another team**: if the move would drop something, such as a project or labels that exist
+  only in the old team, XLR8 lists what changes and asks before moving. The issues get new IDs in the new
+  team; their old IDs keep working in the search.
+
+On the board, <Kbd keys="shift+arrowleft" /> and <Kbd keys="shift+arrowright" /> move all selected
+cards one column.
+
+## Undo and redo
+
+| Keys | Effect |
+|---|---|
+| <Kbd keys="mod+z" /> | undo the last change |
+| <Kbd keys={['mod+shift+z', 'mod+y']} /> | redo |
+
+A bulk change counts as one step, so a single <Kbd keys="mod+z" /> brings back all issues at once. Bulk
+changes and changes that make issues disappear from the view also show a notice with an **Undo** button.
+
+Undo takes you back to where the change happened, with the same page, filters and selection. It covers
+property changes, deleting and restoring, moving to another team, relations, creating issues (the new
+issue goes to the trash) and inbox actions.
+
+If something else changed the same field in the meantime, for example an agent, XLR8 does not overwrite
+it. It tells you who made the newer change instead.
+
+<Aside type="note">
+Inside a text field, <Kbd keys="mod+z" /> undoes typing in that field, not changes to issues. The undo
+history lives in the open tab, so a reload starts a fresh one. Deleted issues stay in the trash for 30
+days either way.
+</Aside>

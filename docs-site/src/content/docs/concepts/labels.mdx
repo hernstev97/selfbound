@@ -1,0 +1,53 @@
+---
+title: Labels
+description: Labels tag issues across teams. Group them, make a group single choice, give them colors, and archive the ones you no longer use.
+sidebar:
+  order: 7
+---
+import Kbd from '../../../components/Kbd.astro';
+
+Labels are tags on issues: "Bug", "Feature", "Frontend", "Waiting for reply". An issue can have any number
+of them, and you can filter any list by them.
+
+## Set labels
+
+Press <Kbd keys="l" /> (**Labels …**) on an issue or a selection. The picker stays open so you can toggle several
+labels in a row; each one shows as checked when all selected issues have it. Labels are listed by group, with
+the labels outside any group at the end.
+
+To create a new label on the spot, type its name in the picker and choose **Create label “…”**. The new label is
+set on the issues right away.
+
+## Workspace labels and team labels
+
+Most labels are **workspace labels**: they work in every team. Labels you create in XLR8, in the picker or in
+the settings, are always workspace labels.
+
+A label can also belong to a single team, for example after an import from Linear. Such a **team label** can
+only be set on issues of that team, so the picker only offers it when all selected issues belong to that team.
+When an issue [moves to another team](/concepts/teams/#move-issues-to-another-team), labels of the old team are
+removed; workspace labels stay.
+
+## Label groups
+
+A group bundles related labels, such as "Type" or "Area". In the picker, every group is its own section.
+
+A group can be **Single choice**: an issue can then have at most one label from it. That fits groups like "Type"
+(an issue is a bug or a feature, not both). Single-choice groups are marked "· one" in the picker. Groups without
+it allow any combination.
+
+## Manage labels
+
+Open **Settings → Labels**. There you can:
+
+- create a group under **New group**, with or without **Single choice**, and rename it or change its color,
+- add a label to a group with **+ Label**, or to **No group**,
+- rename a label, change its color, or move it to another group with the drop-down,
+- see how many issues use each label,
+- **Archive** a label you no longer need.
+
+An archived label stays on the issues that already have it, but can no longer be assigned. Turn on **Show
+archived** to see archived labels and **Unarchive** one.
+
+Every label and group has a color: click its dot to pick one of twelve hues. A new label created from the
+picker gets a color automatically.

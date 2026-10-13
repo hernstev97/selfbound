@@ -1,0 +1,143 @@
+---
+// MCP tools straight from the server's tool list (backend/convex/lib/mcp/tools.ts), so this
+// reference changes with the code. That module has no Convex imports, so it loads at build time.
+// The build fails if a tool is in no group: a new tool must get a place on the page.
+import { Badge } from '@astrojs/starlight/components';
+import { TOOLS, type ToolDefinition } from '../../../backend/convex/lib/mcp/tools';
+
+const GROUPS = {
+  find: ['search_issues', 'list_issues', 'get_issue'],
+  change: ['create_issues', 'update_issue', 'set_status', 'move_issues'],
+  comments: ['add_comment'],
+  sprints: ['get_current_sprint'],
+  knowledge: ['search_articles', 'list_articles', 'get_article', 'create_article', 'update_article'],
+  lookup: ['list_teams', 'list_projects', 'list_labels', 'list_statuses'],
+} as const;
+type Group = keyof typeof GROUPS;
+
+interface Props {
+  group: Group;
+}
+
+const grouped = new Set<string>(Object.values(GROUPS).flat());
+const missing = TOOLS.filter((t) => !grouped.has(t.name)).map((t) => t.name);
+if (missing.length > 0) throw new Error(`McpTools.astro: add ${missing.join(', ')} to GROUPS.`);
+const byName = new Map(TOOLS.map((t) => [t.name, t]));
+const unknown = GROUPS[Astro.props.group].filter((n) => !byName.has(n));
+if (unknown.length > 0) throw new Error(`McpTools.astro: unknown tools ${unknown.join(', ')}.`);
+const tools = GROUPS[Astro.props.group].map((n) => byName.get(n)!);
+
+type Json = Record<string, any>;
+
+function typeOf(s: Json): string {
+  if (s.anyOf) {
+    const parts = (s.anyOf as Json[]).map(typeOf);
+    return [...new Set(parts)].join(' or ');
+  }
+  if (s.type === 'array') return `array of ${s.items ? typeOf(s.items) : 'values'}`;
+  if (s.enum) return (s.enum as string[]).map((v) => `"${v}"`).join(', ');
+  return s.type ?? 'value';
+}
+
+interface Param {
+  name: string;
+  type: string;
+  required: boolean;
+  description: string;
+}
+
+function paramsOf(tool: ToolDefinition): Param[] {
+  const out: Param[] = [];
+  const walk = (schema: Json, prefix: string) => {
+    const required = new Set<string>(schema.required ?? []);
+    for (const [name, s] of Object.entries((schema.properties ?? {}) as Record<string, Json>)) {
+      const items = s.type === 'array' && s.items?.type === 'object' ? (s.items as Json) : null;
+      let description = s.description ?? '';
+      if (s.default !== undefined) description += `${description ? ' ' : ''}Default: \`${JSON.stringify(s.default)}\`.`;
+      // Plain objects (like `expected`) are summarized by their field names.
+      if (s.type === 'object' && s.properties) {
+        description += `${description ? ' ' : ''}Fields: ${Object.keys(s.properties).map((k) => `\`${k}\``).join(', ')}.`;
+      }
+      out.push({ name: prefix + name, type: items ? 'array of objects' : typeOf(s), required: required.has(name), description });
+      if (items) walk(items, `${prefix}${name}[].`);
+    }
+  };
+  walk(tool.inputSchema as Json, '');
+  return out;
+}
+
+/** `code` spans in descriptions as segments. */
+const segments = (text: string) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+---
+
+{
+  tools.map((tool) => {
+    const params = paramsOf(tool);
+    const read = tool.annotations.readOnlyHint === true;
+    return (
+      <section class="xl-tool" id={`tool-${tool.name}`}>
+        <h3 class="xl-tool-name">
+          <a href={`#tool-${tool.name}`}><code>{tool.name}</code></a>
+          <Badge text={read ? 'read' : 'write'} variant={read ? 'note' : 'caution'} size="small" />
+        </h3>
+        <p class="xl-tool-title">{tool.title}</p>
+        <p>{segments(tool.description).map((s) => (s.code ? <code>{s.part}</code> : s.part))}</p>
+        {params.length === 0 ? (
+          <p class="xl-tool-none">No parameters.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Parameter</th>
+                <th scope="col">Type</th>
+                <th scope="col">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              {params.map((p) => (
+                <tr>
+                  <td>
+                    <code>{p.name}</code>
+                    {p.required ? <span class="xl-tool-req">required</span> : null}
+                  </td>
+                  <td>{p.type}</td>
+                  <td>{segments(p.description).map((s) => (s.code ? <code>{s.part}</code> : s.part))}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    );
+  })
+}
+
+<style>
+  .xl-tool {
+    margin-top: 2rem;
+  }
+  .xl-tool-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: var(--sl-text-h4);
+  }
+  .xl-tool-name a {
+    text-decoration: none;
+  }
+  .xl-tool-title {
+    margin-top: 0.25rem;
+    color: var(--sl-color-gray-3);
+  }
+  .xl-tool-req {
+    display: block;
+    font-size: var(--sl-text-xs);
+    color: var(--sl-color-gray-3);
+  }
+  .xl-tool-none {
+    color: var(--sl-color-gray-3);
+  }
+  .xl-tool td:first-child {
+    white-space: nowrap;
+  }
+</style>
