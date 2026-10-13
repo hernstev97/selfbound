@@ -1,0 +1,146 @@
+---
+title: Deploy the web app
+description: Build the XLR8 web app for your instance and serve it from Vercel or another static host.
+sidebar:
+  label: Web app
+  order: 3
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The web app is a set of static files: the landing page, the sign-in page and the app itself. Your Convex
+address and Clerk publishable key are built into them, so you build the app for your own instance. The
+repository ships a script for [Vercel](https://vercel.com); any other static host works if it supports
+the routing rules below.
+
+Before you start, `deploy/instance.json` needs `convexDeployment`, `appUrl` and `clerkPublishableKey`
+(see [the instance settings file](/start/self-hosting/#the-instance-settings-file)).
+
+## With Vercel
+
+<Steps>
+
+1. **Set up the Vercel CLI.** Install the [Vercel CLI](https://vercel.com/docs/cli) and log in with
+   `vercel login`.
+
+2. **Name the project.** In `deploy/instance.json`, set `vercelProject` (for example `xlr8`) and
+   `vercelScope` (your Vercel team slug).
+
+3. **Build and deploy:**
+
+   ```sh
+   node tooling/deploy-web.mjs
+   ```
+
+4. **Add your domain.** In the Vercel dashboard, add `xlr8.example.com` as a domain of the project and
+   create the DNS record Vercel shows you.
+
+</Steps>
+
+What the script does:
+
+- builds the app with the production values from your instance settings;
+- checks the result and stops without uploading anything if the build contains the local test token or
+  a local backend address, lacks your Convex address, or the landing page loads app code;
+- copies the build to `deploy/web/` and writes a `vercel.json` with the routing rules and headers;
+- links `deploy/web/` to your Vercel project on first use and deploys it to production as a static
+  site. Vercel builds nothing itself.
+
+`node tooling/deploy-web.mjs --build` stops after building into `deploy/web/` and uploads nothing. It
+still expects all instance settings, including the two Vercel fields.
+
+## Hosting elsewhere
+
+<Steps>
+
+1. **Build the app** with your values:
+
+   ```sh
+   VITE_CONVEX_URL=https://happy-otter-123.convex.cloud \
+   VITE_CONVEX_SITE_URL=https://happy-otter-123.convex.site \
+   VITE_CLERK_PUBLISHABLE_KEY=pk_live_… \
+   XLR8_PUBLIC_URL=https://xlr8.example.com \
+   VITE_DEV_TOKEN= \
+   pnpm --filter @xlr8/app build
+   ```
+
+   The empty `VITE_DEV_TOKEN=` matters if you have run XLR8 locally: `pnpm dev` writes a local test token
+   into `app/.env.local`, and it must not end up in a production build. Alternatively, delete that file.
+
+2. **Rename the app's entry page:**
+
+   ```sh
+   mv app/dist/index.html app/dist/app.html
+   ```
+
+   Many hosts, Vercel included, serve an `index.html` at `/` before they apply any rewrite. That would
+   skip the first rule below.
+
+3. **Upload `app/dist/`** to your host.
+
+4. **Set up the routing rules**, in this order:
+
+   1. `/` **without** the cookie `xlr8_signed_in` → serve `/welcome.html` (landing page).
+   2. `/sign-in` → serve `/welcome.html` (it shows the embedded Clerk form on this path).
+   3. Every other path except `/assets/…` → serve `/app.html`. Deep links such as `/issue/ACME-42`
+      must work.
+
+5. **Set the headers:**
+
+   | Path | Header |
+   |---|---|
+   | `/assets/*` | `Cache-Control: public, max-age=31536000, immutable` |
+   | `/` | `Cache-Control: no-cache` and `Vary: Cookie` |
+   | `/app.html`, `/welcome.html`, `/sw.js`, `/version.json`, `/site.webmanifest` | `Cache-Control: no-cache` |
+   | all responses (recommended) | `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Strict-Transport-Security` |
+
+</Steps>
+
+The Vercel version of these rules is in `deploy/vercel.base.json`; use it as a reference.
+
+<Aside type="note">
+The cookie `xlr8_signed_in` is not a credential. The app sets it after sign-in and removes it on
+sign-out; it only decides whether `/` shows the landing page or the app. Access is checked by the
+backend on every request.
+</Aside>
+
+## Check the result
+
+1. Open `https://xlr8.example.com/` in a private window: the landing page appears.
+2. Click **Sign in** and sign in with the user you created in Clerk. You land in the app.
+3. Open `https://xlr8.example.com/` again: the app opens directly.
+
+If you see the landing page although you are signed in, for example on the first visit after a deploy,
+click **Sign in**. Clerk recognizes the session and sends you to the app.
+
+## Troubleshooting
+
+### "No access" or an empty app after sign-in
+
+Both mean that the backend does not accept your sign-in. Work through these checks:
+
+- **The issuer.** `CLERK_JWT_ISSUER_DOMAIN` on Convex must be exactly your Clerk Frontend API URL, for
+  example `https://clerk.xlr8.example.com`, without a trailing slash. If you changed it, redeploy the
+  backend (`node tooling/cloud.mjs deploy`): Convex reads it only when the functions are pushed.
+- **The JWT template.** In Clerk, a template of type Convex must exist with the name `convex`.
+- **The owner list.** `XLR8_OWNER_IDS` must contain exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>`:
+  the same issuer spelling and the user id from your Clerk user page. A change here takes effect right
+  away; reload the app.
+- **After a change of your Clerk domain,** the issuer changes, so update it in both
+  `CLERK_JWT_ISSUER_DOMAIN` and `XLR8_OWNER_IDS`.
+
+The **No access** screen ("You are signed in, but this account has no access to XLR8.") has a
+**Sign out** button, so you can try another account.
+
+### "XLR8 is not set up"
+
+The build has no Convex address or no sign-in method. Build again with `VITE_CONVEX_URL` and
+`VITE_CLERK_PUBLISHABLE_KEY` set, or check `convexDeployment` and `clerkPublishableKey` in your instance
+settings.
+
+### Deep links show a 404
+
+The fallback rule to `/app.html` is missing. Check rule 3 above.
+
+## Next step
+
+Sign in and set up your workspace: [First steps](/start/first-steps/).

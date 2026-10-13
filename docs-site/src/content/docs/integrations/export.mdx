@@ -1,0 +1,69 @@
+---
+title: Export your data
+description: How to get your data out of XLR8 today, through a database export, the nightly backups or an AI agent, and the export that is planned.
+sidebar:
+  order: 4
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import Planned from '../../../components/Planned.astro';
+
+Your data lives in your own Convex deployment, so you can always get all of it out. There is no export button in the app yet. Today you have three ways, depending on what you need.
+
+| You want | Use |
+|---|---|
+| Everything, complete, in one file | [Database export](#export-the-whole-database) |
+| A daily copy you can restore | [Nightly backups](#nightly-backups) |
+| Some issues or pages as Markdown or a list | [An AI agent](#ask-an-agent) |
+
+<Planned issue="XLR8-46" title="Export in Settings">
+An export of everything as JSON and as a ZIP of Markdown files, started from Settings, is planned. Until it exists, use one of the ways below.
+</Planned>
+
+## Export the whole database
+
+Convex can export a deployment as a ZIP file. This is the same export the nightly backup uses, and it contains everything: issues with descriptions, comments and history, teams, labels, projects, sprints, knowledge pages, and the uploaded images and team logos.
+
+You need a checkout of the XLR8 repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/xlr8/convex-deploy-key`), run:
+
+```sh
+node tooling/cloud.mjs export --include-file-storage --path ~/xlr8-export.zip
+```
+
+Without the XLR8 tooling, run the Convex CLI in the `backend` folder with the deploy key in the environment:
+
+```sh
+cd backend
+read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY   # paste the production deploy key, then Enter
+pnpm exec convex export --include-file-storage --path ~/xlr8-export.zip
+unset CONVEX_DEPLOY_KEY
+```
+
+The ZIP holds one JSONL file per table (one JSON document per line) and a folder with the stored files. The data is in XLR8's internal format: for example, issue descriptions are stored in a separate table from the issues. The tables and fields are defined in [`backend/convex/schema.ts`](https://github.com/hernstev97/xlr8-public/blob/main/backend/convex/schema.ts). The same ZIP can be imported into another Convex deployment with `convex import`.
+
+<Aside type="caution">
+The export contains all your data unencrypted. Store it somewhere safe and delete copies you no longer need.
+</Aside>
+
+## Nightly backups
+
+The XLR8 repository includes a GitHub Actions workflow that backs up your production deployment every night at 03:30 (Berlin time). It is meant for operators and disaster recovery, not for reading your data, but it is a complete copy:
+
+- Each backup is the database export described above.
+- Before it is stored, it is restored into an empty backend and compared table by table and file by file.
+- It is encrypted with [age](https://age-encryption.org); only the holder of your private key can open it.
+- Daily backups are kept for 30 days, Sunday backups for 90 days, as artifacts of the workflow run.
+- **Settings → Ops** shows when the last backup reported in.
+
+The workflow does nothing until you add a deploy key and your public age key as secrets. In a public repository, workflow logs and artifacts are public: the backup itself stays encrypted, but table names and document counts are visible. Run the backup from a private copy of the repository if that matters to you.
+
+Setup, restore and the quarterly decryption test are described in the [backup guide on GitHub](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md).
+
+Not part of a backup: environment variables such as secrets and tokens (keep them in a password manager), and videos, which are links to Google Drive rather than files in XLR8.
+
+## Ask an agent
+
+An AI agent connected to XLR8 over MCP can read any issue with its full description, comments, relations, sub-issues, linked pull requests and recent history, and any knowledge page. That makes it a practical way to export a slice of your data in a format you choose, for example:
+
+> Write every open issue of team ACME to a Markdown file, one section per issue, with its description and comments.
+
+This is not a complete export. Lists and searches leave out issues in the trash and return at most 100 issues per call, so large exports take many calls. For everything, use the database export.

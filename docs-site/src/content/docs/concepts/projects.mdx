@@ -1,0 +1,55 @@
+---
+title: Projects
+description: Projects group issues of one team toward a larger outcome. Each project has a state and its own list and board.
+sidebar:
+  order: 6
+---
+import Kbd from '../../../components/Kbd.astro';
+
+A project groups issues that work toward one larger outcome, such as "Billing v2" or "Website relaunch". It
+gives you a list, a board and a progress count for that work alone.
+
+## A project belongs to one team
+
+Every project belongs to exactly one [team](/concepts/teams/), and only issues of that team can be in it. An
+issue has at most one project.
+
+This has two consequences:
+
+- The project picker (<Kbd keys="shift+p" />, **Project …**) shows the projects of the issue's team. If you select
+  issues from several teams, it asks you to select issues of a single team.
+- When you [move an issue to another team](/concepts/teams/#move-issues-to-another-team), it loses its project
+  unless the project belongs to the target team. XLR8 tells you before it moves.
+
+## Project states
+
+| State | Meaning |
+|---|---|
+| **Planned** | Not started yet |
+| **Active** | Being worked on (the default for new projects) |
+| **Paused** | On hold |
+| **Done** | Finished |
+| **Canceled** | Dropped |
+
+The state is for your overview. It does not change the issues in the project. The project picker shows the
+state next to every project that is not active.
+
+## Create and manage projects
+
+Projects are managed under **Settings → Projects**, grouped by team:
+
+- Click **+ Project** in a team's group to create one.
+- Click a project's name to rename it.
+- Change its **Status** with the drop-down.
+
+A project cannot change its team after it is created.
+
+## The projects overview and the project page
+
+Click **Projects** under the current team in the sidebar to see the team's projects. Each one shows its state,
+how many issues are open and done, and a progress bar. If the team has a [knowledge area](/concepts/knowledge/),
+the overview also shows how many pages belong to each project and links to them.
+
+Click a project to open its page: a list of all its issues, grouped by status. It works like any other list:
+filters, display options, and <Kbd keys="mod+b" /> to switch to the board. New issues you create there with
+<Kbd keys="c" /> go into the project.

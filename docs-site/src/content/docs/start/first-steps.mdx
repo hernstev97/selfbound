@@ -1,0 +1,122 @@
+---
+title: First steps
+description: Sign in, create your first team and issues, and learn the handful of shortcuts you use all day.
+sidebar:
+  order: 5
+---
+import { Steps } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+This page takes you from your first sign-in to a team with a few issues, using the keyboard most of the
+way. If you run XLR8 [locally](/start/try-locally/) with sample data, you
+can skip to [Move through the list](#move-through-the-list).
+
+## Sign in
+
+Open your instance, for example `https://xlr8.example.com/`. The landing page appears. Click
+**Sign in** and sign in with the Clerk account you added to `XLR8_OWNER_IDS`.
+
+You land in an empty workspace on the **Inbox**: "The inbox is empty. Issues that agents create show up
+here until you remove the entry." The sidebar shows **Inbox**, **Triage**, **All issues** and
+**Sprint**, and below them a **Teams** heading with a **+** button. There are no teams yet, and every
+issue belongs to a team, so a team comes first.
+
+If you see **No access** instead, see
+[the troubleshooting on the web app page](/start/self-hosting/web-app/#no-access-or-an-empty-app-after-sign-in).
+
+## Create your first team
+
+A team is an area of work: a product, a client, a side project. Each team has a short **key** that
+starts every issue identifier, such as `ACME-42`.
+
+<Steps>
+
+1. Open the **Add team** dialog: click **+** next to **Teams** in the sidebar, press
+   <Kbd keys="o n" />, or choose **Add team …** in the command menu.
+
+2. Enter a **Name**, for example `Acme`. XLR8 suggests a **Key** from the name (`ACME`). You can change
+   it: 2 to 6 characters, capital letters and digits, starting with a letter. You can change the key
+   later only while the team has no issues, so pick one you like.
+
+3. Optional: upload a **Logo** (SVG or PNG, square, at most 256 KB).
+
+4. Under **Content**, keep **Issues**. **Issues and knowledge** adds a knowledge area with pages next
+   to the issues; **Knowledge only** makes a team for pages without issues. See
+   [Knowledge](/concepts/knowledge/).
+
+5. Click **Create team**.
+
+</Steps>
+
+XLR8 switches to the new team. It starts with these statuses: Triage, Backlog, Todo, In Progress, In
+Review, Done, Canceled and Duplicate. You can rename, add and reorder statuses later in the team settings
+(see [Workflow](/concepts/workflow/)). More about teams: [Teams](/concepts/teams/).
+
+## Create issues
+
+Press <Kbd keys="c" /> anywhere to open **New issue**.
+
+<Screenshot name="create-issue" alt="The New issue dialog with team, title, description and property chips for status, priority, labels and more" width={720} />
+
+<Steps>
+
+1. Type a title. <Kbd keys="enter" /> moves you to the description, which supports Markdown, `/` for
+   blocks and images pasted with <Kbd keys="mod+v" />.
+
+2. Set properties with the chips at the bottom: status, priority, labels, project, estimate, due date,
+   sprint and parent. Each opens the same picker you use elsewhere. The team chip at the top picks the
+   team.
+
+3. Press <Kbd keys="mod+enter" /> or click **Create issue**.
+
+</Steps>
+
+To write several issues in a row, press <Kbd keys="mod+shift+enter" /> instead, or turn on
+**Create more**: the dialog stays open for the next one.
+
+Press <Kbd keys="escape" /> to close the dialog without creating the issue. Your text stays as a draft;
+you find it under **Drafts** in the sidebar.
+
+Create three or four issues so you have something to work with.
+
+## Move through the list
+
+<Screenshot name="list" alt="An issue list grouped by status, with one issue highlighted by the keyboard focus" />
+
+- <Kbd keys={['j', 'arrowdown']} /> and <Kbd keys={['k', 'arrowup']} /> move the focus to the next or
+  previous issue.
+- <Kbd keys="space" /> opens a quick preview of the focused issue; press it again to close it.
+- <Kbd keys="enter" /> opens the issue. <Kbd keys="escape" /> takes you back to the list.
+- <Kbd keys="x" /> selects the focused issue. Most actions then apply to all selected issues.
+
+## Change the status
+
+Focus an issue and press <Kbd keys="s" />. The status picker opens:
+
+- type to filter, then press <Kbd keys="enter" />;
+- or press a digit: <Kbd keys="1" /> to <Kbd keys="9" /> pick the statuses in workflow order.
+
+Priority (<Kbd keys="p" />) and labels (<Kbd keys="l" />) work the same way. Made a mistake?
+<Kbd keys="mod+z" /> undoes it.
+
+## The command menu
+
+Press <Kbd keys="mod+k" /> to open the command menu. It lists every action that fits where you are,
+with its shortcut next to it. Type a few letters to find one: "status", "sprint", "team". When you do
+not remember a shortcut, the command menu is the way to find it.
+
+<Screenshot name="command-menu" alt="The command menu with a search field and a list of actions with their shortcuts" width={720} />
+
+Two more keys to remember:
+
+- <Kbd keys="?" /> shows all keyboard shortcuts.
+- <Kbd keys="/" /> searches your issues.
+
+## Where next
+
+- [Issues](/concepts/issues/): everything an issue can hold, from sub-issues to relations.
+- [Triage and inbox](/concepts/triage-and-inbox/): where new issues and agent work arrive.
+- [Sprints](/concepts/sprints/): plan a sprint of work across all teams.
+- [Connect an agent](/agents/connect/): let Claude Code, Codex or claude.ai work with your issues.
+- [Keyboard shortcuts](/reference/keyboard-shortcuts/): the full list.

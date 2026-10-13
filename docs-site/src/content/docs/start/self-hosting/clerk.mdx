@@ -1,0 +1,83 @@
+---
+title: Set up Clerk
+description: Create the Clerk application that handles sign-in for your XLR8 instance.
+sidebar:
+  label: Clerk
+  order: 1
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+[Clerk](https://clerk.com) handles sign-in for XLR8. It shows the sign-in form and gives the app a
+token that the Convex backend checks. At the end of this page you have three values: the **publishable
+key**, the **Frontend API URL** and your **user id**.
+
+## Production or development instance
+
+Every Clerk application has a development and a production instance.
+
+- **Production** is what you want for real use. It needs a domain you control: Clerk serves its
+  Frontend API from `clerk.<your domain>`, for example `https://clerk.xlr8.example.com`. Its publishable
+  key starts with `pk_live_`.
+- **Development** is fine to try XLR8 out. It needs no domain, its publishable key starts with
+  `pk_test_`, and its Frontend API URL looks like `https://<slug>.clerk.accounts.dev`. Clerk shows a
+  development badge, and the instance is meant for testing only.
+
+The steps below use a production instance. Clerk renames its dashboard menus now and then; if a label
+differs, look for the closest match.
+
+## Set up the application
+
+<Steps>
+
+1. **Create the application.** In the [Clerk dashboard](https://dashboard.clerk.com), create an
+   application and switch to (or create) its **Production** instance. Add your domain
+   (`xlr8.example.com`) and create the DNS records Clerk shows you. They can take a while to become
+   active.
+
+   Optional: upload `app/public/brand/clerk-logo.png` from the repository as the application logo.
+
+2. **Create the JWT template.** Go to **Configure → JWT templates → New template** and pick **Convex**.
+   Keep the name `convex`. The app asks Clerk for a token from the template called `convex`, and the
+   backend expects the audience `convex`. With another name, sign-in fails.
+
+3. **Note the publishable key and the Frontend API URL.** You find them under **Configure → API keys**
+   and **Domains**:
+
+   - the **publishable key** (`pk_live_…`) goes into `clerkPublishableKey` in your
+     [instance settings](/start/self-hosting/#the-instance-settings-file);
+   - the **Frontend API URL** (`https://clerk.xlr8.example.com`) becomes `CLERK_JWT_ISSUER_DOMAIN` on
+     the Convex backend.
+
+4. **Create your user.** Go to **Users → Create user**, or sign up once before you restrict sign-ups
+   in the next step. Open the user's page and copy the **user id** (`user_…`). You need it for
+   `XLR8_OWNER_IDS`.
+
+5. **Restrict sign-ups.** Go to **Configure → Restrictions → Sign-up mode** and choose **Restricted**.
+   Only the accounts in `XLR8_OWNER_IDS` get into XLR8 anyway; this keeps strangers from creating Clerk
+   accounts at all.
+
+6. **Point Clerk's links to your app.** Go to **Configure → Developers → Paths**:
+
+   - **`<SignIn />`**: "Sign-in page on application domain" → `https://xlr8.example.com/sign-in`
+   - **Signing out**: "Page on application domain" → `https://xlr8.example.com/`
+   - Leave **`<SignUp />`** as it is, and save.
+
+</Steps>
+
+The publishable key is not a secret: it ends up in the browser. Clerk's secret keys are not needed
+anywhere in XLR8.
+
+<Aside type="note">
+The embedded sign-in form works without the path settings from step 6. They make sure that links Clerk
+itself creates lead to your app and not to Clerk's hosted pages.
+</Aside>
+
+## Costs
+
+XLR8 uses no paid Clerk feature. On a free plan, the sign-in form shows a "Secured by Clerk" badge,
+which only paid plans can remove.
+
+## Next step
+
+Continue with [Convex](/start/self-hosting/convex/). There you put the Frontend API URL and your user
+id into the backend's environment variables.

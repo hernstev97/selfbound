@@ -17,10 +17,13 @@ const light = files[`../assets/screenshots/${name}-light.png`]?.default;
 const dark = files[`../assets/screenshots/${name}-dark.png`]?.default;
 if (!light && !dark) throw new Error(`Screenshot "${name}" not found in src/assets/screenshots/`);
 const style = width ? `max-width: ${width}px` : undefined;
+// Up to the home page column (56rem); sharp on 2x screens.
+const widths = [800, 1200, 1800];
+const sizes = width ? `(min-width: ${width}px) ${width}px, 100vw` : '(min-width: 50rem) 56rem, 100vw';
 ---
 
 <figure class="xl-shot" style={style}>
-  {light && <Image src={light} alt={alt} class:list={['xl-shot-img', dark && 'xl-shot-light']} widths={[720, 1440]} sizes="(min-width: 50rem) 45rem, 100vw" />}
-  {dark && <Image src={dark} alt={alt} class:list={['xl-shot-img', light && 'xl-shot-dark']} widths={[720, 1440]} sizes="(min-width: 50rem) 45rem, 100vw" />}
+  {light && <Image src={light} alt={alt} class:list={['xl-shot-img', dark && 'xl-shot-light']} {widths} {sizes} />}
+  {dark && <Image src={dark} alt={alt} class:list={['xl-shot-img', light && 'xl-shot-dark']} {widths} {sizes} />}
   {caption && <figcaption>{caption}</figcaption>}
 </figure>

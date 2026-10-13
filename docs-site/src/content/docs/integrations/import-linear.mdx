@@ -1,0 +1,156 @@
+---
+title: Import from Linear
+description: Copy a Linear workspace into XLR8 with its identifiers, statuses, comments and history dates, and run the import again later without duplicates.
+sidebar:
+  order: 2
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The Linear importer copies your teams, issues, labels, projects, cycles and comments into XLR8. Issue identifiers like `ACME-42` stay the same, so links, branch names and commit messages keep pointing to the right issue. The importer only reads from Linear and never changes anything there.
+
+The import runs from the command line in a checkout of the XLR8 repository. There is no import button in the app.
+
+## What is imported
+
+- **Teams** with key, name and color. Archived teams become dormant: hidden from the sidebar, but still in search and lists.
+- **Issues**, including archived ones, with title, description, status, priority, labels, project, estimate, due date, parent issue and the created, started, completed and canceled dates. Issues keep their identifiers, and old identifiers from team moves in Linear keep working in search, in issue links, for agents and in the GitHub integration.
+- **Statuses**, mapped to XLR8's status kinds (see [Statuses](#statuses)).
+- **Labels and label groups.** Archived labels stay on their issues and are marked as archived.
+- **Projects** with name, description and status (planned, active, paused, done or canceled).
+- **Cycles** become closed sprints named after the cycle, or "`ACME` Cycle 12" when the cycle has no name. An issue appears in its last cycle only. Imported sprints do not count toward the capacity of new sprints.
+- **Relations:** blocks, related and duplicate.
+- **Comments**, with the Linear author shown as "Jane Doe (Linear)" and bots as, for example, "GitHub (Linear)".
+- **GitHub pull requests** attached in Linear become linked pull requests on the issue. An imported link never closes an issue; from then on the [GitHub integration](/integrations/github/) handles that.
+- **Other attachments** (Figma files, links) end up in one comment per issue, "Attachments from Linear", with a line per attachment.
+
+Imported issues count as reviewed. Their order follows the creation date in Linear.
+
+## What changes or is left out
+
+| In Linear | In XLR8 |
+|---|---|
+| Assignees | Dropped. XLR8 has one user and no assignee field. |
+| Threaded comment replies | One flat list in time order. |
+| Custom statuses such as "Testing" | Not created. The issue lands in the team's default status of the same kind (for "Testing", In Progress), and the import report lists it. |
+| Projects shared by several teams | Belong to one team: the one with the most issues in the project. |
+| Labels or projects from another team on an issue | Dropped and counted in the report. In XLR8 they belong to one team. |
+| Files and images uploaded to Linear | Stay links to Linear. Copy them with the [files tool](#copy-files-and-images). |
+| Issues in Linear's trash | Not imported. |
+| Triage suggestions and "similar" relations | Not imported. |
+| Linear's activity log of an issue | Not imported. The created, started, completed and canceled dates are. |
+| Documents | Not imported by the main import. One document at a time can become a knowledge page (see [Documents](#documents)). |
+
+Teams, labels and projects that already exist in XLR8 under the same team key or name are reused instead of duplicated.
+
+### Statuses
+
+Each Linear status is mapped by its type:
+
+| Linear type | XLR8 status kind |
+|---|---|
+| Triage | Triage |
+| Backlog | Backlog |
+| Unstarted | Todo |
+| Started, named "In Review" | In Review |
+| Started, any other name | In Progress |
+| Completed | Done |
+| Canceled, named "Duplicate", or type Duplicate | Duplicate |
+| Canceled, any other name | Canceled |
+
+The issue then gets the team's status with the same name, or the default status of that kind. If a status has a type XLR8 does not know, `fetch` stops and lists it, and nothing is imported. You can map any status by hand when fetching, for example `--map-status "Testing=in_review"` (repeatable). Status kinds are `triage`, `backlog`, `todo`, `in_progress`, `in_review`, `done`, `canceled` and `duplicate`.
+
+## Before you start
+
+- A checkout of the XLR8 repository with Node.js 24 and its dependencies installed (`pnpm install`).
+- A **personal API key from Linear**. Read access is enough. Save it as `~/.config/xlr8/linear-api-key`, readable only by you:
+
+  ```sh
+  mkdir -p ~/.config/xlr8
+  # paste the key into the file, then:
+  chmod 600 ~/.config/xlr8/linear-api-key
+  ```
+
+  The importer refuses to run if the file is readable by others, empty or a symlink.
+- The target: either a local backend started with `pnpm dev`, or your production instance. Production needs your instance settings in `deploy/instance.json` and a Convex deploy key in `~/.config/xlr8/convex-deploy-key`, as described in [Self-hosting](/start/self-hosting/).
+
+<Aside type="tip">
+Try the import against a local backend first. If your production instance already holds data you care about, take a backup before importing into it.
+</Aside>
+
+## Run the import
+
+<Steps>
+
+1. **Fetch** your Linear data:
+
+   ```sh
+   node tooling/linear-import/index.ts fetch
+   ```
+
+   This writes a snapshot to `~/.local/share/xlr8/import/<timestamp>/`, outside the repository and readable only by you. The console shows counts and identifiers, never titles or text. Add `--dry-run` to fetch and check everything without writing files.
+
+2. **Push** the snapshot into XLR8, either into the local backend:
+
+   ```sh
+   node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<timestamp>
+   ```
+
+   or into production:
+
+   ```sh
+   node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<timestamp> --prod
+   ```
+
+3. **Confirm.** The script shows the target and the number of records per kind and asks you to type `import`. For production it always asks.
+
+4. **Read the report.** The import runs in small steps on the backend, and the script waits until the last one is done. It then prints, per kind, how many records were read, new, changed, unchanged and skipped, plus deviations (such as mapped custom statuses) and conflicts. **Settings → Ops** in the app shows the result of the last import too.
+
+</Steps>
+
+Only one import runs at a time. If an import fails, the data processed so far stays. Run `push` again; existing records are recognized and nothing is duplicated.
+
+## Import again later
+
+You can repeat the import whenever you like, for example while you still use Linear in parallel. Running `push` again with the same snapshot changes nothing; every record counts as unchanged. With a fresh snapshot, XLR8 compares every issue field on its own with the value from the previous import:
+
+- **Changed only in Linear:** the Linear value is applied. Your old value stays in the issue history, and an overwritten description is kept as an earlier version.
+- **Changed only in XLR8:** your value stays.
+- **Changed in both:** your value stays, and the report lists the issue and field under conflicts.
+
+Issues you deleted permanently in XLR8 do not come back. Comments you deleted and relations you removed are not restored. Data that only exists in XLR8, such as your own sprints, issue order and team logos, is not touched.
+
+If an issue you created in XLR8 has the same identifier as one coming from Linear, Linear keeps the identifier. Your issue gets the next free number, its old identifier keeps working, and the report names it.
+
+### Closed issues and priority
+
+In XLR8, completing an issue clears its priority. Issues that were already closed in Linear keep their priority after the import. To clear it on your production instance, run a one-off migration; the first command only counts, the second applies:
+
+```sh
+node tooling/cloud.mjs run migrations:priorityClearClosed
+node tooling/cloud.mjs run migrations:priorityClearClosed '{"apply":true}'
+```
+
+## Copy files and images
+
+The import copies text, not the files behind it. Images in descriptions and comments still point to Linear afterwards, need a Linear login and may stop showing. The `files` tool copies them into XLR8 and rewrites the references. Each step can be repeated safely:
+
+```sh
+node tooling/linear-import/index.ts files scan     --prod   # find references to Linear files
+node tooling/linear-import/index.ts files download --prod   # download them with your Linear key
+node tooling/linear-import/index.ts files upload   --prod   # upload images to XLR8
+node tooling/linear-import/index.ts files rewrite  --prod   # replace the links, after a dry run and confirmation
+```
+
+Leave out `--prod` for a local backend. Only images are uploaded (PNG, JPEG, WebP and GIF up to 5 MB). For other files, such as videos, `rewrite --link <sha256>=<url>` replaces the link with one you host elsewhere, for example on Google Drive.
+
+## Documents
+
+The main import does not fetch Linear documents. If you save a document as a Markdown copy in the layout the tool expects (title, Linear ID and dates at the top, described in the reference linked below), you can import it as a knowledge page of a team:
+
+```sh
+node tooling/linear-import/index.ts document copy.md --team ACME --prod
+```
+
+Running it again does not duplicate the page; a changed copy becomes a new version.
+
+For the full format and processing rules, see the [import reference on GitHub](https://github.com/hernstev97/xlr8-public/blob/main/docs/architecture/import.md).

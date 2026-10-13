@@ -1,0 +1,121 @@
+---
+title: Sprints
+description: One sprint spans all your teams. Plan it with a capacity, start it deliberately, and complete it with a decision for every unfinished issue.
+sidebar:
+  order: 5
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+A sprint is a stretch of time, usually two weeks, with a goal and a set of issues you plan to finish. You plan
+it, start it, work through it and complete it, deciding what happens to anything left over.
+
+## One sprint for all teams
+
+In XLR8, sprints don't belong to a team. This is a deliberate choice. As one person you have one stream of
+time, however many teams your work is spread across. Sprints per team split that time into parallel plans
+that nobody keeps up, so XLR8 plans it once: a sprint holds issues from any team, and at most one sprint runs
+at a time.
+
+For the same reason nothing rolls over silently. When you complete a sprint, every unfinished issue needs a
+decision, so the same issues don't drift from sprint to sprint unnoticed.
+
+## The life of a sprint
+
+A sprint is in one of three states:
+
+1. **Planning**: you pick issues and set a goal and capacity. Nothing is running yet.
+2. **Active**: you started it. Issues added from now on count as **added late**.
+3. **Closed**: you completed it. Its contents are frozen as a record of what happened.
+
+A sprint never starts or ends on its own when its dates arrive. Both are deliberate steps. You can plan the
+next sprint while the current one is still running.
+
+## Plan a sprint
+
+<Steps>
+1. Choose **Plan sprint** in the command menu (<Kbd keys="mod+k" />), or click **Plan sprint** in the sprint view
+   (<Kbd keys="g s" />).
+2. If no sprint is in planning yet, fill in **Create sprint**: **Name**, **Start**, **End** and an optional
+   **Goal**. By default a sprint runs two weeks from next Monday.
+3. On the planning page, move issues from the **Backlog** column on the left into the sprint on the right.
+4. Set a **Capacity** and check the planned points against it.
+5. Click **Start sprint** when you're ready.
+</Steps>
+
+<Screenshot name="sprint-plan" alt="Sprint planning: the backlog of all teams on the left, the planned sprint with points and capacity on the right" />
+
+The **Backlog** column shows open, accepted issues without a sprint from all active teams. Triage issues,
+dormant teams and knowledge-only teams are left out. Filters and display options work as in any list.
+
+| Key | Action |
+|---|---|
+| <Kbd keys="arrowright" /> | Move the focused or selected issues into the sprint |
+| <Kbd keys="arrowleft" /> | Send them back to the backlog |
+| <Kbd keys="tab" /> | Switch between the two columns |
+| <Kbd keys="x" /> | Select |
+| <Kbd keys={['alt+arrowup', 'alt+arrowdown']} /> | Change the order |
+
+You can also drag issues between the columns.
+
+### Capacity and the priority budget
+
+Capacity is the number of points you expect to finish. XLR8 suggests one: the average of points completed in
+your last three sprints. Click **Apply** to take it, or type your own. The sprint column shows planned points
+against capacity, warns when you plan more than fits, and counts issues **without estimate**, because those
+add nothing to the total.
+
+Above the backlog, a strip shows each team's open Urgent and High issues against the
+[priority budget](/concepts/issues/#priority) (1 Urgent, 3 High).
+
+## During the sprint
+
+Press <Kbd keys="g s" /> (**Go to: Sprint**) to open the running sprint. The header shows the goal, **Progress**
+in points, how many **Issues** are done, the **Capacity** with the share planned, how many issues were
+**Added late**, and the **Date range** with the days remaining. By default the list is grouped into
+**Planned** and **Added later**, then by status.
+
+To put issues into a sprint from anywhere:
+
+- <Kbd keys="shift+c" /> (**Sprint …**) opens the sprint picker: the running sprint, sprints in planning, or
+  **No sprint**.
+- **Add to the sprint** in the command menu adds the selection to the running sprint, or, if none runs, to the
+  sprint in planning.
+- A new issue created in the sprint view goes into the sprint.
+
+<Screenshot name="sprint" alt="The running sprint: goal, progress in points, capacity and issues grouped into planned and added later" />
+
+## Complete a sprint
+
+Choose **Complete sprint** in the command menu, or **Close** in the sprint view. The completion page lists every
+issue that is not done yet.
+
+- **Done** issues count as completed automatically. **Canceled** and duplicate issues are recorded as canceled.
+- Every other issue needs a decision:
+
+| Key | Decision | What happens |
+|---|---|---|
+| <Kbd keys="1" /> | **Next sprint** | Carried over into the sprint chosen under **Carry over to**: a sprint in planning or a **New sprint (will be created)** |
+| <Kbd keys="2" /> | **Backlog** | Leaves the sprint; its status stays |
+| <Kbd keys="3" /> | **Cancel** | Leaves the sprint and gets the status Canceled |
+| <Kbd keys={['0', 'backspace']} /> | **Clear decision** | |
+
+Select several issues to decide for all of them at once. Add a short retrospective if you like, then click
+**Close** with the sprint's name, or press <Kbd keys="mod+enter" />, once every issue has a decision. Nothing is
+moved without your decision.
+
+## Past sprints
+
+**All sprints** in the sprint view (or **Go to: All sprints** in the command menu) lists every sprint with its goal, date range, points done against
+planned, how much was added late and how many issues were carried over. Cycles imported from Linear appear
+here as well.
+
+A closed sprint keeps its record: which issues were planned or added late, what happened to each, and the
+estimate each completed issue had at that moment. Reopening an issue or changing its estimate later does not
+change that record or the capacity suggestion.
+
+<Aside type="tip">
+Sprints work without estimates too. Progress and capacity then have nothing to count, but planned versus
+added late, carry-over and the record of each sprint still work.
+</Aside>

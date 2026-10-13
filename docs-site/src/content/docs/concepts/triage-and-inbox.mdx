@@ -1,0 +1,89 @@
+---
+title: Triage and inbox
+description: Triage is where new issues wait to be sorted; the inbox is where you review what agents created. How both work and how to clear them quickly.
+sidebar:
+  order: 4
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+Agents can file issues as fast as they find problems. Two places keep that from flooding your backlog:
+**Triage** holds new issues until you decide what to do with them, and the **Inbox** shows you every issue an
+agent created until you have seen it.
+
+They overlap but are not the same. Triage is a status: an issue is in triage until you give it another one.
+The inbox is a marker on the issue: you remove the entry once you've reviewed it, and the issue itself stays
+exactly as it is.
+
+## Triage
+
+Open triage with <Kbd keys="g t" /> (**Go to: Triage**). It shows the issues of all teams whose status is of type
+Triage, grouped by team. The sidebar shows a **Triage** link with a count under the current team while issues
+are waiting there.
+
+Issues land in triage when:
+
+- an agent creates them and does not set a status itself,
+- you share a link or text to XLR8 from another app, with XLR8 installed as an app (the issue also lands in
+  the inbox),
+- you create them with the status Triage, for example with <Kbd keys="c" /> in the triage view.
+
+### Accept, duplicate, decline
+
+Focus an issue in triage (or select several) and press a digit:
+
+| Key | Action | What happens |
+|---|---|---|
+| <Kbd keys="1" /> | **Accept …** | Pick a status under **Accept as** (a Backlog, Unstarted or Started status), or **Accept into** another team. Accepting into another team moves the issue there with the status Backlog. |
+| <Kbd keys="2" /> | **Mark as duplicate …** | Pick the original issue. This one gets the status Duplicate and a "duplicate of" relation. |
+| <Kbd keys="3" /> | **Decline** | The issue gets the status Canceled. |
+
+All three also mark the issue as read in the inbox. If the team uses a
+[fixed order](/concepts/workflow/#fixed-order), **Accept as** only offers the statuses that are allowed.
+
+<Screenshot name="triage" alt="The triage view with new issues grouped by team, one of them focused" />
+
+## Inbox
+
+Open the inbox with <Kbd keys="g i" /> (**Go to: Inbox**). It lists every issue created by an agent until you
+remove the entry. Issues you create yourself and imported issues never appear here. Issues
+shared from another app do.
+
+Each entry is either **unread** (with a dot) or **read**. Opening the issue marks it read. The count in the
+sidebar shows the unread entries.
+
+On a wide screen the inbox is split in two: the list on the left and the full, editable issue on the right.
+Move through the list with <Kbd keys={['j', 'arrowdown']} /> and <Kbd keys={['k', 'arrowup']} />; the right side
+follows and marks the entry read after a short moment. <Kbd keys="enter" /> opens the issue as its own page,
+<Kbd keys="escape" /> closes the right side.
+
+<Screenshot name="inbox" alt="The inbox in split view: entries from agents on the left, the selected issue on the right" />
+
+### Work through the inbox
+
+| Action | Shortcut |
+|---|---|
+| **Remove from inbox** | <Kbd keys={['backspace', 'delete', 'e']} /> |
+| **Mark as read** / **Mark as unread** | <Kbd keys="u" /> |
+| **Mark all as read** | <Kbd keys="alt+u" /> |
+| **Remove read entries from inbox** | <Kbd keys={['shift+backspace', 'shift+delete']} /> |
+| **Done for today: clear inbox** | button **Done for today** in the header |
+
+Removing an entry only takes it out of the inbox. The issue keeps its status, priority and everything else.
+"All" in these actions means all entries in the current view, so a filter narrows them down. Every inbox action
+can be undone with <Kbd keys="mod+z" />.
+
+The triage keys <Kbd keys="1" />, <Kbd keys="2" /> and <Kbd keys="3" /> work in the inbox too, so you can accept or
+decline an agent's issue right where you review it.
+
+### Find unreviewed issues elsewhere
+
+In any list, the filter (<Kbd keys="f" />) has the option **Unread (in inbox)**. It narrows the view to issues
+that are still unread in your inbox, for example to see which issues in the current sprint an agent added that
+you have not looked at yet.
+
+<Aside type="tip">
+A good routine: start the day in the inbox, accept or decline with <Kbd keys="1" /> and <Kbd keys="3" />, remove
+what you've handled with <Kbd keys="e" />, and end with **Done for today**.
+</Aside>

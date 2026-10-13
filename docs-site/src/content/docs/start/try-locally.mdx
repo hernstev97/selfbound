@@ -1,0 +1,136 @@
+---
+title: Try it locally
+description: Run XLR8 on your own machine with sample data, without a Convex or Clerk account.
+sidebar:
+  order: 2
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+You can run all of XLR8 on your machine before you set up anything in the cloud. One command starts a
+local backend, signs you in with a local test account, loads sample data and opens the app. You need no
+Convex or Clerk account for this.
+
+## Requirements
+
+- **Node.js 24**
+- **pnpm 11.** The exact version is pinned in `package.json`. Run `corepack enable` once and Corepack
+  provides the right pnpm.
+- **Git**, to clone the repository.
+
+## Start XLR8
+
+<Steps>
+
+1. Clone the repository and install the dependencies:
+
+   ```sh
+   git clone https://github.com/hernstev97/xlr8-public.git xlr8
+   cd xlr8
+   corepack enable
+   pnpm install
+   ```
+
+2. Start everything:
+
+   ```sh
+   pnpm dev
+   ```
+
+   The first start takes a little longer: the Convex CLI downloads its local backend, and the sample data
+   is loaded.
+
+3. Open [http://127.0.0.1:5412/](http://127.0.0.1:5412/). You are already signed in and see the sample
+   workspace.
+
+</Steps>
+
+## What `pnpm dev` starts
+
+| Part | Address | What it is |
+|---|---|---|
+| App | `http://127.0.0.1:5412/` | the web app (Vite dev server) |
+| Landing page | `http://127.0.0.1:5412/welcome` | the page visitors see before they sign in |
+| Backend | `http://127.0.0.1:13410` | a local, anonymous Convex backend |
+| HTTP endpoints | `http://127.0.0.1:13411` | MCP for agents (`/mcp`) and the health check (`/health`) |
+
+The script also sets up a **local test sign-in**. It creates a key pair in `backend/.dev-auth/`, gives
+the backend the public key and writes a token for the owner into `app/.env.local`. The app uses that
+token, so you never see a sign-in form locally. The backend accepts these tokens only when it runs on
+your own machine, never in the cloud.
+
+## Sample data
+
+`pnpm dev` loads a small, generated dataset: about 440 issues in a handful of fictional teams (Orbit,
+Nova, Pixelworks and others), with labels, projects, sprints, comments, sample agents and sample pull
+requests. Nothing in it is real.
+
+The data stays when you stop and restart. If the sample set is already complete, `pnpm dev` does not load
+it again, so your local changes survive a restart.
+
+### More data
+
+To try XLR8 with 10,000 issues, the size its performance budget is measured at:
+
+```sh
+pnpm local --seed large --app dev
+```
+
+<Aside type="caution">
+Loading a different dataset replaces **all** local data, including what you created yourself. The same
+happens when you switch back from `large` to `small` with `pnpm dev`.
+</Aside>
+
+### Start over
+
+To throw away your local changes and load the sample data again:
+
+```sh
+pnpm dev --reset
+```
+
+## Stop
+
+Press Ctrl+C in the terminal. This stops the backend and the app.
+
+## Other options
+
+`pnpm dev` is short for `node tooling/local.mjs --seed small --app dev`. The script accepts more options,
+all listed at the top of `tooling/local.mjs`. The useful ones:
+
+| Option | Effect |
+|---|---|
+| `--seed small` / `--seed large` / `--seed none` | which sample data to load; `none` loads nothing |
+| `--reset` | load the sample data again even if it is complete |
+| `--app dev` | start the app with the Vite dev server on port 5412 |
+| `--app preview` | build the app for production and serve it on port 5402 |
+| `--app none` | start only the backend |
+| `--port 13410` | port of the local backend; the HTTP endpoints use the next port |
+
+To start with an empty workspace instead of sample data, run
+`node tooling/local.mjs --seed none --app dev` in a fresh checkout, before your first `pnpm dev`. This is
+close to what you see after your [first sign-in](/start/first-steps/) on your own instance. `--seed none`
+does not remove data that is already there.
+
+## Check the backend
+
+Open [http://127.0.0.1:13411/health](http://127.0.0.1:13411/health). Locally it shows `"local": true` and
+`"devAuth": true`. On a production instance both must be `false`.
+
+## Connect an agent locally
+
+The local backend serves MCP at `http://127.0.0.1:13411/mcp`. Create a key in **Settings → Agents** and
+follow [Connect an agent](/agents/connect/), using the local address.
+
+## When something goes wrong
+
+- **"XLR8 is not set up":** the app has no backend address. This happens when you start only the app
+  (for example `pnpm --filter @xlr8/app dev`) before `pnpm dev` has ever run. Start everything with
+  `pnpm dev`.
+- **Port already in use:** the app needs port 5412. If an app already answers there, the script reuses
+  it. For the backend, pick other ports with `--port`.
+- **The health check does not answer:** the backend is not running. Start it with `pnpm dev`.
+
+## Next steps
+
+- [First steps](/start/first-steps/): create a team and issues, and learn the main shortcuts.
+- [Self-hosting](/start/self-hosting/): run your own instance in the cloud.

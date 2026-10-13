@@ -1,0 +1,150 @@
+---
+title: Issues
+description: What an issue holds in XLR8, from status and priority to relations, comments, history, drafts, trash, undo and recurring issues.
+sidebar:
+  order: 2
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+An issue is one piece of work: a bug, a task, an idea. Each issue belongs to one [team](/concepts/teams/), has
+an identifier such as `ACME-42`, and carries a small set of fields you can change from the keyboard.
+
+<Screenshot name="issue" alt="An issue page: parent issue, title and Markdown description, sub-issues and an activity timeline with comments from you and an agent; on the right, status, priority, estimate, due date, labels, project, sprint and parent" />
+
+## Identifiers
+
+The identifier is the team key plus a number that counts up per team: `ACME-1`, `ACME-2` and so on. You can
+type an identifier into search (<Kbd keys="/" />) to jump to the issue.
+
+If an issue [moves to another team](/concepts/teams/#move-issues-to-another-team), it gets a new identifier,
+and the old one keeps working as a link and in search.
+
+## Fields
+
+| Field | What it holds | Shortcut |
+|---|---|---|
+| Title | One line | |
+| Description | Markdown text, see below | <Kbd keys="e" /> on the issue page |
+| Status | One of the team's statuses, see [Statuses and workflow](/concepts/workflow/) | <Kbd keys="s" /> |
+| Priority | No priority, Urgent, High, Medium or Low | <Kbd keys="p" /> |
+| Labels | Any number of labels, see [Labels](/concepts/labels/) | <Kbd keys="l" /> |
+| Project | At most one project of the issue's team, see [Projects](/concepts/projects/) | <Kbd keys="shift+p" /> |
+| Sprint | At most one open sprint, see [Sprints](/concepts/sprints/) | <Kbd keys="shift+c" /> |
+| Estimate | Points; the picker offers 1, 2, 3, 5 and 8 | <Kbd keys="shift+e" /> |
+| Due date | A calendar day | <Kbd keys="shift+d" /> |
+| Parent | Another issue this one is a sub-issue of | <Kbd keys="mod+shift+p" /> |
+
+The pickers also work on a selection: select several issues with <Kbd keys="x" /> and change them all at once.
+All shortcuts are listed in [Keyboard shortcuts](/reference/keyboard-shortcuts/).
+
+### Priority
+
+Priority is stored as a number from 0 to 4: 0 is **No priority**, 1 **Urgent**, 2 **High**, 3 **Medium** and
+4 **Low**. In the priority picker, the digit keys <Kbd keys="0" /> to <Kbd keys="4" /> pick directly.
+
+**Priority belongs to open work.** When an issue moves into a completed or canceled status (Done, Canceled,
+Duplicate), XLR8 removes its priority. Reopening the issue does not bring it back. If you undo the status
+change with <Kbd keys="mod+z" />, status and priority both return.
+
+**Priority budget.** Each team should have at most 1 open Urgent and 3 open High issues. If a change goes
+beyond that, XLR8 shows a hint listing the team's other Urgent or High issues, with **Downgrade …** to lower one
+of them. It is only a hint; your change is saved either way.
+
+### Description
+
+The description is Markdown. On the issue page, click into the text or press <Kbd keys="e" /> to edit it. Type
+`/` for blocks such as headings, lists and code, and paste images with <Kbd keys="mod+v" />. XLR8 saves
+automatically while you type. If someone else, for example an agent, changes the description while you are
+editing, XLR8 lets you choose between **Keep mine** and **Take theirs**.
+
+### Sub-issues
+
+An issue can have a parent. Press <Kbd keys="mod+shift+o" /> (**Create sub-issue**) on an issue to create a
+child, or <Kbd keys="mod+shift+p" /> (**Set parent …**) to attach an existing issue to a parent. The parent
+lists its **Sub-issues** with a done count, such as 2/5.
+
+### Relations
+
+Relations connect two issues. Add them from the command menu (<Kbd keys="mod+k" />) or the context menu (right
+click):
+
+- **Blocks …** and **Blocked by …**: one issue has to be finished before the other.
+- **Related to …**: the two issues belong together.
+- **Mark as duplicate …**: this issue duplicates another one. XLR8 also sets its status to the team's
+  Duplicate status.
+
+The issue page lists relations under **Relations**, grouped as Blocks, Blocked by, Related, Duplicate of and
+Duplicates. Click the × on a relation to remove it.
+
+## Comments and activity
+
+Below the description, **Activity** shows comments and the history of the issue in one timeline. Comments are
+Markdown; press <Kbd keys="mod+enter" /> to send. You can edit and delete your own comments.
+
+Every change is recorded with who made it: you, an agent (by its name), GitHub or XLR8 itself (for example a
+recurring issue). When someone other than you changed a field such as status, priority or labels, the entry has
+an **Undo** button. It restores the old value, but only if nobody has changed the field since.
+
+## Copy link, branch name and ID
+
+| Action | Shortcut | Result |
+|---|---|---|
+| **Copy link** | <Kbd keys="mod+shift+," /> | `https://xlr8.example.com/issue/ACME-42` |
+| **Copy branch name** | <Kbd keys="mod+shift+." /> | `acme-42-fix-login-redirect` |
+| **Copy ID** | <Kbd keys="mod+." /> | `ACME-42` |
+
+The branch name is the lower-case identifier plus the title, shortened. If your instance sets a branch prefix,
+it comes first, for example `dev/acme-42-fix-login-redirect`. A pull request on such a branch is linked to the
+issue automatically, see [GitHub](/integrations/github/).
+
+## Drafts
+
+Press <Kbd keys="c" /> to create an issue. If you close the dialog with content (<Kbd keys="escape" />, ×, or a
+click outside), nothing is lost: the content is saved as a draft, and the message **Saved as draft** offers to
+open it again. Saved drafts are listed under **Drafts** in the sidebar (or **Go to: Drafts** in the command
+menu). Only **Discard** in the dialog throws the content away, and even that offers **Undo**.
+
+Drafts are stored in your browser, so they don't follow you to another device.
+
+## Trash
+
+**Delete** (<Kbd keys={['mod+backspace', 'mod+delete']} />) moves issues to the trash. Open it with
+<Kbd keys="g x" /> (**Go to: Trash**). From there, **Restore** brings an issue back with all its fields,
+comments and history.
+
+Issues in the trash cannot be changed. After 30 days, XLR8 deletes them for good, including description,
+comments and history.
+
+Deleting an issue also takes it out of a sprint that is still open; restoring it does not put it back.
+
+## Undo and redo
+
+Press <Kbd keys="mod+z" /> to undo your last change and <Kbd keys={['mod+shift+z', 'mod+y']} /> to redo it.
+Undo covers nearly everything you do to issues: field changes, creating, deleting and restoring, moving to
+another team, relations, reordering and inbox actions. It also takes you back to the page, filters and
+selection where you made the change.
+
+If someone else changed the same field in the meantime, XLR8 does not overwrite their change and tells you who
+made it.
+
+## Recurring issues
+
+For work that comes back regularly, such as "Test-decrypt a backup", make an issue repeat. On an issue, choose
+**Repeat …** from the command menu, the context menu or the **More actions** menu, then pick a rhythm:
+
+- **Every week on** a weekday, or
+- **Every month on day** 1 to 28.
+
+XLR8 saves a template with the issue's team, title, description, priority, labels, project and estimate. On
+each due day it creates a new issue from the template with the status Todo (or the team's matching status) and
+that day as its due date. The original issue stays as it is.
+
+Manage templates under **Settings → Recurrences**: create one from scratch with **New recurrence**, **Pause**
+and **Resume** it, or **Delete** it. Deleting a template only stops new issues; issues it already created stay.
+
+<Aside type="note">
+If XLR8 cannot create an issue from a template, for example because one of its labels was archived, it pauses
+the template. If several due days were missed, XLR8 creates one catch-up issue, not one per missed day.
+</Aside>

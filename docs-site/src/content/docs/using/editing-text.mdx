@@ -1,0 +1,147 @@
+---
+title: Editing text
+description: Write descriptions, comments and knowledge pages in the Markdown editor, with formatting shortcuts, the / menu, images, code blocks and tables.
+sidebar:
+  order: 6
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+
+Issue descriptions, comments and knowledge pages share one editor. It shows formatted text while you
+write and stores plain Markdown underneath, so what agents read and write through MCP is the same text
+you see. You can type Markdown as you are used to, use shortcuts, or pick blocks from a menu.
+
+## Starting and finishing
+
+- **Description**: click into it, or press <Kbd keys="e" /> on an issue page. The cursor lands where you
+  clicked, or at the end. Changes are saved automatically; the line below the editor shows "Saving …"
+  and then "Saved automatically".
+- **Knowledge page**: click into the text or press <Kbd keys="e" />.
+- **Comment**: type in the field at the end of the activity and press <Kbd keys="mod+enter" /> to send.
+  You can edit your own comments later.
+
+<Kbd keys="escape" /> leaves the editor and keeps the text. Back outside, the keyboard shortcuts of the
+app work again.
+
+If an agent changes a description while you are typing in it, XLR8 does not overwrite either version. It
+shows a notice with **Keep mine** and **Take theirs**.
+
+## The / menu
+
+Type <Kbd keys="/" /> at the start of a line or after a space to open the block menu. Keep typing to
+filter it, use the arrow keys and press <Kbd keys="enter" /> or <Kbd keys="tab" />.
+
+| Entry | Inserts |
+|---|---|
+| Text | a plain paragraph |
+| Heading 1, Heading 2, Heading 3 | a heading |
+| Bulleted list, Numbered list | a list |
+| Checklist | a list with checkboxes |
+| Quote | a quote |
+| Code block | a code block |
+| Table | a table with three columns and a header row |
+| Divider | a horizontal line |
+| Image | an image from a file (where images are allowed) |
+| Link wiki page | a link to a knowledge page (when a team has a knowledge area) |
+
+## Markdown while you type
+
+Type the Markdown and the editor converts it as you go:
+
+| You type | You get |
+|---|---|
+| `#` to `######` and a space | heading, level 1 to 6 |
+| `-`, `*` or `+` and a space | bulleted list |
+| `1.` or `1)` and a space | numbered list |
+| `[ ]` or `[x]` and a space | checklist item, open or done |
+| `>` and a space | quote |
+| ` ``` ` and a space or <Kbd keys="enter" /> | code block; add the language right after, like ` ```ts ` |
+| `---` | divider |
+| `**bold**` or `__bold__` | **bold** |
+| `*italic*` or `_italic_` | *italic* |
+| `~~strike~~` | ~~strikethrough~~ |
+| `` `code` `` | `inline code` |
+| a web address and a space | a link |
+
+<Kbd keys="backspace" /> at the start of a heading, list item, quote or code block turns it back into plain
+text.
+
+## Formatting shortcuts
+
+| Keys | Effect |
+|---|---|
+| <Kbd keys="mod+b" /> | bold |
+| <Kbd keys="mod+i" /> | italic |
+| <Kbd keys="mod+e" /> | inline code |
+| <Kbd keys="mod+shift+x" /> | strikethrough |
+| <Kbd keys="mod+k" /> | add or edit a link |
+| <Kbd keys="mod+alt+1" />, <Kbd keys="mod+alt+2" />, <Kbd keys="mod+alt+3" /> | heading 1, 2, 3 |
+| <Kbd keys="mod+alt+0" /> | plain paragraph |
+| <Kbd keys="mod+shift+7" /> | numbered list |
+| <Kbd keys="mod+shift+8" /> | bulleted list |
+| <Kbd keys="mod+shift+9" /> | checklist |
+| <Kbd keys="mod+shift+\" /> | code block on or off |
+| <Kbd keys="tab" /> / <Kbd keys="shift+tab" /> | indent / outdent a list item |
+| <Kbd keys="shift+enter" /> | line break within a paragraph |
+| <Kbd keys="mod+z" /> / <Kbd keys="mod+shift+z" /> | undo / redo typing |
+
+Pressing a list shortcut inside a list of the same kind turns the current item back into a paragraph;
+inside a different kind of list, it converts the list.
+
+## Links
+
+- Select text and press <Kbd keys="mod+k" /> to add a link, or paste a web address over selected text.
+- A web address followed by a space becomes a link on its own.
+- <Kbd keys="mod" />-click a link in the editor to open it.
+- Type `[[` to pick a knowledge page and insert a link to it. This works when at least one team has a
+  knowledge area.
+- An issue ID like `ACME-42` in the text becomes a link to that issue when the text is shown.
+
+## Images
+
+Add images in any of these ways:
+
+- Paste a screenshot with <Kbd keys="mod+v" />.
+- Drag image files into the text.
+- Choose **Image** in the / menu, or use the image button below a description.
+
+PNG, JPEG, WebP and GIF work, up to 5 MB per image. XLR8 shrinks large images in the browser before
+uploading them (longest edge 2560 pixels) and converts most to WebP. While an image uploads, a
+placeholder shows where it will appear. If the upload fails, a notice offers to try again. Click an image
+in the finished text to see it full size.
+
+## Code blocks
+
+Start a code block with ` ``` ` plus the language, with the / menu, or with <Kbd keys="mod+shift+\" />. To
+leave it, press <Kbd keys="enter" /> on an empty last line, or use the arrow keys at the end of the text.
+
+Code is colored for these languages: TypeScript, JavaScript, Svelte, Vue, HTML, XML, CSS, JSON, Bash,
+SQL, Python, Kotlin, YAML, Markdown and Diff. Common short names work too, like `ts`, `js`, `sh` or
+`py`. To change the language, click the language button at the top right of the code block. This also
+works without opening the editor, in a description and in your own comments. In the editor, the same
+menu offers **Convert to text**, which turns the block back into paragraphs. Shown code blocks have a copy
+button.
+
+## Tables
+
+Insert a table with **Table** in the / menu. Inside a table:
+
+| Keys | Effect |
+|---|---|
+| <Kbd keys="tab" /> / <Kbd keys="shift+tab" /> | next / previous cell; <Kbd keys="tab" /> in the last cell adds a row |
+| <Kbd keys="mod+alt+arrowup" /> / <Kbd keys="mod+alt+arrowdown" /> | insert a row above / below |
+| <Kbd keys="mod+alt+arrowleft" /> / <Kbd keys="mod+alt+arrowright" /> | insert a column left / right |
+| <Kbd keys="mod+alt+backspace" /> | delete the row |
+| <Kbd keys="mod+alt+shift+backspace" /> | delete the column |
+
+The table button at the edge of the current cell opens a menu with the same commands, plus column
+alignment and **Delete table**.
+
+## Checklists
+
+Checkboxes in a description can be ticked without opening the editor: click the box in the shown text.
+
+<Aside type="tip">
+Pasted text is read as Markdown, so content copied from GitHub, an agent's answer or another editor keeps
+its formatting. Copying from XLR8 gives you Markdown as well.
+</Aside>

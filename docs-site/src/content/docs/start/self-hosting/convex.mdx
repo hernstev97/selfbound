@@ -1,0 +1,164 @@
+---
+title: Set up Convex
+description: Create the Convex project, set the environment variables, deploy the backend and check its health.
+sidebar:
+  label: Convex
+  order: 2
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+[Convex](https://convex.dev) runs XLR8's database and backend functions, and serves the HTTP endpoints
+for agents, GitHub and the health check. On this page you create the project, configure it and deploy
+the backend for the first time.
+
+You need the **Frontend API URL** and your **user id** from [Clerk](/start/self-hosting/clerk/).
+
+## Create the project and deploy key
+
+<Steps>
+
+1. **Create a project** in the [Convex dashboard](https://dashboard.convex.dev). Its **production**
+   deployment has a name like `happy-otter-123`. The app talks to `https://happy-otter-123.convex.cloud`;
+   the HTTP endpoints live at `https://happy-otter-123.convex.site`.
+
+2. **Put the deployment name into your instance settings.** In `deploy/instance.json` (see
+   [the instance settings file](/start/self-hosting/#the-instance-settings-file)), set
+   `convexDeployment` to `happy-otter-123`.
+
+3. **Create a production deploy key** in the project settings under **Deploy keys**, and store it in
+   `~/.config/xlr8/convex-deploy-key`, readable only by you:
+
+   ```sh
+   mkdir -p ~/.config/xlr8 && (umask 077; cat > ~/.config/xlr8/convex-deploy-key)
+   ```
+
+   Paste the key, press Enter, then Ctrl+D. The deploy script refuses a key file that others can read,
+   and a key that belongs to a different deployment than `convexDeployment`. To keep the key somewhere
+   else, point the environment variable `XLR8_CONVEX_DEPLOY_KEY_FILE` at the file.
+
+</Steps>
+
+From now on, `node tooling/cloud.mjs <command>` runs any Convex CLI command against your production
+deployment with this key, for example `node tooling/cloud.mjs env list`. It never prints the key.
+
+## Set the required environment variables
+
+Set these **before the first deploy**. The backend's sign-in configuration reads
+`CLERK_JWT_ISSUER_DOMAIN` and `XLR8_DEV_JWKS`, and the deploy fails if either is missing.
+
+```sh
+node tooling/cloud.mjs env set CLERK_JWT_ISSUER_DOMAIN https://clerk.xlr8.example.com
+node tooling/cloud.mjs env set XLR8_DEV_JWKS none
+node tooling/cloud.mjs env set XLR8_OWNER_IDS 'https://clerk.xlr8.example.com|user_2abc…'
+```
+
+You can also set them in the Convex dashboard under **Settings → Environment Variables**.
+
+`XLR8_OWNER_IDS` lists who may use the instance. Each entry is the token issuer (your Frontend API URL),
+a `|`, and a Clerk user id. The issuer must match exactly what Clerk puts into its tokens: the same
+spelling as `CLERK_JWT_ISSUER_DOMAIN`, without a trailing slash. Quote the value in the shell because of
+the `|`.
+
+<Aside type="caution">
+Environment variables are not in the code and not in the backup. Keep every production value in a
+password manager.
+</Aside>
+
+## Deploy the backend
+
+Run `pnpm install` in the repository if you have not yet, then:
+
+```sh
+node tooling/cloud.mjs deploy
+```
+
+Without the wrapper script, the plain Convex CLI works too:
+
+```sh
+cd backend
+read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY   # paste the deploy key, Enter
+npx convex deploy
+```
+
+## Check the health
+
+Open `https://happy-otter-123.convex.site/health`. It returns the backend's status as JSON, without any
+of your data:
+
+| Field | Expected in production | Meaning |
+|---|---|---|
+| `ok` | `true` | the backend answers |
+| `clerk` | `true` | `CLERK_JWT_ISSUER_DOMAIN` is set |
+| `devAuth` | `false` | the local test sign-in is active |
+| `devAuthConfigured` | `false` | `XLR8_DEV_JWKS` holds a key instead of `none`; set it to `none` |
+| `local` | `false` | the backend runs on your own machine |
+| `oauth` | `true` if you use connectors | `XLR8_APP_URL` is set |
+| `push` | `true` if you use push | both VAPID keys are set |
+| `testSwitches` | `false` | test switches for local development are on |
+
+Check `/health` again after every production deploy. The local test sign-in cannot work in the cloud
+anyway, because the backend rejects its tokens on any deployment that is not on `127.0.0.1` or
+`localhost`.
+
+## Environment variables
+
+All variables the backend reads. Set them with `node tooling/cloud.mjs env set NAME value` or in the
+Convex dashboard. Changes take effect right away, except for `CLERK_JWT_ISSUER_DOMAIN` (see below).
+
+### Sign-in and access
+
+| Variable | Required | Value |
+|---|---|---|
+| `CLERK_JWT_ISSUER_DOMAIN` | yes | Clerk Frontend API URL, for example `https://clerk.xlr8.example.com`, no trailing slash. Several URLs separated by commas, only while you move Clerk to another domain. **Redeploy the backend after changing it**: Convex reads it when the functions are pushed, not on every request. |
+| `XLR8_OWNER_IDS` | yes | who gets in: comma-separated entries `<issuer>\|<Clerk user id>`. Empty means nobody gets in. |
+| `XLR8_DEV_JWKS` | yes | `none` in production. Locally it holds the public key of the test sign-in. |
+
+### Agents and connectors
+
+| Variable | Required | Value |
+|---|---|---|
+| `XLR8_APP_URL` | no | address of your app, `https://xlr8.example.com`. Turns on OAuth, so claude.ai and ChatGPT can connect as connectors. Also the default contact for push services. |
+| `XLR8_PUBLIC_SITE_URL` | no | a custom address for MCP and OAuth instead of `…convex.site`, for example `https://mcp.xlr8.example.com`. Changing it later means reconnecting all connectors. |
+| `XLR8_OWNER_NAME` | no | your display name in what agents read, for example who wrote a comment. Default `Owner`. |
+
+Details: [Connect an agent](/agents/connect/).
+
+### Language
+
+| Variable | Required | Value |
+|---|---|---|
+| `XLR8_LOCALE` | no | `de` for German push notification texts and German default status names in new teams. Default English. The UI language is separate: it follows the browser and can be changed in the settings. |
+
+### Push notifications
+
+| Variable | Required | Value |
+|---|---|---|
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | no | key pair for Web Push. Without them, no push notifications. Generate and set them with `node tooling/vapid.mjs`; never by hand. |
+| `VAPID_SUBJECT` | no | contact for push services (`https:` or `mailto:`). Set by `tooling/vapid.mjs`; if unset, `XLR8_APP_URL` is used. |
+
+Details: [Notifications](/using/notifications/).
+
+### GitHub
+
+| Variable | Required | Value |
+|---|---|---|
+| `GITHUB_WEBHOOK_SECRET` | no | verifies that webhook deliveries come from GitHub |
+| `GITHUB_WEBHOOK_SECRET_PREVIOUS` | no | the old secret, only while you rotate it |
+| `GITHUB_TOKEN` | no | fine-grained personal access token for the pull request view (description, checks, comments, merging) and for managing webhooks. Without it, XLR8 shows only title and state. |
+| `GITHUB_MANAGE_WEBHOOKS` | no | `1`: XLR8 creates missing webhooks in the token's repositories and fixes their events. Needs `GITHUB_WEBHOOK_SECRET`. |
+| `GITHUB_REPOS` | no | manage only these repositories, `owner/name` or `owner/*`, comma-separated. Default: all the token can reach. |
+
+Details: [GitHub](/integrations/github/).
+
+### Never in production
+
+| Variable | Meaning |
+|---|---|
+| `XLR8_ALLOW_SEED` | allows loading sample data, which deletes everything else |
+| `XLR8_TEST_SWITCHES` | test switches for local development |
+
+Convex itself sets `CONVEX_CLOUD_URL` and `CONVEX_SITE_URL`; you do not set them.
+
+## Next step
+
+Continue with the [web app](/start/self-hosting/web-app/).

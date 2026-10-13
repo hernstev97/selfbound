@@ -7,17 +7,19 @@ export interface Cap {
   mac?: string;
   /** Screen reader name when the label is a symbol */
   name?: string;
+  /** Screen reader name of the Mac label */
+  macName?: string;
 }
 
 const NAMED: Record<string, Cap> = {
-  mod: { label: 'Ctrl', mac: '⌘', name: 'Control' },
-  alt: { label: 'Alt', mac: '⌥', name: 'Alt' },
+  mod: { label: 'Ctrl', mac: '⌘', name: 'Control', macName: 'Command' },
+  alt: { label: 'Alt', mac: '⌥', name: 'Alt', macName: 'Option' },
   shift: { label: '⇧', name: 'Shift' },
   enter: { label: 'Enter' },
   escape: { label: 'Esc' },
   space: { label: 'Space' },
   tab: { label: 'Tab' },
-  backspace: { label: 'Backspace', mac: '⌫' },
+  backspace: { label: 'Backspace', mac: '⌫', macName: 'Delete' },
   delete: { label: 'Del' },
   home: { label: 'Home' },
   end: { label: 'End' },
