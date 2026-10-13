@@ -1,0 +1,83 @@
+---
+// Home hero (replaces Starlight's Hero): the XLR8 logo as the page heading, centred, with the
+// tagline and actions from the frontmatter.
+import { LinkButton } from '@astrojs/starlight/components';
+import logo from '../assets/logo-dark.svg?raw';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const { title = data.title, tagline, actions = [] } = data.hero || {};
+// One inline SVG in currentColor instead of a light and a dark file; the heading text is the name.
+const svg = logo
+  .replace(/<title>.*?<\/title>/s, '')
+  .replace(/\s(width|height|role|aria-label)="[^"]*"/g, '')
+  .replace('<svg ', '<svg aria-hidden="true" focusable="false" ')
+  .replace(/fill="#[0-9a-f]{3,6}"/gi, 'fill="currentColor"');
+---
+
+<div class="xl-hero">
+  <h1 id="_top" data-page-title>
+    <span class="xl-hero-logo" set:html={svg} />
+    <span class="sr-only" set:html={title} />
+  </h1>
+  {tagline && <p class="xl-hero-tagline" set:html={tagline} />}
+  {
+    actions.length > 0 && (
+      <div class="xl-hero-actions">
+        {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+          <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+            {text}
+            {icon?.html && <Fragment set:html={icon.html} />}
+          </LinkButton>
+        ))}
+      </div>
+    )
+  }
+</div>
+
+<style>
+  .xl-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    padding-block: 2.5rem 1.5rem;
+    text-align: center;
+  }
+  .xl-hero-logo {
+    display: block;
+    color: var(--xl-text-strong);
+  }
+  .xl-hero-logo :global(svg) {
+    display: block;
+    width: auto;
+    height: 3rem;
+  }
+  .xl-hero-tagline {
+    max-width: 34rem;
+    margin: 0;
+    color: var(--xl-text-muted);
+    font-size: 1.125rem;
+    line-height: 1.55;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .xl-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.625rem;
+    margin-top: 0.5rem;
+  }
+  @media (min-width: 50rem) {
+    .xl-hero {
+      gap: 1.5rem;
+      padding-block: 4.5rem 2.5rem;
+    }
+    .xl-hero-logo :global(svg) {
+      height: 4.25rem;
+    }
+    .xl-hero-tagline {
+      font-size: 1.3125rem;
+    }
+  }
+</style>

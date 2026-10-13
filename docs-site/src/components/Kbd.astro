@@ -1,0 +1,61 @@
+---
+// One or more shortcuts in the app's notation: <Kbd keys="mod+k" />, <Kbd keys={['j', 'arrowdown']} />.
+// Caps that differ on a Mac carry both faces; CSS shows one depending on html[data-mac], and the
+// hidden face is display: none, so screen readers only meet the visible one. Real spaces between
+// caps keep the search index readable ("G then I"); Pagefind skips the Mac face and spoken names.
+import { combo, type Cap } from '../lib/keys';
+
+interface Props {
+  keys: string | string[];
+}
+interface Face {
+  text: string;
+  /** Spoken name for symbols such as ⇧ or ⌘ */
+  sr?: string;
+  cls?: string;
+}
+const list = Array.isArray(Astro.props.keys) ? Astro.props.keys : [Astro.props.keys];
+const face = (text: string, name: string | undefined, cls?: string): Face => ({
+  text,
+  sr: name && !/^[\p{L}\p{N}]/u.test(text) ? name : undefined,
+  cls,
+});
+const faces = (cap: Cap): Face[] =>
+  cap.mac ? [face(cap.label, cap.name, 'xl-kbd-pc'), face(cap.mac, cap.macName ?? cap.name, 'xl-kbd-mac')] : [face(cap.label, cap.name)];
+---
+
+<span class="xl-kbds">
+  {
+    list.map((keys, i) => (
+      <>
+        {i > 0 && <>{' '}<span class="xl-kbd-or">or</span>{' '}</>}
+        <span class="xl-combo">
+          {combo(keys).map((step, s) => (
+            <>
+              {s > 0 && <>{' '}<span class="xl-kbd-then">then</span>{' '}</>}
+              {step.map((cap, c) => (
+                <>
+                {c > 0 && ' '}
+                <kbd class:list={['xl-kbd', [...cap.label].length === 1 && 'xl-kbd-char']} data-mac={cap.mac}>
+                  {faces(cap).map((f) => (
+                    <span class={f.cls} data-pagefind-ignore={f.cls === 'xl-kbd-mac' ? '' : undefined}>
+                      {f.sr ? (
+                        <>
+                          <span aria-hidden="true">{f.text}</span>
+                          <span class="sr-only" data-pagefind-ignore>{f.sr}</span>
+                        </>
+                      ) : (
+                        f.text
+                      )}
+                    </span>
+                  ))}
+                </kbd>
+                </>
+              ))}
+            </>
+          ))}
+        </span>
+      </>
+    ))
+  }
+</span>

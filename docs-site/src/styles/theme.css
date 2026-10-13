@@ -1,0 +1,1190 @@
+/* XLR8 look for Starlight. Values follow the app's tokens (app/src/styles/app.css, md.css):
+   neutral greys with a trace of hue 286, indigo accent at hue 276, 8 px radius, Inter.
+   Unlayered on purpose: it wins over Starlight's cascade layers without !important. */
+
+/* ---------------------------------------------------------------- Tokens */
+
+:root,
+::backdrop {
+  --xl-hue: 286;
+  --xl-accent-hue: 276;
+
+  /* Dark (Starlight's default): the app's dark palette at contrast 1. */
+  --xl-bg-app: oklch(0.129 0.001 var(--xl-hue));
+  --xl-bg-panel: oklch(0.169 0.002 var(--xl-hue));
+  --xl-bg-hover: oklch(0.195 0.003 var(--xl-hue));
+  --xl-bg-raised: oklch(0.215 0.006 var(--xl-hue));
+  --xl-bg-active: oklch(0.232 0.004 var(--xl-hue));
+  --xl-bg-control: oklch(0.277 0.002 var(--xl-hue));
+  --xl-bg-sidebar-hover: oklch(0.165 0.003 var(--xl-hue));
+  --xl-code-bg: oklch(0.205 0.005 var(--xl-hue));
+  --xl-line: oklch(0.214 0.004 var(--xl-hue));
+  --xl-border: oklch(0.243 0.002 var(--xl-hue));
+  --xl-border-strong: oklch(0.269 0.004 var(--xl-hue));
+  --xl-border-popover: oklch(0.337 0.004 var(--xl-hue));
+  --xl-text-strong: oklch(0.985 0 0);
+  --xl-text: oklch(0.918 0.002 var(--xl-hue));
+  /* Body copy a touch softer than the app's UI text: long reading on a dark surface. */
+  --xl-text-body: oklch(0.875 0.002 var(--xl-hue));
+  --xl-text-muted: oklch(0.667 0.003 var(--xl-hue));
+  /* Decoration only (rules, carets): below 3 : 1, never for text. */
+  --xl-text-faint: oklch(0.453 0.002 var(--xl-hue));
+  --xl-accent: oklch(0.567 0.159 var(--xl-accent-hue));
+  /* Darker than the app's dark hover (0.62) so white button text keeps 4.5 : 1. */
+  --xl-accent-hover: oklch(0.52 0.16 var(--xl-accent-hue));
+  --xl-accent-text: oklch(0.72 0.12 var(--xl-accent-hue));
+  --xl-accent-fg: oklch(1 0 0);
+  --xl-focus-ring: oklch(0.65 0.14 var(--xl-accent-hue));
+  --xl-selection: oklch(0.243 0.049 var(--xl-accent-hue));
+  --xl-shadow-popover: 0 0 0 0.5px var(--xl-border-popover), 0 8px 12px rgb(0 0 0 / 0.5), 0 0 64px rgb(0 0 0 / 0.45);
+  --xl-shadow-shot: 0 0 0 1px var(--xl-border), 0 16px 48px -12px rgb(0 0 0 / 0.6);
+  --xl-panel-edge: 1px;
+
+  /* Callout colours: text tone, and a base tone for borders and tints. */
+  --xl-note: oklch(0.72 0.12 var(--xl-accent-hue));
+  --xl-note-base: oklch(0.567 0.159 var(--xl-accent-hue));
+  --xl-tip: oklch(0.8 0.11 155);
+  --xl-tip-base: oklch(0.62 0.12 155);
+  --xl-caution: oklch(0.84 0.13 85);
+  --xl-caution-base: oklch(0.72 0.14 80);
+  --xl-danger: oklch(0.75 0.13 22);
+  --xl-danger-base: oklch(0.6 0.18 25);
+
+  --xl-radius-sm: 4px;
+  --xl-radius-md: 6px;
+  --xl-radius: 8px;
+  --xl-radius-lg: 12px;
+  --xl-ease: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --xl-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', 'Cascadia Code', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Starlight: greys from strongest (white) to the page (black). */
+  --sl-color-white: var(--xl-text-strong);
+  --sl-color-gray-1: var(--xl-text);
+  --sl-color-gray-2: var(--xl-text-body);
+  --sl-color-gray-3: var(--xl-text-muted);
+  --sl-color-gray-4: var(--xl-text-faint);
+  --sl-color-gray-5: var(--xl-border-strong);
+  --sl-color-gray-6: var(--xl-bg-raised);
+  --sl-color-gray-7: var(--xl-bg-hover);
+  --sl-color-black: var(--xl-bg-panel);
+
+  --sl-color-accent-low: var(--xl-selection);
+  --sl-color-accent: var(--xl-accent);
+  --sl-color-accent-high: var(--xl-accent-text);
+
+  --sl-hue-blue: var(--xl-accent-hue);
+  --sl-color-blue-low: oklch(0.26 0.05 var(--xl-accent-hue));
+  --sl-color-blue: var(--xl-note-base);
+  --sl-color-blue-high: var(--xl-note);
+  --sl-color-purple-low: oklch(0.26 0.05 305);
+  --sl-color-purple: oklch(0.6 0.15 305);
+  --sl-color-purple-high: oklch(0.78 0.11 305);
+  --sl-color-green-low: oklch(0.26 0.04 155);
+  --sl-color-green: var(--xl-tip-base);
+  --sl-color-green-high: var(--xl-tip);
+  --sl-color-orange-low: oklch(0.28 0.045 80);
+  --sl-color-orange: var(--xl-caution-base);
+  --sl-color-orange-high: var(--xl-caution);
+  --sl-color-red-low: oklch(0.27 0.06 25);
+  --sl-color-red: var(--xl-danger-base);
+  --sl-color-red-high: var(--xl-danger);
+
+  --sl-color-text: var(--xl-text-body);
+  --sl-color-text-accent: var(--xl-accent-text);
+  --sl-color-text-invert: var(--xl-accent-fg);
+  --sl-color-bg: var(--xl-bg-panel);
+  --sl-color-bg-nav: var(--xl-bg-app);
+  --sl-color-bg-sidebar: var(--xl-bg-app);
+  --sl-color-bg-inline-code: var(--xl-code-bg);
+  --sl-color-bg-accent: var(--xl-accent);
+  --sl-color-hairline-light: var(--xl-border);
+  --sl-color-hairline: var(--xl-line);
+  --sl-color-hairline-shade: var(--xl-border);
+  --sl-color-backdrop-overlay: rgb(0 0 0 / 0.5);
+
+  --sl-shadow-sm: none;
+  --sl-shadow-md: none;
+  --sl-shadow-lg: var(--xl-shadow-popover);
+
+  /* Type: Inter like the app, a calmer heading scale than Starlight's default. */
+  --sl-font: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sl-font-mono: var(--xl-mono);
+  --sl-text-body: 1rem;
+  --sl-text-code: 0.875rem;
+  --sl-text-code-sm: 0.875em;
+  --sl-text-h1: 1.875rem;
+  --sl-text-h2: 1.375rem;
+  --sl-text-h3: 1.125rem;
+  --sl-text-h4: 1rem;
+  --sl-text-h5: 1rem;
+  --sl-text-h6: 0.9375rem;
+  --sl-line-height: 1.7;
+  --sl-line-height-headings: 1.3;
+
+  /* About 70 characters of Inter at 16 px per line. */
+  --sl-content-width: 42rem;
+  --sl-sidebar-width: 16.5rem;
+  --sl-nav-height: 3.25rem;
+  --sl-nav-pad-y: 0.625rem;
+}
+
+:root[data-theme='light'],
+[data-theme='light'] ::backdrop {
+  --xl-bg-app: oklch(0.964 0.001 var(--xl-hue));
+  --xl-bg-panel: oklch(0.991 0.001 var(--xl-hue));
+  --xl-bg-hover: oklch(0.958 0.001 var(--xl-hue));
+  --xl-bg-raised: oklch(0.985 0.001 var(--xl-hue));
+  --xl-bg-active: oklch(0.922 0.001 var(--xl-hue));
+  --xl-bg-control: oklch(0.952 0.001 var(--xl-hue));
+  --xl-bg-sidebar-hover: oklch(0.938 0.001 var(--xl-hue));
+  --xl-code-bg: oklch(0.962 0.002 var(--xl-hue));
+  --xl-line: oklch(0.922 0.001 var(--xl-hue));
+  --xl-border: oklch(0.922 0.001 var(--xl-hue));
+  --xl-border-strong: oklch(0.876 0.001 var(--xl-hue));
+  --xl-border-popover: var(--xl-border-strong);
+  --xl-text-strong: oklch(0.222 0 0);
+  --xl-text: oklch(0.31 0.004 var(--xl-hue));
+  --xl-text-body: oklch(0.31 0.004 var(--xl-hue));
+  --xl-text-muted: oklch(0.479 0.003 var(--xl-hue));
+  --xl-text-faint: oklch(0.684 0.003 var(--xl-hue));
+  --xl-accent: oklch(0.567 0.159 var(--xl-accent-hue));
+  --xl-accent-hover: oklch(0.52 0.16 var(--xl-accent-hue));
+  --xl-accent-text: oklch(0.5 0.16 var(--xl-accent-hue));
+  --xl-focus-ring: var(--xl-accent);
+  --xl-selection: oklch(0.94 0.025 var(--xl-accent-hue));
+  --xl-shadow-popover: 0 0 0 0.5px var(--xl-border-popover), 0 4px 24px rgb(0 0 0 / 0.1);
+  --xl-shadow-shot: 0 0 0 1px var(--xl-border-strong), 0 16px 40px -16px rgb(0 0 0 / 0.18);
+
+  --xl-note: oklch(0.5 0.16 var(--xl-accent-hue));
+  --xl-note-base: oklch(0.567 0.159 var(--xl-accent-hue));
+  --xl-tip: oklch(0.47 0.11 150);
+  --xl-tip-base: oklch(0.6 0.13 150);
+  --xl-caution: #7d6400;
+  --xl-caution-base: oklch(0.78 0.15 85);
+  --xl-danger: #bf2a2a;
+  --xl-danger-base: oklch(0.6 0.2 25);
+
+  --sl-color-white: var(--xl-text-strong);
+  --sl-color-gray-1: var(--xl-text);
+  --sl-color-gray-2: var(--xl-text-body);
+  --sl-color-gray-3: var(--xl-text-muted);
+  --sl-color-gray-4: var(--xl-text-faint);
+  --sl-color-gray-5: var(--xl-border-strong);
+  --sl-color-gray-6: var(--xl-line);
+  --sl-color-gray-7: var(--xl-bg-hover);
+  --sl-color-black: var(--xl-bg-panel);
+
+  --sl-color-accent-low: var(--xl-selection);
+  --sl-color-accent: var(--xl-accent-text);
+  --sl-color-accent-high: oklch(0.42 0.15 var(--xl-accent-hue));
+
+  --sl-color-blue-low: oklch(0.94 0.03 var(--xl-accent-hue));
+  --sl-color-blue: var(--xl-note-base);
+  --sl-color-blue-high: var(--xl-note);
+  --sl-color-purple-low: oklch(0.94 0.03 305);
+  --sl-color-purple: oklch(0.58 0.17 305);
+  --sl-color-purple-high: oklch(0.48 0.17 305);
+  --sl-color-green-low: oklch(0.95 0.03 150);
+  --sl-color-green: var(--xl-tip-base);
+  --sl-color-green-high: var(--xl-tip);
+  --sl-color-orange-low: oklch(0.95 0.04 85);
+  --sl-color-orange: var(--xl-caution-base);
+  --sl-color-orange-high: var(--xl-caution);
+  --sl-color-red-low: oklch(0.95 0.03 25);
+  --sl-color-red: var(--xl-danger-base);
+  --sl-color-red-high: var(--xl-danger);
+
+  --sl-color-text: var(--xl-text-body);
+  --sl-color-text-accent: var(--xl-accent-text);
+  --sl-color-text-invert: var(--xl-accent-fg);
+  --sl-color-bg: var(--xl-bg-panel);
+  --sl-color-bg-nav: var(--xl-bg-app);
+  --sl-color-bg-sidebar: var(--xl-bg-app);
+  --sl-color-bg-inline-code: var(--xl-code-bg);
+  --sl-color-bg-accent: var(--xl-accent);
+  --sl-color-hairline-light: var(--xl-border);
+  --sl-color-hairline: var(--xl-line);
+  --sl-color-hairline-shade: var(--xl-border);
+  --sl-color-backdrop-overlay: rgb(0 0 0 / 0.18);
+}
+
+@media (min-width: 50rem) {
+  :root {
+    --sl-text-h1: 2.125rem;
+    --sl-text-h2: 1.5rem;
+    --sl-text-h3: 1.1875rem;
+    --sl-nav-height: 3.5rem;
+  }
+}
+
+/* ---------------------------------------------------------------- Base */
+
+body {
+  font-feature-settings: 'cv01', 'ss03';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--xl-accent) 32%, transparent);
+}
+
+/* Focus ring like the app: full colour, 2 px outside the element. */
+:focus-visible {
+  outline: 2px solid var(--xl-focus-ring);
+  outline-offset: 2px;
+}
+/* Inside scroll containers the ring would be clipped, so it sits inside there. */
+.sidebar-content :focus-visible,
+.right-sidebar :focus-visible,
+mobile-starlight-toc :focus-visible {
+  outline-offset: -2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--xl-text-faint) 45%, transparent);
+    background-clip: content-box;
+    border: 2px solid transparent;
+    border-radius: 5px;
+  }
+  *:hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, var(--xl-text-faint) 80%, transparent);
+  }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--xl-text-faint) 55%, transparent) transparent;
+  }
+}
+
+/* ---------------------------------------------------------------- Frame: header and sidebar around a panel */
+
+.header {
+  border-bottom-color: var(--xl-border);
+}
+.site-title img {
+  height: 1.25rem;
+}
+/* "Docs" next to the wordmark; the link already has the full name for screen readers. */
+.site-title::after {
+  content: 'Docs' / '';
+  padding-inline-start: 0.75rem;
+  margin-inline-start: 0.125rem;
+  border-inline-start: 1px solid var(--xl-border-strong);
+  color: var(--xl-text-muted);
+  font-size: 0.9375rem;
+  font-weight: 510;
+  letter-spacing: -0.01em;
+  line-height: 1.25rem;
+}
+.site-title {
+  gap: 0.625rem;
+}
+
+@media (min-width: 50rem) {
+  /* The app's inset panel: a rounded inner corner where header and sidebar meet. */
+  :root[data-has-sidebar] .main-frame::before {
+    --r: var(--xl-radius-lg);
+    content: '';
+    position: fixed;
+    z-index: 9;
+    top: calc(var(--sl-nav-height) - 1px);
+    inset-inline-start: calc(var(--sl-sidebar-width) - 1px);
+    width: calc(var(--r) + 1px);
+    height: calc(var(--r) + 1px);
+    pointer-events: none;
+    background: radial-gradient(
+      circle at 100% 100%,
+      transparent calc(var(--r) - 1px),
+      var(--xl-border) calc(var(--r) - 0.5px),
+      var(--xl-border) calc(var(--r)),
+      var(--xl-bg-app) calc(var(--r) + 0.5px)
+    );
+  }
+  [dir='rtl'] .main-frame::before {
+    transform: scaleX(-1);
+  }
+}
+
+/* Header controls like the app's toolbar: quiet until hovered. */
+site-search button[data-open-modal] {
+  color: var(--xl-text-muted);
+}
+@media (min-width: 50rem) {
+  site-search button[data-open-modal] {
+    height: 2.125rem;
+    max-width: 20rem;
+    border: 0;
+    border-radius: var(--xl-radius);
+    background: var(--xl-bg-panel);
+    box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border);
+    color: var(--xl-text-muted);
+    font-size: 0.875rem;
+    transition: box-shadow 0.15s var(--xl-ease), color 0.15s var(--xl-ease);
+  }
+  site-search button[data-open-modal]:hover {
+    box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border-strong);
+    color: var(--xl-text);
+  }
+  site-search button[data-open-modal] > kbd {
+    gap: 0.1875rem;
+    padding: 0;
+    background: none;
+  }
+  site-search button[data-open-modal] > kbd kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.3125rem;
+    border-radius: var(--xl-radius-sm);
+    box-shadow: inset 0 0 0 1px var(--xl-border-strong);
+    font-size: 0.6875rem;
+    font-weight: 510;
+    color: var(--xl-text-muted);
+  }
+}
+.social-icons a,
+starlight-theme-select label {
+  color: var(--xl-text-muted);
+}
+.social-icons a:hover,
+starlight-theme-select label:hover {
+  color: var(--xl-text-strong);
+}
+.header .social-icons::after {
+  border-inline-end-color: var(--xl-border-strong);
+  height: 1.25rem;
+}
+
+/* Search dialog like the app's command menu. */
+site-search dialog {
+  background: var(--xl-bg-raised);
+  border: 0;
+  box-shadow: var(--xl-shadow-popover);
+}
+@media (min-width: 50rem) {
+  site-search dialog {
+    border-radius: var(--xl-radius-lg);
+  }
+}
+#starlight__search {
+  --pagefind-ui-border: var(--xl-border-strong);
+  --pagefind-ui-border-radius: var(--xl-radius);
+  --pagefind-ui-background: var(--xl-bg-panel);
+}
+#starlight__search .pagefind-ui__result-title:not(:where(.pagefind-ui__result-nested *)),
+#starlight__search .pagefind-ui__result-nested {
+  background-color: var(--xl-bg-panel);
+}
+#starlight__search mark {
+  color: var(--xl-text-strong);
+}
+
+/* ---------------------------------------------------------------- Sidebar like the app's navigation */
+
+.sidebar-content {
+  padding-top: 0.75rem;
+  font-size: 0.875rem;
+}
+.sidebar-content ul {
+  --sl-sidebar-item-padding-inline: 0.5rem;
+}
+.sidebar-content .top-level > li + li {
+  margin-top: 0.875rem;
+}
+/* Group headings: small and muted, like section labels in the app. */
+.sidebar-content summary {
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--xl-radius);
+}
+.sidebar-content .top-level > li > details > summary .large {
+  font-size: 0.75rem;
+  font-weight: 590;
+  letter-spacing: 0.01em;
+  color: var(--xl-text-muted);
+}
+.sidebar-content summary .caret {
+  color: var(--xl-text-faint);
+  width: 1rem;
+  height: 1rem;
+}
+.sidebar-content summary:hover .caret {
+  color: var(--xl-text-muted);
+}
+/* Nested groups (Self-hosting) read like a link with a caret. */
+.sidebar-content ul ul summary .large {
+  font-size: 0.875rem;
+  font-weight: 510;
+  color: var(--xl-text-muted);
+}
+.sidebar-content ul ul summary:hover .large {
+  color: var(--xl-text-strong);
+}
+.sidebar-content ul ul li {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+  border-inline-start: 0;
+}
+.sidebar-content ul ul ul {
+  margin-inline-start: 0.875rem;
+  padding-inline-start: 0.375rem;
+  border-inline-start: 1px solid var(--xl-border);
+}
+.sidebar-content ul ul li + li {
+  margin-top: 1px;
+}
+.sidebar-content a {
+  display: flex;
+  align-items: center;
+  min-height: 1.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--xl-radius);
+  font-size: 0.875rem;
+  font-weight: 450;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+  color: var(--xl-text-muted);
+  transition: background-color 0.15s ease-out;
+}
+.sidebar-content a:hover {
+  background: var(--xl-bg-sidebar-hover);
+  color: var(--xl-text-strong);
+  transition: none;
+}
+.sidebar-content a[aria-current='page'],
+.sidebar-content a[aria-current='page']:hover,
+.sidebar-content a[aria-current='page']:focus {
+  background: var(--xl-bg-active);
+  color: var(--xl-text-strong);
+  font-weight: 510;
+}
+/* Menu button (mobile): a quiet toolbar button instead of Starlight's filled circle. */
+.sl-menu-button,
+:root[data-theme='light'] .sl-menu-button {
+  border-radius: var(--xl-radius);
+  background: transparent;
+  color: var(--xl-text-muted);
+  box-shadow: none;
+}
+.sl-menu-button:hover,
+.sl-menu-button:has(~ :popover-open),
+:root[data-theme='light'] .sl-menu-button:has(~ :popover-open) {
+  background: var(--xl-bg-active);
+  color: var(--xl-text-strong);
+}
+.sl-menu-button svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+/* Mobile menu: full-width sheet on the panel colour. */
+@media (max-width: 49.99rem) {
+  .sidebar-pane {
+    background: var(--xl-bg-app);
+  }
+  .sidebar-content a,
+  .sidebar-content ul ul summary .large {
+    font-size: 1rem;
+    min-height: 2.5rem;
+  }
+}
+.mobile-preferences {
+  border-top-color: var(--xl-border) !important;
+}
+
+/* ---------------------------------------------------------------- Table of contents */
+
+.right-sidebar {
+  border-inline-start-color: transparent;
+}
+.right-sidebar-panel {
+  padding-top: 2rem;
+}
+.right-sidebar-panel h2 {
+  font-size: 0.75rem;
+  font-weight: 590;
+  letter-spacing: 0.01em;
+  color: var(--xl-text-muted);
+  margin-bottom: 0.5rem;
+}
+starlight-toc a {
+  font-size: 0.8125rem;
+  color: var(--xl-text-muted);
+  border-radius: var(--xl-radius-md);
+  padding-block: 0.3125rem;
+}
+starlight-toc a:hover {
+  color: var(--xl-text-strong);
+}
+starlight-toc a[aria-current='true'] {
+  color: var(--xl-text-strong);
+  font-weight: 510;
+}
+mobile-starlight-toc nav {
+  background: var(--xl-bg-panel);
+  border-top-color: var(--xl-border);
+}
+mobile-starlight-toc summary {
+  border-bottom-color: var(--xl-border);
+  font-size: 0.8125rem;
+}
+mobile-starlight-toc .toggle {
+  border-radius: var(--xl-radius);
+  border-color: var(--xl-border-strong);
+  color: var(--xl-text);
+}
+mobile-starlight-toc .display-current {
+  color: var(--xl-text-muted);
+}
+mobile-starlight-toc .dropdown {
+  background: var(--xl-bg-raised);
+  border-color: var(--xl-border);
+  border-radius: var(--xl-radius);
+  box-shadow: var(--xl-shadow-popover);
+}
+
+/* ---------------------------------------------------------------- Page title and content */
+
+.content-panel {
+  padding-block: 1.25rem;
+}
+.content-panel + .content-panel {
+  border-top: 0;
+  padding-top: 0;
+}
+main > .content-panel:first-of-type {
+  padding-top: 2.25rem;
+}
+@media (min-width: 50rem) {
+  main > .content-panel:first-of-type {
+    padding-top: 3rem;
+  }
+}
+h1#_top {
+  margin-top: 0;
+  font-size: var(--sl-text-h1);
+  font-weight: 620;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+  color: var(--xl-text-strong);
+  text-wrap: balance;
+}
+
+.sl-markdown-content {
+  font-size: var(--sl-text-body);
+  line-height: var(--sl-line-height);
+  color: var(--xl-text-body);
+  text-wrap: pretty;
+}
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6):not(:where(.not-content *)) {
+  color: var(--xl-text-strong);
+  font-weight: 600;
+  line-height: var(--sl-line-height-headings);
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+.sl-markdown-content h2:not(:where(.not-content *)) {
+  letter-spacing: -0.018em;
+}
+.sl-markdown-content h4:not(:where(.not-content *)),
+.sl-markdown-content h5:not(:where(.not-content *)),
+.sl-markdown-content h6:not(:where(.not-content *)) {
+  font-weight: 590;
+  letter-spacing: -0.006em;
+}
+.sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + :is(h2):not(:where(.not-content *)) {
+  margin-top: 2em;
+}
+.sl-markdown-content :not(h1, h2, h3, h4, h5, h6) + :is(h3, h4):not(:where(.not-content *)) {
+  margin-top: 1.75em;
+}
+/* Headings sit close to the text they introduce. */
+.sl-markdown-content :is(h2, h3, h4, h5, h6):not(:where(.not-content *)) + * {
+  margin-top: 0.625rem;
+}
+.sl-markdown-content .sl-heading-wrapper + * {
+  margin-top: 0.625rem;
+}
+.sl-markdown-content :not(.sl-heading-wrapper) + .sl-heading-wrapper.level-h2 {
+  margin-top: 2em;
+}
+.sl-markdown-content :not(.sl-heading-wrapper) + .sl-heading-wrapper:is(.level-h3, .level-h4) {
+  margin-top: 1.75em;
+}
+.sl-markdown-content .sl-anchor-link {
+  color: var(--xl-text-faint);
+}
+.sl-markdown-content .sl-anchor-link:hover {
+  color: var(--xl-accent-text);
+}
+
+.sl-markdown-content strong {
+  font-weight: 600;
+  color: var(--xl-text);
+}
+
+/* Links: accent text, a quiet underline that firms up on hover. */
+.sl-markdown-content a:not(:where(.not-content *)) {
+  color: var(--xl-accent-text);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in oklch, var(--xl-accent-text) 40%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  transition: text-decoration-color 0.15s var(--xl-ease);
+}
+.sl-markdown-content a:hover:not(:where(.not-content *)) {
+  color: var(--xl-accent-text);
+  text-decoration-color: currentColor;
+}
+
+.sl-markdown-content :is(ul, ol):not(:where(.not-content *)) {
+  padding-inline-start: 1.375rem;
+}
+.sl-markdown-content li::marker {
+  color: var(--xl-text-muted);
+}
+.sl-markdown-content li + li:not(:where(.not-content *)) {
+  margin-top: 0.375rem;
+}
+
+/* Inline code like the app's Markdown. */
+.sl-markdown-content code:not(:where(.not-content *)) {
+  padding: 0.125rem 0.3125rem;
+  border-radius: var(--xl-radius-sm);
+  background: var(--xl-code-bg);
+  box-shadow: inset 0 0 0 1px var(--xl-line);
+  font-size: 0.875em;
+  color: var(--xl-text);
+  overflow-wrap: break-word;
+}
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) code {
+  font-size: 0.9em;
+}
+.sl-markdown-content a code {
+  color: inherit;
+}
+
+.sl-markdown-content blockquote:not(:where(.not-content *)) {
+  padding-inline-start: 1rem;
+  border-inline-start: 2px solid var(--xl-border-strong);
+  color: var(--xl-text-muted);
+}
+
+.sl-markdown-content hr:not(:where(.not-content *)) {
+  margin-block: 2.5rem;
+  border-bottom-color: var(--xl-line);
+}
+
+.sl-markdown-content kbd:not(.xl-kbd, .xl-kbd kbd) {
+  display: inline-block;
+  min-width: 1.375em;
+  padding: 0 0.375em;
+  border-radius: var(--xl-radius-sm);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong);
+  font-family: var(--__sl-font);
+  font-size: 0.75em;
+  font-weight: 510;
+  line-height: 1.75;
+  text-align: center;
+  color: var(--xl-text-muted);
+}
+
+/* Tables: hairlines only, header in small muted type; wide tables scroll sideways. */
+.sl-markdown-content table:not(:where(.not-content *)) {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  max-width: 100%;
+}
+.sl-markdown-content :is(th, td):not(:where(.not-content *)) {
+  padding: 0.5625rem 0.75rem;
+  border-bottom: 1px solid var(--xl-line);
+}
+.sl-markdown-content :is(th, td):first-child:not(:where(.not-content *)) {
+  padding-inline-start: 0;
+}
+.sl-markdown-content :is(th, td):last-child:not(:where(.not-content *)) {
+  padding-inline-end: 0;
+}
+.sl-markdown-content th:not(:where(.not-content *)) {
+  padding-block: 0.5rem;
+  border-bottom-color: var(--xl-border-strong);
+  color: var(--xl-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 560;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+}
+.sl-markdown-content tbody tr:last-child td:not(:where(.not-content *)) {
+  border-bottom: 0;
+}
+/* Room between caps when a cell's keys wrap onto a second line. */
+.sl-markdown-content td .xl-kbds {
+  line-height: 1.875rem;
+}
+.sl-markdown-content td code:not(:where(.not-content *)) {
+  white-space: nowrap;
+}
+
+/* <details> */
+.sl-markdown-content details:not(:where(.not-content *)) {
+  --sl-details-border-color: var(--xl-border-strong);
+  --sl-details-border-color--hover: var(--xl-accent-text);
+  border-inline-start-width: 2px;
+}
+
+/* Images in Markdown: rounded like panels. */
+.sl-markdown-content :is(img, picture, video):not(:where(.not-content *)) {
+  border-radius: var(--xl-radius);
+}
+
+/* ---------------------------------------------------------------- Asides */
+
+.starlight-aside {
+  --xl-aside: var(--xl-note);
+  --xl-aside-base: var(--xl-note-base);
+  padding: 0.875rem 1rem;
+  border: 1px solid color-mix(in oklch, var(--xl-aside-base) 28%, transparent);
+  border-radius: var(--xl-radius);
+  background: color-mix(in oklch, var(--xl-aside-base) 7%, var(--xl-bg-panel));
+  color: var(--xl-text-body);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.starlight-aside--note {
+  --xl-aside: var(--xl-note);
+  --xl-aside-base: var(--xl-note-base);
+}
+.starlight-aside--tip {
+  --xl-aside: var(--xl-tip);
+  --xl-aside-base: var(--xl-tip-base);
+}
+.starlight-aside--caution {
+  --xl-aside: var(--xl-caution);
+  --xl-aside-base: var(--xl-caution-base);
+}
+.starlight-aside--danger {
+  --xl-aside: var(--xl-danger);
+  --xl-aside-base: var(--xl-danger-base);
+}
+.starlight-aside {
+  --sl-color-asides-text-accent: var(--xl-aside);
+  --sl-color-asides-border: color-mix(in oklch, var(--xl-aside-base) 28%, transparent);
+}
+.starlight-aside__title {
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 590;
+  letter-spacing: -0.005em;
+  line-height: 1.4;
+  color: var(--xl-aside);
+}
+.starlight-aside__icon {
+  font-size: 1.125em;
+}
+.starlight-aside__title + .starlight-aside__content {
+  margin-top: 0.375rem;
+}
+.starlight-aside__content a {
+  color: var(--xl-aside);
+}
+
+/* ---------------------------------------------------------------- Footer: edit link, pagination */
+
+.sl-markdown-content + footer .meta,
+footer .meta {
+  margin-top: 3.5rem;
+  font-size: 0.8125rem;
+  color: var(--xl-text-muted);
+}
+footer .meta a {
+  color: var(--xl-text-muted);
+}
+footer .meta a:hover {
+  color: var(--xl-text-strong);
+}
+.pagination-links {
+  gap: 0.75rem;
+}
+.pagination-links a {
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-radius: var(--xl-radius);
+  box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border);
+  color: var(--xl-text-muted);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  transition: box-shadow 0.15s var(--xl-ease), background-color 0.15s var(--xl-ease);
+}
+.pagination-links a:hover {
+  background: var(--xl-bg-hover);
+  box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border-strong);
+}
+.pagination-links .link-title {
+  display: inline-block;
+  margin-top: 0.125rem;
+  font-size: 1rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+  color: var(--xl-text-strong);
+}
+.pagination-links svg {
+  color: var(--xl-text-faint);
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.xl-site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  justify-content: space-between;
+  margin-top: 2.5rem;
+  padding-block: 1.25rem 0.5rem;
+  border-top: 1px solid var(--xl-line);
+  font-size: 0.8125rem;
+  color: var(--xl-text-muted);
+}
+.xl-site-footer nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+}
+.xl-site-footer a {
+  color: var(--xl-text-muted);
+  text-decoration: none;
+}
+.xl-site-footer a:hover {
+  color: var(--xl-text-strong);
+}
+
+/* ---------------------------------------------------------------- Buttons (hero actions, LinkButton) */
+
+.sl-link-button {
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: var(--xl-radius);
+  font-size: 0.875rem;
+  font-weight: 510;
+  letter-spacing: -0.005em;
+  line-height: 1;
+  transition: background-color 0.15s var(--xl-ease), box-shadow 0.15s var(--xl-ease), color 0.15s var(--xl-ease);
+}
+.sl-link-button.primary {
+  background: var(--xl-accent);
+  color: var(--xl-accent-fg);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08), 0 1px 2px rgb(0 0 0 / 0.2);
+}
+.sl-link-button.primary:hover {
+  background: var(--xl-accent-hover);
+  color: var(--xl-accent-fg);
+}
+.sl-link-button.secondary {
+  background: var(--xl-bg-control);
+  color: var(--xl-text-strong);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong);
+}
+:root[data-theme='light'] .sl-link-button.secondary {
+  background: var(--xl-bg-panel);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong), 0 1px 2px rgb(0 0 0 / 0.04);
+}
+.sl-link-button.secondary:hover {
+  background: color-mix(in oklch, var(--xl-bg-control) 70%, var(--xl-text-strong) 8%);
+}
+:root[data-theme='light'] .sl-link-button.secondary:hover {
+  background: var(--xl-bg-hover);
+}
+.sl-link-button.minimal {
+  color: var(--xl-text-muted);
+  padding-inline: 0.5rem;
+}
+.sl-link-button.minimal:hover {
+  color: var(--xl-text-strong);
+}
+@media (min-width: 50rem) {
+  .sl-link-button {
+    height: 2.5rem;
+    padding: 0 1.125rem;
+    font-size: 0.9375rem;
+  }
+}
+
+/* Starlight Badge (sidebar badges, inline) in the app's chip style. */
+.sl-badge {
+  border-radius: var(--xl-radius-sm);
+  font-weight: 560;
+}
+
+/* Cards and link cards. */
+.sl-link-card,
+.card {
+  border: 0;
+  border-radius: var(--xl-radius-lg);
+  box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border);
+  background: var(--xl-bg-panel);
+}
+.sl-link-card:hover {
+  background: var(--xl-bg-hover);
+  box-shadow: 0 0 0 var(--xl-panel-edge) var(--xl-border-strong);
+}
+.sl-link-card .title {
+  font-size: 1rem;
+  font-weight: 560;
+}
+.sl-link-card .description {
+  color: var(--xl-text-muted);
+  font-size: 0.9375rem;
+}
+
+/* Steps and tabs. */
+.sl-steps > li::before {
+  background: var(--xl-bg-control);
+  color: var(--xl-text-strong);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong);
+  font-weight: 560;
+}
+.sl-steps > li::after {
+  background: var(--xl-border);
+}
+starlight-tabs [role='tablist'] {
+  border-bottom-color: var(--xl-border);
+}
+starlight-tabs [role='tab'] {
+  color: var(--xl-text-muted);
+  font-weight: 510;
+}
+starlight-tabs [role='tab'][aria-selected='true'] {
+  color: var(--xl-text-strong);
+  border-color: var(--xl-accent);
+}
+
+/* ---------------------------------------------------------------- XLR8 components */
+
+/* Key caps (Kbd.astro), like the app's .kbd. Plain inline boxes rather than inline-block, so
+   punctuation after a cap never wraps onto its own line. Ctrl/⌘ swap: both faces are in the
+   markup and html[data-mac] decides, so screen readers only meet the visible one. */
+.xl-kbds {
+  line-height: inherit;
+}
+.xl-combo {
+  white-space: nowrap;
+}
+.xl-kbd {
+  padding: 0.1875rem 0.375rem;
+  border-radius: var(--xl-radius-sm);
+  background: var(--xl-bg-panel);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong), inset 0 -1px 0 var(--xl-border-strong);
+  font-family: var(--__sl-font);
+  font-size: 0.75rem;
+  font-weight: 510;
+  font-feature-settings: 'cv01', 'ss03', 'tnum';
+  line-height: 1;
+  color: var(--xl-text);
+  white-space: nowrap;
+}
+/* Single characters get wider padding so caps come out roughly square. */
+.xl-kbd-char,
+:root[data-mac] .xl-kbd[data-mac] {
+  padding-inline: 0.4375rem;
+}
+:root[data-theme='light'] .xl-kbd {
+  background: oklch(1 0 0);
+  box-shadow: inset 0 0 0 1px var(--xl-border-strong), inset 0 -1px 0 var(--xl-border-strong), 0 1px 1px rgb(0 0 0 / 0.03);
+}
+.xl-kbd-mac {
+  display: none;
+}
+:root[data-mac] .xl-kbd-mac {
+  display: inline;
+}
+:root[data-mac] .xl-kbd-pc {
+  display: none;
+}
+.xl-kbd-or,
+.xl-kbd-then {
+  margin-inline: 0.0625rem;
+  color: var(--xl-text-muted);
+  font-size: 0.75rem;
+}
+
+/* Planned feature (Planned.astro): dashed outline because it does not exist yet. */
+.xl-planned {
+  padding: 0.875rem 1rem;
+  border: 1px dashed var(--xl-border-strong);
+  border-radius: var(--xl-radius);
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.sl-markdown-content .xl-planned-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--xl-text-strong);
+  font-size: 0.875rem;
+  font-weight: 590;
+  line-height: 1.4;
+}
+.xl-planned-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 1.25rem;
+  padding: 0 0.4375rem;
+  border-radius: var(--xl-radius-sm);
+  background: color-mix(in oklch, var(--xl-accent) 14%, transparent);
+  color: var(--xl-accent-text);
+  font-size: 0.6875rem;
+  font-weight: 590;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.sl-markdown-content .xl-planned-title + .xl-planned-body {
+  margin-top: 0.375rem;
+}
+.xl-planned-body {
+  color: var(--xl-text-muted);
+}
+.xl-planned-body > :first-child {
+  margin-top: 0;
+}
+
+/* Screenshots (Screenshot.astro): framed like the app's panel; only the one for the current theme. */
+.xl-shot {
+  margin-inline: 0;
+}
+.sl-markdown-content .xl-shot {
+  margin-block: 1.75rem;
+}
+.xl-shot .xl-shot-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--xl-radius-lg);
+  box-shadow: var(--xl-shadow-shot);
+}
+:root[data-theme='light'] .xl-shot-dark,
+:root:not([data-theme='light']) .xl-shot-light {
+  display: none;
+}
+.xl-shot figcaption {
+  margin-top: 0.75rem;
+  color: var(--xl-text-muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* Shortcut tables (ShortcutTable.astro): full width, actions left, keys right, quiet rows. */
+.xl-shortcuts + .xl-shortcuts {
+  margin-top: 2.25rem;
+}
+.sl-markdown-content .xl-shortcuts h3 {
+  margin-bottom: 0.5rem;
+}
+.sl-markdown-content .xl-shortcuts table {
+  display: table;
+  width: 100%;
+  table-layout: auto;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.sl-markdown-content .xl-shortcuts :is(th, td) {
+  padding: 0.4375rem 0.5rem;
+  vertical-align: middle;
+}
+.sl-markdown-content .xl-shortcuts :is(th, td):first-child {
+  padding-inline-start: 0.5rem;
+}
+.sl-markdown-content .xl-shortcuts :is(th, td):last-child {
+  padding-inline-end: 0.5rem;
+  text-align: end;
+}
+.sl-markdown-content .xl-shortcuts th {
+  font-size: 0.75rem;
+}
+.sl-markdown-content .xl-shortcuts tbody tr:hover td {
+  background: var(--xl-bg-hover);
+}
+
+/* ---------------------------------------------------------------- Home (splash) */
+
+:root[data-has-hero] {
+  --sl-content-width: 56rem;
+}
+.sl-link-button svg {
+  width: 1rem;
+  height: 1rem;
+}
+:root[data-has-hero] .sl-markdown-content > .xl-shot:first-child {
+  margin-block: 0.5rem 3rem;
+}
+.sl-markdown-content .xl-home-points {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1.25rem 2rem;
+  margin: 1.5rem 0 0;
+  padding: 2rem 0 0;
+  border-top: 1px solid var(--xl-line);
+  list-style: none;
+}
+.xl-home-points li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  color: var(--xl-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.xl-home-points strong {
+  color: var(--xl-text-strong);
+  font-size: 0.9375rem;
+  font-weight: 560;
+  letter-spacing: -0.01em;
+}
+:root[data-has-hero] .sl-markdown-content h2 {
+  margin-top: 3.5rem;
+  color: var(--xl-text-muted);
+  font-size: 0.8125rem;
+  font-weight: 590;
+  letter-spacing: 0.01em;
+}
+:root[data-has-hero] .sl-markdown-content .sl-heading-wrapper {
+  margin-top: 3.5rem;
+}
+:root[data-has-hero] .sl-markdown-content .sl-anchor-link {
+  display: none;
+}
+.sl-markdown-content .xl-home-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+}
+@media (min-width: 40rem) {
+  .sl-markdown-content .xl-home-cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+:root[data-has-hero] .main-frame {
+  background:
+    radial-gradient(60rem 28rem at 50% -6rem, color-mix(in oklch, var(--xl-accent) 13%, transparent), transparent 70%) no-repeat;
+}
+:root[data-theme='light'][data-has-hero] .main-frame {
+  background:
+    radial-gradient(60rem 28rem at 50% -6rem, color-mix(in oklch, var(--xl-accent) 9%, transparent), transparent 70%) no-repeat;
+}
