@@ -18,10 +18,9 @@
 #   `check` (CI) and CodeQL results, no force pushes, no deletion, linear history; repository admins
 #   may bypass, but only when merging a pull request, never with a direct push; also required: the
 #   check `branch-name` (.github/workflows/pr-policy.yml)
-# - ruleset "branch names": new branches must be `<type>/<slug>` (CONTRIBUTING.md) or Dependabot's.
-#   GitHub's documentation does not say whether branch-name rules exist for repositories of a personal
-#   account on the Free plan. If GitHub refuses, the step reports "skipped"; the CI check `branch-name`
-#   enforces the same rule on every pull request either way.
+# - no ruleset for branch names: GitHub rejects the rule `branch_name_pattern` for repositories of a
+#   personal account (HTTP 422, tried 2026-10-13, public repository, Free plan; it seems to need an
+#   organization). The CI check `branch-name` (required in ruleset "main") enforces the rule instead.
 # - label `accepted` (the maintainer's approval of an issue; the PR policy workflow looks for it)
 set -u
 repo=${1:?usage: tooling/github-repo-settings.sh OWNER/REPO}
@@ -118,30 +117,6 @@ upsert_ruleset() {
 }
 
 upsert_ruleset main "$ruleset"
-
-# Branch names: <type>/<issue>-<slug> or <type>/<slug>, lower case, digits and hyphens (CONTRIBUTING.md);
-# Dependabot branches and the default branch itself are allowed.
-branch_rule=$(cat <<'EOF'
-{
-  "name": "branch names",
-  "target": "branch",
-  "enforcement": "active",
-  "conditions": { "ref_name": { "include": ["~ALL"], "exclude": [] } },
-  "rules": [
-    {
-      "type": "branch_name_pattern",
-      "parameters": {
-        "name": "<type>/<issue>-<slug>",
-        "negate": false,
-        "operator": "regex",
-        "pattern": "^((feat|fix|docs|refactor|perf|test|chore|ci)/[a-z0-9]+(-[a-z0-9]+)*|dependabot/[A-Za-z0-9._/-]+|main)$"
-      }
-    }
-  ]
-}
-EOF
-)
-upsert_ruleset "branch names" "$branch_rule"
 
 # Label for approved issues (--force updates colour and description if it exists).
 step "label accepted"
