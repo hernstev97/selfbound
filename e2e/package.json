@@ -1,0 +1,20 @@
+{
+  "name": "@xlr8/e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test -c playwright.config.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "shots": "node tools/shoot.mjs",
+    "bench": "node tools/bench.mjs"
+  },
+  "dependencies": {
+    "@playwright/test": "1.63.0",
+    "@xlr8/backend": "workspace:*",
+    "convex": "1.46.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "7.0.2"
+  }
+}

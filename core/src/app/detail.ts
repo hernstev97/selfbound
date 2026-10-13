@@ -1,0 +1,659 @@
+// Issue detail (full page) and peek (floating card). Both show the same target issue: the open
+// one on the detail page; in the list with peek open, the focused one or the preview from the
+// command menu. Description, comments and history come from a detail subscription (loaded only
+// when opened); the focused issue is prefetched.
+import { api } from '@xlr8/backend/api';
+import { workflowsOf } from '../workflow.ts';
+import { PRIORITY_LABEL, STATUS_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
+import { intlLocale, t, tc, translated } from '../i18n.ts';
+import { Slice } from '../observable.ts';
+import { OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type HistoryDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
+import type { App } from './index.ts';
+import { errorCode } from './toasts.ts';
+import { inInbox, unread } from '../inbox.ts';
+import { BodyEditSession, type BodyEdit } from '../bodyEdit.ts';
+
+/**
+ * Split view: how long an entry must stay on the right before it counts as read. Skimming past
+ * it with J/K is not looking at it; and marking it (save, redraw row and count) does not land in
+ * the same frame as the switch.
+ */
+const SPLIT_READ_MS = 250;
+
+export interface ActivityItem {
+  id: string;
+  kind: 'event' | 'comment';
+  at: number;
+  ago: string;
+  full: string;
+  actor: Actor['kind'];
+  actorName: string;
+  /** Event text without the name ("changed the status …") */
+  text?: string;
+  body?: string;
+  edited?: boolean;
+  pending?: boolean;
+  /** The owner may edit/delete it */
+  mine?: boolean;
+  /** Field change by someone else (e.g. an agent) that can be reverted */
+  revert?: { field: PatchField; from: unknown; to: unknown };
+}
+
+export interface RelationGroup {
+  label: string;
+  items: { relationId: string; id: IssueId; key: string; title: string; status: Status; deleted: boolean }[];
+}
+
+export interface IssueBrief {
+  id: IssueId;
+  key: string;
+  title: string;
+  status: Status;
+  priority: Priority;
+}
+
+export interface DetailState {
+  id: IssueId;
+  key: string;
+  title: string;
+  status: Status;
+  statusLabel: string;
+  /** custom status color (#rrggbb) or null */
+  statusColor: string | null;
+  priority: Priority;
+  priorityLabel: string;
+  team: TeamBadge;
+  labels: { id: string; name: string; hue: number }[];
+  project: { id: string; name: string } | null;
+  sprint: { id: string; name: string; late: boolean; state: string } | null;
+  estimate: number | null;
+  due: { day: string; label: string; long: string; overdue: boolean } | null;
+  parent: IssueBrief | null;
+  children: IssueBrief[];
+  created: string;
+  createdFull: string;
+  createdBy: string;
+  createdByKind: Actor['kind'];
+  updated: string;
+  /** Is in the inbox, and still unread there */
+  inInbox: boolean;
+  unread: boolean;
+  deleted: boolean;
+  pending: boolean;
+  /** null = still loading */
+  body: { markdown: string; version: number; updatedBy: string; updated: string } | null;
+  activity: ActivityItem[] | null;
+  relations: RelationGroup[];
+  pullRequests: PullRequestInfo[];
+  position: { index: number; total: number } | null;
+  /** Older comments can be loaded */
+  olderComments: 'more' | 'loading' | null;
+}
+
+/** Description editing (bodyEdit.ts). */
+export type DescEdit = BodyEdit;
+
+/** Consecutive description edits by the same actor within this time = one row. */
+const DESC_MERGE_MS = 10 * 60_000;
+
+/**
+ * Autosave writes one "changed the description" row per save. Directly consecutive rows of the
+ * same actor (at most DESC_MERGE_MS apart) are merged into one showing the time of the last edit.
+ */
+export function mergeDescriptionEdits(items: ActivityItem[], descIds: ReadonlySet<string>): ActivityItem[] {
+  const out: ActivityItem[] = [];
+  for (const item of items) {
+    const prev = out.at(-1);
+    if (prev && descIds.has(item.id) && descIds.has(prev.id) && prev.actor === item.actor && prev.actorName === item.actorName && item.at - prev.at <= DESC_MERGE_MS) {
+      out[out.length - 1] = { ...prev, id: item.id, at: item.at, ago: item.ago, full: item.full };
+      continue;
+    }
+    out.push(item);
+  }
+  return out;
+}
+
+const RELATION_LABEL: Record<string, string> = translated({
+  'blocks:out': 'Blocks',
+  'blocks:in': 'Blocked by',
+  'related:out': 'Related',
+  'related:in': 'Related',
+  'duplicate:out': 'Duplicate of',
+  'duplicate:in': 'Duplicates',
+});
+
+const draftKey = (id: string) => `xlr8:desc:${id}`;
+const commentKey = (id: string) => `xlr8:comment:${id}`;
+
+export class DetailController {
+  readonly state = new Slice<DetailState | null>(null);
+  readonly peekOpen = new Slice(false);
+  /** Split view of the inbox: the focused issue shows on the right. */
+  readonly split = new Slice(false);
+  #readTimer: ReturnType<typeof setTimeout> | null = null;
+  #readFor: IssueId | null = null;
+  /** Description editing (autosave, draft, conflict) */
+  readonly #body: BodyEditSession;
+  readonly desc: Slice<DescEdit>;
+  /** Issue open on the detail page */
+  #pageId: IssueId | null = null;
+  /** Preview from the command menu or search */
+  #previewId: IssueId | null = null;
+  #target: IssueId | null = null;
+  #unwatch: (() => void) | null = null;
+  #prefetchTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Older comments loaded on demand, per issue */
+  #older = new Map<IssueId, { comments: DetailDoc['comments']; hasMore: boolean; loading: boolean }>();
+
+  constructor(private app: App) {
+    this.#body = new BodyEditSession({
+      draftKey,
+      save: (id, text, base) => this.app.store.setDescription(id as IssueId, text, base),
+      current: (id) => {
+        const doc = this.app.store.detail(id as IssueId);
+        return doc ? { markdown: doc.body.markdown, version: doc.body.version, by: actorName(doc.body.updatedBy, this.app.store.agents.get()) } : null;
+      },
+      errorCode,
+      onError: (error, retry) => this.app.toasts.error(t('Description not saved'), error, retry),
+      notify: (message) => this.app.toasts.show(message),
+    });
+    this.desc = this.#body.state;
+  }
+
+  target() {
+    return this.#target;
+  }
+
+  pageId() {
+    return this.#pageId;
+  }
+
+  /** Peek is visible (open, or as a preview from the menu). */
+  peekVisible() {
+    return this.#pageId === null && !this.splitShown() && (this.peekOpen.get() || this.#previewId !== null) && this.#target !== null;
+  }
+
+  /** The right side of the split view shows the focused issue. */
+  splitShown() {
+    return this.#pageId === null && this.split.get() && this.app.splitLayout();
+  }
+
+  /** Split view: show the focused issue on the right (click, J/K, space). */
+  openSplit() {
+    if (!this.app.splitLayout() || !this.app.list.focusId()) return;
+    if (!this.split.get()) this.split.set(true);
+    this.#retarget();
+  }
+
+  closeSplit() {
+    if (!this.split.get()) return;
+    this.split.set(false);
+    this.#retarget();
+  }
+
+  /** Page or window width changed: without split layout the right side closes. */
+  onLayout() {
+    // It stays open when going into the issue (Enter) and back.
+    if (this.split.get() && !this.app.splitLayout() && this.app.nav.page.get().name !== 'issue') this.split.set(false);
+    if (this.#wanted() !== this.#target) this.#retarget();
+  }
+
+  // ---------------------------------------------------------------- Choosing the target
+
+  openPage(id: IssueId) {
+    this.peekOpen.set(false);
+    this.#previewId = null;
+    if (this.#pageId !== id) this.#endEdit(true);
+    this.#pageId = id;
+    this.#retarget();
+  }
+
+  closePage() {
+    if (this.#pageId === null) return;
+    this.#endEdit(true);
+    this.#pageId = null;
+    this.#retarget();
+  }
+
+  togglePeek() {
+    // In the split inbox the issue is already on the right: space shows or closes that side.
+    if (this.app.splitLayout()) return this.split.get() ? this.closeSplit() : this.openSplit();
+    this.peekOpen.set(!this.peekOpen.get());
+    if (this.peekOpen.get()) this.#markSeen(this.app.list.focusId());
+    this.#retarget();
+  }
+
+  closePeek() {
+    if (!this.peekOpen.get() && this.#previewId === null) return;
+    this.peekOpen.set(false);
+    this.#previewId = null;
+    this.#retarget();
+  }
+
+  /** Preview while moving through the command menu. */
+  preview(id: IssueId | null) {
+    if (this.#previewId === id) return;
+    this.#previewId = id;
+    this.#retarget();
+  }
+
+  onFocus(id: IssueId | null) {
+    if (this.splitShown()) this.#retarget();
+    else if (this.peekOpen.get()) {
+      this.#markSeen(id);
+      this.#retarget();
+    }
+    // Prefetch the focused issue's description so peek and open show content right away.
+    if (this.#prefetchTimer) clearTimeout(this.#prefetchTimer);
+    if (id) this.#prefetchTimer = setTimeout(() => this.app.store.prefetchDetail(id), 120);
+  }
+
+  #markSeen(id: IssueId | null) {
+    const issue = id ? this.app.store.get(id) : null;
+    if (issue && unread(issue) && !issue.pending) this.app.edit.markRead([issue._id]);
+  }
+
+  /** Which issue to show: detail page, split view, preview, peek. */
+  #wanted(): IssueId | null {
+    if (this.#pageId) return this.#pageId;
+    if (this.splitShown()) return this.app.list.focusId();
+    return this.#previewId ?? (this.peekOpen.get() ? this.app.list.focusId() : null);
+  }
+
+  #retarget() {
+    // List became empty: close the right side, otherwise an entry arriving later would open itself.
+    if (this.splitShown() && !this.app.list.focusId()) this.split.set(false);
+    const target = this.#wanted();
+    const readFor = this.splitShown() ? target : null;
+    if (readFor !== this.#readFor) {
+      if (this.#readTimer) clearTimeout(this.#readTimer);
+      this.#readTimer = null;
+      this.#readFor = readFor;
+      if (readFor) {
+        this.#readTimer = setTimeout(() => {
+          this.#readTimer = null;
+          if (this.#target === readFor && this.splitShown()) this.#markSeen(readFor);
+        }, SPLIT_READ_MS);
+      }
+    }
+    if (target !== this.#target) {
+      // Split view: switching while editing the description saves it first.
+      if (this.desc.get().editing) this.#endEdit(true);
+      this.#unwatch?.();
+      this.#unwatch = null;
+      this.#target = target;
+      if (target) {
+        this.app.store.watchAgents();
+        this.#unwatch = this.app.store.watchDetail(target, () => this.refresh());
+      }
+    }
+    this.refresh();
+    this.app.updateShell();
+  }
+
+  /** Recompute only if the change affects the shown issue (itself, parent, sub-issues, position). */
+  refreshIf(ids: ReadonlySet<IssueId>) {
+    const id = this.#target;
+    const st = this.state.get();
+    if (!id || !st || st.id !== id || ids.has(id) || this.app.store.resolvedId(id) !== id) return this.refresh();
+    if (st.parent && ids.has(st.parent.id)) return this.refresh();
+    for (const child of st.children) if (ids.has(child.id)) return this.refresh();
+    for (const changed of ids) if (this.app.store.get(changed)?.parentId === id) return this.refresh();
+    const pos = this.app.list.positionOf(id);
+    if (pos?.index !== st.position?.index || pos?.total !== st.position?.total) this.refresh();
+  }
+
+  /** Recompute (issue, detail subscription, metadata or agents changed). */
+  refresh() {
+    const id = this.#target;
+    const issue = id ? this.app.store.get(id) : undefined;
+    if (!id || !issue) {
+      if (this.state.get() !== null) this.state.set(null);
+      return;
+    }
+    const doc = this.app.store.detail(id);
+    this.state.set(this.#compute(issue, doc ?? null));
+    if (doc && (this.#pageId === id || this.splitShown())) this.#checkDescription(doc);
+  }
+
+  #compute(issue: Issue, doc: DetailDoc | null): DetailState {
+    const store = this.app.store;
+    const meta = store.meta.get();
+    const agents = store.agents.get();
+    const labels = new Map(meta?.labels.map((l) => [l._id as string, l]) ?? []);
+    const project = issue.projectId ? meta?.projects.find((p) => p._id === issue.projectId) : undefined;
+    const sprint = issue.sprintId ? meta?.sprints.find((s) => s._id === issue.sprintId) : undefined;
+    const brief = (i: Issue): IssueBrief => ({ id: i._id, key: i.key, title: i.title, status: i.status, priority: i.priority });
+    const parent = issue.parentId ? store.get(issue.parentId) : undefined;
+    const children: IssueBrief[] = [];
+    for (const other of store.childrenOf(issue._id)) if (other.deletedAt === undefined) children.push(brief(other));
+    children.sort((a, b) => a.key.localeCompare(b.key, intlLocale(), { numeric: true }));
+    const due = issue.dueDate ? dueLabel(issue.dueDate) : null;
+    const state = workflowsOf(meta).of(issue);
+    return {
+      id: issue._id,
+      key: issue.key,
+      title: issue.title,
+      status: state.status,
+      statusLabel: state.name,
+      statusColor: state.color,
+      priority: issue.priority,
+      priorityLabel: PRIORITY_LABEL[issue.priority],
+      team: this.app.list.teamBadge(issue.teamId),
+      labels: issue.labelIds.map((id) => ({ id, name: labels.get(id)?.name ?? '…', hue: labels.get(id)?.hue ?? 0 })),
+      project: project ? { id: project._id, name: project.name } : null,
+      sprint: sprint ? { id: sprint._id, name: sprint.name, late: store.sprintKinds.get().get(issue._id) === 'late', state: sprint.state } : null,
+      estimate: issue.estimate ?? null,
+      due: issue.dueDate && due ? { day: issue.dueDate, label: due.label, long: dayLabel(issue.dueDate), overdue: due.overdue } : null,
+      parent: parent ? brief(parent) : null,
+      children,
+      created: shortDate(issue.createdAt),
+      createdFull: fullDate(issue.createdAt),
+      createdBy: actorName(issue.createdBy, agents),
+      createdByKind: issue.createdBy.kind,
+      updated: relativeTime(issue.updatedAt),
+      inInbox: inInbox(issue),
+      unread: unread(issue),
+      deleted: issue.deletedAt !== undefined,
+      pending: !!issue.pending,
+      body: doc ? { markdown: doc.body.markdown, version: doc.body.version, updatedBy: actorName(doc.body.updatedBy, agents), updated: relativeTime(doc.body.updatedAt) } : issue.pending ? { markdown: '', version: 1, updatedBy: t('You'), updated: t('just now') } : null,
+      activity: doc ? this.#activity(doc, agents) : issue.pending ? [] : null,
+      relations: doc ? this.#relations(doc) : [],
+      pullRequests: doc?.pullRequests ?? [],
+      position: this.app.list.positionOf(issue._id),
+      olderComments: doc ? this.#olderState(issue._id, doc) : null,
+    };
+  }
+
+  #olderState(id: IssueId, doc: DetailDoc): DetailState['olderComments'] {
+    const older = this.#older.get(id);
+    if (older?.loading) return 'loading';
+    return (older ? older.hasMore : doc.commentsHasMore) ? 'more' : null;
+  }
+
+  /** "Load older comments": the 100 before the oldest one loaded so far (comments.page). */
+  async loadOlderComments() {
+    const id = this.#target;
+    const doc = id ? this.app.store.detail(id) : null;
+    if (!id || !doc) return;
+    const older = this.#older.get(id) ?? { comments: [], hasMore: !!doc.commentsHasMore, loading: false };
+    const oldest = older.comments[0] ?? doc.comments.find((c) => !c.pending);
+    if (!oldest || older.loading) return;
+    older.loading = true;
+    this.#older.set(id, older);
+    this.refresh();
+    try {
+      const page = await this.app.store.client.query(api.comments.page, { issueId: id, before: oldest._id as never });
+      older.comments = [...(page.comments as unknown as DetailDoc['comments']), ...older.comments];
+      older.hasMore = page.hasMore;
+    } catch (error) {
+      this.app.toasts.error(t('Older comments not loaded'), error);
+    } finally {
+      older.loading = false;
+      this.refresh();
+    }
+  }
+
+  #activity(doc: DetailDoc, agents: ReadonlyMap<string, string>): ActivityItem[] {
+    const items: ActivityItem[] = [];
+    for (const h of doc.history) {
+      const text = this.#historyText(h);
+      if (!text) continue;
+      const field = (h.field === 'sprint' ? 'sprintId' : h.field) as PatchField;
+      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title';
+      items.push({ id: h._id, kind: 'event', at: h.at, ago: relativeTime(h.at), full: fullDate(h.at), actor: h.actor.kind, actorName: actorName(h.actor, agents), text, ...(revertable ? { revert: { field, from: h.from ?? null, to: h.to ?? null } } : {}) });
+    }
+    const older = this.#older.get(doc.id)?.comments ?? [];
+    const seen = new Set(doc.comments.map((c) => String(c._id)));
+    for (const c of [...older.filter((o) => !seen.has(String(o._id))), ...doc.comments]) {
+      items.push({
+        id: String(c._id),
+        kind: 'comment',
+        at: c.createdAt,
+        ago: relativeTime(c.createdAt),
+        full: fullDate(c.createdAt),
+        actor: c.author.kind,
+        actorName: actorName(c.author, agents, c.authorName),
+        body: c.body,
+        edited: c.editedAt !== undefined,
+        pending: !!(c as { pending?: boolean }).pending,
+        mine: c.author.kind === OWNER_KIND,
+      });
+    }
+    // Chronological, oldest first; the comment input sits below.
+    items.sort((a, b) => a.at - b.at);
+    return mergeDescriptionEdits(items, new Set(doc.history.filter((h) => h.field === 'description').map((h) => h._id)));
+  }
+
+  /**
+   * Event text after the actor's name. The owner is shown as "You" (German "Du"), which needs the
+   * second person in German: each text exists as tc('you', …) for the owner and t(…) for others.
+   */
+  #historyText(h: HistoryDoc): string | null {
+    const store = this.app.store;
+    const meta = store.meta.get();
+    // Both calls stay literal so tooling/i18n-check.mjs can check them.
+    const own = h.actor.kind === OWNER_KIND;
+    const say = (yours: string, theirs: string) => (own ? yours : theirs);
+    const keyOf = (id: unknown) => (typeof id === 'string' ? (store.get(id as IssueId)?.key ?? t('an issue')) : t('an issue'));
+    const labelName = (id: string) => meta?.labels.find((l) => l._id === id)?.name ?? t('Label');
+    const sprintName = (id: unknown) => meta?.sprints.find((s) => s._id === id)?.name ?? t('a sprint');
+    switch (h.field) {
+      case 'created':
+        return say(tc('you', 'created the issue'), t('created the issue'));
+      case 'title':
+        return say(tc('you', 'changed the title'), t('changed the title'));
+      case 'stateId': {
+        // Per-team statuses: names from the metadata, archived ones included.
+        const workflows = workflowsOf(meta);
+        const name = (id: unknown) => (typeof id === 'string' ? (workflows.byId.get(id)?.name ?? t('another status')) : null);
+        const from = name(h.from);
+        const to = name(h.to) ?? '';
+        if (from) return say(tc('you', 'changed the status from {from} to {to}', { from, to }), t('changed the status from {from} to {to}', { from, to }));
+        return say(tc('you', 'set the status to {to}', { to }), t('set the status to {to}', { to }));
+      }
+      case 'status': {
+        const to = STATUS_LABEL[h.to as Status] ?? String(h.to);
+        if (h.from) {
+          const from = STATUS_LABEL[h.from as Status] ?? String(h.from);
+          return say(tc('you', 'changed the status from {from} to {to}', { from, to }), t('changed the status from {from} to {to}', { from, to }));
+        }
+        return say(tc('you', 'set the status to {to}', { to }), t('set the status to {to}', { to }));
+      }
+      case 'priority': {
+        const priority = PRIORITY_LABEL[h.to as Priority] ?? String(h.to);
+        return say(tc('you', 'set the priority to {priority}', { priority }), t('set the priority to {priority}', { priority }));
+      }
+      case 'labelIds': {
+        const from = new Set((h.from as string[] | undefined) ?? []);
+        const to = new Set((h.to as string[] | undefined) ?? []);
+        const added = [...to].filter((x) => !from.has(x)).map(labelName);
+        const removed = [...from].filter((x) => !to.has(x)).map(labelName);
+        const parts = [added.length ? t('added {labels}', { labels: added.join(', ') }) : '', removed.length ? t('removed {labels}', { labels: removed.join(', ') }) : ''].filter(Boolean);
+        if (!parts.length) return null;
+        const changes = parts.join(', ');
+        return say(tc('you', 'changed labels: {changes}', { changes }), t('changed labels: {changes}', { changes }));
+      }
+      case 'projectId': {
+        if (!h.to) return say(tc('you', 'removed the project'), t('removed the project'));
+        const project = meta?.projects.find((p) => p._id === h.to)?.name ?? '…';
+        return say(tc('you', 'set the project to {project}', { project }), t('set the project to {project}', { project }));
+      }
+      case 'estimate': {
+        if (h.to === undefined || h.to === null) return say(tc('you', 'removed the estimate'), t('removed the estimate'));
+        const points = String(h.to);
+        return say(tc('you', 'set the estimate to {points} points', { points }), t('set the estimate to {points} points', { points }));
+      }
+      case 'dueDate': {
+        if (typeof h.to !== 'string') return say(tc('you', 'removed the due date'), t('removed the due date'));
+        const date = dayLabel(h.to);
+        return say(tc('you', 'set the due date to {date}', { date }), t('set the due date to {date}', { date }));
+      }
+      case 'parentId': {
+        if (!h.to) return say(tc('you', 'removed the parent'), t('removed the parent'));
+        const key = keyOf(h.to);
+        return say(tc('you', 'set {key} as parent', { key }), t('set {key} as parent', { key }));
+      }
+      case 'sprint': {
+        if (h.to) {
+          const sprint = sprintName(h.to);
+          return say(tc('you', 'added it to {sprint}', { sprint }), t('added it to {sprint}', { sprint }));
+        }
+        const sprint = sprintName(h.from);
+        return say(tc('you', 'removed it from {sprint}', { sprint }), t('removed it from {sprint}', { sprint }));
+      }
+      case 'description':
+        return say(tc('you', 'changed the description'), t('changed the description'));
+      case 'relation': {
+        const r = h.to as { type?: string; direction?: string; otherId?: string } | undefined;
+        const relation = RELATION_LABEL[`${r?.type}:${r?.direction}`] ?? t('Relation');
+        const key = keyOf(r?.otherId);
+        return say(tc('you', 'added a relation: {relation} {key}', { relation, key }), t('added a relation: {relation} {key}', { relation, key }));
+      }
+      case 'relation_removed': {
+        const r = h.from as { type?: string; direction?: string; otherId?: string } | undefined;
+        const relation = RELATION_LABEL[`${r?.type}:${r?.direction}`] ?? t('Relation');
+        const key = keyOf(r?.otherId);
+        return say(tc('you', 'removed a relation: {relation} {key}', { relation, key }), t('removed a relation: {relation} {key}', { relation, key }));
+      }
+      case 'teamId': {
+        const from = (h.from as { identifier?: string } | undefined)?.identifier ?? '…';
+        const to = (h.to as { identifier?: string } | undefined)?.identifier ?? '…';
+        return say(tc('you', 'moved it from {from} to {to}', { from, to }), t('moved it from {from} to {to}', { from, to }));
+      }
+      case 'deleted':
+        return say(tc('you', 'moved it to the trash'), t('moved it to the trash'));
+      case 'restored':
+        return say(tc('you', 'restored it'), t('restored it'));
+      default:
+        return null; // rank, seen, comments (shown on their own)
+    }
+  }
+
+  #relations(doc: DetailDoc): RelationGroup[] {
+    const groups = new Map<string, RelationGroup>();
+    for (const r of doc.relations) {
+      const label = RELATION_LABEL[`${r.type}:${r.direction}`] ?? r.type;
+      let group = groups.get(label);
+      if (!group) groups.set(label, (group = { label, items: [] }));
+      group.items.push({ relationId: r.id, id: r.other.id, key: r.other.identifier, title: r.other.title, status: r.other.status, deleted: r.other.deleted });
+    }
+    return [...groups.values()];
+  }
+
+  // ---------------------------------------------------------------- Description
+
+  startEdit() {
+    const s = this.state.get();
+    if (!s || !s.body || s.pending) return;
+    this.#body.start(s.id, { markdown: s.body.markdown, version: s.body.version, by: s.body.updatedBy });
+  }
+
+  input(text: string) {
+    this.#body.input(text);
+  }
+
+  saveDescription() {
+    return this.#body.save();
+  }
+
+  /** Someone else's change arrives while the owner types → notice instead of overwriting. */
+  #checkDescription(doc: DetailDoc) {
+    const id = this.#target;
+    if (id) this.#body.check(id, { markdown: doc.body.markdown, version: doc.body.version, by: actorName(doc.body.updatedBy, this.app.store.agents.get()) });
+  }
+
+  /** Keep own version: save on top of the new version. */
+  keepMine() {
+    this.#body.keepMine();
+  }
+
+  /** Take the other version; one's own stays in the clipboard. */
+  takeTheirs() {
+    this.#body.takeTheirs();
+  }
+
+  finishEdit() {
+    return this.#body.finish();
+  }
+
+  #endEdit(save: boolean) {
+    this.#body.end(save);
+  }
+
+  // ---------------------------------------------------------------- Comments
+
+  /** Unsent comment of an issue (survives navigating away and reloading, like the description). */
+  commentDraft(id: string): string {
+    try {
+      return globalThis.localStorage?.getItem(commentKey(id)) ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  setCommentDraft(id: string, text: string) {
+    try {
+      if (text.trim()) globalThis.localStorage?.setItem(commentKey(id), text);
+      else globalThis.localStorage?.removeItem(commentKey(id));
+    } catch {
+      // ignore
+    }
+  }
+
+  async addComment(body: string) {
+    const id = this.#target;
+    const text = body.trim();
+    if (!id || !text) return false;
+    try {
+      await this.app.store.addComment(id, text);
+      this.setCommentDraft(id, '');
+      return true;
+    } catch (error) {
+      this.app.toasts.error(t('Comment not saved'), error, () => void this.addComment(text));
+      return false;
+    }
+  }
+
+  async editComment(commentId: string, body: string) {
+    const id = this.#target;
+    if (!id || !body.trim()) return;
+    try {
+      await this.app.store.editComment(id, commentId, body.trim());
+    } catch (error) {
+      this.app.toasts.error(t('Comment not updated'), error, () => void this.editComment(commentId, body));
+    }
+  }
+
+  async removeComment(commentId: string) {
+    const id = this.#target;
+    if (!id) return;
+    try {
+      await this.app.store.removeComment(id, commentId);
+    } catch (error) {
+      this.app.toasts.error(t('Comment not deleted'), error, () => void this.removeComment(commentId));
+    }
+  }
+
+  async removeRelation(relationId: string) {
+    const id = this.#target;
+    if (!id) return;
+    const rel = this.app.store.detail(id)?.relations.find((r) => r.id === relationId);
+    if (!rel) return;
+    // Through the editor: undo recreates the relation; the editor reports errors.
+    const [from, to] = rel.direction === 'out' ? [id, rel.other.id] : [rel.other.id, id];
+    await this.app.edit.removeRelation({ from, to, type: rel.type, relationId, at: id }).catch(() => {});
+  }
+
+  /** On the detail page, step to the next issue of the list. */
+  step(delta: number) {
+    if (this.splitShown()) return this.app.list.moveFocus(delta);
+    const id = this.#pageId;
+    if (!id) return;
+    const next = this.app.list.neighbor(id, delta);
+    if (next) {
+      this.app.list.focus(next);
+      this.app.openIssue(next, { replace: true });
+    }
+  }
+}

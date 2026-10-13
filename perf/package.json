@@ -1,0 +1,22 @@
+{
+  "name": "@xlr8/perf",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "run": "node run.ts",
+    "quick": "node run.ts --quick",
+    "full": "node run.ts --full",
+    "report": "node report.ts",
+    "record": "node record.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@playwright/test": "1.63.0",
+    "@xlr8/backend": "workspace:*",
+    "convex": "1.46.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.1",
+    "typescript": "7.0.2"
+  }
+}

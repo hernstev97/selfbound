@@ -1,0 +1,43 @@
+/* Form inputs and buttons (settings, sprint planning), loaded lazily. */
+.input {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  border: 0;
+  outline: none;
+  background: var(--bg-control);
+  box-shadow: inset 0 0 0 0.5px var(--border-popover);
+  color: var(--text);
+  font: inherit;
+  min-width: 0;
+}
+textarea.input {
+  height: auto;
+  padding: 6px 10px;
+  resize: vertical;
+  line-height: 1.5;
+}
+.input:focus {
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
+.input.small {
+  height: 24px;
+  font-size: var(--fs-mini);
+  padding: 0 8px;
+}
+.input.num {
+  width: 56px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.input::-webkit-calendar-picker-indicator {
+  filter: var(--picker-filter, none);
+}
+[data-theme='dark'] .input {
+  color-scheme: dark;
+}
+.btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+

@@ -1,0 +1,665 @@
+/* Pull requests: list on the issue, issue | PR frame, view as a page or beside the issue.
+   Loaded with the issue page (list, frame) or the PR view, not in the startup bundle. */
+
+/* ---------------------------------------------------------------- Colors */
+
+.pr-icon.is-open,
+.pr-state.is-open {
+  --pr-c: var(--status-review);
+}
+.pr-icon.is-draft,
+.pr-state.is-draft {
+  --pr-c: var(--text-muted);
+}
+.pr-icon.is-closed,
+.pr-state.is-closed {
+  --pr-c: var(--danger);
+}
+.pr-icon.is-merged,
+.pr-state.is-merged {
+  --pr-c: var(--status-done);
+}
+.pr-icon {
+  color: var(--pr-c, var(--text-muted));
+}
+
+.pr-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+.pr-dot.success {
+  background: var(--status-review);
+}
+.pr-dot.failure {
+  background: var(--danger);
+}
+.pr-dot.pending {
+  background: var(--status-progress);
+}
+.pr-dot.merged {
+  background: var(--status-done);
+}
+.pr-dot.cancelled,
+.pr-dot.skipped,
+.pr-dot.neutral {
+  background: var(--text-faint);
+}
+
+/* ---------------------------------------------------------------- List on the issue */
+
+.pr-row {
+  padding-right: 4px;
+}
+.pr-row.active {
+  background: var(--bg-active);
+  --icon-cut: var(--bg-active);
+}
+.pr-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  color: inherit;
+  text-decoration: none;
+}
+.pr-row .pr-review {
+  display: inline-grid;
+  place-items: center;
+}
+.pr-row .pr-review.approved {
+  color: var(--status-review);
+}
+.pr-row .pr-review.changes_requested {
+  color: var(--danger);
+}
+.pr-row .pr-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+}
+.pill.pr-conflict {
+  color: var(--danger);
+}
+.pr-row-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+.pr-row:hover .pr-row-actions,
+.pr-row:focus-within .pr-row-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .pr-row-actions {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Frame: issue | PR */
+
+.pr-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.pr-host-issue {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pr-pane {
+  flex: none;
+  width: clamp(420px, var(--pr-w, 50%), calc(100% - 420px));
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  /* The PR opens like an issue: brief fade-in with a slight rise. */
+  animation: lift var(--dur-3) var(--ease-out);
+}
+.pr-host.dragging {
+  cursor: col-resize;
+  user-select: none;
+}
+.pr-host.dragging .pr-host-issue,
+.pr-host.dragging .pr-pane {
+  pointer-events: none;
+}
+.pr-host.dragging .split-handle {
+  background: var(--accent);
+}
+
+/* ---------------------------------------------------------------- View */
+
+.pr-bar .crumb .icon {
+  color: var(--text-muted);
+}
+.pr-bar .spinning .icon {
+  animation: pr-spin 0.9s linear infinite;
+}
+@keyframes pr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pr-bar .spinning .icon {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
+.pr-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.pr-content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 32px 40px 80px;
+}
+.pr-scroll.in-split .pr-content {
+  padding: 24px 28px 80px;
+}
+@media (max-width: 768px) {
+  .pr-content {
+    padding: 20px 16px 120px;
+  }
+}
+
+.pr-skeleton {
+  height: 28px;
+  border-radius: var(--radius);
+  background: var(--bg-group);
+  margin-bottom: 14px;
+}
+.pr-skeleton.short {
+  width: 60%;
+  height: 16px;
+}
+
+.pr-title {
+  margin: 0 0 10px;
+  font-size: var(--fs-title);
+  font-weight: 590;
+  line-height: 1.3;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+.pr-num {
+  color: var(--text-muted);
+  font-weight: 450;
+}
+
+.pr-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.pr-meta.second {
+  margin-top: 8px;
+}
+.pr-meta .muted,
+.pr-foot,
+.pr-content .muted {
+  color: var(--text-muted);
+}
+.pr-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 9px 0 7px;
+  border-radius: 12px;
+  font-weight: 510;
+  color: #fff;
+  background: var(--pr-c, var(--text-muted));
+}
+.pr-state.is-conflict {
+  --pr-c: var(--danger);
+  background: color-mix(in oklch, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+.pr-person {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pr-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--bg-group);
+}
+.pr-ref {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--accent-text, var(--accent));
+  font-size: 0.92em;
+  overflow-wrap: anywhere;
+}
+.pr-files {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.pr-files:hover {
+  color: var(--text);
+}
+.pr-files .add {
+  color: var(--status-review);
+  font-variant-numeric: tabular-nums;
+}
+.pr-files .del {
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+.pr-label {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  font-size: var(--fs-mini);
+  font-weight: 510;
+  color: var(--text);
+  background: color-mix(in oklch, var(--label) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--label) 45%, transparent);
+}
+
+.pr-notice {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: var(--bg-group);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.pr-notice.error {
+  background: color-mix(in oklch, var(--danger) 10%, var(--bg-panel));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger) 35%, transparent);
+}
+
+/* Box as on GitHub: checks, mergeability, actions */
+.pr-box {
+  margin: 20px 0 8px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-group);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  overflow: hidden;
+  font-size: var(--fs-small);
+}
+[data-theme='light'] .pr-box {
+  background: var(--bg-raised);
+}
+.pr-box-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 14px;
+  text-align: left;
+  color: var(--text);
+}
+.pr-box-row + .pr-box-row,
+.pr-checks + .pr-box-row,
+.pr-actions {
+  border-top: 1px solid var(--line);
+}
+.pr-box .grow {
+  flex: 1;
+  min-width: 0;
+}
+.pr-checks-head {
+  cursor: pointer;
+  font: inherit;
+  background: none;
+  border: 0;
+}
+.pr-checks-head:hover {
+  background: var(--bg-row-hover);
+}
+.pr-checks-head .chev {
+  color: var(--text-muted);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+.pr-checks-head .chev.open {
+  transform: rotate(90deg);
+}
+.pr-checks {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pr-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 14px 0 28px;
+}
+.pr-check .name {
+  font-weight: 510;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.pr-check .app,
+.pr-check .summary {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  flex: 0 2 auto;
+}
+.pr-check .when {
+  flex: none;
+  font-size: var(--fs-mini);
+}
+.pr-check .btn {
+  flex: none;
+}
+@container split-detail (max-width: 560px) {
+  .pr-check .app,
+  .pr-check .summary {
+    display: none;
+  }
+}
+/* PR beside the issue (narrow right side) and mobile: name and link, the rest in the log. */
+.pr-scroll.in-split .pr-check .app,
+.pr-scroll.in-split .pr-check .when {
+  display: none;
+}
+@media (max-width: 768px) {
+  .pr-check {
+    padding-left: 22px;
+  }
+  .pr-check .app,
+  .pr-check .summary,
+  .pr-check .when {
+    display: none;
+  }
+  .pr-check .name {
+    flex: 1 1 auto;
+  }
+}
+.pr-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.pr-method {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: var(--radius);
+  border: 0;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-control);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.pr-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+  cursor: pointer;
+}
+.pr-actions .small-note,
+.pr-actions .confirm-text {
+  color: var(--text-muted);
+}
+.pr-actions .confirm-text {
+  color: var(--text);
+}
+
+.pr-desc {
+  margin: 24px 0 0;
+}
+
+/* GitHub HTML in our Markdown styles */
+.pr-md {
+  overflow-wrap: anywhere;
+}
+.pr-md img,
+.pr-md video {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius);
+}
+.pr-md video {
+  display: block;
+  max-height: 520px;
+  background: #000;
+}
+.pr-md details {
+  margin: 8px 0;
+}
+.pr-md summary {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+.pr-md input[type='checkbox'] {
+  margin: 0 6px 0 0;
+  vertical-align: -1px;
+}
+.pr-md li:has(> input[type='checkbox']) {
+  list-style: none;
+}
+.pr-md .anchor,
+.pr-md .octicon {
+  display: none;
+}
+
+/* Timeline: comments, reviews, line comments */
+.pr-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pr-item {
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--line);
+}
+.pr-item:first-child {
+  border-top: 0;
+}
+.pr-item.reply {
+  margin-left: 26px;
+  border-top: 0;
+  padding-top: 4px;
+}
+.pr-item-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.pr-item-head strong {
+  font-weight: 590;
+  color: var(--text-strong);
+}
+.pr-item-head .when {
+  margin-left: auto;
+  font-size: var(--fs-mini);
+  text-decoration: none;
+}
+.pr-item-head .when:hover {
+  text-decoration: underline;
+}
+.pr-bot {
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: var(--fs-micro);
+  font-weight: 590;
+  line-height: 16px;
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.pr-item.review-approved .review-verb {
+  color: var(--status-review);
+}
+.pr-item.review-changes_requested .review-verb {
+  color: var(--danger);
+}
+.pr-item-body {
+  margin: 6px 0 0 26px;
+}
+.pr-item-body.clamped {
+  max-height: 240px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, #000 70%, transparent);
+}
+.pr-more {
+  margin: 4px 0 0 20px;
+}
+.pr-comment {
+  margin-top: 16px;
+}
+.pr-foot {
+  margin-top: 20px;
+  font-size: var(--fs-mini);
+}
+
+/* Image viewer (ImageViewer.svelte): large images in the same tab */
+.pr-md img {
+  cursor: zoom-in;
+}
+.img-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: rgb(0 0 0 / 0.9);
+  backdrop-filter: blur(6px);
+  animation: fade var(--dur-3) var(--ease-out);
+  outline: none;
+  --icon-btn: color-mix(in oklch, #fff 10%, transparent);
+  --icon-btn-ring: transparent;
+}
+.img-viewer .icon-btn {
+  color: #fff;
+}
+.img-viewer-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 12px 0 18px;
+  flex: none;
+  color: #fff;
+  font-size: var(--fs-small);
+}
+.img-viewer-bar .grow {
+  flex: 1;
+}
+.img-viewer-count {
+  opacity: 0.8;
+}
+.img-viewer-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 64px 24px;
+  overflow: hidden;
+}
+.img-viewer-stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 40px rgb(0 0 0 / 0.5);
+  cursor: zoom-in;
+  animation: lift var(--dur-3) var(--ease-out);
+}
+.img-viewer.zoomed .img-viewer-stage {
+  overflow: auto;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+.img-viewer.zoomed .img-viewer-stage img {
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  cursor: zoom-out;
+}
+.img-viewer-nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 0;
+  color: #fff;
+  background: color-mix(in oklch, #fff 12%, transparent);
+  cursor: pointer;
+}
+.img-viewer-nav:hover {
+  background: color-mix(in oklch, #fff 22%, transparent);
+}
+.img-viewer-nav.prev {
+  left: 14px;
+}
+.img-viewer-nav.next {
+  right: 14px;
+}
+.img-viewer-caption {
+  flex: none;
+  padding: 0 24px 20px;
+  text-align: center;
+  color: #fff;
+  opacity: 0.85;
+  font-size: var(--fs-small);
+}
+@media (max-width: 768px) {
+  .img-viewer-stage {
+    padding: 0 8px 16px;
+  }
+  .img-viewer-nav {
+    top: auto;
+    bottom: 18px;
+    translate: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .img-viewer,
+  .img-viewer-stage img {
+    animation: none;
+  }
+}

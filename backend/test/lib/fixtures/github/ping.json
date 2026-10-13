@@ -1,0 +1,25 @@
+{
+  "zen": "Keep it logically awesome.",
+  "hook_id": 500000001,
+  "hook": {
+    "type": "Repository",
+    "id": 500000001,
+    "name": "web",
+    "active": true,
+    "events": ["pull_request"],
+    "config": {
+      "content_type": "json",
+      "insecure_ssl": "0",
+      "url": "https://example-deployment.convex.site/github"
+    },
+    "updated_at": "2026-10-08T08:00:00Z",
+    "created_at": "2026-10-08T08:00:00Z"
+  },
+  "repository": {
+    "id": 1296269,
+    "name": "xlr8",
+    "full_name": "acme/xlr8",
+    "private": true
+  },
+  "sender": { "login": "octocat", "id": 1, "type": "User" }
+}

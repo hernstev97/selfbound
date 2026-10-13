@@ -1,0 +1,295 @@
+/* Peek and create dialog: loaded with the overlays chunk. */
+@import './md.css';
+
+/* ---------------------------------------------------------------- Peek */
+
+.peek {
+  position: absolute;
+  top: 96px;
+  right: 8px;
+  width: 520px;
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 112px);
+  overflow: hidden auto;
+  padding: 22px 24px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-popover);
+  z-index: 20;
+  animation: fade var(--dur-2) var(--ease-out);
+  --icon-cut: var(--bg-raised);
+}
+[data-theme='light'] .peek {
+  background: var(--bg-popover);
+  --icon-cut: var(--bg-popover);
+}
+.peek {
+  transition:
+    top var(--dur-2) var(--ease-glide),
+    right var(--dur-2) var(--ease-glide);
+}
+.peek.beside-palette {
+  top: 15vh;
+  right: 24px;
+  z-index: 60;
+}
+.peek-key {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 4px;
+}
+.peek-title {
+  margin: 0 0 8px;
+  font-size: 17px;
+  font-weight: 510;
+  color: var(--text-strong);
+  letter-spacing: -0.012em;
+  line-height: 1.35;
+}
+.peek-sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.peek-props {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  margin-bottom: 12px;
+  color: var(--text-muted);
+}
+.peek-prop {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.peek-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-bottom: 14px;
+  color: var(--text-muted);
+}
+.peek-desc {
+  color: var(--text);
+  font-size: var(--fs-regular);
+  line-height: 1.55;
+  max-height: 112px; /* a short excerpt, a little over four lines */
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+/* The peek shows body text only: headings no larger than the text. */
+.peek-desc .md :is(h1, h2, h3, h4) {
+  font-size: inherit;
+  font-weight: 510;
+  margin: 0 0 4px;
+  color: var(--text);
+}
+/* Images and Drive videos stay small in the peek so they fit the excerpt. */
+.peek-desc .md img {
+  max-height: 96px;
+  width: auto;
+}
+.peek-desc .md .drive-embed {
+  max-width: 172px;
+}
+.peek-foot {
+  margin-top: 14px;
+  color: var(--text-muted);
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------------------------------------------------------------- Create dialog */
+
+.create {
+  position: fixed;
+  left: 50%;
+  top: 13vh;
+  width: 760px;
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+  z-index: 52;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  animation: pop var(--dur-3) var(--ease-out);
+  --icon-cut: var(--bg-control);
+}
+.create-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 16px 4px 18px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px 0 8px;
+  border-radius: 9999px;
+  font-size: var(--fs-mini);
+  font-weight: 510;
+  color: var(--text);
+  background: var(--bg-control);
+  box-shadow: inset 0 0 0 0.5px var(--border-popover);
+  white-space: nowrap;
+  max-width: 240px;
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+.chip:hover {
+  background: var(--bg-control-on);
+}
+.chip.unset {
+  color: var(--text-muted);
+}
+.chip .icon,
+.chip .icon svg,
+.chip .icon.mi::before {
+  width: 14px;
+  height: 14px;
+}
+.chip .chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.create-body {
+  padding: 8px 20px 0;
+}
+.create-title {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  font-size: 18px;
+  font-weight: 590;
+  letter-spacing: -0.012em;
+  color: var(--text-strong);
+  padding: 6px 0;
+}
+.create-title::placeholder,
+.create-desc::placeholder {
+  color: var(--text-subtle);
+}
+.create-desc {
+  display: block;
+  width: 100%;
+  min-height: 76px;
+  max-height: 40vh;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: none;
+  font-size: var(--fs-large);
+  line-height: 1.55;
+  color: var(--text);
+  padding: 4px 0 8px;
+  field-sizing: content;
+}
+.rich.create-desc {
+  overflow-y: auto;
+}
+.create-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 18px 14px;
+}
+.create-foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 0.5px solid var(--border-popover);
+}
+.create-foot .error {
+  color: var(--danger-text);
+  font-size: var(--fs-mini);
+}
+.create-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+}
+
+/* ---------------------------------------------------------------- Add team */
+
+.team-dialog-overlay {
+  animation: fade var(--dur-3) var(--ease-out);
+  display: grid;
+  place-items: start center;
+  padding-top: 14vh;
+  background: var(--overlay);
+  z-index: 70;
+}
+.team-dialog {
+  width: 440px;
+  max-width: calc(100vw - 24px);
+  padding: 18px 20px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  animation: pop var(--dur-3) var(--ease-out);
+}
+.team-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.team-dialog-title {
+  margin: 0;
+  font-size: var(--fs-large);
+  font-weight: 590;
+  color: var(--text-strong);
+}
+.team-dialog-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.team-dialog-logo-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.team-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.team-dialog .muted {
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.team-dialog .input.short {
+  width: 120px;
+}
+.team-dialog .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.team-dialog-error {
+  color: var(--danger-text);
+  font-size: var(--fs-mini);
+}
+.team-dialog-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+.team-dialog-field .muted {
+  margin-left: 6px;
+}

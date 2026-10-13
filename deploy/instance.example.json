@@ -1,0 +1,12 @@
+{
+  "convexDeployment": "happy-otter-123",
+  "appUrl": "https://xlr8.example.com",
+  "clerkPublishableKey": "pk_live_REPLACE_ME",
+  "vercelProject": "xlr8",
+  "vercelScope": "your-vercel-team",
+  "mcpHosts": [
+    "mcp.xlr8.example.com"
+  ],
+  "redirectHosts": [],
+  "branchPrefix": "your-github-login"
+}

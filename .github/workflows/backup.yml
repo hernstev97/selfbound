@@ -1,0 +1,153 @@
+# Daily backup of the production deployment (Convex) with a restore test.
+#
+# Runs every night from the default branch `main`. As long as the secrets are missing, the run
+# ends with a notice instead of an error (job "prerequisites"). To enable it:
+#   1. Create a separate Convex deploy key just for the backup (permissions: docs/backup.md),
+#      not the deploy key from your own machine.
+#   2. Set these secrets in the GitHub environment `production`:
+#        CONVEX_DEPLOY_KEY  production deploy key (Convex has no read-only keys, so only in this environment)
+#        AGE_RECIPIENTS     public age keys (age1…), separated by commas or newlines
+#      Only the owner holds the private age key (see docs/backup.md).
+#   3. The backend reports success through the internal function `opsStatus:recordBackup`
+#      (shown on the ops page). If that report fails, the backup still counts.
+#
+# Steps: export (ZIP with tables and files) → restore into a fresh local backend in the runner
+# and compare all tables and files → only then encrypt with age → artifact kept 30 days,
+# on Sundays additionally 90 days. The unencrypted ZIP never leaves the runner.
+#
+# In a public repository, workflow logs and artifacts are public: the archive stays encrypted, but the
+# manifest and the restore summary (table names, document counts, sizes) can be seen by anyone. Run the
+# backup from a private copy of the repository if that matters to you.
+
+name: Backup
+
+on:
+  schedule:
+    # 03:30 Berlin time. GitHub honours `timezone`; without it this would be
+    # 01:30 UTC (summer time) or 02:30 UTC (winter time).
+    - cron: '30 3 * * *'
+      timezone: 'Europe/Berlin'
+  workflow_dispatch:
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+# Nothing by default; each job states what it needs.
+permissions: {}
+
+jobs:
+  prerequisites:
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 2
+    permissions: {}
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - id: check
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          AGE_RECIPIENTS: ${{ secrets.AGE_RECIPIENTS }}
+        run: |
+          if [ -n "$CONVEX_DEPLOY_KEY" ] && [ -n "$AGE_RECIPIENTS" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Backup not set up yet: CONVEX_DEPLOY_KEY or AGE_RECIPIENTS missing in the production environment. Nothing backed up."
+            echo "Backup not set up yet: secrets missing (see docs/backup.md)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  backup:
+    needs: prerequisites
+    if: needs.prerequisites.outputs.ready == 'true'
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Dependencies (backend only)
+        run: pnpm install --frozen-lockfile --filter @xlr8/backend
+
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age && age --version
+
+      - name: Export from production
+        id: export
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: node tooling/backup/export.mjs --source deploy-key --out "$RUNNER_TEMP/backup"
+
+      - name: Restore test (fresh local backend in the runner)
+        run: |
+          set -o pipefail
+          node tooling/backup/verify-restore.mjs "${{ steps.export.outputs.zip }}" | tee "$RUNNER_TEMP/restore.txt"
+
+      - name: Encrypt with age
+        id: encrypt
+        env:
+          AGE_RECIPIENTS: ${{ secrets.AGE_RECIPIENTS }}
+          ZIP: ${{ steps.export.outputs.zip }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$AGE_RECIPIENTS" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep '^age1' > "$RUNNER_TEMP/recipients.txt"
+          test -s "$RUNNER_TEMP/recipients.txt" || { echo "AGE_RECIPIENTS contains no age1… key"; exit 1; }
+          age -R "$RUNNER_TEMP/recipients.txt" -o "$ZIP.age" "$ZIP"
+          shred -u "$ZIP"
+          echo "file=$ZIP.age" >> "$GITHUB_OUTPUT"
+          echo "date=$(TZ=Europe/Berlin date +%F)" >> "$GITHUB_OUTPUT"
+          echo "weekday=$(TZ=Europe/Berlin date +%u)" >> "$GITHUB_OUTPUT"
+
+      - name: Artifact (30 days)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: xlr8-backup-${{ steps.encrypt.outputs.date }}
+          path: |
+            ${{ steps.encrypt.outputs.file }}
+            ${{ steps.export.outputs.manifest }}
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Weekly copy (Sundays, 90 days)
+        if: steps.encrypt.outputs.weekday == '7'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: xlr8-backup-weekly-${{ steps.encrypt.outputs.date }}
+          path: |
+            ${{ steps.encrypt.outputs.file }}
+            ${{ steps.export.outputs.manifest }}
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Report success
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+          MANIFEST: ${{ steps.export.outputs.manifest }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Backup $(TZ=Europe/Berlin date '+%F %H:%M')"
+            echo
+            echo "Export, restore test and encryption succeeded."
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/restore.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          # For the ops page (ops.status → backup). If the report fails (e.g. the backend
+          # is unreachable right now), the backup still counts.
+          summary=$(node -e "const m=require(process.env.MANIFEST);console.log(JSON.stringify({at:Date.now(),bytes:m.bytes,sha256:m.sha256,tables:Object.keys(m.tables).length,documents:Object.values(m.tables).reduce((a,b)=>a+b,0),files:m.storage.files,run:process.env.GITHUB_RUN_ID}))")
+          (cd backend && node_modules/.bin/convex run opsStatus:recordBackup "$summary") \
+            || echo "::warning::Report to opsStatus:recordBackup failed; success recorded only in the workflow."

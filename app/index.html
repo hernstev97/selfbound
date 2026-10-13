@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <!-- Embedded pages: only Drive videos (Markdown) and Clerk's bot protection during sign-in. -->
+    <meta http-equiv="Content-Security-Policy" content="frame-src https://drive.google.com https://challenges.cloudflare.com https://*.protect.clerk.com; object-src 'none'; base-uri 'self'" />
+    <title>XLR8</title>
+    <meta name="description" content="XLR8: issues, sprints and projects." />
+    <!-- Status bar color (installed app, Android): follows the chosen color scheme (core/src/app/prefs.ts). -->
+    <meta name="theme-color" content="#0f0f10" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="XLR8" />
+    <meta property="og:title" content="XLR8" />
+    <meta property="og:description" content="XLR8: issues, sprints and projects." />
+    <meta property="og:image" content="/brand/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/brand/og-image.png" />
+    <script>
+      // Language as early as possible: the saved choice ('en' or 'de'), otherwise the first browser
+      // language that is English or German, otherwise English. Same rule as resolveLocale in
+      // core/src/i18n.ts; app/src/lib/i18n.ts sets it again at startup.
+      try {
+        var p = JSON.parse(localStorage.getItem('xlr8:prefs') || '{}');
+      } catch (e) {
+        p = {};
+      }
+      (function () {
+        var lang = p && (p.locale === 'en' || p.locale === 'de') ? p.locale : null;
+        var tags = navigator.languages || [navigator.language || ''];
+        for (var i = 0; !lang && i < tags.length; i++) {
+          var base = String(tags[i]).toLowerCase().split('-')[0];
+          if (base === 'en' || base === 'de') lang = base;
+        }
+        document.documentElement.lang = lang || 'en';
+      })();
+      // Color scheme before the first paint (no flash).
+      try {
+        var t = p.theme || 'system';
+        var dark = t === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : t === 'dark';
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        if (!dark) document.querySelector('meta[name=theme-color]').content = '#fcfcfd';
+        if (p.fontSize) document.documentElement.dataset.font = p.fontSize;
+        // Chosen themes and fonts (app/src/lib/look): ready-made CSS from the last run.
+        var l = JSON.parse(localStorage.getItem('xlr8:look') || 'null');
+        if (l && l.css) {
+          var s = document.createElement('style');
+          s.id = 'xlr8-look';
+          s.textContent = l.css;
+          document.head.appendChild(s);
+          (l.preload || []).forEach(function (h) {
+            var k = document.createElement('link');
+            k.rel = 'preload';
+            k.as = 'font';
+            k.type = 'font/woff2';
+            k.crossOrigin = '';
+            k.href = h;
+            document.head.appendChild(k);
+          });
+          var bar = l.bar && (dark ? l.bar.dark : l.bar.light);
+          if (bar) document.querySelector('meta[name=theme-color]').content = bar;
+        }
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

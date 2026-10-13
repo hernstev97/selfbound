@@ -1,0 +1,21 @@
+{
+  // Checks scripts, test data and tests. convex/ has its own tsconfig
+  // (Convex bundles itself; imports there have no file extensions).
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": false,
+    "types": ["node"]
+  },
+  "include": ["scripts", "data", "test", "vitest.config.ts"]
+}

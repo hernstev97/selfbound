@@ -1,0 +1,24 @@
+{
+  // Type check for the Linear importer (Node 24 type stripping, no build step):
+  //   pnpm --filter @xlr8/backend exec tsc --noEmit -p ../tooling/linear-import
+  // `@types/node` comes from backend/node_modules (tooling/ is not a workspace package).
+  // allowJs: push.ts imports tooling/instance.mjs (typed through JSDoc).
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ES2024"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "allowJs": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "typeRoots": ["../../backend/node_modules/@types"],
+    "types": ["node"]
+  },
+  "include": ["./*.ts", "../../backend/convex/shared/importTypes.ts"]
+}

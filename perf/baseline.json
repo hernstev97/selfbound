@@ -1,0 +1,729 @@
+{
+  "runId": "2026-10-12T22-37-05",
+  "mode": "full",
+  "commit": "375233b",
+  "cpu": "13th Gen Intel(R) Core(TM) i7-13700F",
+  "date": "2026-10-12T22:37:16.763Z",
+  "metrics": {
+    "P1|large|agent.change (server → row)": {
+      "median": 54.77,
+      "p95": 106.43,
+      "n": 20
+    },
+    "P1|large|agent.mcp (MCP call → row)": {
+      "median": 66.56,
+      "p95": 83.01,
+      "n": 20
+    },
+    "P1|large|board.column (→)": {
+      "median": 8.85,
+      "p95": 17.57,
+      "n": 30
+    },
+    "P1|large|board.move (Shift →)": {
+      "median": 21.15,
+      "p95": 23.73,
+      "n": 30
+    },
+    "P1|large|bulk50.status (Enter)": {
+      "median": 19.45,
+      "p95": 23.72,
+      "n": 20
+    },
+    "P1|large|bundle.bytes (initial, brotli)": {
+      "median": 122751,
+      "p95": 122751,
+      "n": 1
+    },
+    "P1|large|click.row (opens issue)": {
+      "median": 20.1,
+      "p95": 24.47,
+      "n": 30
+    },
+    "P1|large|click.status (picker)": {
+      "median": 17.25,
+      "p95": 19.78,
+      "n": 30
+    },
+    "P1|large|cold.bytes": {
+      "median": 330488,
+      "p95": 330488,
+      "n": 20
+    },
+    "P1|large|cold.fcp": {
+      "median": 76,
+      "p95": 80.2,
+      "n": 20
+    },
+    "P1|large|cold.list": {
+      "median": 136.8,
+      "p95": 177.98,
+      "n": 20
+    },
+    "P1|large|cold.shell": {
+      "median": 68.65,
+      "p95": 73.44,
+      "n": 20
+    },
+    "P1|large|cold.synced": {
+      "median": 323.1,
+      "p95": 441.68,
+      "n": 20
+    },
+    "P1|large|comment.send (Ctrl+Enter)": {
+      "median": 12.85,
+      "p95": 19.68,
+      "n": 20
+    },
+    "P1|large|comment.send (Ctrl+Enter):confirmed": {
+      "median": 40.9,
+      "p95": 51.76,
+      "n": 20
+    },
+    "P1|large|create.submit (Ctrl+Enter)": {
+      "median": 17.35,
+      "p95": 28.55,
+      "n": 20
+    },
+    "P1|large|create.submit (Ctrl+Enter):confirmed": {
+      "median": 204.55,
+      "p95": 290.74,
+      "n": 20
+    },
+    "P1|large|detail.close (Esc)": {
+      "median": 14.1,
+      "p95": 21.52,
+      "n": 30
+    },
+    "P1|large|detail.open (Enter)": {
+      "median": 19.75,
+      "p95": 27.95,
+      "n": 30
+    },
+    "P1|large|detail.open (Enter):content": {
+      "median": 19.8,
+      "p95": 27.95,
+      "n": 30
+    },
+    "P1|large|filter.apply": {
+      "median": 19.05,
+      "p95": 20.84,
+      "n": 30
+    },
+    "P1|large|filter.remove (click)": {
+      "median": 20.25,
+      "p95": 24.78,
+      "n": 30
+    },
+    "P1|large|focus.next (J)": {
+      "median": 11.95,
+      "p95": 18.93,
+      "n": 30
+    },
+    "P1|large|focus.prev (K)": {
+      "median": 10.05,
+      "p95": 19.91,
+      "n": 30
+    },
+    "P1|large|inbox.next (J)": {
+      "median": 6.45,
+      "p95": 8.71,
+      "n": 14
+    },
+    "P1|large|inbox.next (J):content": {
+      "median": 6.45,
+      "p95": 8.71,
+      "n": 14
+    },
+    "P1|large|inbox.prev (K)": {
+      "median": 7,
+      "p95": 11.55,
+      "n": 16
+    },
+    "P1|large|inbox.prev (K):content": {
+      "median": 7,
+      "p95": 11.57,
+      "n": 16
+    },
+    "P1|large|layout.board (Ctrl+B)": {
+      "median": 29.45,
+      "p95": 34.08,
+      "n": 30
+    },
+    "P1|large|layout.list (Ctrl+B)": {
+      "median": 29.25,
+      "p95": 34.5,
+      "n": 30
+    },
+    "P1|large|memory.domNodes (loaded)": {
+      "median": 1881,
+      "p95": 1881,
+      "n": 3
+    },
+    "P1|large|memory.domNodes (after 20× detail)": {
+      "median": 2337,
+      "p95": 2337,
+      "n": 3
+    },
+    "P1|large|memory.heapMB (loaded)": {
+      "median": 11.89,
+      "p95": 11.9,
+      "n": 3
+    },
+    "P1|large|memory.heapMB (after 20× detail)": {
+      "median": 13.67,
+      "p95": 13.69,
+      "n": 3
+    },
+    "P1|large|nav.all (G A)": {
+      "median": 32.5,
+      "p95": 39.1,
+      "n": 30
+    },
+    "P1|large|nav.backlog (G B)": {
+      "median": 24.55,
+      "p95": 27.32,
+      "n": 30
+    },
+    "P1|large|nav.sprint (G S)": {
+      "median": 25.8,
+      "p95": 31.67,
+      "n": 30
+    },
+    "P1|large|nav.team (click)": {
+      "median": 22.9,
+      "p95": 25.61,
+      "n": 60
+    },
+    "P1|large|nav.triage (G T)": {
+      "median": 23.1,
+      "p95": 28.17,
+      "n": 30
+    },
+    "P1|large|palette.key": {
+      "median": 13.35,
+      "p95": 20.57,
+      "n": 72
+    },
+    "P1|large|palette.open (Ctrl+K)": {
+      "median": 18.95,
+      "p95": 24.21,
+      "n": 30
+    },
+    "P1|large|peek.next (↓)": {
+      "median": 14.75,
+      "p95": 20.26,
+      "n": 30
+    },
+    "P1|large|peek.open (Space)": {
+      "median": 13.35,
+      "p95": 19.31,
+      "n": 30
+    },
+    "P1|large|peek.open (Space):content": {
+      "median": 13.4,
+      "p95": 19.41,
+      "n": 30
+    },
+    "P1|large|picker.open (S)": {
+      "median": 16.55,
+      "p95": 22.2,
+      "n": 30
+    },
+    "P1|large|priority.set (Enter)": {
+      "median": 13.1,
+      "p95": 20.54,
+      "n": 30
+    },
+    "P1|large|quicksearch.clear": {
+      "median": 16.7,
+      "p95": 23.64,
+      "n": 12
+    },
+    "P1|large|quicksearch.key": {
+      "median": 13.95,
+      "p95": 23.77,
+      "n": 72
+    },
+    "P1|large|save.confirmed (key → server confirmed)": {
+      "median": 90.95,
+      "p95": 175.88,
+      "n": 30
+    },
+    "P1|large|save.painted (key → confirmed visible)": {
+      "median": 95.95,
+      "p95": 180.84,
+      "n": 30
+    },
+    "P1|large|scroll (CPU 4×).loafBlockingMs": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll (CPU 4×).loafCount": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll (CPU 4×).longFramePct": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll (CPU 4×).medianFrame": {
+      "median": 16.7,
+      "p95": 16.7,
+      "n": 10
+    },
+    "P1|large|scroll (CPU 4×).p95Frame": {
+      "median": 16.7,
+      "p95": 16.8,
+      "n": 10
+    },
+    "P1|large|scroll.loafBlockingMs": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll.loafCount": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll.longFramePct": {
+      "median": 0,
+      "p95": 0,
+      "n": 10
+    },
+    "P1|large|scroll.medianFrame": {
+      "median": 16.7,
+      "p95": 16.7,
+      "n": 10
+    },
+    "P1|large|scroll.p95Frame": {
+      "median": 16.7,
+      "p95": 16.8,
+      "n": 10
+    },
+    "P1|large|search.id (identifier)": {
+      "median": 14.6,
+      "p95": 22.73,
+      "n": 30
+    },
+    "P1|large|search.key": {
+      "median": 17.9,
+      "p95": 26.6,
+      "n": 60
+    },
+    "P1|large|status.set (Enter)": {
+      "median": 11.85,
+      "p95": 19.54,
+      "n": 30
+    },
+    "P1|large|triage.accept (1, Enter)": {
+      "median": 14.8,
+      "p95": 18.83,
+      "n": 20
+    },
+    "P1|large|warm.bytes": {
+      "median": 11400,
+      "p95": 11400,
+      "n": 20
+    },
+    "P1|large|warm.fcp": {
+      "median": 56,
+      "p95": 69,
+      "n": 20
+    },
+    "P1|large|warm.fromCache": {
+      "median": 0,
+      "p95": 0,
+      "n": 20
+    },
+    "P1|large|warm.list": {
+      "median": 83,
+      "p95": 88.33,
+      "n": 20
+    },
+    "P1|large|warm.shell": {
+      "median": 50.1,
+      "p95": 80.04,
+      "n": 20
+    },
+    "P1|large|warm.synced": {
+      "median": 301.6,
+      "p95": 382.95,
+      "n": 20
+    },
+    "P1|large|wiki.page (click in tree)": {
+      "median": 16.55,
+      "p95": 17.71,
+      "n": 60
+    },
+    "P1|small|cold.bytes": {
+      "median": 215776,
+      "p95": 218818,
+      "n": 20
+    },
+    "P1|small|cold.fcp": {
+      "median": 76,
+      "p95": 80,
+      "n": 20
+    },
+    "P1|small|cold.list": {
+      "median": 136.5,
+      "p95": 158.99,
+      "n": 20
+    },
+    "P1|small|cold.shell": {
+      "median": 68.25,
+      "p95": 74.44,
+      "n": 20
+    },
+    "P1|small|cold.synced": {
+      "median": 151.6,
+      "p95": 172.86,
+      "n": 20
+    },
+    "P1|small|filter.apply": {
+      "median": 19.7,
+      "p95": 27.86,
+      "n": 30
+    },
+    "P1|small|filter.remove (click)": {
+      "median": 19.45,
+      "p95": 21.91,
+      "n": 30
+    },
+    "P1|small|quicksearch.clear": {
+      "median": 18.75,
+      "p95": 20.69,
+      "n": 12
+    },
+    "P1|small|quicksearch.key": {
+      "median": 12.4,
+      "p95": 23.84,
+      "n": 72
+    },
+    "P1|small|search.id (identifier)": {
+      "median": 12.2,
+      "p95": 20.33,
+      "n": 30
+    },
+    "P1|small|search.key": {
+      "median": 13.2,
+      "p95": 20.25,
+      "n": 60
+    },
+    "P1|small|warm.bytes": {
+      "median": 4500,
+      "p95": 4530,
+      "n": 20
+    },
+    "P1|small|warm.fcp": {
+      "median": 52,
+      "p95": 60.2,
+      "n": 20
+    },
+    "P1|small|warm.fromCache": {
+      "median": 0,
+      "p95": 0,
+      "n": 20
+    },
+    "P1|small|warm.list": {
+      "median": 80.45,
+      "p95": 85.06,
+      "n": 20
+    },
+    "P1|small|warm.shell": {
+      "median": 47.45,
+      "p95": 73.89,
+      "n": 20
+    },
+    "P1|small|warm.synced": {
+      "median": 90.3,
+      "p95": 96.22,
+      "n": 20
+    },
+    "P2|large|agent.change (server → row)": {
+      "median": 85,
+      "p95": 93.39,
+      "n": 20
+    },
+    "P2|large|agent.mcp (MCP call → row)": {
+      "median": 102.24,
+      "p95": 108.9,
+      "n": 20
+    },
+    "P2|large|board.column (→)": {
+      "median": 12.45,
+      "p95": 24.86,
+      "n": 30
+    },
+    "P2|large|board.move (Shift →)": {
+      "median": 45.45,
+      "p95": 49.1,
+      "n": 30
+    },
+    "P2|large|bulk50.status (Enter)": {
+      "median": 55.25,
+      "p95": 59.06,
+      "n": 20
+    },
+    "P2|large|click.row (opens issue)": {
+      "median": 62.55,
+      "p95": 67.23,
+      "n": 30
+    },
+    "P2|large|click.status (picker)": {
+      "median": 40.25,
+      "p95": 42.5,
+      "n": 30
+    },
+    "P2|large|cold.bytes": {
+      "median": 207180,
+      "p95": 215767,
+      "n": 20
+    },
+    "P2|large|cold.fcp": {
+      "median": 396,
+      "p95": 400.4,
+      "n": 20
+    },
+    "P2|large|cold.list": {
+      "median": 716.05,
+      "p95": 744.12,
+      "n": 20
+    },
+    "P2|large|cold.shell": {
+      "median": 392.35,
+      "p95": 396.4,
+      "n": 20
+    },
+    "P2|large|cold.synced": {
+      "median": 1622.4,
+      "p95": 1665.17,
+      "n": 20
+    },
+    "P2|large|comment.send (Ctrl+Enter)": {
+      "median": 23.8,
+      "p95": 34.42,
+      "n": 20
+    },
+    "P2|large|comment.send (Ctrl+Enter):confirmed": {
+      "median": 155.4,
+      "p95": 305.12,
+      "n": 20
+    },
+    "P2|large|create.submit (Ctrl+Enter)": {
+      "median": 60,
+      "p95": 67.26,
+      "n": 20
+    },
+    "P2|large|create.submit (Ctrl+Enter):confirmed": {
+      "median": 281.25,
+      "p95": 609.83,
+      "n": 20
+    },
+    "P2|large|detail.close (Esc)": {
+      "median": 30.3,
+      "p95": 35.07,
+      "n": 30
+    },
+    "P2|large|detail.open (Enter)": {
+      "median": 25.7,
+      "p95": 31.73,
+      "n": 30
+    },
+    "P2|large|detail.open (Enter):content": {
+      "median": 25.7,
+      "p95": 31.79,
+      "n": 30
+    },
+    "P2|large|filter.apply": {
+      "median": 79.65,
+      "p95": 86.42,
+      "n": 30
+    },
+    "P2|large|filter.remove (click)": {
+      "median": 71,
+      "p95": 78.81,
+      "n": 30
+    },
+    "P2|large|focus.next (J)": {
+      "median": 14,
+      "p95": 22.56,
+      "n": 30
+    },
+    "P2|large|focus.prev (K)": {
+      "median": 15.8,
+      "p95": 21.81,
+      "n": 30
+    },
+    "P2|large|inbox.next (J)": {
+      "median": 25,
+      "p95": 26.74,
+      "n": 14
+    },
+    "P2|large|inbox.next (J):content": {
+      "median": 25,
+      "p95": 26.74,
+      "n": 14
+    },
+    "P2|large|inbox.prev (K)": {
+      "median": 23.5,
+      "p95": 26.27,
+      "n": 16
+    },
+    "P2|large|inbox.prev (K):content": {
+      "median": 23.5,
+      "p95": 26.27,
+      "n": 16
+    },
+    "P2|large|layout.board (Ctrl+B)": {
+      "median": 111.2,
+      "p95": 117.45,
+      "n": 30
+    },
+    "P2|large|layout.list (Ctrl+B)": {
+      "median": 65.45,
+      "p95": 74.15,
+      "n": 30
+    },
+    "P2|large|nav.all (G A)": {
+      "median": 108.9,
+      "p95": 120.78,
+      "n": 30
+    },
+    "P2|large|nav.backlog (G B)": {
+      "median": 93.5,
+      "p95": 98.21,
+      "n": 30
+    },
+    "P2|large|nav.sprint (G S)": {
+      "median": 71.3,
+      "p95": 87.6,
+      "n": 30
+    },
+    "P2|large|nav.team (click)": {
+      "median": 56,
+      "p95": 61.22,
+      "n": 60
+    },
+    "P2|large|nav.triage (G T)": {
+      "median": 77.15,
+      "p95": 88.15,
+      "n": 30
+    },
+    "P2|large|palette.key": {
+      "median": 26.3,
+      "p95": 31.25,
+      "n": 72
+    },
+    "P2|large|palette.open (Ctrl+K)": {
+      "median": 48.35,
+      "p95": 52.84,
+      "n": 30
+    },
+    "P2|large|peek.next (↓)": {
+      "median": 16.35,
+      "p95": 23.64,
+      "n": 30
+    },
+    "P2|large|peek.open (Space)": {
+      "median": 17.2,
+      "p95": 21.64,
+      "n": 30
+    },
+    "P2|large|peek.open (Space):content": {
+      "median": 27.55,
+      "p95": 44.13,
+      "n": 30
+    },
+    "P2|large|picker.open (S)": {
+      "median": 36.25,
+      "p95": 40.01,
+      "n": 30
+    },
+    "P2|large|priority.set (Enter)": {
+      "median": 34.1,
+      "p95": 49.8,
+      "n": 30
+    },
+    "P2|large|quicksearch.clear": {
+      "median": 58.75,
+      "p95": 66.24,
+      "n": 12
+    },
+    "P2|large|quicksearch.key": {
+      "median": 37.4,
+      "p95": 54.7,
+      "n": 72
+    },
+    "P2|large|save.confirmed (key → server confirmed)": {
+      "median": 142.85,
+      "p95": 277.58,
+      "n": 30
+    },
+    "P2|large|save.painted (key → confirmed visible)": {
+      "median": 149.05,
+      "p95": 281.16,
+      "n": 30
+    },
+    "P2|large|search.id (identifier)": {
+      "median": 21.5,
+      "p95": 35.68,
+      "n": 30
+    },
+    "P2|large|search.key": {
+      "median": 41.7,
+      "p95": 62.18,
+      "n": 60
+    },
+    "P2|large|status.set (Enter)": {
+      "median": 33.15,
+      "p95": 45.49,
+      "n": 30
+    },
+    "P2|large|triage.accept (1, Enter)": {
+      "median": 50.85,
+      "p95": 74.53,
+      "n": 20
+    },
+    "P2|large|warm.bytes": {
+      "median": 2100,
+      "p95": 2115,
+      "n": 20
+    },
+    "P2|large|warm.fcp": {
+      "median": 284,
+      "p95": 297.4,
+      "n": 20
+    },
+    "P2|large|warm.fromCache": {
+      "median": 1,
+      "p95": 1,
+      "n": 20
+    },
+    "P2|large|warm.list": {
+      "median": 555.55,
+      "p95": 577.88,
+      "n": 20
+    },
+    "P2|large|warm.shell": {
+      "median": 281.4,
+      "p95": 318.99,
+      "n": 20
+    },
+    "P2|large|warm.synced": {
+      "median": 1661.9,
+      "p95": 1681.78,
+      "n": 20
+    },
+    "P2|large|wiki.page (click in tree)": {
+      "median": 22.65,
+      "p95": 25.94,
+      "n": 60
+    }
+  }
+}

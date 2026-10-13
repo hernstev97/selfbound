@@ -1,0 +1,369 @@
+/* Wiki: loaded with the wiki page chunk (not in the startup bundle). */
+
+.wiki {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.wiki-side {
+  width: 260px;
+  flex: none;
+  overflow-y: auto;
+  padding: 10px 8px 40px;
+  border-right: 0.5px solid var(--border);
+}
+.wiki-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.wiki-content {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 36px 40px 80px;
+  animation: lift var(--dur-3) var(--ease-out);
+}
+.wiki-content .section-title {
+  margin: 28px 0 8px;
+  font-weight: 590;
+  color: var(--text-strong);
+}
+.wiki-meta {
+  margin: -4px 0 14px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.wiki-content .sub-row .muted {
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+
+/* ---------------------------------------------------------------- Tree */
+
+.wiki-tree-empty {
+  padding: 10px 12px;
+  color: var(--text-muted);
+}
+.wiki-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 6px 0 calc(6px + var(--depth, 0) * 16px);
+  border-radius: var(--radius);
+  color: var(--text);
+  text-decoration: none;
+  cursor: default;
+  position: relative;
+}
+.wiki-row:hover {
+  background: var(--bg-row-hover);
+}
+.wiki-row.active {
+  background: var(--bg-active);
+  color: var(--text-strong);
+}
+.wiki-row.dragging {
+  opacity: 0.45;
+}
+.wiki-row.drop-inside {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.wiki-row.drop-before::before,
+.wiki-row.drop-after::after {
+  content: '';
+  position: absolute;
+  left: calc(6px + var(--depth, 0) * 16px);
+  right: 6px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent);
+}
+.wiki-row.drop-before::before {
+  top: -1px;
+}
+.wiki-row.drop-after::after {
+  bottom: -1px;
+}
+.wiki-caret,
+.wiki-caret-space {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--text-muted);
+  border-radius: 4px;
+}
+/* 24 px target (WCAG 2.5.8) with the footprint and look of 18 px: padding extends outward, background only inside. */
+.wiki-caret {
+  width: 24px;
+  height: 24px;
+  margin: -3px;
+  padding: 3px;
+  background-clip: content-box;
+  border-radius: 7px;
+}
+.wiki-caret:hover {
+  background: var(--bg-active);
+}
+.wiki-caret .icon.open {
+  transform: rotate(90deg);
+}
+.wiki-row-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.wiki-row-add {
+  width: 24px;
+  height: 24px;
+  margin: -2px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  padding: 2px;
+  background: none;
+  background-clip: content-box;
+  color: var(--text-muted);
+  border-radius: 6px;
+  opacity: 0;
+}
+.wiki-row:hover .wiki-row-add,
+.wiki-row-add:focus-visible {
+  opacity: 1;
+}
+/* Touch has no hover: tools are always visible (otherwise invisible but still tappable). */
+@media (hover: none) {
+  .wiki-row-add {
+    opacity: 1;
+  }
+}
+.wiki-row-add:hover {
+  background: var(--bg-active);
+  color: var(--text-strong);
+}
+
+/* ---------------------------------------------------------------- Sources */
+
+.wiki-sources {
+  margin: 0;
+  padding-left: 22px;
+  line-height: 1.6;
+}
+.wiki-sources .muted {
+  margin-left: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.wiki-sources div.muted {
+  margin-left: 0;
+}
+
+@media (max-width: 760px) {
+  .wiki {
+    flex-direction: column;
+  }
+  .wiki-side {
+    width: auto;
+    max-height: 40vh;
+    border-right: 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .wiki-content {
+    padding: 24px 18px 60px;
+  }
+  /* Tap targets with a 44 px hit area (see the mobile block in app.css): tree rows 44 px tall, expand
+     and add-subpage with an invisible margin; source tools with a gap so nothing overlaps. */
+  .wiki-row {
+    height: 44px;
+  }
+  .wiki-caret,
+  .wiki-row-add,
+  .wiki-props .chip {
+    position: relative;
+  }
+  .wiki-caret::after,
+  .wiki-row-add::after,
+  .wiki-source-tools .icon-btn::after,
+  .wiki-props .chip::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+  .wiki-source-tools {
+    gap: 8px;
+    margin-block: 4px;
+  }
+  .wiki-source-tools .icon-btn::after {
+    inset: -4px;
+  }
+  .wiki-props {
+    gap: 18px 8px;
+  }
+  /* Space below "Add source" so its hit area does not reach into the first source's. */
+  .wiki-content .section-title {
+    margin-bottom: 12px;
+  }
+  .wiki-props .chip::after {
+    inset: -9px -4px;
+  }
+}
+
+/* ---------------------------------------------------------------- Project, topics, filter */
+
+.wiki-props {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 16px;
+}
+.wiki-project select {
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.wiki-topic {
+  background: oklch(from var(--accent) l c var(--hue) / 0.16);
+}
+.wiki-topic-picker {
+  position: relative;
+}
+.wiki-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.25), inset 0 0 0 0.5px var(--border);
+}
+.wiki-menu .input {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.wiki-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.wiki-menu-row:hover {
+  background: var(--bg-row-hover);
+}
+.wiki-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: oklch(0.7 0.14 var(--hue));
+}
+.wiki-filter {
+  display: flex;
+  gap: 6px;
+  padding: 0 4px 8px;
+}
+.wiki-filter select {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border-radius: var(--radius);
+  border: 0.5px solid var(--border);
+  background: var(--bg-group);
+  color: inherit;
+  font: inherit;
+  font-size: var(--fs-mini);
+}
+
+/* ---------------------------------------------------------------- Sources, revisions */
+
+.wiki-empty-line {
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.wiki-source {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.wiki-source .grow {
+  flex: 1;
+  min-width: 0;
+}
+.wiki-source-tools {
+  display: flex;
+  opacity: 0;
+}
+.wiki-source:hover .wiki-source-tools,
+.wiki-source-tools:focus-within {
+  opacity: 1;
+}
+@media (hover: none) {
+  .wiki-source-tools {
+    opacity: 1;
+  }
+}
+.wiki-source-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 12px;
+}
+.wiki-source-row {
+  display: flex;
+  gap: 6px;
+}
+.wiki-source-row.end {
+  justify-content: flex-end;
+}
+.wiki-source-row .input {
+  flex: 1;
+  min-width: 0;
+}
+.wiki-source-row .input.short {
+  flex: 0 0 170px;
+}
+.wiki-revisions {
+  margin: 0 0 20px;
+  padding: 4px 12px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-group);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.wiki-revision {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+.wiki-revision.active {
+  background: var(--bg-active);
+}
+.wiki-revision-preview {
+  margin: 4px 0 10px 10px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border);
+  max-height: 360px;
+  overflow-y: auto;
+}
