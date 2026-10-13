@@ -46,6 +46,17 @@ export const actorValidator = v.object({
   agentId: v.optional(v.id('agents')),
 });
 
+export const inboxKindValidator = v.union(v.literal('created'), v.literal('changed'));
+export const inboxChangeValidator = v.object({
+  field: v.string(), // history field name ('stateId', 'comment', 'description', …)
+  actor: actorValidator,
+  at: v.number(),
+  // What the field became (IDs for references, the preview for texts, 'type:direction:otherId' for
+  // relations); missing = cleared or no value. `from` only where the text needs it (labels, team).
+  value: v.optional(v.union(v.string(), v.number(), v.array(v.string()))),
+  from: v.optional(v.union(v.string(), v.array(v.string()))),
+});
+
 export const relationTypeValidator = v.union(v.literal('blocks'), v.literal('related'), v.literal('duplicate'));
 
 export const sprintStateValidator = v.union(v.literal('planning'), v.literal('active'), v.literal('closed'));
@@ -238,9 +249,10 @@ export default defineSchema({
     sprintId: v.optional(v.id('sprints')),
     rank: v.string(), // order in the backlog (fractional-indexing)
     createdBy: actorValidator,
-    // Inbox: issues created by agents stay in the inbox until the owner removes the entry
-    // (reviewedAt). Issues created by the owner and imported ones have it from the start.
-    // readAt: entry seen (read) but still in the inbox. Neither changes the issue.
+    // Legacy inbox markers. Inbox entries live in `inboxEntries` now; these two stay in the schema
+    // because stored issues still carry them. `reviewedAt` is still written at creation for issues
+    // that do not start in the inbox, so `migrations.inboxBackfill` can tell them apart at any time.
+    // Nothing else reads or writes them.
     reviewedAt: v.optional(v.number()),
     readAt: v.optional(v.number()),
     createdAt: v.number(),
@@ -343,6 +355,23 @@ export default defineSchema({
     at: v.number(),
     requestId: v.optional(v.string()),
   }).index('by_issue', ['issueId', 'at']),
+
+  // Inbox: one open entry per issue (removedAt missing). An agent that creates an issue or changes
+  // an existing one adds to the open entry or opens one; reading and removing only touch the entry,
+  // never the issue. Removed entries stay (undo, history) until the cleanup deletes them.
+  // `kind` is why the entry exists; later reasons (a snoozed issue coming back) add a value.
+  inboxEntries: defineTable({
+    issueId: v.id('issues'),
+    kind: inboxKindValidator,
+    actor: actorValidator, // who caused the latest change
+    changes: v.array(inboxChangeValidator), // latest change per field, oldest first
+    createdAt: v.number(),
+    updatedAt: v.number(), // latest change: the entry's place in the list
+    readAt: v.optional(v.number()),
+    removedAt: v.optional(v.number()),
+  })
+    .index('by_issue', ['issueId', 'removedAt'])
+    .index('by_removed', ['removedAt', 'updatedAt']),
 
   sprints: defineTable({
     number: v.number(),

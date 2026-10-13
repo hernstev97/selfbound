@@ -12,6 +12,7 @@ import { readCounter, SEQ } from './lib/counters';
 import { hasAllTerms, searchTerms, snippet } from './lib/search';
 import { BUCKET_SIZE } from './shared/constants';
 import { commentPage } from './ops/comments';
+import * as inbox from './ops/inbox';
 import * as ops from './ops/issues';
 import { moveIssuesToTeam } from './ops/move';
 
@@ -290,17 +291,17 @@ export const restore = ownerWriteMutation({
 
 export const markReviewed = ownerWriteMutation({
   args: { ids: v.array(v.id('issues')), ...requestIdArg },
-  handler: async (ctx, args) => await ops.markReviewed(ctx, ctx.actor, args),
+  handler: async (ctx, args) => await inbox.markReviewed(ctx, ctx.actor, args),
 });
 
 export const markUnreviewed = ownerWriteMutation({
   args: { ids: v.array(v.id('issues')), ...requestIdArg },
-  handler: async (ctx, args) => await ops.markUnreviewed(ctx, ctx.actor, args),
+  handler: async (ctx, args) => await inbox.markUnreviewed(ctx, ctx.actor, args),
 });
 
 export const markRead = ownerWriteMutation({
   args: { ids: v.array(v.id('issues')), read: v.boolean(), ...requestIdArg },
-  handler: async (ctx, args) => await ops.markRead(ctx, ctx.actor, args),
+  handler: async (ctx, args) => await inbox.markRead(ctx, ctx.actor, args),
 });
 
 export const reorder = ownerWriteMutation({

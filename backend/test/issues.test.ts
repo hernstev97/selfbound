@@ -93,7 +93,7 @@ describe('Create issues', () => {
     expect(parent.identifier).toBe('NOVA-1');
   });
 
-  test('agent: actor in history, unreviewed; markReviewed sets reviewedAt with history', async () => {
+  test('agent: actor in history, inbox entry; markReviewed removes the entry with history', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     const agent = await makeAgent(t);
@@ -104,40 +104,36 @@ describe('Create issues', () => {
     expect(issue.createdBy).toEqual(agent);
     expect(issue.reviewedAt).toBeUndefined();
     expect((await historyOf(t, issue._id))[0].actor).toEqual(agent);
+    expect(await owner.query(api.inbox.list, {})).toMatchObject([{ issueId: issue._id, kind: 'created', actor: agent, changes: [] }]);
     expect(await owner.mutation(api.issues.markReviewed, { ids: [issue._id] })).toEqual({ reviewed: 1 });
     expect(await owner.mutation(api.issues.markReviewed, { ids: [issue._id] })).toEqual({ reviewed: 0 });
-    expect((await getIssue(t, issue._id)).reviewedAt).toBeDefined();
+    expect(await owner.query(api.inbox.list, {})).toEqual([]);
     const rows = await historyOf(t, issue._id);
     expect(rows.map((r) => r.field)).toEqual(['created', 'reviewed']);
     expect(rows[1].actor).toEqual({ kind: OWNER_KIND });
-    // Undo: unreviewed again, with history; a second call changes nothing.
+    // Undo: back in the inbox, with history; a second call changes nothing.
     expect(await owner.mutation(api.issues.markUnreviewed, { ids: [issue._id] })).toEqual({ unreviewed: 1 });
     expect(await owner.mutation(api.issues.markUnreviewed, { ids: [issue._id] })).toEqual({ unreviewed: 0 });
-    expect((await getIssue(t, issue._id)).reviewedAt).toBeUndefined();
+    expect(await owner.query(api.inbox.list, {})).toHaveLength(1);
     expect((await historyOf(t, issue._id)).map((r) => r.field)).toEqual(['created', 'reviewed', 'unreviewed']);
   });
 
-  test('inbox: dismissing and reading are only markers, the issue stays unchanged', async () => {
+  test('inbox: dismissing and reading only touch the entry, the issue stays unchanged', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     const agent = await makeAgent(t);
     const result = await t.run(async (ctx) => await createIssues(ctx, agent, { issues: [{ teamId: f.orb, title: 'From the agent', status: 'todo' }] }));
     const before = await getIssue(t, result.issues[0].id);
-    expect(before.readAt).toBeUndefined();
+    expect((await owner.query(api.inbox.list, {}))[0].readAt).toBeUndefined();
     expect(await owner.mutation(api.issues.markRead, { ids: [before._id], read: true })).toEqual({ changed: 1 });
     expect(await owner.mutation(api.issues.markRead, { ids: [before._id], read: true })).toEqual({ changed: 0 });
-    const read = await getIssue(t, before._id);
-    expect(read.readAt).toBeDefined();
+    expect((await owner.query(api.inbox.list, {}))[0].readAt).toBeDefined();
     expect(await owner.mutation(api.issues.markReviewed, { ids: [before._id] })).toEqual({ reviewed: 1 });
-    const removed = await getIssue(t, before._id);
-    expect(removed.reviewedAt).toBeDefined();
-    // Status, title, updatedAt: as before. Reading writes no history.
-    const { reviewedAt: _r, readAt: _a, ...rest } = removed;
-    const { reviewedAt: _r0, readAt: _a0, ...restBefore } = before;
-    expect(rest).toEqual(restBefore);
+    // The issue document is exactly as before: status, title, updatedAt, markers.
+    expect(await getIssue(t, before._id)).toEqual(before);
     expect((await historyOf(t, before._id)).map((r) => r.field)).toEqual(['created', 'reviewed']);
-    expect(await owner.mutation(api.issues.markRead, { ids: [before._id], read: false })).toEqual({ changed: 1 });
-    expect((await getIssue(t, before._id)).readAt).toBeUndefined();
+    // Reading something that is no longer in the inbox changes nothing.
+    expect(await owner.mutation(api.issues.markRead, { ids: [before._id], read: false })).toEqual({ changed: 0 });
   });
 });
 

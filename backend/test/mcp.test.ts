@@ -78,6 +78,7 @@ describe('MCP over HTTP', () => {
       'list_projects',
       'list_labels',
       'list_statuses',
+      'list_inbox',
       'search_articles',
       'list_articles',
       'get_article',
@@ -622,5 +623,35 @@ describe('MCP: knowledge', () => {
     expect((await mcp.call('create_article', { requestId: 'wiki-0009', team: 'ORB', title: 'Q', sources: [{ author: 'Author only' }] })).error).toContain('url or a title');
     expect((await mcp.call('update_article', { requestId: 'wiki-0010', id })).error).toContain('nothing to change');
     expect(await rateCount(t, agentId)).toBeGreaterThan(10);
+  });
+
+  test('list_inbox: agent changes as entries, grouped per issue; reviewedBySteven follows the entry', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const { id, identifier } = await createOne(owner, f.orb, { title: 'Mine' });
+    const { key } = await agent(owner, 'Aleister');
+    const mcp = client(t, key);
+    expect((await mcp.call('list_inbox')).value).toEqual({ count: 0, unread: 0, entries: [] });
+    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(true);
+
+    expect((await mcp.call('set_status', { requestId: 'inbox-0001', identifiers: [identifier], status: 'done' })).ok).toBe(true);
+    await mcp.call('add_comment', { requestId: 'inbox-0002', identifier, body: 'Merged.' });
+    const inbox = (await mcp.call('list_inbox')).value;
+    expect(inbox).toMatchObject({ count: 1, unread: 1 });
+    expect(inbox.entries[0]).toMatchObject({ identifier, title: 'Mine', kind: 'changed', unread: true });
+    expect(inbox.entries[0].changes.map((c: Json) => [c.field, c.by])).toEqual([
+      ['comment', 'Aleister (agent)'],
+      ['status', 'Aleister (agent)'],
+    ]);
+    expect(inbox.entries[0].changes.find((c: Json) => c.field === 'status').to).toBe('Done');
+    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(false);
+
+    // The owner reads it: no longer unread; removing it empties the list again.
+    await owner.mutation(api.issues.markRead, { ids: [id], read: true });
+    expect((await mcp.call('list_inbox', { unreadOnly: true })).value).toMatchObject({ count: 0, unread: 0 });
+    expect((await mcp.call('list_inbox')).value).toMatchObject({ count: 1, unread: 0 });
+    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(true);
+    await owner.mutation(api.issues.markReviewed, { ids: [id] });
+    expect((await mcp.call('list_inbox')).value.entries).toEqual([]);
   });
 });

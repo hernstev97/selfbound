@@ -319,6 +319,11 @@ const listStatuses = object({
   team: optional(teamKey('Only the statuses of this team.')),
 });
 
+const listInbox = object({
+  unreadOnly: optional(boolean({ description: 'Only entries the owner has not read yet.' }), false),
+  limit: optional(integer({ description: 'Maximum number of entries.', min: 1, max: 100 }), 50),
+});
+
 // ---------------------------------------------------------------------------
 // Knowledge: pages per team
 
@@ -429,6 +434,7 @@ const SCHEMAS = {
   list_projects: listProjects,
   list_labels: listLabels,
   list_statuses: listStatuses,
+  list_inbox: listInbox,
   search_articles: searchArticles,
   list_articles: listArticles,
   get_article: getArticle,
@@ -509,6 +515,12 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
     title: 'List statuses',
     description:
       'List the workflow statuses of each team in workflow order: name, type (triage, backlog, unstarted, started, completed, canceled) and key. Teams define their own statuses; use the names in set_status, update_issue and list_issues. A team with strictOrder only allows moving to the next status, canceling, and the listed exceptions; get_issue then returns allowedStatuses, and a disallowed change fails with invalid_transition and the allowed targets.',
+    annotations: READ,
+  },
+  list_inbox: {
+    title: 'List inbox',
+    description:
+      'Read-only view of the owner\'s inbox, newest first: one entry per issue that agents created or changed and the owner has not removed yet. Each entry names the agents and their latest change per field (status, comment, description, …), and whether the owner has read it. Several changes to the same issue are one entry. Use it to see what is still waiting for the owner; reading and removing entries is reserved for the owner.',
     annotations: READ,
   },
   search_articles: {

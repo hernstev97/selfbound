@@ -21,6 +21,8 @@ import {
 } from '../shared/workflow';
 import { addCommentCore } from './comments';
 import { applyDescription, applyPatch, budgetWarnings, createIssuesCore, updateIssuesCore, type BudgetWarning } from './issues';
+import { listOpen } from './inbox';
+import { openEntry } from './inboxChanges';
 import { issueArticles } from './links';
 import { moveIssuesToTeamCore } from './move';
 import {
@@ -583,6 +585,12 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
   }
 }
 
+/** No inbox entry is waiting for the owner: never was one, removed, or read (a new agent change makes it unread again). */
+async function reviewedByOwner(ctx: QueryCtx, issueId: Id<'issues'>) {
+  const entry = await openEntry(ctx, issueId);
+  return !entry || entry.readAt !== undefined;
+}
+
 async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
   const lookup = new Lookup(ctx);
   let issue: Doc<'issues'> | null = null;
@@ -645,8 +653,9 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     ...(issue.completedAt ? { completedAt: iso(issue.completedAt) } : {}),
     ...(issue.canceledAt ? { canceledAt: iso(issue.canceledAt) } : {}),
     createdBy: await lookup.actorName(issue.createdBy),
-    // Legacy field name (= reviewed by the owner), kept because agents rely on it.
-    reviewedBySteven: issue.reviewedAt !== undefined || issue.readAt !== undefined,
+    // Legacy field name (= reviewed by the owner), kept because agents rely on it: true unless an
+    // unread inbox entry is waiting (a new change by an agent makes it false again).
+    reviewedBySteven: await reviewedByOwner(ctx, id),
     ...(await allowedStatuses(lookup, issue)),
     ...(aliases.length ? { previousIdentifiers: aliases.map((a) => a.key) } : {}),
     description: { markdown: body?.markdown ?? '', version: body?.version ?? 0 },
@@ -816,6 +825,35 @@ async function listStatuses(ctx: QueryCtx, args: ToolArgs['list_statuses']) {
       }),
     ),
   };
+}
+
+async function listInboxTool(ctx: QueryCtx, args: ToolArgs['list_inbox']) {
+  const lookup = new Lookup(ctx);
+  const entries = [];
+  let unread = 0;
+  for (const entry of await listOpen(ctx)) {
+    const issue = await ctx.db.get('issues', entry.issueId);
+    if (!issue || issue.deletedAt !== undefined) continue;
+    const isUnread = entry.readAt === undefined;
+    if (isUnread) unread++;
+    if ((args.unreadOnly && !isUnread) || entries.length >= (args.limit ?? 50)) continue;
+    entries.push({
+      ...(await lookup.brief(issue)),
+      kind: entry.kind === 'created' ? 'created' : 'changed',
+      unread: isUnread,
+      ...(entry.kind === 'created' ? { createdBy: await lookup.actorName(issue.createdBy) } : {}),
+      updatedAt: iso(entry.updatedAt),
+      changes: await Promise.all(
+        [...entry.changes].reverse().map(async (c) => ({
+          at: iso(c.at),
+          field: c.field === 'stateId' ? 'status' : c.field,
+          ...(c.value !== undefined ? { to: c.field.startsWith('relation') ? await lookup.parentIdentifier(c.value as Id<'issues'>) : await historyValue(lookup, c.field, c.value) } : {}),
+          by: await lookup.actorName(c.actor),
+        })),
+      ),
+    });
+  }
+  return { count: entries.length, unread, entries };
 }
 
 /** With strict order: the statuses the issue may move to now (names). */
@@ -1109,6 +1147,8 @@ export async function runReadTool(ctx: QueryCtx, tool: ToolName, args: unknown, 
       return await getArticleTool(ctx, args as ToolArgs['get_article']);
     case 'list_statuses':
       return await listStatuses(ctx, args as ToolArgs['list_statuses']);
+    case 'list_inbox':
+      return await listInboxTool(ctx, args as ToolArgs['list_inbox']);
     default:
       return fail('invalid', `${tool} is not a read tool.`);
   }
