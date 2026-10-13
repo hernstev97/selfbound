@@ -63,7 +63,11 @@ function main() {
     console.error('Missing Vercel scope: set XLR8_DOCS_VERCEL_SCOPE or vercelScope in deploy/instance.json.');
     process.exit(2);
   }
-  if (!existsSync(join(out, '.vercel', 'project.json'))) run('vercel', ['link', '--yes', '--project', project, '--scope', scope], { cwd: out });
+  if (!existsSync(join(out, '.vercel', 'project.json'))) {
+    run('vercel', ['link', '--yes', '--project', project, '--scope', scope], { cwd: out });
+    // Linking inside the repo connects it to GitHub; pushes would then build without config and fail.
+    run('vercel', ['git', 'disconnect', '--yes', '--scope', scope], { cwd: out });
+  }
   run('vercel', ['deploy', '--yes', '--scope', scope, ...(process.argv.includes('--prod') ? ['--prod'] : [])], { cwd: out });
 }
 
