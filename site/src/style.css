@@ -129,6 +129,7 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 .compare tbody th { width: 18%; color: var(--strong); font-weight: 600; white-space: nowrap; }
 .compare td { width: 41%; color: var(--muted); }
 .compare td:last-child { color: var(--text); }
+.note { margin: 14px 0 0; color: var(--faint); font-size: 13px; }
 
 /* Self-hosting */
 .host { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 56px; align-items: center; }
