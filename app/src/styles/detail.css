@@ -1,0 +1,542 @@
+/* Detail page: loaded with the detail page chunk (not in the startup bundle). */
+@import './md.css';
+
+/* ---------------------------------------------------------------- Detail */
+
+.detail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  /* Open: brief fade-in rising 4 px; J/K inside the detail swaps the content instantly. */
+  animation: lift var(--dur-3) var(--ease-out);
+}
+.detail-main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+.detail-content {
+  max-width: 740px;
+  margin: 0 auto;
+  padding: 36px 40px 80px;
+}
+/* Parent issue above the title: one line, long titles end in an ellipsis (never wider than the column). */
+.detail-content .parent-link {
+  max-width: calc(100% + 10px);
+  min-width: 0;
+  margin: -6px 0 6px -10px;
+}
+.parent-link .parent-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.detail-title {
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 2px 0;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: none;
+  font-size: var(--fs-title);
+  font-weight: 590;
+  line-height: 1.33;
+  letter-spacing: -0.012em;
+  color: var(--text-strong);
+  overflow: hidden;
+  field-sizing: content;
+}
+.detail-unseen {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--accent) 12%, var(--bg-panel));
+  color: var(--accent-text);
+  font-size: var(--fs-mini);
+  font-weight: 510;
+}
+.desc {
+  position: relative;
+  min-height: 48px;
+  margin: 0 -10px 24px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  font-size: var(--fs-regular);
+  line-height: 1.6;
+  color: var(--text);
+}
+.desc.view:hover,
+.desc.view:focus-visible {
+  background: color-mix(in oklch, var(--bg-row-hover) 60%, transparent);
+}
+.desc-placeholder {
+  color: var(--text-subtle);
+}
+.desc-editor {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: none;
+  font: inherit;
+  line-height: 1.6;
+  color: var(--text);
+  field-sizing: content;
+}
+.rich.desc-editor {
+  min-height: 96px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.desc-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.desc-conflict {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--status-progress) 12%, var(--bg-panel));
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--status-progress) 35%, transparent);
+  color: var(--text);
+  font-size: var(--fs-small);
+}
+.desc-conflict .grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+
+.sub-list {
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.sub-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: var(--radius);
+  cursor: default;
+  --icon-cut: var(--bg-panel);
+}
+.sub-row:hover {
+  background: var(--bg-row-hover);
+  --icon-cut: var(--bg-row-hover);
+}
+.sub-row .key {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+}
+.sub-row .t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-strong);
+  font-weight: 510;
+}
+.sub-row .t.deleted {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.sub-row .x {
+  opacity: 0;
+}
+.sub-row:hover .x,
+.sub-row .x:focus-visible {
+  opacity: 1;
+}
+
+.activity {
+  position: relative;
+  margin-top: 8px;
+}
+.act-event {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 2px 0 2px 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.act-event .who {
+  color: var(--text);
+  font-weight: 510;
+}
+.act-event .when {
+  color: var(--text-muted);
+}
+.act-revert {
+  margin-left: auto;
+  opacity: 0;
+}
+.act-event:hover .act-revert,
+.act-revert:focus-visible {
+  opacity: 1;
+}
+.act-line {
+  position: absolute;
+  left: 10px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line);
+}
+.act-older {
+  position: relative;
+  margin: 0 0 8px 24px;
+}
+.act-avatar {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--bg-control);
+  color: var(--text-muted);
+  box-shadow: 0 0 0 3px var(--bg-panel);
+  font-size: 9px;
+  font-weight: 700;
+}
+.act-avatar .icon svg,
+.act-avatar .icon.mi::before {
+  width: 11px;
+  height: 11px;
+}
+.act-avatar.steven {
+  background: oklch(0.56 0.12 250);
+  color: white;
+}
+.act-avatar.agent {
+  background: oklch(0.5 0.12 300);
+  color: white;
+}
+.act-avatar.github {
+  background: var(--text);
+  color: var(--bg-panel);
+}
+.comment {
+  position: relative;
+  z-index: 1;
+  margin: 8px 0 10px;
+  padding: 12px 16px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+[data-theme='light'] .comment {
+  background: var(--bg-popover);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.comment.pending {
+  opacity: 0.65;
+}
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: var(--fs-mini);
+  color: var(--text-muted);
+}
+.comment-head .who {
+  color: var(--text);
+  font-weight: 510;
+  font-size: var(--fs-small);
+}
+.comment-head .tools {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+}
+.comment:hover .comment-head .tools,
+.comment-head .tools:focus-within {
+  opacity: 1;
+}
+/* Tools that only appear on hover: touch has no hover, and invisible buttons would still accept
+   taps there. (hover: none) rather than (any-hover: none) so a tablet with a touchpad also shows
+   them as long as touch is the primary input. */
+@media (hover: none) {
+  .sub-row .x,
+  .act-revert,
+  .comment-head .tools {
+    opacity: 1;
+  }
+}
+.comment-body {
+  font-size: var(--fs-regular);
+  line-height: 1.55;
+  color: var(--text);
+}
+.comment-box {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  padding: 12px 14px 10px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+[data-theme='light'] .comment-box {
+  background: var(--bg-popover);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.comment-box textarea,
+.comment textarea {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  outline: none;
+  resize: none;
+  background: none;
+  font-size: var(--fs-regular);
+  line-height: 1.55;
+  color: var(--text);
+  field-sizing: content;
+}
+.comment-box .rich,
+.comment .rich {
+  min-height: 44px;
+  font-size: var(--fs-regular);
+  line-height: 1.55;
+  color: var(--text);
+}
+.comment .rich {
+  margin: 4px 0 2px;
+}
+.comment-box textarea::placeholder {
+  color: var(--text-subtle);
+}
+.comment-box-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.comment-box-foot .image-btn {
+  margin-right: auto;
+}
+.image-btn svg {
+  margin-right: 4px;
+}
+/* A file is dragged over a text field (insert image). */
+textarea.drop-target {
+  outline: 1px dashed var(--accent);
+  outline-offset: 2px;
+}
+
+/* Properties column (stacked cards) */
+.props-col {
+  width: 300px;
+  flex: none;
+  overflow-y: auto;
+  padding: 12px 12px 24px 0;
+}
+.props-card {
+  padding: 8px 6px 10px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-group);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+  --icon-cut: var(--bg-group);
+}
+[data-theme='light'] .props-card {
+  background: var(--bg-raised);
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+.props-title {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 8px;
+  font-size: var(--fs-mini);
+  color: var(--text-muted);
+}
+.prop-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 30px;
+  padding: 3px 8px 3px 7px;
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--fs-mini);
+  font-weight: 510;
+  text-align: left;
+}
+.prop-row:hover {
+  background: var(--bg-control);
+  --icon-cut: var(--bg-control);
+}
+.prop-row .empty-val {
+  color: var(--text-muted);
+  font-weight: 450;
+}
+.prop-row .val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prop-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 8px 6px;
+}
+.prop-meta {
+  padding: 6px 8px 2px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  line-height: 1.7;
+}
+.round-add {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.round-add:hover {
+  background: var(--bg-control);
+  color: var(--text);
+}
+.detail-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+}
+.detail-missing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-muted);
+}
+
+/* Editor key hints are not needed on a phone. */
+@media (max-width: 768px) {
+  .desc-hint {
+    display: none;
+  }
+  /* Safeguard: the page can never be swiped sideways on a phone. */
+  .detail-main {
+    overflow-x: hidden;
+  }
+  /* Tap targets with a 44 px hit area (see the mobile block in app.css). List rows become
+     44 px tall so the button hit areas inside them do not overlap the neighboring row. */
+  .sub-row {
+    height: 44px;
+  }
+  .act-event:has(.act-revert) {
+    min-height: 44px;
+  }
+  .comment-head {
+    margin-bottom: 10px;
+  }
+  /* No negative top margin, so the scroll container does not clip the hit area. */
+  .detail-content .parent-link {
+    margin: 0 0 10px -10px;
+  }
+  .sub-row .x::after,
+  .activity .btn.small::after,
+  .section-title .btn.small::after,
+  .parent-link::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+  }
+  .activity .btn.small,
+  .section-title .btn.small,
+  .parent-link {
+    position: relative;
+  }
+  /* Short labels ("Edit") would make the hit area narrower than 44 px. */
+  .activity .btn.small {
+    min-width: 44px;
+    justify-content: center;
+  }
+  .activity .btn.small::after,
+  .section-title .btn.small::after,
+  .parent-link::after {
+    inset: -10px 0;
+  }
+  /* Room for the buttons' hit area, otherwise a tap at the bottom lands in the comment field. */
+  .comment-box-foot {
+    margin-top: 12px;
+  }
+}
+
+/* Split inbox: issue to the right of the list. When space is tight, the properties sit as
+   buttons above the description (as on mobile). */
+.split-detail .detail-content {
+  padding: 28px 32px 80px;
+}
+@container split-detail (max-width: 820px) {
+  .split-detail .props-col {
+    display: none;
+  }
+  .split-detail .mobile-props {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 18px;
+  }
+  .split-detail .detail-content {
+    padding: 24px 24px 80px;
+  }
+}
+/* Right-hand header: the title sits directly below, so the header row shows only team and identifier. */
+.split-detail .location-bar .crumb.desktop-only {
+  display: none;
+}
+.split-detail .detail-nav {
+  white-space: nowrap;
+}
+/* The identifier is never truncated; when space is short, team name and labels drop out. */
+.split-detail .location-bar .crumb:has([data-testid='detail-key']) {
+  flex: none;
+}
+@container split-detail (max-width: 640px) {
+  .split-detail .location-bar .crumb:first-child .crumb-title,
+  .split-detail .location-bar .btn-label {
+    display: none;
+  }
+}

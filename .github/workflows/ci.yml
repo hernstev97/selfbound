@@ -1,0 +1,92 @@
+# Checks for every push to main and every pull request.
+#
+# Types, unit tests, integration (local Convex in the runner), browser flows (Playwright)
+# and a quick performance run. All without cloud access and without secrets.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Nothing by default; each job states what it needs.
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v4.4.0
+
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Types
+        run: |
+          pnpm typecheck
+          pnpm --filter @xlr8/backend exec tsc --noEmit -p test/lib
+          pnpm --filter @xlr8/backend exec tsc --noEmit -p ../tooling/linear-import
+
+      - name: Translations
+        run: node tooling/i18n-check.mjs
+
+      - name: Tests
+        run: |
+          pnpm test
+          pnpm --filter @xlr8/backend test:lib
+
+      # Fresh local backend in the runner (port 13490): import twice, MCP SDK client,
+      # concurrency with 20 clients, 5 agents and parallel webhooks.
+      - name: Integration (local backend)
+        run: pnpm --filter @xlr8/backend test:integration
+
+      # Performance regression, quick run (perf/README.md): own backend (13520), two builds, vite preview (5522),
+      # only P1 · 10,000 issues, few repetitions. Threshold 250 ms p95 instead of 100 ms because shared
+      # runners fluctuate. Initial bundle and DOM nodes are load-independent and may be at most 5 % above
+      # perf/baseline.json; other deviations from the baseline are only warnings.
+      - name: Playwright browser
+        run: pnpm --filter @xlr8/perf exec playwright install --with-deps chromium
+
+      - name: UI (Playwright, own local backend)
+        run: pnpm e2e
+
+      - name: Keep Playwright report
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: e2e-report
+          path: |
+            e2e/playwright-report/
+            e2e/test-results/
+          if-no-files-found: ignore
+
+      - name: Performance (quick run)
+        run: node perf/run.ts --quick --no-pin
+
+      - name: Keep performance report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: perf-quick
+          path: |
+            perf/results/
+            perf/.backend/.convex-local.log
+          if-no-files-found: ignore

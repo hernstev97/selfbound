@@ -1,0 +1,20 @@
+{
+  // Type check for the building-block tests and the MCP smoke script:
+  //   pnpm --filter @xlr8/backend exec tsc --noEmit -p test/lib
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ES2023", "DOM"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "types": ["node"]
+  },
+  "include": ["./**/*", "../../scripts/mcp-smoke.ts", "../../convex/lib/github.ts", "../../convex/lib/mcp/**/*"]
+}

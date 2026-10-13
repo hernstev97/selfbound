@@ -1,0 +1,24 @@
+{
+  "name": "xlr8",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "node tooling/local.mjs --seed small --app dev",
+    "local": "node tooling/local.mjs",
+    "build": "pnpm --filter @xlr8/app build",
+    "typecheck": "pnpm -r --filter ./backend --filter ./core --filter ./app --filter ./e2e --filter ./perf typecheck",
+    "test": "pnpm -r --filter ./backend --filter ./core --filter ./app test",
+    "e2e": "pnpm --filter @xlr8/e2e test",
+    "perf": "node perf/run.ts --full",
+    "perf:quick": "node perf/run.ts --quick",
+    "perf:record": "node perf/record.ts",
+    "convex": "node tooling/convex.mjs"
+  },
+  "devDependencies": {
+    "convex": "1.46.0"
+  }
+}

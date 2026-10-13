@@ -1,0 +1,17 @@
+name: Feature request
+description: Suggest an idea or an improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What do you have in mind?
+  - type: markdown
+    attributes:
+      value: XLR8 is early and maintained by one person, so not every idea will be picked up. Speed and keyboard use come first.
