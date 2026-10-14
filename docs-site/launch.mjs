@@ -4,4 +4,4 @@ export const INDEXABLE = false;
 
 export const SITE_URL = 'https://docs.selfbound.kiumu.app';
 export const LANDING_URL = 'https://selfbound.kiumu.app';
-export const REPO_URL = 'https://github.com/hernstev97/xlr8';
+export const REPO_URL = 'https://github.com/hernstev97/selfbound';

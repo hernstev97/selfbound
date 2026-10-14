@@ -71,5 +71,6 @@ browsers and the running instance, so it is done separately and only where it pa
 routes, MCP tool names and parameters, token prefixes (`xlr8_rt_`, `xlr8_ac_`, `xlr8_`), browser storage
 keys and the cookie `xlr8_signed_in`, the team key `XLR8` with identifiers like `XLR8-48` and branch names
 built from them, the instance `xlr8.kiumu.app`, the MCP address `mcp.xlr8.kiumu.app`, the Vercel project
-`xlr8` of the app and the repository `hernstev97/xlr8`. Historical reports under `docs/reports/` and
+`xlr8` of the app. The repository was renamed to `hernstev97/selfbound` the same day (GitHub redirects the old
+address). Historical reports under `docs/reports/` and
 `docs/brand.md` describe the past and stay as they are.
