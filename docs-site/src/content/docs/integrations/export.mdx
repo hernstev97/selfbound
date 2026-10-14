@@ -38,7 +38,7 @@ pnpm exec convex export --include-file-storage --path ~/xlr8-export.zip
 unset CONVEX_DEPLOY_KEY
 ```
 
-The ZIP holds one JSONL file per table (one JSON document per line) and a folder with the stored files. The data is in XLR8's internal format: for example, issue descriptions are stored in a separate table from the issues. The tables and fields are defined in [`backend/convex/schema.ts`](https://github.com/hernstev97/xlr8-public/blob/main/backend/convex/schema.ts). The same ZIP can be imported into another Convex deployment with `convex import`.
+The ZIP holds one JSONL file per table (one JSON document per line) and a folder with the stored files. The data is in XLR8's internal format: for example, issue descriptions are stored in a separate table from the issues. The tables and fields are defined in [`backend/convex/schema.ts`](https://github.com/hernstev97/xlr8/blob/main/backend/convex/schema.ts). The same ZIP can be imported into another Convex deployment with `convex import`.
 
 <Aside type="caution">
 The export contains all your data unencrypted. Store it somewhere safe and delete copies you no longer need.
@@ -56,7 +56,7 @@ The XLR8 repository includes a GitHub Actions workflow that backs up your produc
 
 The workflow does nothing until you add a deploy key and your public age key as secrets. In a public repository, workflow logs and artifacts are public: the backup itself stays encrypted, but table names and document counts are visible. Run the backup from a private copy of the repository if that matters to you.
 
-Setup, restore and the quarterly decryption test are described in the [backup guide on GitHub](https://github.com/hernstev97/xlr8-public/blob/main/docs/backup.md).
+Setup, restore and the quarterly decryption test are described in the [backup guide on GitHub](https://github.com/hernstev97/xlr8/blob/main/docs/backup.md).
 
 Not part of a backup: environment variables such as secrets and tokens (keep them in a password manager), and videos, which are links to Google Drive rather than files in XLR8.
 

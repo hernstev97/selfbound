@@ -5,9 +5,9 @@ sidebar:
   order: 2
 ---
 
-XLR8 is free and open source under the [GNU Affero General Public License v3.0](https://github.com/hernstev97/xlr8-public/blob/main/LICENSE) (AGPL-3.0). Copyright © 2026 Steven Hernandez and contributors.
+XLR8 is free and open source under the [GNU Affero General Public License v3.0](https://github.com/hernstev97/xlr8/blob/main/LICENSE) (AGPL-3.0). Copyright © 2026 Steven Hernandez and contributors.
 
-This page explains the license in plain words. It is not legal advice; the [license text](https://github.com/hernstev97/xlr8-public/blob/main/LICENSE) is what counts.
+This page explains the license in plain words. It is not legal advice; the [license text](https://github.com/hernstev97/xlr8/blob/main/LICENSE) is what counts.
 
 ## What you may do
 
@@ -39,6 +39,6 @@ When you contribute to XLR8, your contribution is licensed under the AGPL-3.0 as
 
 Some parts of XLR8 come from other projects and keep their own licenses:
 
-- **Color themes:** the built-in VS Code themes (Catppuccin, Dracula, Nord, Tokyo Night, Gruvbox, Solarized, GitHub and others) are unmodified originals under the MIT License. Each theme folder contains its license, and [SOURCES.md](https://github.com/hernstev97/xlr8-public/blob/main/app/src/themes/SOURCES.md) lists where each one comes from.
+- **Color themes:** the built-in VS Code themes (Catppuccin, Dracula, Nord, Tokyo Night, Gruvbox, Solarized, GitHub and others) are unmodified originals under the MIT License. Each theme folder contains its license, and [SOURCES.md](https://github.com/hernstev97/xlr8/blob/main/app/src/themes/SOURCES.md) lists where each one comes from.
 - **Fonts:** the selectable fonts (Inter, Geist, JetBrains Mono, Fira Code and others) come from Fontsource packages under the SIL Open Font License 1.1.
 - **Libraries:** the npm packages XLR8 depends on keep their own licenses.
