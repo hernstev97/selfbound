@@ -4,4 +4,4 @@ export const INDEXABLE = false;
 
 export const SITE_URL = 'https://docs.getxlr8.app';
 export const LANDING_URL = 'https://getxlr8.app';
-export const REPO_URL = 'https://github.com/hernstev97/xlr8-public';
+export const REPO_URL = 'https://github.com/hernstev97/xlr8';
