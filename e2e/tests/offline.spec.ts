@@ -7,8 +7,8 @@ import { BACKEND_PORT } from '../support/env.ts';
 import { open } from '../support/helpers.ts';
 
 /** Publishable key of a Clerk host that does not exist (`pk_test_` + base64 of "host$"). */
-const FAKE_KEY = `pk_test_${Buffer.from('clerk.xlr8-offline.invalid$').toString('base64')}`;
-const FAKE_HOST = /xlr8-offline\.invalid/;
+const FAKE_KEY = `pk_test_${Buffer.from('clerk.selfbound-offline.invalid$').toString('base64')}`;
+const FAKE_HOST = /selfbound-offline\.invalid/;
 
 /** Blocks the backend (requests and WebSocket) and Clerk: like no network, only the app files load. */
 async function cutNetwork(page: Page) {
@@ -72,11 +72,11 @@ test('Signed in last time, no network: list from the cache, "Offline" notice', a
   await expect(page.getByTestId('sync-state')).toHaveText('Offline', { timeout: 6000 });
   // Clerk stays unreachable: one notice explaining what applies.
   await expect(page.getByTestId('toast').filter({ hasText: 'last saved state on this device' })).toBeVisible({ timeout: 10_000 });
-  expect(await page.evaluate(() => (window as unknown as { __xlr8: { app: { auth: { status: { get(): string } } } } }).__xlr8.app.auth.status.get())).toBe('cached');
+  expect(await page.evaluate(() => (window as unknown as { __selfbound: { app: { auth: { status: { get(): string } } } } }).__selfbound.app.auth.status.get())).toBe('cached');
   // Editing without a confirmed sign-in: a notice at once, nothing is saved only seemingly.
   const id = await page.locator('[data-testid="issue-row"]').first().getAttribute('data-id');
   const before = await page.locator('[data-testid="issue-row"]').first().getAttribute('data-priority');
-  await page.evaluate((issue) => (window as unknown as { __xlr8: { app: { edit: { patch(ids: string[], p: object): void } } } }).__xlr8.app.edit.patch([issue!], { priority: 4 }), id);
+  await page.evaluate((issue) => (window as unknown as { __selfbound: { app: { edit: { patch(ids: string[], p: object): void } } } }).__selfbound.app.edit.patch([issue!], { priority: 4 }), id);
   await expect(page.getByText('Offline: you can make changes again', { exact: false })).toBeVisible();
   await expect(page.locator('[data-testid="issue-row"]').first()).toHaveAttribute('data-priority', before!);
 });
@@ -98,7 +98,7 @@ test('A chunk that cannot load offline: notice instead of an empty page; back on
   await open(page, '/all');
   // The projects page is its own chunk, not loaded at startup.
   await context.setOffline(true);
-  await page.evaluate(() => (window as unknown as { __xlr8: { app: { nav: { go(p: object): void } } } }).__xlr8.app.nav.go({ name: 'projects', team: 'ORB' }));
+  await page.evaluate(() => (window as unknown as { __selfbound: { app: { nav: { go(p: object): void } } } }).__selfbound.app.nav.go({ name: 'projects', team: 'ORB' }));
   await expect(page.getByTestId('load-failed')).toBeVisible();
   await expect(page.getByTestId('load-failed')).toContainText('Offline: this part is not loaded');
   await context.setOffline(false);

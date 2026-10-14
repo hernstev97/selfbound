@@ -4,11 +4,11 @@
   // A new key is shown exactly once here (with a ready-made command for Claude Code), afterwards
   // only its prefix. Connectors are added through "Connect connector" (armed for 15 minutes) and
   // the consent page. Revoking is final and needs a confirmation.
-  import { ICON, relativeTime, fullDate } from '@xlr8/core';
-  import { t, tc, translated } from '@xlr8/core/i18n';
-  import { api } from '@xlr8/backend/api';
-  import type { Id } from '@xlr8/backend/dataModel';
-  import { mcpCommand, siteUrl } from '@xlr8/core/app/admin';
+  import { ICON, relativeTime, fullDate } from '@selfbound/core';
+  import { t, tc, translated } from '@selfbound/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import type { Id } from '@selfbound/backend/dataModel';
+  import { mcpCommand, siteUrl } from '@selfbound/core/app/admin';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
   import Dialog from './Dialog.svelte';
@@ -70,7 +70,7 @@
       <span class="sub" data-testid="connector-off">{t('Not enabled on this backend (XLR8_APP_URL is missing, see docs/operations.md).')}</span>
     {:else}
       <ol class="steps sub">
-        <li>{t('Press "Connect connector". XLR8 then accepts new connections for 15 minutes.')}</li>
+        <li>{t('Press "Connect connector". Selfbound then accepts new connections for 15 minutes.')}</li>
         <li>{t('claude.ai: Settings → Connectors → Add custom connector. ChatGPT: Settings → Apps → add your own MCP server. Enter this URL as the address:')}</li>
       </ol>
       <div class="copy-field">
@@ -78,7 +78,7 @@
         <button class="btn small" data-testid="connector-url-copy" onclick={() => void app.edit.copy(connectors.url!, t('Address'))}><span class="icon">{@html ICON.copy}</span>{t('Copy')}</button>
       </div>
       <ol class="steps sub" start="3">
-        <li>{t('Sign in and allow access on the XLR8 consent page. The connector then appears in the list below.')}</li>
+        <li>{t('Sign in and allow access on the Selfbound consent page. The connector then appears in the list below.')}</li>
       </ol>
       <div class="arm-row">
         {#if armedLeft > 0}

@@ -1,8 +1,8 @@
 <script lang="ts">
   import '../styles/detail.css';
   import '../styles/overlays.css';
-  import { ICON, PRIORITY_ICON, STATUS_ICON, statusIcon, type PaletteKind } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, PRIORITY_ICON, STATUS_ICON, statusIcon, type PaletteKind } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { anchorOf, tip } from '../lib/ui.ts';

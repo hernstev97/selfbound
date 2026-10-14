@@ -7,7 +7,7 @@ sidebar:
 ---
 import { Aside, Steps } from '@astrojs/starlight/components';
 
-[Convex](https://convex.dev) runs XLR8's database and backend functions, and serves the HTTP endpoints
+[Convex](https://convex.dev) runs Selfbound's database and backend functions, and serves the HTTP endpoints
 for agents, GitHub and the health check. On this page you create the project, configure it and deploy
 the backend for the first time.
 
@@ -47,9 +47,9 @@ Set these **before the first deploy**. The backend's sign-in configuration reads
 `CLERK_JWT_ISSUER_DOMAIN` and `XLR8_DEV_JWKS`, and the deploy fails if either is missing.
 
 ```sh
-node tooling/cloud.mjs env set CLERK_JWT_ISSUER_DOMAIN https://clerk.xlr8.example.com
+node tooling/cloud.mjs env set CLERK_JWT_ISSUER_DOMAIN https://clerk.selfbound.example.com
 node tooling/cloud.mjs env set XLR8_DEV_JWKS none
-node tooling/cloud.mjs env set XLR8_OWNER_IDS 'https://clerk.xlr8.example.com|user_2abc…'
+node tooling/cloud.mjs env set XLR8_OWNER_IDS 'https://clerk.selfbound.example.com|user_2abc…'
 ```
 
 You can also set them in the Convex dashboard under **Settings → Environment Variables**.
@@ -111,7 +111,7 @@ changing them.
 
 | Variable | Required | Value |
 |---|---|---|
-| `CLERK_JWT_ISSUER_DOMAIN` | yes | Clerk Frontend API URL, for example `https://clerk.xlr8.example.com`, no trailing slash. Several URLs separated by commas, only while you move Clerk to another domain. **Redeploy the backend after changing it**: Convex reads it when the functions are pushed, not on every request. |
+| `CLERK_JWT_ISSUER_DOMAIN` | yes | Clerk Frontend API URL, for example `https://clerk.selfbound.example.com`, no trailing slash. Several URLs separated by commas, only while you move Clerk to another domain. **Redeploy the backend after changing it**: Convex reads it when the functions are pushed, not on every request. |
 | `XLR8_OWNER_IDS` | yes | who gets in: comma-separated entries `<issuer>\|<Clerk user id>`. Empty means nobody gets in. |
 | `XLR8_DEV_JWKS` | yes | `none` in production. Locally it holds the public key of the test sign-in. |
 
@@ -119,8 +119,8 @@ changing them.
 
 | Variable | Required | Value |
 |---|---|---|
-| `XLR8_APP_URL` | no | address of your app, `https://xlr8.example.com`. Turns on OAuth, so claude.ai and ChatGPT can connect as connectors. Also the default contact for push services. |
-| `XLR8_PUBLIC_SITE_URL` | no | a custom address for MCP and OAuth instead of `…convex.site`, for example `https://mcp.xlr8.example.com`. Changing it later means reconnecting all connectors. |
+| `XLR8_APP_URL` | no | address of your app, `https://selfbound.example.com`. Turns on OAuth, so claude.ai and ChatGPT can connect as connectors. Also the default contact for push services. |
+| `XLR8_PUBLIC_SITE_URL` | no | a custom address for MCP and OAuth instead of `…convex.site`, for example `https://mcp.selfbound.example.com`. Changing it later means reconnecting all connectors. |
 | `XLR8_OWNER_NAME` | no | your display name in what agents read, for example who wrote a comment. Default `Owner`. |
 
 Details: [Connect an agent](/agents/connect/).
@@ -146,8 +146,8 @@ Details: [Notifications](/using/notifications/).
 |---|---|---|
 | `GITHUB_WEBHOOK_SECRET` | no | verifies that webhook deliveries come from GitHub |
 | `GITHUB_WEBHOOK_SECRET_PREVIOUS` | no | the old secret, only while you rotate it |
-| `GITHUB_TOKEN` | no | fine-grained personal access token for the pull request view (description, checks, comments, merging) and for managing webhooks. Without it, XLR8 shows only title and state. |
-| `GITHUB_MANAGE_WEBHOOKS` | no | `1`: XLR8 creates missing webhooks in the token's repositories and fixes their events. Needs `GITHUB_WEBHOOK_SECRET`. |
+| `GITHUB_TOKEN` | no | fine-grained personal access token for the pull request view (description, checks, comments, merging) and for managing webhooks. Without it, Selfbound shows only title and state. |
+| `GITHUB_MANAGE_WEBHOOKS` | no | `1`: Selfbound creates missing webhooks in the token's repositories and fixes their events. Needs `GITHUB_WEBHOOK_SECRET`. |
 | `GITHUB_REPOS` | no | manage only these repositories, `owner/name` or `owner/*`, comma-separated. Default: all repositories owned by the token's account. |
 
 Details: [GitHub](/integrations/github/).

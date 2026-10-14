@@ -1,5 +1,5 @@
 // "Repeat …" in the more menu: a recurrence template from an issue (own small chunk, loaded on demand).
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { intlLocale, t } from '../i18n.ts';
 import type { IssueId } from '../types.ts';
 import type { App } from './index.ts';

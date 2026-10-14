@@ -177,7 +177,7 @@ describe('rate limits and errors', () => {
 });
 
 describe('key file', () => {
-  const dir = mkdtempSync(join(tmpdir(), 'xlr8-key-'));
+  const dir = mkdtempSync(join(tmpdir(), 'selfbound-key-'));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
   test('mode 600: ok, whitespace and line end are trimmed', () => {

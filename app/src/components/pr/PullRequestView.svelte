@@ -1,14 +1,14 @@
 <script lang="ts">
-  // A pull request in XLR8: state, checks, description, comments and reviews, merge, close/reopen,
+  // A pull request in Selfbound: state, checks, description, comments and reviews, merge, close/reopen,
   // comment. As its own page (/pr/<owner>/<repo>/<nr>) or beside the issue. Data: subscription
   // `githubPr.view`; on open `githubPr.refresh` fetches the state from GitHub, afterwards webhooks
   // keep it current. The code diff stays on GitHub (link to the changed files).
   import '../../styles/pr.css';
-  import { api } from '@xlr8/backend/api';
-  import type { Id } from '@xlr8/backend/dataModel';
-  import { checkCounts, type MergeMethod, type PrCheck, type PrItem, type PrView } from '@xlr8/backend/shared/pullRequests';
-  import { ICON, fullDate, relativeTime } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import type { Id } from '@selfbound/backend/dataModel';
+  import { checkCounts, type MergeMethod, type PrCheck, type PrItem, type PrView } from '@selfbound/backend/shared/pullRequests';
+  import { ICON, fullDate, relativeTime } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import TextEditor from '../TextEditor.svelte';
@@ -193,7 +193,7 @@
   {:else if view === null || !pr}
     <div class="detail-missing" data-testid="pr-missing">
       <div class="empty-icon"><span class="icon">{@html ICON.pr}</span></div>
-      <div>{t('{pr} is not known in XLR8. Pull requests appear here once they are linked to an issue.', { pr: `${repo}#${number}` })}</div>
+      <div>{t('{pr} is not known in Selfbound. Pull requests appear here once they are linked to an issue.', { pr: `${repo}#${number}` })}</div>
       <a class="btn" href="https://github.com/{repo}/pull/{number}" target="_blank" rel="noopener noreferrer">{t('Open on GitHub')}</a>
     </div>
   {:else}
@@ -241,7 +241,7 @@
 
       {#if !view.configured}
         <div class="pr-notice" data-testid="pr-unconfigured">
-          {#each parts(t('GitHub access is not set up: XLR8 only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).', { token: slot('token') })) as part, i (i)}{#if i % 2}<code>GITHUB_TOKEN</code>{:else}{part}{/if}{/each}
+          {#each parts(t('GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).', { token: slot('token') })) as part, i (i)}{#if i % 2}<code>GITHUB_TOKEN</code>{:else}{part}{/if}{/each}
         </div>
       {:else if detail?.error}
         <div class="pr-notice error" data-testid="pr-error">{detail.error} <span class="muted">{t('As of {when}.', { when: relativeTime(detail.fetchedAt) })}</span></div>

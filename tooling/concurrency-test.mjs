@@ -358,7 +358,7 @@ export async function runConcurrencyTest({
 
   // ---------------------------------------------------------------- Read the final state
   log('Reading the final state (convex export) …');
-  const work = mkdtempSync(join(tmpdir(), 'xlr8-concurrency-'));
+  const work = mkdtempSync(join(tmpdir(), 'selfbound-concurrency-'));
   const zip = join(work, 'export.zip');
   await convexCli(backendDir, ['export', '--path', zip]);
   const entries = readZip(readFileSync(zip));
@@ -601,7 +601,7 @@ export function formatReport(result, { url }) {
     'node tooling/concurrency-test.mjs --port 13480 --report concurrency-report.md',
     '```',
     '',
-    'A smaller version runs automatically in the integration test (`pnpm --filter @xlr8/backend test:integration`).',
+    'A smaller version runs automatically in the integration test (`pnpm --filter @selfbound/backend test:integration`).',
     '',
   ];
   return lines.join('\n');

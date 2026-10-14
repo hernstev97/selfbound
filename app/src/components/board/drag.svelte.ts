@@ -1,4 +1,4 @@
-import type { IssueId } from '@xlr8/core';
+import type { IssueId } from '@selfbound/core';
 
 /** Cards being dragged (to mark allowed and blocked columns while dragging). */
 class DragState {

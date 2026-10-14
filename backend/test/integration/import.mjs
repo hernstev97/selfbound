@@ -54,7 +54,7 @@ const seenOf = (result) => Object.fromEntries(Object.entries(result.counts).map(
 
 export async function importSuite(backend, log) {
   // Outside the repo, like a real fetch.
-  const work = mkdtempSync(join(tmpdir(), 'xlr8-import-test-'));
+  const work = mkdtempSync(join(tmpdir(), 'selfbound-import-test-'));
   try {
     const run = 'synthetic-2026-10-09T00-00-00Z';
     const snapshot = normalize(syntheticLinearData(), { run, fetchedAt: Date.UTC(2026, 9, 9) });

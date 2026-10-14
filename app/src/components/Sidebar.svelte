@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { pagePath, type Page, type SidebarTeam } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { pagePath, type Page, type SidebarTeam } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { untrack } from 'svelte';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
@@ -148,9 +148,8 @@
     <Lazy load={pages.settingsNav} quiet />
   {:else}
   <div class="ws-head">
-    <button class="ws-name" onclick={() => app.palette.open('command')} title="XLR8">
-      <span class="ws-logo"><Logo kind="mark" height={18} label={null} /></span>
-      <Logo kind="word" height={12} />
+    <button class="ws-name" onclick={() => app.palette.open('command')} title="Selfbound">
+      <Logo kind="logo" height={13} />
       <span class="icon mi ui-chevronDown" style="color: var(--text-muted); width: 12px"></span>
     </button>
     <span class="spacer"></span>

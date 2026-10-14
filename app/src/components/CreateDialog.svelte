@@ -1,8 +1,8 @@
 <script lang="ts">
   // Create dialog: team, title, description, property chips with the same pickers.
   // Ctrl Enter creates, Ctrl Shift Enter creates and stays open ("Create more").
-  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, statusIcon, dayLabel, formatShortcut, type PaletteKind } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, statusIcon, dayLabel, formatShortcut, type PaletteKind } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { leave } from '../lib/motion.ts';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';

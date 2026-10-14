@@ -26,7 +26,7 @@
   import { markdownFragment, parseMarkdown, type Source } from './parse.ts';
   import { closeSlash, plugins, slashKey } from './plugins.ts';
   import { app } from '../../app-instance.ts';
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { schema } from './schema.ts';
   import { serializeMarkdown } from './serialize.ts';
   import { alignColumn, canDeleteColumn, canDeleteRow, columnAlign, isInTable, tableCommands, type Align } from './table.ts';

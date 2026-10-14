@@ -29,7 +29,7 @@ node_bin=$(command -v node)
 mkdir -p "$units"
 cat > "$units/xlr8-perf-idle.service" <<UNIT
 [Unit]
-Description=XLR8: idle performance measurement (perf/idle.ts)
+Description=Selfbound: idle performance measurement (perf/idle.ts)
 
 [Service]
 Type=oneshot
@@ -43,7 +43,7 @@ TimeoutStartSec=4h
 UNIT
 cat > "$units/xlr8-perf-idle.timer" <<UNIT
 [Unit]
-Description=XLR8: check every 30 minutes whether a measurement can run
+Description=Selfbound: check every 30 minutes whether a measurement can run
 
 [Timer]
 OnCalendar=*:00/30

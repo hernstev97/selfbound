@@ -38,7 +38,7 @@ import {
 import { mergeMethodValidator, prItemValidator, prDetailDataValidator, prStateValidator } from './schema';
 import type { GithubConnection, PrSummary, PrView } from './shared/pullRequests';
 
-// Pull requests in XLR8: view, summaries, fetching through the GitHub API, actions (merge,
+// Pull requests in Selfbound: view, summaries, fetching through the GitHub API, actions (merge,
 // close/reopen, comment) and the webhooks in all repos of the token.
 // Access only through the instance's GITHUB_TOKEN (fine-grained PAT); the token never leaves the backend.
 
@@ -46,7 +46,7 @@ const token = () => process.env.GITHUB_TOKEN || undefined;
 
 // ---------------------------------------------------------------- Reading
 
-/** View of a PR; null if XLR8 doesn't know the PR (no linked issue). */
+/** View of a PR; null if Selfbound doesn't know the PR (no linked issue). */
 export const view = ownerQuery({
   args: { repo: v.string(), number: v.number() },
   handler: async (ctx, args): Promise<PrView | null> => await prView(ctx, args.repo, args.number),
@@ -237,7 +237,7 @@ export const merge = ownerAction({
           message = `Merged, but the branch could not be deleted. ${messageOf(error)}`;
         }
       } else {
-        message = 'Merged. XLR8 cannot delete the branch (fork or already deleted).';
+        message = 'Merged. Selfbound cannot delete the branch (fork or already deleted).';
       }
     }
     // Refetch right away so the PR is already "merged" when the action returns. The fetch handles

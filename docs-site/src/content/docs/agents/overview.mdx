@@ -1,26 +1,26 @@
 ---
-title: Agents in XLR8
-description: How coding agents and AI assistants work in XLR8 through its MCP server, what they can change, and how you keep track of it.
+title: Agents in Selfbound
+description: How coding agents and AI assistants work in Selfbound through its MCP server, what they can change, and how you keep track of it.
 sidebar:
   order: 1
 ---
 import { Aside } from '@astrojs/starlight/components';
 import Screenshot from '../../../components/Screenshot.astro';
 
-XLR8 is built for one developer working alongside AI agents. You and your agents share one tracker: agents
+Selfbound is built for one developer working alongside AI agents. You and your agents share one tracker: agents
 find and read issues, file new ones, report progress and close what they finished, while you keep the final
-say. They connect through XLR8's built-in MCP server.
+say. They connect through Selfbound's built-in MCP server.
 
 ## The MCP server
 
-Every XLR8 backend runs an MCP server (Model Context Protocol) at `/mcp` on its HTTP address, for example
+Every Selfbound backend runs an MCP server (Model Context Protocol) at `/mcp` on its HTTP address, for example
 `https://happy-otter-123.convex.site/mcp`. Any MCP client that speaks Streamable HTTP can connect:
 
 - **Coding agents** such as Claude Code, Codex or Cursor connect with a key you create in the app.
 - **Claude** (claude.ai, desktop and mobile) and **ChatGPT** connect as a custom connector and sign in
-  through your XLR8 login (OAuth).
+  through your Selfbound login (OAuth).
 
-To XLR8, a connector is just another agent. Each key and each connector shows up as its own entry under
+To Selfbound, a connector is just another agent. Each key and each connector shows up as its own entry under
 **Settings → Agents**, with its own name, call count and revoke button. How to set them up:
 [Connect an agent](/agents/connect/).
 
@@ -48,10 +48,10 @@ The full list with parameters is in the [MCP tools reference](/agents/tools/).
 Two safeguards protect writes:
 
 - **`requestId` makes retries safe.** Agents pass their own key with a call. If the response gets lost and
-  the agent sends the same call again, XLR8 returns the original result instead of acting twice. Creating
+  the agent sends the same call again, Selfbound returns the original result instead of acting twice. Creating
   issues, commenting and writing knowledge pages require it.
 - **`expected` values prevent overwriting your changes.** When an agent changes an issue, it can pass the
-  values it last saw. If you changed a field in the meantime, XLR8 leaves that field alone and reports a
+  values it last saw. If you changed a field in the meantime, Selfbound leaves that field alone and reports a
   conflict, so the agent reads the issue again and decides. Replacing a description or a knowledge page's
   text always requires the version the agent based its edit on.
 
@@ -60,7 +60,7 @@ Two safeguards protect writes:
 There are no tools for the following, so agents cannot do them over MCP:
 
 - Delete issues, move them to the trash or restore them.
-- Delete knowledge pages. When an agent replaces a page's text, XLR8 first keeps the old text as a version
+- Delete knowledge pages. When an agent replaces a page's text, Selfbound first keeps the old text as a version
   you can restore.
 - Edit or delete comments, including their own.
 - Change settings: teams, workflows and statuses, labels, projects, appearance, notifications, keys or
@@ -84,13 +84,13 @@ team's default status if the team has no triage). An agent can choose another st
 within the team's workflow rules.
 
 Every issue an agent creates also lands in your **Inbox**, whatever its status, and stays there until you
-remove it. That is how XLR8 marks agent work as "not yet reviewed". Agents see the same mark: `get_issue`
+remove it. That is how Selfbound marks agent work as "not yet reviewed". Agents see the same mark: `get_issue`
 tells them whether you have read or dismissed the issue yet.
 
 <Screenshot name="inbox" alt="The Inbox listing issues created by agents, with unread entries marked by a dot" />
 
 From the inbox you open each issue, decide, and remove the entry ([Triage and inbox](/concepts/triage-and-inbox/)). Issues you create yourself normally skip
-the inbox. If you use push notifications, XLR8 by default notifies you when an agent creates an issue or
+the inbox. If you use push notifications, Selfbound by default notifies you when an agent creates an issue or
 comments; you can turn these events off under **Settings → Notifications**.
 
 ## Agent actions in the history

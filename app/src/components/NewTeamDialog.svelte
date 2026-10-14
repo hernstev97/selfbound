@@ -3,8 +3,8 @@
   // The UI checks the key first (instant feedback); the server (teams.create) has the final say.
   // Afterwards the new team is the current team.
   import { untrack } from 'svelte';
-  import { ICON, type TeamBadge } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, type TeamBadge } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { leave } from '../lib/motion.ts';
   import { modal } from '../lib/modal.ts';
   import { app } from '../app-instance.ts';
@@ -71,7 +71,7 @@
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const { precheckLogo } = await import('@xlr8/core/app/admin');
+    const { precheckLogo } = await import('@selfbound/core/app/admin');
     logoError = precheckLogo(file);
     setLogo(logoError ? null : file);
   }
@@ -102,7 +102,7 @@
     let admin: typeof import('../pages/settings/admin.ts').admin;
     let HUES: number[];
     try {
-      [{ admin }, { HUES }] = await Promise.all([import('../pages/settings/admin.ts'), import('@xlr8/core/app/admin')]);
+      [{ admin }, { HUES }] = await Promise.all([import('../pages/settings/admin.ts'), import('@selfbound/core/app/admin')]);
     } catch {
       serverError = t('The dialog could not be loaded completely. Please try again.');
       busy = false;

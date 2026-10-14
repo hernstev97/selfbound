@@ -62,7 +62,7 @@ describe('MCP over HTTP', () => {
       capabilities: {},
       clientInfo: { name: 'vitest', version: '1' },
     });
-    expect(init.body.result).toMatchObject({ protocolVersion: '2025-11-25', serverInfo: { name: 'xlr8' } });
+    expect(init.body.result).toMatchObject({ protocolVersion: '2025-11-25', serverInfo: { name: 'selfbound' } });
     const tools = await mcp.rpc('tools/list');
     expect((tools.body.result.tools as Json[]).map((x) => x.name)).toEqual([
       'search_issues',

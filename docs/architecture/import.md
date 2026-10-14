@@ -1,6 +1,6 @@
 # Importing from Linear: format and processing
 
-The importer copies a Linear workspace into XLR8. It only reads from Linear; nothing is ever written back.
+The importer copies a Linear workspace into Selfbound. It only reads from Linear; nothing is ever written back.
 
 ## Overview
 
@@ -21,16 +21,16 @@ This is the user-facing summary. It applies to the first import and to every lat
 
 ### Changes
 
-| Area | In Linear | In XLR8 |
+| Area | In Linear | In Selfbound |
 |---|---|---|
-| Files and images | uploaded to Linear | stay links to `uploads.linear.app` and are not copied by the import itself. Signed links (`?signature=…`) expire after minutes and then show nothing. Run the [`files` tool](#files-from-linear) to copy them into XLR8 |
+| Files and images | uploaded to Linear | stay links to `uploads.linear.app` and are not copied by the import itself. Signed links (`?signature=…`) expire after minutes and then show nothing. Run the [`files` tool](#files-from-linear) to copy them into Selfbound |
 | Other attachments (Figma, links) | attachment on the issue | one comment "Attachments from Linear" on the issue with one line (title and link) per attachment |
-| GitHub PRs | attachment from the Linear GitHub app | linked PR on the issue. An imported PR never closes anything; from then on the XLR8 webhook does that |
-| Assignee | assignee | dropped: XLR8 is single-user and has no assignee |
+| GitHub PRs | attachment from the Linear GitHub app | linked PR on the issue. An imported PR never closes anything; from then on the Selfbound webhook does that |
+| Assignee | assignee | dropped: Selfbound is single-user and has no assignee |
 | Triage intelligence | Linear's suggestions (e.g. "similar issues") | dropped, including relations of type `similar` |
 | Author | Linear user | Linear name plus "(Linear)", e.g. "Jane Doe (Linear)"; bots by their name, e.g. "GitHub (Linear)". The issue itself counts as created by the import |
 | Comment threads | replies nested under a comment | one flat list by time; a reply has no reference to the comment it answers |
-| Status | custom statuses per team | each XLR8 team has its own statuses, but custom Linear statuses are not created. Mapping goes by type into the eight status kinds (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), then to the team's status with the same name or the default status of that kind. A custom status like "Testing" lands in the default "in progress" status and is listed in the report. A status that cannot be mapped aborts the import. See [Status mapping](#status-mapping) |
+| Status | custom statuses per team | each Selfbound team has its own statuses, but custom Linear statuses are not created. Mapping goes by type into the eight status kinds (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), then to the team's status with the same name or the default status of that kind. A custom status like "Testing" lands in the default "in progress" status and is listed in the report. A status that cannot be mapped aborts the import. See [Status mapping](#status-mapping) |
 | Projects | can belong to several teams | belong to exactly one team: the one with the most issues of the project. The report counts these cases |
 | Project status | custom project statuses | planned, active, paused, done, canceled |
 | Cycles | per team, run automatically | closed sprints named after the cycle (or "`<TEAM>` Cycle n") with source Linear. They do not count toward the capacity of new sprints. An issue appears only in its last cycle |
@@ -39,8 +39,8 @@ This is the user-facing summary. It applies to the first import and to every lat
 | Archived or retired teams | archived | "dormant": not in the sidebar, but in search and lists |
 | Archived labels | archived | marked as archived |
 | Reviewed | – | imported issues count as reviewed; only new agent issues are "unreviewed" |
-| Labels or project from another team | possible (e.g. after a team change) | dropped and counted in the report; in XLR8, team labels and projects belong to exactly one team |
-| Teams, labels, projects that already exist in XLR8 | – | linked to Linear instead of duplicated (same team key or same name) |
+| Labels or project from another team | possible (e.g. after a team change) | dropped and counted in the report; in Selfbound, team labels and projects belong to exactly one team |
+| Teams, labels, projects that already exist in Selfbound | – | linked to Linear instead of duplicated (same team key or same name) |
 
 The attachments comment is written by the author "Linear (attachments)". Comments whose Linear author is unknown are attributed to "Unknown (Linear)".
 
@@ -49,12 +49,12 @@ The attachments comment is written by the author "Linear (attachments)". Comment
 You can run the import again at any time. Every issue field is compared on its own with the value from the previous import:
 
 - **Changed only in Linear:** the Linear value is applied, your old value stays in the history (actor "import"). An overwritten description is kept in full as an earlier revision.
-- **Changed only in XLR8:** your value stays.
+- **Changed only in Selfbound:** your value stays.
 - **Changed in both:** your value stays, and the run lists the issue with the field names under conflicts. For the description, the Linear version is kept for comparison.
 - A new "last updated" timestamp in Linear alone does not count as a change.
-- Issues you permanently deleted in XLR8 do not come back.
-- XLR8-only data (team logos, sprints, rank, "reviewed") is not touched.
-- If an issue created in XLR8 collides with a Linear identifier, Linear keeps the identifier; the XLR8 issue gets the next free number, its old identifier becomes an alias, and the report names it.
+- Issues you permanently deleted in Selfbound do not come back.
+- Selfbound-only data (team logos, sprints, rank, "reviewed") is not touched.
+- If an issue created in Selfbound collides with a Linear identifier, Linear keeps the identifier; the Selfbound issue gets the next free number, its old identifier becomes an alias, and the report names it.
 
 Details: [Step 3: Process](#step-3-process).
 
@@ -124,7 +124,7 @@ Each line is a document of the `importStaging` table:
 | `pullRequest` | `ImportPullRequest` (`linearId` = attachment ID) | 2 |
 | `link` | `ImportLink` (other attachments) | 2 |
 
-- References always use Linear IDs (`teamLinearId`, `parentLinearId` …), never XLR8 IDs.
+- References always use Linear IDs (`teamLinearId`, `parentLinearId` …), never Selfbound IDs.
 - Times are milliseconds (UTC); calendar days are `YYYY-MM-DD` in Europe/Berlin (hard-coded in `normalize.ts`). Fields without a value are omitted; there is no `null`. The file is sorted in processing order.
 - References to data that is not part of the import (for example a parent in Linear's trash) are already removed by the script and counted as a note.
 
@@ -137,18 +137,18 @@ Principles:
 - **Batches:** at most about 100 issues or 1 MB per mutation, in the order of the table above, via the index `by_run_kind`.
 - **Resumable steps:** `importer.start` creates the `importRuns` row (`phase: 'scan'`) and schedules the first step. Each step (`importer.step`, an action that calls the mutation `importer.advance`) processes exactly one batch, stores `phase`, `cursor`, `maxNumbers` and `heartbeatAt` on the run and schedules the next step in the same transaction. Phases: `scan` (highest Linear number per team), then the import steps, then `cleanup` (delete staging rows), then `done`. If a step throws, the run is set to `failed` with the error text. A run without progress for 15 minutes (for example after a backend restart) becomes `failed`: on the next `importer.start`, and hourly via the cron `fail-stale-imports` (`importer.failStale`). While a fresh run is `running`, `start` rejects a second one.
 - **Repeatable without duplicates:** before creating anything, look it up in `linearLinks` (`by_kind_linear`). If the entry exists, reconcile instead of creating. `hash` stores a checksum of the payload; if it is unchanged, the record is not touched. For issues, `order`, `updatedAt` and `url` are excluded from the checksum: they change in Linear without any change to the content. A second run right after the first must give the same counts.
-- **Three-way merge for issues:** `linearLinks.base` holds, per issue, the last imported Linear values in XLR8 form (title, status, priority, label IDs, project, estimate, due date, parent, plus a checksum of the description). When a payload has changed, each field is decided on its own:
+- **Three-way merge for issues:** `linearLinks.base` holds, per issue, the last imported Linear values in Selfbound form (title, status, priority, label IDs, project, estimate, due date, parent, plus a checksum of the description). When a payload has changed, each field is decided on its own:
 
-  | Linear since last import | XLR8 since last import | Result |
+  | Linear since last import | Selfbound since last import | Result |
   |---|---|---|
-  | unchanged | any | XLR8 value stays |
+  | unchanged | any | Selfbound value stays |
   | changed | unchanged | Linear value applied, old value in history (actor `import`) |
   | changed | changed to the same value as Linear | nothing to do |
-  | changed | changed differently | XLR8 value stays, entry in `importConflicts` (identifier and field names, no content) |
+  | changed | changed differently | Selfbound value stays, entry in `importConflicts` (identifier and field names, no content) |
 
-  Afterwards `base` holds the new Linear values, so the same conflict is reported only once. `startedAt`, `completedAt` and `canceledAt` follow the status (only when the status is applied). If `base` is missing (link created before the merge existed), every difference counts as a conflict: XLR8 wins.
-- **Description:** when it is overwritten (only for "changed only in Linear"), the previous version goes **in full** into `bodyRevisions` (`reason: 'import_overwrite'`, with its version). On a conflict the XLR8 version stays, and the Linear version that was not applied is stored in `bodyRevisions` (`reason: 'import_conflict'`). Readable via `issues.revisions`. Why a separate table and not a comment: a description may have 200,000 characters, a comment only 50,000, and an "earlier version" comment would sit in the middle of the conversation and in comment search. A `bodyRevisions` document with at most 200,000 characters (under 800 KB) stays safely below Convex's 1 MiB limit.
-- **Permanently deleted:** when emptying the trash purges an imported issue, its `linearLinks` entry gets `purgedAt`. Later runs do not recreate it (`skipped`, deviation "permanently deleted in XLR8"); its comments, relations, PRs and attachments are skipped too.
+  Afterwards `base` holds the new Linear values, so the same conflict is reported only once. `startedAt`, `completedAt` and `canceledAt` follow the status (only when the status is applied). If `base` is missing (link created before the merge existed), every difference counts as a conflict: Selfbound wins.
+- **Description:** when it is overwritten (only for "changed only in Linear"), the previous version goes **in full** into `bodyRevisions` (`reason: 'import_overwrite'`, with its version). On a conflict the Selfbound version stays, and the Linear version that was not applied is stored in `bodyRevisions` (`reason: 'import_conflict'`). Readable via `issues.revisions`. Why a separate table and not a comment: a description may have 200,000 characters, a comment only 50,000, and an "earlier version" comment would sit in the middle of the conversation and in comment search. A `bodyRevisions` document with at most 200,000 characters (under 800 KB) stays safely below Convex's 1 MiB limit.
+- **Permanently deleted:** when emptying the trash purges an imported issue, its `linearLinks` entry gets `purgedAt`. Later runs do not recreate it (`skipped`, deviation "permanently deleted in Selfbound"); its comments, relations, PRs and attachments are skipped too.
 - **Actor:** `{kind: 'import'}` for history, `createdBy` and comments.
 - **Run:** `importRuns` with counts and deviations (`notes` from `summary.json`), conflicts in `importConflicts`.
 
@@ -157,7 +157,7 @@ Principles:
 1. **Teams:** `key`, `name`, `dormant`. Color: the Linear hex color is converted to an OKLCH hue (`hue`). `order` follows the order in the snapshot.
 2. **Label groups and labels:** groups are always single-select in Linear (`exclusive: true`). Archived labels get `archived: true`.
 3. **Projects:** exactly one team (`teamLinearId`). Linear allows several teams; the script picks the team with the most issues in the project. Status: `backlog`/`planned` → `planned`, `started` → `active`, `paused` → `paused`, `completed` → `done`, `canceled` → `canceled`.
-4. **Sprints:** `state: 'closed'`, `source: 'linear'`, name from Linear or "`<TEAM>` Cycle 12". XLR8 numbers sprints across all teams, Linear per team: `number` is assigned in `startsAt` order. Linear sprints do not count toward capacity.
+4. **Sprints:** `state: 'closed'`, `source: 'linear'`, name from Linear or "`<TEAM>` Cycle 12". Selfbound numbers sprints across all teams, Linear per team: `number` is assigned in `startsAt` order. Linear sprints do not count toward capacity.
 5. **Issues** in `order` (= creation date):
    - `seq` = next counter in that order, `bucket = floor(seq / 64)`. On a later import, an already imported issue keeps its `seq`.
    - `teamId` + `number` from Linear, so the identifier stays the same.
@@ -178,17 +178,17 @@ Principles:
 ### Processing decisions
 
 - **Batches:** `paginate` over `by_run_kind` with `numItems` (100 issues, otherwise 200) and `maximumBytesRead` 1 MB, one batch per scheduled step. The `scan` phase determines the highest Linear number per team.
-- **Unchanged means untouched:** if the payload has not changed since the last run (same checksum in `linearLinks.hash`), the record stays as it is in XLR8, even if you edited it there. If it changed, issues go through the per-field three-way merge (above); your edits to fields Linear did not touch are kept.
+- **Unchanged means untouched:** if the payload has not changed since the last run (same checksum in `linearLinks.hash`), the record stays as it is in Selfbound, even if you edited it there. If it changed, issues go through the per-field three-way merge (above); your edits to fields Linear did not touch are kept.
 - **Adopt what exists:** a team with the same key, a label group or label with the same name (same team, same group), and a project with the same name in the same team are linked instead of duplicated. Name, dormant and color then come from Linear; key, order and logos stay.
 - **Labels and projects from another team** on an issue are dropped (invariants 7 and 8 in [backend.md](backend.md#invariants)) and counted as a deviation. Archived labels stay on imported issues.
 - **Timestamps:** `createdAt`, `startedAt`, `completedAt`, `canceledAt` from Linear; `updatedAt` = time of the import (so the app sees the change). `reviewedAt` = import time (counts as reviewed).
-- **Removed in XLR8 stays removed:** deleted comments are not restored, removed relations are not recreated. Issues in the XLR8 trash keep `deletedAt`; permanently deleted ones do not come back (`purgedAt`).
-- **Team changed in Linear** (new identifier): XLR8 takes over team and number, the old identifier becomes an alias.
+- **Removed in Selfbound stays removed:** deleted comments are not restored, removed relations are not recreated. Issues in the Selfbound trash keep `deletedAt`; permanently deleted ones do not come back (`purgedAt`).
+- **Team changed in Linear** (new identifier): Selfbound takes over team and number, the old identifier becomes an alias.
 - **Deviations** (`importRuns.deviations`): the notes from `summary.json` plus those from processing, only counts and identifiers, at most 1000.
 
 ### Status mapping
 
-| Linear type | Name | XLR8 status kind |
+| Linear type | Name | Selfbound status kind |
 |---|---|---|
 | `triage` | any | `triage` |
 | `backlog` | any | `backlog` |
@@ -205,9 +205,9 @@ Current Linear workspaces return "Duplicate" with its own type `duplicate`, olde
 
 Names are compared case-insensitively. Statuses with names other than Linear's defaults (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate) are mapped by type and named in the report, e.g. `Status "Testing (started)" mapped to in_progress`. `--map-status` overrides any mapping.
 
-Each XLR8 team has its own statuses (`workflowStates`). The table gives the **status kind** (`issue.status`); the backend then picks the team's status with the same name if its kind matches, otherwise the status for that kind (`stateForStatus`: the default status with that kind first). Custom Linear statuses are not created as new XLR8 statuses.
+Each Selfbound team has its own statuses (`workflowStates`). The table gives the **status kind** (`issue.status`); the backend then picks the team's status with the same name if its kind matches, otherwise the status for that kind (`stateForStatus`: the default status with that kind first). Custom Linear statuses are not created as new Selfbound statuses.
 
-For Linear's default names this means (test "state per team" in `backend/test/import.test.ts`): Triage, Backlog, Todo and In Review hit the XLR8 status of the same name; In Progress, Done, Canceled and Duplicate match the XLR8 default status of that name too (default names in `DEFAULT_STATES`, `backend/convex/shared/workflow.ts`); on a deployment with `XLR8_LOCALE=de` the default names are German, and these four go to the team's default status of their kind. A custom status like "Testing" lands in the default in-progress status.
+For Linear's default names this means (test "state per team" in `backend/test/import.test.ts`): Triage, Backlog, Todo and In Review hit the Selfbound status of the same name; In Progress, Done, Canceled and Duplicate match the Selfbound default status of that name too (default names in `DEFAULT_STATES`, `backend/convex/shared/workflow.ts`); on a deployment with `XLR8_LOCALE=de` the default names are German, and these four go to the team's default status of their kind. A custom status like "Testing" lands in the default in-progress status.
 
 ## Verified field names and open questions
 
@@ -225,7 +225,7 @@ Not derivable from the schema, so uncertain:
 
 ## Files from Linear
 
-The import copies text, not the files behind it: descriptions and comments still point to `uploads.linear.app` afterwards. Those files require a Linear login, and signed URLs (`?signature=…`) expire after five minutes. The `files` tool copies them into XLR8 storage and rewrites the references. Every step can be repeated; a second pass changes nothing.
+The import copies text, not the files behind it: descriptions and comments still point to `uploads.linear.app` afterwards. Those files require a Linear login, and signed URLs (`?signature=…`) expire after five minutes. The `files` tool copies them into Selfbound storage and rewrites the references. Every step can be repeated; a second pass changes nothing.
 
 ```sh
 node tooling/linear-import/index.ts files scan     --prod                  # read only → refs.json
@@ -239,7 +239,7 @@ node tooling/linear-import/index.ts files rewrite  --prod [--link <sha256>=<http
 - **download:** one `GET` per file with the key from `~/.config/xlr8/linear-api-key` (mode 600, as for fetching), only to `uploads.linear.app`. Stored under the SHA-256 of the content. Files already downloaded are skipped.
 - **upload:** the same check as when pasting an image (PNG, JPEG, WebP, GIF up to 5 MB). `linearFiles:uploadUrl` and `linearFiles:register` are internal functions (actor `import`), reachable only with the deploy key. The mapping lives in `linearLinks` (`kind: 'file'`, `linearId` = Linear URL, `localId` = image token); identical content under two URLs is uploaded once. Non-images and oversized files are left out. `--substitute` uploads an edited version instead of the Linear file (for example a smaller GIF).
 - **rewrite:** `linearFiles:rewrite` replaces every reference that has a target with `/img/<token>` or with the URL given via `--link` (for example videos hosted elsewhere; a Google Drive link alone on a line is embedded). First a dry run with counts, then the confirmation `rewrite` (always typed in production), then a check with `scan`. Descriptions get a new version and a history line (actor `import`), comments a `comment_edited` line, without `editedAt`. Removed comments are not touched. Image references (`fileRefs`) are created on write; without a reference, the cron deletes a copied image after 7 days like any fresh upload.
-- **Later imports:** `linearLinks.base` keeps the old description checksum. A new import therefore sees the description as "changed in XLR8" and leaves it alone.
+- **Later imports:** `linearLinks.base` keeps the old description checksum. A new import therefore sees the description as "changed in Selfbound" and leaves it alone.
 
 ## Documents from Linear
 

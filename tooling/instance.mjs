@@ -1,4 +1,4 @@
-// Settings of one deployed XLR8 instance (yours), used by the deploy and production tools:
+// Settings of one deployed Selfbound instance (yours), used by the deploy and production tools:
 // tooling/deploy-web.mjs, tooling/cloud.mjs, tooling/linear-import (push to production).
 //
 // Read from deploy/instance.json (gitignored; copy deploy/instance.example.json), or, if that file is
@@ -8,15 +8,15 @@
 //
 //   field                 env override                 example
 //   convexDeployment      XLR8_CONVEX_DEPLOYMENT       happy-otter-123 (production deployment name)
-//   appUrl                XLR8_APP_URL                 https://xlr8.example.com
+//   appUrl                XLR8_APP_URL                 https://selfbound.example.com
 //   clerkPublishableKey   XLR8_CLERK_PUBLISHABLE_KEY   pk_live_… (or "host=pk_live_…,host2=pk_live_…")
-//   vercelProject         XLR8_VERCEL_PROJECT          xlr8
+//   vercelProject         XLR8_VERCEL_PROJECT          selfbound
 //   vercelScope           XLR8_VERCEL_SCOPE            your Vercel team slug
-//   mcpHosts              XLR8_MCP_HOSTS               mcp.xlr8.example.com (comma-separated)
+//   mcpHosts              XLR8_MCP_HOSTS               mcp.selfbound.example.com (comma-separated)
 //   redirectHosts         XLR8_REDIRECT_HOSTS          old-domain.example (comma-separated, redirected to appUrl)
 //   branchPrefix          VITE_XLR8_BRANCH_PREFIX      your GitHub login (prefix of suggested branch names; optional)
 //   siteUrl               XLR8_SITE_URL                https://example.com (public landing page, site/; optional)
-//   siteVercelProject     XLR8_SITE_VERCEL_PROJECT     xlr8-landing (Vercel project of the landing page; optional)
+//   siteVercelProject     XLR8_SITE_VERCEL_PROJECT     selfbound-landing (Vercel project of the landing page; optional)
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';

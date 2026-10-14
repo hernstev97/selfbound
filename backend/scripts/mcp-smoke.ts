@@ -1,4 +1,4 @@
-// Smoke test for the XLR8 MCP endpoint with the official MCP SDK client.
+// Smoke test for the Selfbound MCP endpoint with the official MCP SDK client.
 //
 // Flow: initialize → tools/list → one read call (default: list_teams).
 // Prints only counts and names, no content from the data.
@@ -36,7 +36,7 @@ export async function runMcpSmoke(options: SmokeOptions): Promise<SmokeResult> {
   const transport = new StreamableHTTPClientTransport(new URL(options.url), {
     requestInit: { headers: { Authorization: `Bearer ${options.key}` } },
   });
-  const client = new Client({ name: 'xlr8-mcp-smoke', version: '1.0.0' });
+  const client = new Client({ name: 'selfbound-mcp-smoke', version: '1.0.0' });
   await client.connect(transport);
   try {
     const info = client.getServerVersion();

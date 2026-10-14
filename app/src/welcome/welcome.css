@@ -56,7 +56,7 @@ a { color: inherit; }
 /* Header */
 .top { position: absolute; inset: 0 0 auto; z-index: 3; display: flex; align-items: center; width: 100%; max-width: 1200px; margin: 0 auto; padding: 22px 28px; }
 .brand { display: inline-flex; padding: 4px 0; color: var(--strong); }
-.logo { display: block; height: 22px; aspect-ratio: 581.89 / 138.62; background: currentColor; mask: url(/brand/xlr8-logo.svg) center / contain no-repeat; }
+.logo { display: block; height: 16px; aspect-ratio: 6.13 / 1; background: currentColor; mask: url(/brand/selfbound-logo.svg) center / contain no-repeat; }
 
 /* Sign-in: Clerk widget centered over a dot grid */
 .sign-in { position: relative; overflow: hidden; isolation: isolate; flex: 1; display: grid; place-items: center; min-height: 100svh; padding: 96px 20px 48px; background: var(--dots) 0 0 / 11px 11px; }

@@ -1,7 +1,7 @@
 <script lang="ts">
   // Language picker on a code block: list with search, arrow keys, Enter, Esc.
   // The same picker in the view (description, your own comments) and in the editor.
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { LANGUAGES, langWord, languageFor, plainLabel } from '../lib/languages.ts';
 
   interface Action {

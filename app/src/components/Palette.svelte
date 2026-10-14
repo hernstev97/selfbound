@@ -1,8 +1,8 @@
 <script lang="ts">
   // One pattern for the command menu, search, help, filters and all property pickers:
   // focus in the search field, typing filters, ↑/↓ moves, Enter applies, Esc cancels.
-  import { ICON, dayOf, monthLabel, parseDay, today, type PaletteKind } from '@xlr8/core';
-  import { intlLocale, t } from '@xlr8/core/i18n';
+  import { ICON, dayOf, monthLabel, parseDay, today, type PaletteKind } from '@selfbound/core';
+  import { intlLocale, t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { autofocus, keepInView } from '../lib/ui.ts';

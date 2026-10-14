@@ -1,7 +1,7 @@
 <script lang="ts">
   // "Insert image" button next to a text field. Opens the file picker; on a phone the system
   // also offers photos and the camera there.
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { pickImages, type ImageField, type UploadTarget } from '../lib/imageInput.ts';
 
   let { field, target }: { field: () => ImageField | null | undefined; target: UploadTarget } = $props();

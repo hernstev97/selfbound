@@ -1,6 +1,6 @@
 {
   // Type check for the Linear importer (Node 24 type stripping, no build step):
-  //   pnpm --filter @xlr8/backend exec tsc --noEmit -p ../tooling/linear-import
+  //   pnpm --filter @selfbound/backend exec tsc --noEmit -p ../tooling/linear-import
   // `@types/node` comes from backend/node_modules (tooling/ is not a workspace package).
   // allowJs: push.ts imports tooling/instance.mjs (typed through JSDoc).
   "compilerOptions": {

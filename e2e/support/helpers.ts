@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import { ConvexHttpClient } from 'convex/browser';
 import { readFileSync } from 'node:fs';
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { BACKEND_PORT, BACKEND_URL, state } from './env.ts';
 
 /** A second client (like an agent or a second device), with the local test token. */
@@ -15,7 +15,7 @@ export { api };
 
 /** Waits until the server has confirmed all changes (otherwise they are lost when the page closes). */
 export async function settled(page: Page) {
-  await page.waitForFunction(() => ((window as unknown as { __xlr8?: { saves: { confirmed?: number; failed?: boolean }[] } }).__xlr8?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed));
+  await page.waitForFunction(() => ((window as unknown as { __selfbound?: { saves: { confirmed?: number; failed?: boolean }[] } }).__selfbound?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed));
 }
 
 /** Opens a page and waits for the list (or the detail view). */
@@ -23,7 +23,7 @@ export async function open(page: Page, path = '/all?group=none&order=created') {
   await page.goto(path);
   await expect(page.locator('[data-testid="issue-row"], [data-testid="issue-card"], [data-testid="empty-state"], [data-testid="detail"]').first()).toBeVisible();
   // The order is final only once all buckets came from the server (not just the IndexedDB mirror).
-  await page.waitForFunction(() => (window as unknown as { __xlr8?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__xlr8?.app?.store.sync.get().phase === 'live');
+  await page.waitForFunction(() => (window as unknown as { __selfbound?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__selfbound?.app?.store.sync.get().phase === 'live');
   // Move the mouse out of the list, otherwise hover moves the focus.
   await page.mouse.move(2, 890);
 }

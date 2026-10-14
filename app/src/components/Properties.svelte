@@ -1,7 +1,7 @@
 <script lang="ts">
   // Properties column on the right (stacked cards). Each row opens the same picker as its shortcut.
-  import { ICON, PRIORITY_ICON, statusIcon, type DetailState, type PaletteKind } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
+  import { ICON, PRIORITY_ICON, statusIcon, type DetailState, type PaletteKind } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { anchorOf, tip } from '../lib/ui.ts';
   import TeamLogo from './TeamLogo.svelte';

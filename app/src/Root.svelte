@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isConsentPath } from '@xlr8/core';
+  import { isConsentPath } from '@selfbound/core';
   import { auth, convexUrl } from './app-instance.ts';
   import { fromSlice } from './slice.svelte.ts';
   import Shell from './components/Shell.svelte';

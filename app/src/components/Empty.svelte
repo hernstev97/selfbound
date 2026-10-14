@@ -1,8 +1,8 @@
 <script lang="ts">
   // Empty state: one sentence on why, exactly one action.
-  import { t } from '@xlr8/core/i18n';
-  import { ICON, VIEWS } from '@xlr8/core';
-  import type { ListController } from '@xlr8/core/app/list';
+  import { t } from '@selfbound/core/i18n';
+  import { ICON, VIEWS } from '@selfbound/core';
+  import type { ListController } from '@selfbound/core/app/list';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

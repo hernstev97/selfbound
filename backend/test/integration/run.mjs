@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Integration tests against a real, fresh local backend (port 13490/13491).
 //
-//   pnpm --filter @xlr8/backend test:integration
+//   pnpm --filter @selfbound/backend test:integration
 //
 // Starts a temporary anonymous backend (tooling/temp-backend.mjs) and runs:
 //   1. Import: synthetic Linear snapshot twice → same counts, no duplicates

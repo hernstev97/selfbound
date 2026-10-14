@@ -5,7 +5,7 @@
 //   2. Soft repeating sounds (tap, key, tick, sliderTick, select) may start only MAX_SOFT voices
 //      together per WINDOW_MS; notices (success, error, open …) do not count and are never crowded out.
 //   3. Behind everything sits a limiter in the audio path (engine.ts) as a net for overlapping notices.
-import type { Cue } from '@xlr8/core';
+import type { Cue } from '@selfbound/core';
 
 /** Minimum gap of a sound to itself in ms; missing entries use DEFAULT_GAP. */
 export const GAP: Partial<Record<Cue, number>> = {

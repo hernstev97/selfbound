@@ -3,7 +3,7 @@
 // shown as source and saved unchanged. Inline HTML becomes `html_inline`. Attributes such as
 // `bullet`, `delim`, `fence` and `markup` remember the source notation, so an edited list keeps
 // its "*" and italic text keeps its "_".
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 import { Schema, type DOMOutputSpec, type MarkSpec, type NodeSpec } from 'prosemirror-model';
 import { tableNodes } from 'prosemirror-tables';
 

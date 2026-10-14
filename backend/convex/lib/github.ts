@@ -314,7 +314,7 @@ function prNumbers(list: unknown, repo: string): number[] {
 
 /**
  * Which PRs does a delivery affect? null = event not related to a PR (not evaluated).
- * Whether the PR exists in XLR8 is checked by the mutation.
+ * Whether the PR exists in Selfbound is checked by the mutation.
  */
 export function refreshTargets(event: string, payload: unknown): RefreshTargets | null {
   if (!REFRESH_EVENTS.has(event) || !isObj(payload)) return null;

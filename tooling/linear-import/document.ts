@@ -86,7 +86,7 @@ export function parseDocument(text: string): ParsedDocument {
 export interface DocumentOptions {
   file: string;
   team: string;
-  /** Project in XLR8 (default: "Project in Linear" from the copy). */
+  /** Project in Selfbound (default: "Project in Linear" from the copy). */
   project?: string;
   yes?: boolean;
   backendDir?: string;

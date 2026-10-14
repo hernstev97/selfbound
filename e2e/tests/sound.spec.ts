@@ -1,17 +1,17 @@
 // UI sounds. A test cannot hear whether something sounds; it checks what the app reports
-// (`__xlr8.cues`), what actually plays after rate limiting (`__xlr8.sound.played`), and that the
+// (`__selfbound.cues`), what actually plays after rate limiting (`__selfbound.sound.played`), and that the
 // AudioContext is created only after a gesture and does not hold up startup or input.
 import { expect, test, type Page } from '@playwright/test';
 import { api, backend, focusedRow, open, settled } from '../support/helpers.ts';
 
 type Hooks = { cues: string[]; sound?: { played: string[]; state(): string } };
 const hooks = (page: Page) => ({
-  cues: () => page.evaluate(() => (window as unknown as { __xlr8: Hooks }).__xlr8.cues.slice()),
-  played: () => page.evaluate(() => (window as unknown as { __xlr8: Hooks }).__xlr8.sound?.played.slice() ?? []),
-  state: () => page.evaluate(() => (window as unknown as { __xlr8: Hooks }).__xlr8.sound?.state() ?? 'none'),
+  cues: () => page.evaluate(() => (window as unknown as { __selfbound: Hooks }).__selfbound.cues.slice()),
+  played: () => page.evaluate(() => (window as unknown as { __selfbound: Hooks }).__selfbound.sound?.played.slice() ?? []),
+  state: () => page.evaluate(() => (window as unknown as { __selfbound: Hooks }).__selfbound.sound?.state() ?? 'none'),
   clear: () =>
     page.evaluate(() => {
-      const h = (window as unknown as { __xlr8: Hooks }).__xlr8;
+      const h = (window as unknown as { __selfbound: Hooks }).__selfbound;
       h.cues.length = 0;
       h.sound?.played.splice(0);
     }),
@@ -20,7 +20,7 @@ const hooks = (page: Page) => ({
 /** Page open and the sound chunk loaded (it arrives when idle after startup). */
 async function ready(page: Page, path?: string) {
   await open(page, path);
-  await page.waitForFunction(() => !!(window as unknown as { __xlr8: Hooks }).__xlr8.sound);
+  await page.waitForFunction(() => !!(window as unknown as { __selfbound: Hooks }).__selfbound.sound);
 }
 
 test.afterEach(async ({ page }) => {
@@ -40,7 +40,7 @@ test('Startup: no audio chunk at startup and no AudioContext before the first ge
     };
   });
   await open(page);
-  await page.waitForFunction(() => !!(window as unknown as { __xlr8: Hooks }).__xlr8.sound);
+  await page.waitForFunction(() => !!(window as unknown as { __selfbound: Hooks }).__selfbound.sound);
   // Loaded and ready, but no context without a gesture.
   expect(await page.evaluate(() => (window as unknown as { __contexts: number }).__contexts)).toBe(0);
   expect(await hooks(page).state()).toBe('none');
@@ -195,14 +195,14 @@ test('Settings: sounds off → silent and no audio chunk on the next start; the 
   // Reload: the audio chunk is not loaded at all
   await page.goto('/settings/general');
   await expect(page.getByTestId('sound-switch')).toBeVisible();
-  await page.waitForFunction(() => (window as unknown as { __xlr8?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__xlr8?.app?.store.sync.get().phase === 'live');
+  await page.waitForFunction(() => (window as unknown as { __selfbound?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__selfbound?.app?.store.sync.get().phase === 'live');
   await page.waitForTimeout(3500); // at most this long does startup wait before fetching lazy chunks
   expect(await page.evaluate(() => performance.getEntriesByType('resource').some((e) => /sound-[\w-]+\.js/.test(e.name)))).toBe(false);
-  expect(await page.evaluate(() => !!(window as unknown as { __xlr8: Hooks }).__xlr8.sound)).toBe(false);
+  expect(await page.evaluate(() => !!(window as unknown as { __selfbound: Hooks }).__selfbound.sound)).toBe(false);
 
   // On again: the chunk loads, switching on sounds (swoosh)
   await page.getByTestId('sound-switch').getByText('On', { exact: true }).click();
-  await page.waitForFunction(() => !!(window as unknown as { __xlr8: Hooks }).__xlr8.sound);
+  await page.waitForFunction(() => !!(window as unknown as { __selfbound: Hooks }).__selfbound.sound);
   await expect.poll(() => hooks(page).cues()).toContain('swoosh');
   await expect.poll(() => hooks(page).played()).toContain('swoosh');
   await page.evaluate(() => localStorage.removeItem('xlr8:prefs'));

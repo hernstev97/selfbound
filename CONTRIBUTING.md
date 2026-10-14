@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for your interest. XLR8 is early and maintained by one person, so contributions work
+Thanks for your interest. Selfbound is early and maintained by one person, so contributions work
 issue-first. That keeps your time well spent and the project focused.
 
 ## How to contribute

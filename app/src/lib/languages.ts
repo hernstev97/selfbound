@@ -1,7 +1,7 @@
 // Code block languages: names for the language picker and which highlight.js grammar colors them.
 // Small and without highlight.js, so the renderer and editor know the list before the highlighter
 // is loaded.
-import { msg, t } from '@xlr8/core/i18n';
+import { msg, t } from '@selfbound/core/i18n';
 
 export interface Language {
   /** What is written after the fence ("```typescript") */

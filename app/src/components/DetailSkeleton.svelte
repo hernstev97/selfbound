@@ -2,8 +2,8 @@
   // Placeholder of the detail page while the chunk or the data is missing (e.g. a deep link on a slow
   // network): header with the identifier from the URL, below it title and text bars.
   // Small and without dependencies so it may live in the start bundle.
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

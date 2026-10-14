@@ -1,4 +1,4 @@
-// The tools of the XLR8 MCP server: names, descriptions (for agents), input schemas,
+// The tools of the Selfbound MCP server: names, descriptions (for agents), input schemas,
 // annotations and argument validation.
 //
 // Execution is not here: `protocol.ts` checks the arguments with `checkToolArguments` and
@@ -152,7 +152,7 @@ const listIssues = object({
     enumOf(LIST_FILTERS, {
       description: [
         'Preset filter:',
-        '"assigned" = all open issues (status type backlog, unstarted or started) outside triage, in teams that are not dormant and not knowledge-only. XLR8 has a single user (the owner) and no assignee field, so this is what "assigned to me" means;',
+        '"assigned" = all open issues (status type backlog, unstarted or started) outside triage, in teams that are not dormant and not knowledge-only. Selfbound has a single user (the owner) and no assignee field, so this is what "assigned to me" means;',
         '"due" = open issues due within `dueWithinDays` days from today, overdue ones included;',
         '"overdue" = open issues with a due date before today;',
         '"in_progress" = issues in a started status (e.g. In Progress, In Review);',

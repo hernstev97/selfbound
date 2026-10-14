@@ -103,7 +103,7 @@ test('Tapping a notification opens the issue in the open window', async ({ page,
   await expect(page).toHaveURL(/\/inbox$/);
 });
 
-test('XLR8 is open: an agent notification shows as a toast in the app, "Open" shows the issue', async ({ page }) => {
+test('Selfbound is open: an agent notification shows as a toast in the app, "Open" shows the issue', async ({ page }) => {
   await open(page, '/inbox');
   await registered(page);
   // The PWA chunk (with presence) is loaded once the service worker is registered.

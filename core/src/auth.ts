@@ -42,7 +42,7 @@ export interface AuthConfig {
 /** What the UI needs from Clerk (deliberately narrow so the rest does not depend on Clerk). */
 interface ClerkLike {
   load(opts?: Record<string, unknown>): Promise<void>;
-  /** Address of the Clerk server (Frontend API), e.g. `clerk.xlr8.example.com` */
+  /** Address of the Clerk server (Frontend API), e.g. `clerk.selfbound.example.com` */
   readonly frontendApi?: string;
   readonly user: unknown;
   readonly session: { getToken(opts: { template: string; skipCache?: boolean }): Promise<string | null> } | null | undefined;

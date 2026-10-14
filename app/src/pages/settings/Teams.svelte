@@ -1,12 +1,12 @@
 <script lang="ts">
   // Teams: list with logo, key, issue count, dormant; order; create a new team.
-  import { ICON, type TeamId } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
+  import { ICON, type TeamId } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import TeamLogo from '../../components/TeamLogo.svelte';
   import { admin } from './admin.ts';
-  import { HUES } from '@xlr8/core/app/admin';
+  import { HUES } from '@selfbound/core/app/admin';
 
   const metaSlice = fromSlice(app.store.meta);
   const versionSlice = fromSlice(app.store.version);

@@ -1,4 +1,4 @@
-import { Admin } from '@xlr8/core/app/admin';
+import { Admin } from '@selfbound/core/app/admin';
 import { app, convexUrl } from '../../app-instance.ts';
 
 /** Settings operations (loaded only in this chunk). */

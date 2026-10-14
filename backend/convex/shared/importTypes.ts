@@ -7,7 +7,7 @@
 // docs/architecture/import.md.
 //
 // Value rules: times as milliseconds since 1970 (UTC), calendar days as
-// "YYYY-MM-DD", references always by Linear ID (`…LinearId`), never by XLR8 IDs.
+// "YYYY-MM-DD", references always by Linear ID (`…LinearId`), never by Selfbound IDs.
 // Fields without a value are absent (no `null`), so Convex accepts them.
 // This file imports nothing; it runs in Node, in the browser and in Convex.
 
@@ -33,7 +33,7 @@ export interface ImportTeam {
   name: string;
   color?: string; // Linear color as hex, e.g. "#5e6ad2"
   description?: string;
-  /** Archived or retired in Linear → dormant in XLR8. */
+  /** Archived or retired in Linear → dormant in Selfbound. */
   dormant: boolean;
   createdAt: number;
 }
@@ -60,7 +60,7 @@ export interface ImportProject {
   linearId: string;
   name: string;
   description?: string;
-  /** The single team in XLR8 (in Linear a project can have several, see `teamLinearIds`). */
+  /** The single team in Selfbound (in Linear a project can have several, see `teamLinearIds`). */
   teamLinearId: string;
   teamLinearIds: string[];
   state: ImportProjectState;
@@ -125,7 +125,7 @@ export interface ImportComment {
   body: string;
   authorName: string; // "Jane Doe (Linear)" or bot name
   authorKind: 'user' | 'bot';
-  parentLinearId?: string; // reply in a thread (XLR8 shows comments flat)
+  parentLinearId?: string; // reply in a thread (Selfbound shows comments flat)
   createdAt: number;
   editedAt?: number;
 }

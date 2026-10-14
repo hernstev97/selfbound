@@ -25,7 +25,7 @@ function logoUrl(storageId: Id<'_storage'>) {
 export const get = ownerQuery({
   args: {},
   handler: async (ctx) => {
-    const [teams, workflowStates, projects, labelGroups, labels, planning, active, closedXlr8] = await Promise.all([
+    const [teams, workflowStates, projects, labelGroups, labels, planning, active, closedSelfbound] = await Promise.all([
       ctx.db.query('teams').take(500),
       ctx.db.query('workflowStates').take(5000),
       ctx.db.query('projects').take(2000),
@@ -41,9 +41,9 @@ export const get = ownerQuery({
         .take(10),
       recentClosedSprints(ctx, 'xlr8', RECENT_CLOSED),
     ]);
-    // The most recently closed sprints by close time, XLR8 sprints first. Imported Linear cycles
-    // only fill up while there are fewer than RECENT_CLOSED XLR8 sprints.
-    const closed = [...closedXlr8, ...(await recentClosedSprints(ctx, 'linear', RECENT_CLOSED - closedXlr8.length))];
+    // The most recently closed sprints by close time, Selfbound sprints first. Imported Linear cycles
+    // only fill up while there are fewer than RECENT_CLOSED Selfbound sprints.
+    const closed = [...closedSelfbound, ...(await recentClosedSprints(ctx, 'linear', RECENT_CLOSED - closedSelfbound.length))];
     const teamsWithLogos = teams
       .sort((a, b) => a.order - b.order)
       .map((team) => ({

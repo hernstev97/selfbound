@@ -1,8 +1,8 @@
 // Subscribe and unsubscribe push on this device. Used by Settings › Notifications and at startup
 // (renew the subscription after a new server key).
-import { api } from '@xlr8/backend/api';
-import type { App } from '@xlr8/core';
-import { t } from '@xlr8/core/i18n';
+import { api } from '@selfbound/backend/api';
+import type { App } from '@selfbound/core';
+import { t } from '@selfbound/core/i18n';
 
 export type PushSupport = 'ok' | 'unsupported' | 'insecure';
 

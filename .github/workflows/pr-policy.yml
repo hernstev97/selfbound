@@ -131,7 +131,7 @@ jobs:
             const comment = [
               `Hi @${pr.user.login}, and thank you for taking the time to contribute!`,
               '',
-              `XLR8 is maintained by one person and works issue-first: please open an issue first, wait until it carries the \`${label}\` label, and then send a pull request that mentions it (for example "Closes #123").`,
+              `Selfbound is maintained by one person and works issue-first: please open an issue first, wait until it carries the \`${label}\` label, and then send a pull request that mentions it (for example "Closes #123").`,
               'That way nobody spends time on a change that does not fit the project, and your work gets a fair review.',
               '',
               `This pull request does not refer to an open issue with the \`${label}\` label, so I am closing it for now. Nothing is lost: once there is an accepted issue, add the reference to the description and reopen this pull request, or open a new one.`,

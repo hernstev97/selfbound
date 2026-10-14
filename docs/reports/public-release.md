@@ -103,7 +103,7 @@ The same checks, run locally on the final tree (via `tooling/quiet.sh`):
 | `pnpm typecheck` (+ `tsc -p test/lib`, `tsc -p ../tooling/linear-import`) | 0 errors |
 | `node tooling/i18n-check.mjs` | 1353 keys, 0 errors, 0 warnings |
 | `pnpm test` | backend 469 passed (11 skipped), core 249, app 174 |
-| `pnpm --filter @xlr8/backend test:lib` | 217 passed (11 skipped) |
+| `pnpm --filter @selfbound/backend test:lib` | 217 passed (11 skipped) |
 | `test:integration` (local backend: import, Linear files, MCP, OAuth, concurrency) | all passed |
 | `pnpm e2e` | 243 passed, 0 failed (incl. the new German-locale test) |
 | quick performance run | not run locally (no measurement runs on the maintainer's machine during this work); first run in CI |

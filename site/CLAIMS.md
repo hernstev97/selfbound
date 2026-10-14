@@ -1,6 +1,6 @@
 # Basis of the comparison on the landing page
 
-The table "How XLR8 differs from most issue trackers" compares XLR8 with the most popular trackers as a
+The table "How Selfbound differs from most issue trackers" compares Selfbound with the most popular trackers as a
 group and names none of them. Every statement about the group has to stay true for them. Checked on
 2026-10-13 against the public pricing and product pages of Jira, Asana, ClickUp, Trello, GitHub Issues
 and Linear:

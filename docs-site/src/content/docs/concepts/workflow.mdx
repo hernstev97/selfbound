@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 import Kbd from '../../../components/Kbd.astro';
 
 Every team has its own list of statuses, its workflow. You can rename statuses, add your own and archive
-the ones you don't need. Each status has one of six types, and the type decides how XLR8 treats issues in it.
+the ones you don't need. Each status has one of six types, and the type decides how Selfbound treats issues in it.
 
 ## Status types
 
@@ -24,7 +24,7 @@ the ones you don't need. Each status has one of six types, and the type decides 
 A new team starts with these eight default statuses. On an instance whose language is set to German
 (`XLR8_LOCALE=de`), new teams get German names for them instead.
 
-The type is what the rest of XLR8 looks at. A custom status "Testing" of type Started counts as work in
+The type is what the rest of Selfbound looks at. A custom status "Testing" of type Started counts as work in
 progress everywhere: in the **Active** view, on the board, in sprint progress and in the filters agents use.
 That is why you can shape the workflow freely without breaking views or sprints. Some examples of what types
 drive:
@@ -64,7 +64,7 @@ start in the team's Triage status, see [Triage and inbox](/concepts/triage-and-i
 ### Archive a status
 
 Statuses are never deleted, only archived, so old history entries stay readable. Click **Archive** on a status.
-If issues are in it, XLR8 asks where they should move, then moves them and archives the status (**Move and
+If issues are in it, Selfbound asks where they should move, then moves them and archives the status (**Move and
 archive**).
 
 You cannot archive the default status, nor the last remaining status of the types Unstarted, Completed and

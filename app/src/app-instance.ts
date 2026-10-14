@@ -1,10 +1,10 @@
 // First: the UI language, so the App below starts with the right dictionary.
 import './lib/locale-ready.ts';
-import { App, Auth } from '@xlr8/core';
+import { App, Auth } from '@selfbound/core';
 import { ConvexClient } from 'convex/browser';
 import { publishableKey } from './publishableKey.ts';
 
-// One app instance per page. Measurement and test hooks (globalThis.__xlr8, test switches in the
+// One app instance per page. Measurement and test hooks (globalThis.__selfbound, test switches in the
 // command menu) only in development, with ?perf=1 or in the test build (VITE_XLR8_TEST=1).
 const url = new URL(location.href);
 const perf = url.searchParams.get('perf') === '1';

@@ -2,8 +2,8 @@
   // Body of a knowledge page, like an issue description (components/Description.svelte): view,
   // click to edit at that spot, autosave, conflict with a choice. Keyboard as there: Tab stops on the
   // view, Enter, Space or E edits.
-  import { formatShortcut, shortcutOf, type ArticleView } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { formatShortcut, shortcutOf, type ArticleView } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { editorFocus, focusReturn, startKey } from '../../lib/bodyView.ts';

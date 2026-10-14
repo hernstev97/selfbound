@@ -1,8 +1,8 @@
 <script lang="ts">
   // Labels and label groups: create, rename, color, group (single choice yes/no), archive.
-  import { ICON, type LabelGroupDoc } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
-  import { HUES } from '@xlr8/core/app/admin';
+  import { ICON, type LabelGroupDoc } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
+  import { HUES } from '@selfbound/core/app/admin';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import InlineText from './InlineText.svelte';

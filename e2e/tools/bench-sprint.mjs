@@ -21,10 +21,10 @@ if (process.env.THROTTLE) {
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 
-const settle = () => page.waitForFunction(() => (window.__xlr8?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed), null, { timeout: 15000 });
+const settle = () => page.waitForFunction(() => (window.__selfbound?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed), null, { timeout: 15000 });
 async function last() {
   await page.waitForTimeout(40);
-  return page.evaluate(() => window.__xlr8.app.perf.state.get().last?.ms ?? NaN);
+  return page.evaluate(() => window.__selfbound.app.perf.state.get().last?.ms ?? NaN);
 }
 function report(name, samples) {
   const sorted = samples.filter((n) => !Number.isNaN(n)).sort((a, b) => a - b);
@@ -35,7 +35,7 @@ async function measure(name, action, before) {
   const samples = [];
   for (let i = 0; i < reps; i++) {
     if (before) await before(i);
-    await page.evaluate(() => window.__xlr8.app.perf.state.set({ ...window.__xlr8.app.perf.state.get(), last: null }));
+    await page.evaluate(() => window.__selfbound.app.perf.state.set({ ...window.__selfbound.app.perf.state.get(), last: null }));
     await action(i);
     samples.push(await last());
   }
@@ -45,14 +45,14 @@ async function measure(name, action, before) {
 async function open(name, route, from) {
   const samples = [];
   for (let i = 0; i < reps; i++) {
-    await page.evaluate((r) => window.__xlr8.app.nav.goView(r), from);
+    await page.evaluate((r) => window.__selfbound.app.nav.goView(r), from);
     await page.waitForTimeout(80);
     samples.push(
       await page.evaluate(
         (r) =>
           new Promise((resolve) => {
             const t = performance.now();
-            window.__xlr8.app.nav.goView(r);
+            window.__selfbound.app.nav.goView(r);
             requestAnimationFrame(() => {
               const ch = new MessageChannel();
               ch.port1.onmessage = () => resolve(performance.now() - t);
@@ -69,13 +69,13 @@ async function open(name, route, from) {
 
 const t0 = Date.now();
 await page.goto(`${base}/sprint?perf=1`);
-await page.waitForFunction(() => window.__xlr8?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
+await page.waitForFunction(() => window.__selfbound?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
 await page.waitForSelector('[data-testid="sprint-head"]');
-console.log(`Start to "live": ${Date.now() - t0} ms, ${await page.evaluate(() => window.__xlr8.app.store.all().length)} issues in memory, sprint: ${await page.evaluate(() => window.__xlr8.app.main.list.get().count)} issues`);
+console.log(`Start to "live": ${Date.now() - t0} ms, ${await page.evaluate(() => window.__selfbound.app.store.all().length)} issues in memory, sprint: ${await page.evaluate(() => window.__selfbound.app.main.list.get().count)} issues`);
 // Load the chunks once (as after idle preloading), then measure.
-await page.evaluate(() => window.__xlr8.app.nav.goView({ kind: 'plan', team: null, sprint: null }));
+await page.evaluate(() => window.__selfbound.app.nav.goView({ kind: 'plan', team: null, sprint: null }));
 await page.waitForSelector('[data-testid="plan-backlog"] [data-testid="issue-row"]');
-console.log(`Planning: ${await page.evaluate(() => window.__xlr8.app.main.list.get().count)} in the backlog, ${await page.evaluate(() => window.__xlr8.app.side.list.get().count)} in the sprint`);
+console.log(`Planning: ${await page.evaluate(() => window.__selfbound.app.main.list.get().count)} in the backlog, ${await page.evaluate(() => window.__selfbound.app.side.list.get().count)} in the sprint`);
 await page.mouse.move(2, 890);
 
 const all = { kind: 'all', team: null };
@@ -85,7 +85,7 @@ await open('Open sprint view (from All issues)', sprint, all);
 await open('Open planning (from All issues)', plan, all);
 await open('Open planning (from the sprint view)', plan, sprint);
 
-await page.evaluate(() => window.__xlr8.app.nav.goView({ kind: 'plan', team: null, sprint: null }));
+await page.evaluate(() => window.__selfbound.app.nav.goView({ kind: 'plan', team: null, sprint: null }));
 await page.waitForSelector('[data-testid="plan-backlog"] [data-testid="issue-row"]');
 await page.waitForTimeout(300);
 await measure('Planning: J (focus)', () => page.keyboard.press('j'));
@@ -99,7 +99,7 @@ await measure('Planning: Alt ↓ (reorder)', () => page.keyboard.press('Alt+Arro
 await settle();
 await measure('Planning: Tab (switch column)', () => page.keyboard.press('Tab'));
 
-await page.evaluate(() => window.__xlr8.app.nav.goView({ kind: 'sprint', team: null }));
+await page.evaluate(() => window.__selfbound.app.nav.goView({ kind: 'sprint', team: null }));
 await page.waitForTimeout(300);
 await measure('Sprint: J (focus)', () => page.keyboard.press('j'));
 await measure('Sprint: S + Enter (Status)', () => page.keyboard.press('Enter'), async (i) => {

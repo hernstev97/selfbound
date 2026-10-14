@@ -1,9 +1,9 @@
 <script lang="ts">
   // General: language, teams in the sidebar, sounds, local cache, sign out.
   // Color scheme, font size, themes and fonts: Appearance (Appearance.svelte).
-  import type { SidebarTeamSize } from '@xlr8/core';
-  import { ICON } from '@xlr8/core';
-  import { LOCALES, LOCALE_NAMES, t, type LocalePref } from '@xlr8/core/i18n';
+  import type { SidebarTeamSize } from '@selfbound/core';
+  import { ICON } from '@selfbound/core';
+  import { LOCALES, LOCALE_NAMES, t, type LocalePref } from '@selfbound/core/i18n';
   import { app, auth } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
 

@@ -1,5 +1,5 @@
 {
-  "name": "@xlr8/perf",
+  "name": "@selfbound/perf",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@playwright/test": "1.63.0",
-    "@xlr8/backend": "workspace:*",
+    "@selfbound/backend": "workspace:*",
     "convex": "1.46.0"
   },
   "devDependencies": {

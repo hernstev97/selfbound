@@ -1,5 +1,5 @@
 {
-  "name": "xlr8",
+  "name": "selfbound",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.23.0",
@@ -9,16 +9,16 @@
   "scripts": {
     "dev": "node tooling/local.mjs --seed small --app dev",
     "local": "node tooling/local.mjs",
-    "build": "pnpm --filter @xlr8/app build",
+    "build": "pnpm --filter @selfbound/app build",
     "typecheck": "pnpm -r --filter ./backend --filter ./core --filter ./app --filter ./e2e --filter ./perf --filter ./site typecheck",
     "test": "pnpm -r --filter ./backend --filter ./core --filter ./app --filter ./site test",
-    "e2e": "pnpm --filter @xlr8/e2e test",
+    "e2e": "pnpm --filter @selfbound/e2e test",
     "perf": "node perf/run.ts --full",
     "perf:quick": "node perf/run.ts --quick",
     "perf:record": "node perf/record.ts",
     "convex": "node tooling/convex.mjs",
-    "site:dev": "pnpm --filter @xlr8/site dev",
-    "site:build": "pnpm --filter @xlr8/site build",
+    "site:dev": "pnpm --filter @selfbound/site dev",
+    "site:build": "pnpm --filter @selfbound/site build",
     "site:deploy": "node tooling/deploy-site.mjs"
   },
   "devDependencies": {

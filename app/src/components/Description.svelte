@@ -4,8 +4,8 @@
   // same time, a notice offers a choice. Tasks can be checked and a code block's language chosen
   // without the editor.
   // Keyboard: Tab stops on the view, Enter, space or E edits (cursor at the end).
-  import { formatShortcut, shortcutOf, type DetailState, type IssueId } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { formatShortcut, shortcutOf, type DetailState, type IssueId } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { editorFocus, focusReturn, startKey } from '../lib/bodyView.ts';

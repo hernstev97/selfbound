@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ICON } from '@xlr8/core';
+  import { ICON } from '@selfbound/core';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { keepInView } from '../lib/ui.ts';

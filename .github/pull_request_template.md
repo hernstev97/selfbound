@@ -1,5 +1,5 @@
 <!--
-Thank you for contributing! XLR8 works issue-first (see CONTRIBUTING.md): the issue below needs the
+Thank you for contributing! Selfbound works issue-first (see CONTRIBUTING.md): the issue below needs the
 label "accepted" from the maintainer. Pull requests from non-collaborators without such an issue are
 closed automatically; once the issue is accepted you can reopen this one.
 Branch names look like feat/123-short-description or fix/short-description.

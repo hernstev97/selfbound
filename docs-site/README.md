@@ -1,18 +1,18 @@
-# XLR8 docs site
+# Selfbound docs site
 
-Public user documentation for docs.getxlr8.app, built with [Starlight](https://starlight.astro.build).
+Public user documentation for docs.selfbound.kiumu.app, built with [Starlight](https://starlight.astro.build).
 The internal architecture and operations docs stay in `docs/`.
 
 ```sh
-pnpm --filter @xlr8/docs dev        # http://127.0.0.1:5420/
-pnpm --filter @xlr8/docs build      # into docs-site/dist/
+pnpm --filter @selfbound/docs dev        # http://127.0.0.1:5420/
+pnpm --filter @selfbound/docs build      # into docs-site/dist/
 node docs-site/scripts/deploy.mjs   # build + Vercel preview deploy (--prod for production)
 ```
 
 | Path | Content |
 |---|---|
 | `src/content/docs/` | pages (Markdown/MDX); the sidebar is in `astro.config.mjs` |
-| `src/styles/theme.css` | XLR8's colours, type and components mapped onto Starlight |
+| `src/styles/theme.css` | Selfbound's colours, type and components mapped onto Starlight |
 | `src/components/` | `Kbd`, `Planned`, `Screenshot`, generated `ShortcutTable` and `McpTools`, overrides for `Hero` and `Footer` |
 | `src/assets/screenshots/` | app screenshots with demo data, `<name>-light.png` / `<name>-dark.png` |
 | `launch.mjs` | `INDEXABLE`: the one switch that removes `noindex` (meta tag, robots.txt, `X-Robots-Tag`) at launch |

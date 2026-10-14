@@ -2,7 +2,7 @@
 // loaded `lib/sound` chunk and reaches the page only after startup. The AudioContext is created on
 // the first user gesture (browser rule, otherwise a warning and silence), not on load.
 import { definePatch, getMasterBus, setMasterVolume, type AudioPatch } from '@web-kits/audio';
-import type { Cue, CueEvent } from '@xlr8/core';
+import type { Cue, CueEvent } from '@selfbound/core';
 import { Gate } from './gate.ts';
 import { JITTER, PATCH_NAME, SOUNDS } from './patch.ts';
 

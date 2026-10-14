@@ -84,7 +84,7 @@ function main() {
 
   // 1. Build. Set VITE_DEV_TOKEN empty: the process environment wins over app/.env.local.
   const dist = join(root, 'app', 'dist');
-  run('pnpm', ['--filter', '@xlr8/app', 'build'], { env: { ...process.env, ...production, VITE_DEV_TOKEN: '', VITE_XLR8_TEST: '' } });
+  run('pnpm', ['--filter', '@selfbound/app', 'build'], { env: { ...process.env, ...production, VITE_DEV_TOKEN: '', VITE_XLR8_TEST: '' } });
 
   // 2. Guard: no local test token, no local address, the right production deployment.
   const bundle = filesIn(dist).filter((f) => f.endsWith('.js')).map((f) => readFileSync(f, 'utf8')).join('\n');

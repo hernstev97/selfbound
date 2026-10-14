@@ -108,7 +108,7 @@ export interface SidebarState {
 export interface AppOptions {
   client: ConvexClient;
   auth: Auth;
-  /** Measurement and test hooks (globalThis.__xlr8, test switch): only DEV, ?perf=1 or test build */
+  /** Measurement and test hooks (globalThis.__selfbound, test switch): only DEV, ?perf=1 or test build */
   debug: boolean;
   perf: boolean;
   cacheName: string;
@@ -159,7 +159,7 @@ export class App {
   constructor(options: AppOptions) {
     this.debug = options.debug;
     this.branchPrefix = options.branchPrefix;
-    const hooks: DebugHooks | null = options.debug ? (globalThis.__xlr8 ??= { saves: [] }) : null;
+    const hooks: DebugHooks | null = options.debug ? (globalThis.__selfbound ??= { saves: [] }) : null;
     this.store = new IssueStore(options.client, { cacheName: options.cacheName, hooks });
     this.auth = options.auth;
     this.prefs = new Prefs();
@@ -308,7 +308,7 @@ export class App {
       }
       const error =
         status === 'cached'
-          ? new Error(t('Offline: you can make changes again once XLR8 is connected and signed in.'))
+          ? new Error(t('Offline: you can make changes again once Selfbound is connected and signed in.'))
           : status === 'signed-out' || status === 'denied'
             ? new Error(t('Not signed in: the change was not saved.'))
             : null;
@@ -537,17 +537,17 @@ export class App {
   #title(page: Page) {
     if (page.name === 'issue') {
       const issue = this.store.byKey(page.key);
-      return issue ? `${issue.key} ${issue.title} · XLR8` : `${page.key} · XLR8`;
+      return issue ? `${issue.key} ${issue.title} · Selfbound` : `${page.key} · Selfbound`;
     }
-    if (page.name === 'view') return `${this.list.header.get().title} · XLR8`;
-    if (page.name === 'settings') return `${t('Settings')} · XLR8`;
-    if (page.name === 'drafts') return `${t('Drafts')} · XLR8`;
-    if (page.name === 'projects') return `${t('Projects')} · ${page.team} · XLR8`;
-    if (page.name === 'wiki') return `${t('Knowledge')} · ${page.team} · XLR8`;
-    if (page.name === 'article') return `${t('Knowledge')} · XLR8`;
-    if (page.name === 'pr') return `${page.repo.split('/')[1] ?? page.repo}#${page.number} · XLR8`;
-    if (page.name === 'sprints') return 'Sprints · XLR8';
-    return 'XLR8';
+    if (page.name === 'view') return `${this.list.header.get().title} · Selfbound`;
+    if (page.name === 'settings') return `${t('Settings')} · Selfbound`;
+    if (page.name === 'drafts') return `${t('Drafts')} · Selfbound`;
+    if (page.name === 'projects') return `${t('Projects')} · ${page.team} · Selfbound`;
+    if (page.name === 'wiki') return `${t('Knowledge')} · ${page.team} · Selfbound`;
+    if (page.name === 'article') return `${t('Knowledge')} · Selfbound`;
+    if (page.name === 'pr') return `${page.repo.split('/')[1] ?? page.repo}#${page.number} · Selfbound`;
+    if (page.name === 'sprints') return 'Sprints · Selfbound';
+    return 'Selfbound';
   }
 
   #resolving: string | null = null;

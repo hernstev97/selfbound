@@ -135,7 +135,7 @@ export const teamsWithoutStates = internalQuery({
 
 /**
  * Removes a test team (for example before the first Linear import) with its projects, team
- * labels, states and recurrences, plus the given XLR8 sprints and workspace labels.
+ * labels, states and recurrences, plus the given Selfbound sprints and workspace labels.
  * Without `apply: true` it only lists what it would remove (identifiers and counts). Aborts if
  * anything came from Linear.
  */

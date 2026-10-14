@@ -1,5 +1,5 @@
 // German UI strings (components), English text → German. See core/src/i18n.ts.
-import { ctx, type Dictionary } from '@xlr8/core/i18n';
+import { ctx, type Dictionary } from '@selfbound/core/i18n';
 
 export default {
   // PerfOverlay.svelte
@@ -22,18 +22,18 @@ export default {
   'This sprint has no issues yet.': 'Dieser Sprint hat noch keine Issues.',
   'Create issue': 'Issue anlegen',
   // LoginScreen.svelte
-  'XLR8 is not set up': 'XLR8 ist nicht eingerichtet',
+  'Selfbound is not set up': 'Selfbound ist nicht eingerichtet',
   'The backend address (VITE_CONVEX_URL) or a sign-in method is missing.': 'Es fehlt die Adresse des Backends (VITE_CONVEX_URL) bzw. eine Anmeldung.',
   'Locally, {command} starts everything.': 'Lokal startet {command} alles.',
   'No access': 'Kein Zugriff',
-  'You are signed in, but this account has no access to XLR8.': 'Du bist angemeldet, aber dieses Konto ist für XLR8 nicht freigegeben.',
+  'You are signed in, but this account has no access to Selfbound.': 'Du bist angemeldet, aber dieses Konto ist für Selfbound nicht freigegeben.',
   'Sign out': 'Abmelden',
   'No connection': 'Keine Verbindung',
-  'XLR8 needs the network to sign in. This device has no saved data yet that it could show offline.':
-    'Für die Anmeldung braucht XLR8 das Netz. Auf diesem Gerät liegt noch kein Stand, den es ohne Netz zeigen könnte.',
+  'Selfbound needs the network to sign in. This device has no saved data yet that it could show offline.':
+    'Für die Anmeldung braucht Selfbound das Netz. Auf diesem Gerät liegt noch kein Stand, den es ohne Netz zeigen könnte.',
   'Connecting …': 'Verbinde …',
   'Try again': 'Erneut versuchen',
-  'Sign in to XLR8': 'Bei XLR8 anmelden',
+  'Sign in to Selfbound': 'Bei Selfbound anmelden',
   'Sign-in through Clerk.': 'Anmeldung über Clerk.',
   'Sign in': 'Anmelden',
   // Toasts.svelte
@@ -282,14 +282,14 @@ export default {
   'commented on the code': 'kommentierte im Code',
   commented: 'kommentierte',
   'Reload from GitHub': 'Von GitHub neu laden',
-  '{pr} is not known in XLR8. Pull requests appear here once they are linked to an issue.': '{pr} ist in XLR8 nicht bekannt. PRs erscheinen hier, sobald sie mit einem Issue verknüpft sind.',
+  '{pr} is not known in Selfbound. Pull requests appear here once they are linked to an issue.': '{pr} ist in Selfbound nicht bekannt. PRs erscheinen hier, sobald sie mit einem Issue verknüpft sind.',
   'merged {count} commit from {head} into {base}': ['hat {count} Commit von {head} nach {base} gemergt', 'hat {count} Commits von {head} nach {base} gemergt'],
   'wants to merge {count} commit from {head} into {base}': ['möchte {count} Commit von {head} nach {base} mergen', 'möchte {count} Commits von {head} nach {base} mergen'],
   'View code changes on GitHub': 'Code-Änderungen auf GitHub ansehen',
   '{count} file on GitHub': ['{count} Datei auf GitHub', '{count} Dateien auf GitHub'],
   'Review requested from {names}': 'Review angefragt bei {names}',
-  'GitHub access is not set up: XLR8 only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).':
-    'GitHub-Zugang ist nicht eingerichtet: XLR8 kennt nur Titel und Stand aus dem Webhook. Beschreibung, Checks, Kommentare und Aktionen brauchen {token} im Backend (docs/operations.md).',
+  'GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).':
+    'GitHub-Zugang ist nicht eingerichtet: Selfbound kennt nur Titel und Stand aus dem Webhook. Beschreibung, Checks, Kommentare und Aktionen brauchen {token} im Backend (docs/operations.md).',
   'As of {when}.': 'Stand von {when}.',
   'Loading from GitHub …': 'Wird von GitHub geladen …',
   Log: 'Log',
@@ -317,7 +317,7 @@ export default {
   'updating …': 'wird aktualisiert …',
   // main.ts
   Offline: 'Ohne Verbindung',
-  'You are seeing the last saved state on this device. Editing works again once XLR8 is connected.': 'Du siehst den letzten Stand auf diesem Gerät. Ändern geht wieder, sobald XLR8 verbunden ist.',
+  'You are seeing the last saved state on this device. Editing works again once Selfbound is connected.': 'Du siehst den letzten Stand auf diesem Gerät. Ändern geht wieder, sobald Selfbound verbunden ist.',
   // Properties.svelte, Sidebar.svelte
   'Snoozed until {date}': 'Zurückgestellt bis {date}',
 } satisfies Dictionary;

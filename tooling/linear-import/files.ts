@@ -1,4 +1,4 @@
-// Copy files hosted by Linear into XLR8 storage. Four steps, each repeatable on its own;
+// Copy files hosted by Linear into Selfbound storage. Four steps, each repeatable on its own;
 // a second run changes nothing:
 //
 //   node tooling/linear-import/index.ts files scan     [--prod | --backend-dir <dir>] [--dir <dir>]

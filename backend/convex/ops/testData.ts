@@ -6,7 +6,7 @@ import { purgeIssue } from './issues';
 import { purgeArticle } from './wiki';
 
 // Remove test data from production (e.g. before the first Linear import).
-// Deletes a team with everything attached to it, plus selected XLR8 sprints and
+// Deletes a team with everything attached to it, plus selected Selfbound sprints and
 // workspace labels. Without `apply` it only returns the list and changes nothing.
 //
 // Safeguards: aborts as soon as anything comes from the Linear import (`linearLinks`), a
@@ -85,7 +85,7 @@ export async function removeTestTeam(ctx: MutationCtx, args: RemoveTestTeamArgs,
   for (const r of await ctx.db.query('recurrences').collect()) {
     if (r.teamId !== team._id && r.labelIds.some((id) => labelIds.has(id))) throw new Error('Aborted: a label is on a recurrence of another team.');
   }
-  // Safeguard 3: only XLR8 sprints that contain issues of this team only.
+  // Safeguard 3: only Selfbound sprints that contain issues of this team only.
   const sprints: Doc<'sprints'>[] = [];
   for (const number of args.sprintNumbers) {
     const sprint = await ctx.db

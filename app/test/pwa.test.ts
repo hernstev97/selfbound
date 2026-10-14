@@ -7,9 +7,9 @@ import { issueFromShare, readShare, shareRequestId } from '../src/lib/pwa/share.
 
 describe('share to the inbox', () => {
   it('reads only /share with content', () => {
-    expect(readShare(new URL('https://xlr8.example.com/share?title=A&text=B&url='))).toEqual({ title: 'A', text: 'B', url: '' });
-    expect(readShare(new URL('https://xlr8.example.com/share?title=&text='))).toBeNull();
-    expect(readShare(new URL('https://xlr8.example.com/inbox?title=A'))).toBeNull();
+    expect(readShare(new URL('https://selfbound.example.com/share?title=A&text=B&url='))).toEqual({ title: 'A', text: 'B', url: '' });
+    expect(readShare(new URL('https://selfbound.example.com/share?title=&text='))).toBeNull();
+    expect(readShare(new URL('https://selfbound.example.com/inbox?title=A'))).toBeNull();
   });
 
   it('Android puts the link in the text: title without the link, link in the description', () => {

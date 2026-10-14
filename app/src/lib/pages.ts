@@ -1,7 +1,7 @@
 // Pages as separate chunks (code splitting): small start bundle; the detail page is preloaded when
 // idle so Enter opens it at once. A module loaded once returns the same promise (no flicker).
 // Main areas mount through components/Lazy.svelte (notice and "Try again" on failure).
-import { Slice } from '@xlr8/core';
+import { Slice } from '@selfbound/core';
 import { app } from '../app-instance.ts';
 
 type Overlays = typeof import('../components/overlays.ts');

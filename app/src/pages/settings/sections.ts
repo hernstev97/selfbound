@@ -1,5 +1,5 @@
-import type { IconName } from '@xlr8/core';
-import { translated } from '@xlr8/core/i18n';
+import type { IconName } from '@selfbound/core';
+import { translated } from '@selfbound/core/i18n';
 
 /** Section groups of the settings (extension point: an entry here plus a case in SettingsPage). */
 const GROUP = translated({ account: 'Account', workspace: 'Workspace', agents: 'Agents and ops' });

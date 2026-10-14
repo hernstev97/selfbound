@@ -1,12 +1,12 @@
 <script lang="ts" module>
-  import type { ListController as LC } from '@xlr8/core/app/list';
+  import type { ListController as LC } from '@selfbound/core/app/list';
   const lastWidth = new WeakMap<LC, number>();
 </script>
 
 <script lang="ts">
-  import { INBOX_ROW_HEIGHT, ROW_HEIGHT, ROW_HEIGHT_MOBILE, computeWindow, type IssueId } from '@xlr8/core';
-  import type { ListController } from '@xlr8/core/app/list';
-  import { t } from '@xlr8/core/i18n';
+  import { INBOX_ROW_HEIGHT, ROW_HEIGHT, ROW_HEIGHT_MOBILE, computeWindow, type IssueId } from '@selfbound/core';
+  import type { ListController } from '@selfbound/core/app/list';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { clearKeyWidths, keyColumnWidth } from '../lib/ui.ts';

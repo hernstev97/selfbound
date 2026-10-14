@@ -5,7 +5,7 @@
 //   node tooling/backup/verify-restore.mjs <export.zip> [--port 13440] [--keep]
 //
 // Steps:
-//   1. Temporary project under /tmp/xlr8-restore-…: copy of backend/convex, backend/package.json,
+//   1. Temporary project under /tmp/selfbound-restore-…: copy of backend/convex, backend/package.json,
 //      node_modules as a symlink. Its own HOME, so its own anonymous deployment
 //      (via tooling/convex.mjs, local only).
 //   2. `convex dev` on 127.0.0.1:<port>/<port+1> starts the backend and uploads the functions
@@ -63,7 +63,7 @@ async function waitFor(check, label, timeoutMs = 240_000) {
 
 async function main() {
   const source = resolve(zipPath);
-  const work = mkdtempSync(join(tmpdir(), 'xlr8-restore-'));
+  const work = mkdtempSync(join(tmpdir(), 'selfbound-restore-'));
   let backend;
   const stop = () => {
     if (!backend) return;

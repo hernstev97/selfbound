@@ -8,7 +8,7 @@ import { LIMITS } from '../convex/shared/constants';
 import { linearUploadPaths, replaceLinearUploads } from '../convex/shared/linearFiles';
 import { createOne, fixture, historyOf, setup, type T } from './helpers';
 
-// Files from Linear into XLR8 storage: find, upload, rewrite, repeatable.
+// Files from Linear into Selfbound storage: find, upload, rewrite, repeatable.
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1]);
 const ORG = 'https://uploads.linear.app/0a1b2c3d-0000-4000-8000-000000000000';

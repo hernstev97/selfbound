@@ -4,11 +4,11 @@
   // on the right open it full size or on GitHub. The summary comes from its own query, only after
   // the frame in which the issue opens (like IssueKnowledge).
   import '../../styles/pr.css';
-  import { api } from '@xlr8/backend/api';
-  import type { Id } from '@xlr8/backend/dataModel';
-  import type { PrSummary } from '@xlr8/backend/shared/pullRequests';
-  import { ICON, type PullRequestInfo } from '@xlr8/core';
-  import { t, tc, tn } from '@xlr8/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import type { Id } from '@selfbound/backend/dataModel';
+  import type { PrSummary } from '@selfbound/backend/shared/pullRequests';
+  import { ICON, type PullRequestInfo } from '@selfbound/core';
+  import { t, tc, tn } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { STATE_LABEL, checksText } from './prText.ts';

@@ -1,9 +1,9 @@
 <script lang="ts">
   // One column: header (status, count, "+", collapse) and windowed cards. Dragging: allowed columns
   // accept, blocked ones (status missing in the team, fixed order) are dimmed.
-  import { CARD_SLOT } from '@xlr8/core/board';
-  import { t } from '@xlr8/core/i18n';
-  import { computeWindow, statusIcon, type BoardColumn, type IssueId } from '@xlr8/core';
+  import { CARD_SLOT } from '@selfbound/core/board';
+  import { t } from '@selfbound/core/i18n';
+  import { computeWindow, statusIcon, type BoardColumn, type IssueId } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import Card from './Card.svelte';
   import { drag } from './drag.svelte.ts';

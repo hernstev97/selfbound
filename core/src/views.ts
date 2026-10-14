@@ -4,7 +4,7 @@ import { ACTIVE } from './format.ts';
 import { t, translated } from './i18n.ts';
 import { inInbox } from './inbox.ts';
 import type { IconName } from './icons.ts';
-import type { StateType } from '@xlr8/backend/shared/workflow';
+import type { StateType } from '@selfbound/backend/shared/workflow';
 import type { Display, DisplayProp, Grouping, Issue, IssueId, Meta, NewIssue, Ordering, RowStyle, ViewKind, ViewRoute } from './types.ts';
 
 /** What a view needs for filtering (resolved up front so the loop stays cheap). */

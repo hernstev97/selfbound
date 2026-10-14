@@ -37,7 +37,7 @@ describe('Web Push', () => {
     expect(fromBase64url(keys.publicKey)).toHaveLength(65);
     expect(fromBase64url(keys.privateKey)).toHaveLength(32);
     const now = Date.UTC(2026, 9, 11, 12);
-    const header = await vapidAuthorization('https://fcm.googleapis.com/fcm/send/abc', { ...keys, subject: 'https://xlr8.example.com' }, now);
+    const header = await vapidAuthorization('https://fcm.googleapis.com/fcm/send/abc', { ...keys, subject: 'https://selfbound.example.com' }, now);
     const match = header.match(/^vapid t=([^.]+)\.([^.]+)\.([^,]+), k=(.+)$/);
     expect(match).not.toBeNull();
     const [, head, claims, signature, k] = match!;
@@ -46,7 +46,7 @@ describe('Web Push', () => {
     expect(JSON.parse(new TextDecoder().decode(fromBase64url(claims!)))).toEqual({
       aud: 'https://fcm.googleapis.com',
       exp: now / 1000 + 12 * 3600,
-      sub: 'https://xlr8.example.com',
+      sub: 'https://selfbound.example.com',
     });
     const pub = await crypto.subtle.importKey('raw', fromBase64url(keys.publicKey), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
     const ok = await crypto.subtle.verify(
@@ -65,7 +65,7 @@ describe('Web Push', () => {
     const req = await buildPushRequest(
       { endpoint: 'https://push.example/x', ...receiver.target },
       '{}',
-      { ...keys, subject: 'https://xlr8.example.com' },
+      { ...keys, subject: 'https://selfbound.example.com' },
       { ttl: 60, urgency: 'high', topic },
     );
     expect(req.url).toBe('https://push.example/x');

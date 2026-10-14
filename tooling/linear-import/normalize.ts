@@ -1,4 +1,4 @@
-// Raw Linear data → snapshot in the XLR8 format (backend/convex/shared/importTypes.ts).
+// Raw Linear data → snapshot in the Selfbound format (backend/convex/shared/importTypes.ts).
 //
 // Pure and offline: everything here is testable with fixtures. Notes (`notes`)
 // contain only counts and ids, never titles or texts.
@@ -49,7 +49,7 @@ export class UnknownStatusError extends Error {
   readonly unknown: { team: string; name: string; type: string; issues: number }[];
   constructor(unknown: UnknownStatusError['unknown']) {
     super(
-      'Import aborted: these Linear statuses cannot be mapped to an XLR8 status:\n' +
+      'Import aborted: these Linear statuses cannot be mapped to a Selfbound status:\n' +
         unknown.map((u) => `  - team ${u.team}: "${u.name}" (type ${u.type || 'empty'}), ${u.issues} issue(s)`).join('\n') +
         '\nAdd a mapping by hand, e.g. --map-status "Blocked=in_progress".',
     );

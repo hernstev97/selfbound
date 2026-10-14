@@ -3,8 +3,8 @@
 // only Web Animations on `translate` and `opacity` run here. Positions (`top`), windowing, scroll
 // anchoring and dragging stay untouched. Without a signal this costs nothing.
 import { tick } from 'svelte';
-import type { IssueId, ListMotion } from '@xlr8/core';
-import type { ListController } from '@xlr8/core/app/list';
+import type { IssueId, ListMotion } from '@selfbound/core';
+import type { ListController } from '@selfbound/core/app/list';
 import { DUR, EASE, STAGGER, land, reduced, stillCopy } from './motion.ts';
 
 const ROWS = '.row, .group-row, .inbox-row';

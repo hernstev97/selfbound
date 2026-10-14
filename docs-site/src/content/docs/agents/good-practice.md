@@ -1,11 +1,11 @@
 ---
 title: Good practice
-description: Tips for working with AI agents in XLR8 so their work stays reviewable, safe to retry and easy to follow.
+description: Tips for working with AI agents in Selfbound so their work stays reviewable, safe to retry and easy to follow.
 sidebar:
   order: 4
 ---
 
-A few habits make agent work in XLR8 easier to review and harder to get wrong.
+A few habits make agent work in Selfbound easier to review and harder to get wrong.
 
 ## One key per agent
 
@@ -43,7 +43,7 @@ start a second one.
 ## Reference issues in branches and pull requests
 
 Have agents put the issue identifier in the branch name, for example `acme-42-fix-login`, or write
-`Fixes ACME-42` in the pull request. With the GitHub integration, XLR8 then links the pull request to the
+`Fixes ACME-42` in the pull request. With the GitHub integration, Selfbound then links the pull request to the
 issue and closes the issue when the pull request is merged. An identifier mentioned only in the title or
 description, without "Fixes" or a similar word, links without closing. Commit messages alone don't link
 anything. See [GitHub](/integrations/github/).
@@ -51,7 +51,7 @@ anything. See [GitHub](/integrations/github/).
 ## Retries are safe with a `requestId`
 
 Agents pass their own `requestId` (for example a UUID) with each write. If a response gets lost and the
-agent repeats the call with the same `requestId` and the same arguments, XLR8 returns the original result
+agent repeats the call with the same `requestId` and the same arguments, Selfbound returns the original result
 instead of creating a second issue or comment. The same `requestId` with different arguments is
 rejected. A fresh `requestId` belongs to each new action, not to each retry.
 
@@ -59,5 +59,5 @@ rejected. A fresh `requestId` belongs to each new action, not to each retry.
 
 When you and an agent, or two agents, work on the same issue, changes can cross. Agents that pass
 `expected` (the values they last read) to `update_issue` never overwrite a field that changed in the
-meantime: XLR8 skips that field and reports a conflict, and the agent reads the issue again. Descriptions
+meantime: Selfbound skips that field and reports a conflict, and the agent reads the issue again. Descriptions
 and knowledge page texts are always protected this way through their version number.

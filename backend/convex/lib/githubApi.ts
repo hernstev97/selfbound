@@ -173,7 +173,7 @@ export function githubClient(token: string, fetchImpl: FetchLike = (input, init)
     Authorization: `Bearer ${token}`,
     Accept: accept,
     'X-GitHub-Api-Version': API_VERSION,
-    'User-Agent': 'xlr8',
+    'User-Agent': 'selfbound',
   });
 
   async function send(method: string, url: string, call: CallInfo, accept?: string, body?: unknown) {
@@ -887,7 +887,7 @@ function decodeSafe(s: string) {
 
 // ---------------------------------------------------------------- Webhooks in all repos
 
-/** Events XLR8 processes (docs/operations.md). */
+/** Events Selfbound processes (docs/operations.md). */
 export const WEBHOOK_EVENTS = [
   'pull_request',
   'issue_comment',

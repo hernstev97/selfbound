@@ -6,8 +6,8 @@
     <meta name="color-scheme" content="dark light" />
     <!-- Embedded pages: only Drive videos (Markdown) and Clerk's bot protection during sign-in. -->
     <meta http-equiv="Content-Security-Policy" content="frame-src https://drive.google.com https://challenges.cloudflare.com https://*.protect.clerk.com; object-src 'none'; base-uri 'self'" />
-    <title>XLR8</title>
-    <meta name="description" content="XLR8: issues, sprints and projects." />
+    <title>Selfbound</title>
+    <meta name="description" content="Selfbound: issues, sprints and projects." />
     <!-- Status bar color (installed app, Android): follows the chosen color scheme (core/src/app/prefs.ts). -->
     <meta name="theme-color" content="#0f0f10" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
@@ -16,9 +16,9 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="XLR8" />
-    <meta property="og:title" content="XLR8" />
-    <meta property="og:description" content="XLR8: issues, sprints and projects." />
+    <meta property="og:site_name" content="Selfbound" />
+    <meta property="og:title" content="Selfbound" />
+    <meta property="og:description" content="Selfbound: issues, sprints and projects." />
     <meta property="og:image" content="/brand/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -53,7 +53,7 @@
         var l = JSON.parse(localStorage.getItem('xlr8:look') || 'null');
         if (l && l.css) {
           var s = document.createElement('style');
-          s.id = 'xlr8-look';
+          s.id = 'selfbound-look';
           s.textContent = l.css;
           document.head.appendChild(s);
           (l.preload || []).forEach(function (h) {

@@ -2,11 +2,11 @@
   // Notifications: push on this device on and off, test notification, events (apply to all
   // devices) and the list of registered devices. New events show up by themselves
   // (backend/convex/shared/notifyEvents.ts).
-  import { relativeTime } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
-  import { api } from '@xlr8/backend/api';
-  import type { Id } from '@xlr8/backend/dataModel';
-  import { NOTIFY_EVENTS, type NotifyKind } from '@xlr8/backend/shared/notifyEvents';
+  import { relativeTime } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import type { Id } from '@selfbound/backend/dataModel';
+  import { NOTIFY_EVENTS, type NotifyKind } from '@selfbound/backend/shared/notifyEvents';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
   import { currentSubscription, disablePush, enablePush, pushSupport } from '../../lib/pwa/push.ts';
@@ -78,7 +78,7 @@
 </script>
 
 <h1 class="page-title">{t('Notifications')}</h1>
-<p class="page-lead">{t('Notifications on phone and desktop, even when XLR8 is closed. While you are using XLR8 on a device, nothing goes to the phone: the notification shows up in the app instead.')}</p>
+<p class="page-lead">{t('Notifications on phone and desktop, even when Selfbound is closed. While you are using Selfbound on a device, nothing goes to the phone: the notification shows up in the app instead.')}</p>
 
 <h2 class="section-title">{t('This device')}</h2>
 <div class="card-list" data-testid="push-device">
@@ -107,12 +107,12 @@
     </span>
   </div>
   <div class="card-row">
-    <span class="t">{t('Test notification')}<div class="sub">{t('Arrives on this device right away, even while XLR8 is open.')}</div></span>
+    <span class="t">{t('Test notification')}<div class="sub">{t('Arrives on this device right away, even while Selfbound is open.')}</div></span>
     <button class="btn small" data-testid="push-test" disabled={!on || testing} onclick={() => void sendTest()}>{t('Send')}</button>
   </div>
   {#if android && !installed}
     <div class="card-row">
-      <span class="t">{t('Install as an app')}<div class="sub">{t('In Chrome, choose "Install app" in the ⋮ menu. XLR8 then starts full screen from the home screen, and "Share" from other apps creates issues in the inbox.')}</div></span>
+      <span class="t">{t('Install as an app')}<div class="sub">{t('In Chrome, choose "Install app" in the ⋮ menu. Selfbound then starts full screen from the home screen, and "Share" from other apps creates issues in the inbox.')}</div></span>
     </div>
   {/if}
 </div>

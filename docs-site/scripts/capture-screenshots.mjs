@@ -12,7 +12,7 @@
 // backend with sample data: whatever the app shows ends up in the public docs.
 //
 // Viewport 1440x900 at 2x, PNGs reduced to a palette with sharp (a docs-site dependency).
-// The themes shot switches the appearance (stored on the server) and resets it to XLR8 afterwards;
+// The themes shot switches the appearance (stored on the server) and resets it to Selfbound afterwards;
 // the inbox shot marks its first entry read, so start from a fresh seed for identical counts.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -118,7 +118,7 @@ async function ready(page, path, selector = '[data-testid="issue-row"], [data-te
   await page.goto(base + path);
   await page.waitForSelector(selector, { timeout: 20_000 });
   await page
-    .waitForFunction(() => window.__xlr8?.app?.store.sync.get().phase === 'live', null, { timeout: 10_000 })
+    .waitForFunction(() => window.__selfbound?.app?.store.sync.get().phase === 'live', null, { timeout: 10_000 })
     .catch(() => {});
   await page.evaluate(() => document.fonts.ready);
   await idle(page);

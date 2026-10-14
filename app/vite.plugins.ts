@@ -5,7 +5,7 @@ import type { Plugin } from 'vite';
 /** Preloads the font for the first list (Inter latin) in parallel with JS and CSS. */
 export function preloadFont(): Plugin {
   return {
-    name: 'xlr8-preload-font',
+    name: 'selfbound-preload-font',
     apply: 'build',
     transformIndexHtml: {
       order: 'post',
@@ -30,7 +30,7 @@ export function welcomeRoutes(): Plugin {
     next();
   };
   return {
-    name: 'xlr8-welcome-routes',
+    name: 'selfbound-welcome-routes',
     configureServer: (server) => void server.middlewares.use(rewrite),
     configurePreviewServer: (server) => void server.middlewares.use(rewrite),
   };
@@ -43,7 +43,7 @@ export function welcomeRoutes(): Plugin {
  */
 export function signedOutGuard(on: boolean): Plugin {
   return {
-    name: 'xlr8-signed-out-guard',
+    name: 'selfbound-signed-out-guard',
     apply: 'build',
     transformIndexHtml: {
       order: 'pre',
@@ -58,16 +58,16 @@ export function signedOutGuard(on: boolean): Plugin {
 
 /**
  * Service worker (push only) and version file as /sw.js and /version.json. The build id is in sw.js
- * (so the browser detects every new version), in version.json and as __XLR8_BUILD__ in the app code
+ * (so the browser detects every new version), in version.json and as __SELFBOUND_BUILD__ in the app code
  * (compared after a deploy, app/src/lib/pwa/index.ts).
  */
 export function pwaFiles(build: string): Plugin {
   const source = fileURLToPath(new URL('./sw/sw.js', import.meta.url));
   return {
-    name: 'xlr8-pwa-files',
+    name: 'selfbound-pwa-files',
     apply: 'build',
     generateBundle() {
-      this.emitFile({ type: 'asset', fileName: 'sw.js', source: readFileSync(source, 'utf8').replaceAll('__XLR8_BUILD__', build) });
+      this.emitFile({ type: 'asset', fileName: 'sw.js', source: readFileSync(source, 'utf8').replaceAll('__SELFBOUND_BUILD__', build) });
       this.emitFile({ type: 'asset', fileName: 'version.json', source: `${JSON.stringify({ build })}\n` });
     },
   };
@@ -80,7 +80,7 @@ const IMAGE_DETAIL_TAG = /[ \t]*<meta\s+property="og:image:(?:width|height|alt|t
 
 /**
  * Makes the link-preview URLs in an HTML page absolute. The page writes them as paths
- * (`content="/brand/og-image.png"`); with `base` (e.g. https://xlr8.example.com) they become
+ * (`content="/brand/og-image.png"`); with `base` (e.g. https://selfbound.example.com) they become
  * absolute. Without `base` the tags are removed, together with og:image:width/height/alt: crawlers
  * need absolute URLs, so no tag is better than a wrong one.
  */
@@ -95,13 +95,13 @@ export function publicUrlHtml(html: string, base: string | undefined): string {
 }
 
 /**
- * Build-time public URL of the instance (`XLR8_PUBLIC_URL`, e.g. https://xlr8.example.com) for the
+ * Build-time public URL of the instance (`XLR8_PUBLIC_URL`, e.g. https://selfbound.example.com) for the
  * absolute URLs in index.html and welcome.html, see publicUrlHtml().
  */
 export function publicUrl(base: string | undefined): Plugin {
-  if (base && !/^https?:\/\/[^/\s]+\/?$/.test(base.trim())) throw new Error(`XLR8_PUBLIC_URL must be an origin like https://xlr8.example.com, got "${base}"`);
+  if (base && !/^https?:\/\/[^/\s]+\/?$/.test(base.trim())) throw new Error(`XLR8_PUBLIC_URL must be an origin like https://selfbound.example.com, got "${base}"`);
   return {
-    name: 'xlr8-public-url',
+    name: 'selfbound-public-url',
     transformIndexHtml: { order: 'pre', handler: (html) => publicUrlHtml(html, base) },
   };
 }

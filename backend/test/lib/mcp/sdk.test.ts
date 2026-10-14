@@ -20,7 +20,7 @@ describe('MCP SDK client against handleMcpHttp', () => {
   test('smoke script: initialize, tools/list, read call', async () => {
     const result = await runMcpSmoke({ url: server.url, key: KEY });
     expect(result).toMatchObject({
-      serverName: 'xlr8',
+      serverName: 'selfbound',
       serverVersion: '0.0.0-test',
       protocolVersion: '2025-11-25',
       instructions: true,

@@ -1,12 +1,12 @@
 ---
 title: Try it locally
-description: Run XLR8 on your own machine with sample data, without a Convex or Clerk account.
+description: Run Selfbound on your own machine with sample data, without a Convex or Clerk account.
 sidebar:
   order: 2
 ---
 import { Aside, Steps } from '@astrojs/starlight/components';
 
-You can run all of XLR8 on your machine before you set up anything in the cloud. One command starts a
+You can run all of Selfbound on your machine before you set up anything in the cloud. One command starts a
 local backend, signs you in with a local test account, loads sample data and starts the app. You need no
 Convex or Clerk account for this.
 
@@ -17,15 +17,15 @@ Convex or Clerk account for this.
   provides the right pnpm.
 - **Git**, to clone the repository.
 
-## Start XLR8
+## Start Selfbound
 
 <Steps>
 
 1. Clone the repository and install the dependencies:
 
    ```sh
-   git clone https://github.com/hernstev97/xlr8.git xlr8
-   cd xlr8
+   git clone https://github.com/hernstev97/xlr8.git selfbound
+   cd selfbound
    corepack enable
    pnpm install
    ```
@@ -69,7 +69,7 @@ it again, so your local changes survive a restart.
 
 ### More data
 
-To try XLR8 with 10,000 issues, the size its performance budget is measured at:
+To try Selfbound with 10,000 issues, the size its performance budget is measured at:
 
 ```sh
 pnpm local --seed large --app dev
@@ -123,8 +123,8 @@ follow [Connect an agent](/agents/connect/), using the local address.
 
 ## When something goes wrong
 
-- **"XLR8 is not set up":** the app has no backend address. This happens when you start only the app
-  (for example `pnpm --filter @xlr8/app dev`) before `pnpm dev` has ever run. Start everything with
+- **"Selfbound is not set up":** the app has no backend address. This happens when you start only the app
+  (for example `pnpm --filter @selfbound/app dev`) before `pnpm dev` has ever run. Start everything with
   `pnpm dev`.
 - **Port already in use:** the app needs port 5412. If an app already answers there, the script reuses
   it. For the backend, pick other ports with `--port`.

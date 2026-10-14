@@ -1,4 +1,4 @@
-/* XLR8 look for Starlight. Values follow the app's tokens (app/src/styles/app.css, md.css):
+/* Selfbound look for Starlight. Values follow the app's tokens (app/src/styles/app.css, md.css):
    neutral greys with a trace of hue 286, indigo accent at hue 276, 8 px radius, Inter.
    Unlayered on purpose: it wins over Starlight's cascade layers without !important. */
 
@@ -972,7 +972,7 @@ starlight-tabs [role='tab'][aria-selected='true'] {
   border-color: var(--xl-accent);
 }
 
-/* ---------------------------------------------------------------- XLR8 components */
+/* ---------------------------------------------------------------- Selfbound components */
 
 /* Key caps (Kbd.astro), like the app's .kbd. Plain inline boxes rather than inline-block, so
    punctuation after a cap never wraps onto its own line. Ctrl/⌘ swap: both faces are in the

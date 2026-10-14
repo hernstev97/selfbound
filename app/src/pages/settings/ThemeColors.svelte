@@ -1,8 +1,8 @@
 <script lang="ts">
   // Override single colors of a theme. Takes effect right away in the whole app; the contrast check
   // applies here too (an "adjusted" note with the value that actually applies).
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { look, overridesFor } from '../../lib/look/index.ts';
   import { VAR_GROUPS, VAR_GROUP_LABEL, VARS, type MappedTheme } from '../../lib/look/map.ts';
   import { fromSlice } from '../../slice.svelte.ts';

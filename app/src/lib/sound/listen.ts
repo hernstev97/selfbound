@@ -2,7 +2,7 @@
 // input, and reports the matching sound to `app.cues`; the player (index.ts) plays it. Core reports
 // what happens in the logic on its own (done, copied, error, menu choice, J/K).
 //
-// Mapping by the classes and roles of the XLR8 UI. `data-sound="<sound>"` (or `none`) assigns any
+// Mapping by the classes and roles of the Selfbound UI. `data-sound="<sound>"` (or `none`) assigns any
 // element explicitly.
 //
 //   Toggles (checkbox, switch, check mark in rows)          toggleOn / toggleOff by the previous state
@@ -16,8 +16,8 @@
 //   typing in editors and text fields                        key (deleting lower)
 //   sliders                                                  sliderTick (higher to the right)
 // Menus and the command menu (`.menu-item`) are reported by core itself (palette.choose, menu.choose).
-import { CUES, type App, type Cue } from '@xlr8/core';
-import { t } from '@xlr8/core/i18n';
+import { CUES, type App, type Cue } from '@selfbound/core';
+import { t } from '@selfbound/core/i18n';
 
 /** No sound from here: core reports menu choices itself. */
 const OWN_CUE = '.menu-item';

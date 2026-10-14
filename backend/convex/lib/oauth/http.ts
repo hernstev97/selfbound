@@ -150,7 +150,7 @@ export async function register(request: Request, backend: OAuthBackend) {
     return oauthError(
       400,
       'invalid_client_metadata',
-      'XLR8 is not accepting new connectors right now. In XLR8, press "Connect connector" under Settings → Agents, then restart the connection.',
+      'Selfbound is not accepting new connectors right now. In Selfbound, press "Connect connector" under Settings → Agents, then restart the connection.',
     );
   }
   return json(201, {
@@ -172,7 +172,7 @@ export async function authorize(request: Request, cfg: OAuthConfig, backend: OAu
   const params = new URL(request.url).searchParams;
   const clientId = params.get('client_id') ?? '';
   const client = clientId.length > 0 && clientId.length <= 200 ? await backend.client(clientId) : null;
-  if (!client) return page(400, 'Unknown client', 'This app is not registered with XLR8. Set up the connection in the app again.');
+  if (!client) return page(400, 'Unknown client', 'This app is not registered with Selfbound. Set up the connection in the app again.');
   const checked = checkAuthorize(params, client, cfg);
   if (checked.kind === 'page') return page(400, checked.title, checked.text);
   if (checked.kind === 'error') {
@@ -212,7 +212,7 @@ async function authenticateClient(request: Request, form: Record<string, string>
 }
 
 const invalidClient = () =>
-  oauthError(401, 'invalid_client', 'Client authentication failed.', { 'WWW-Authenticate': 'Basic realm="xlr8"' });
+  oauthError(401, 'invalid_client', 'Client authentication failed.', { 'WWW-Authenticate': 'Basic realm="selfbound"' });
 
 export async function token(request: Request, cfg: OAuthConfig, backend: OAuthBackend) {
   const body = await readBody(request);

@@ -1,6 +1,6 @@
 <script lang="ts">
   // Measurement overlay (?perf=1): time from the last interaction to the next frame.
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

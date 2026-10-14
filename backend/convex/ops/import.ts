@@ -34,16 +34,16 @@ import { checkParent } from './validate';
 //
 // Principles (docs/architecture/import.md):
 // - Repeatable without duplicates: every record has an entry in `linearLinks`
-//   (kind + Linear ID → XLR8 ID + payload hash). Same hash → untouched.
+//   (kind + Linear ID → Selfbound ID + payload hash). Same hash → untouched.
 // - Issues: three-way merge per field against the last imported Linear value
 //   (`linearLinks.base`). Changed only in Linear → take it (old value in history, old
-//   description in full in `bodyRevisions`); changed only in XLR8 → keep; changed in
-//   both → keep XLR8, add an `importConflicts` entry.
-// - Issues permanently deleted in XLR8 (`linearLinks.purgedAt`) do not come back.
-// - The import never touches XLR8's own data: logos, team order, XLR8 sprints and sprint
+//   description in full in `bodyRevisions`); changed only in Selfbound → keep; changed in
+//   both → keep Selfbound, add an `importConflicts` entry.
+// - Issues permanently deleted in Selfbound (`linearLinks.purgedAt`) do not come back.
+// - The import never touches Selfbound's own data: logos, team order, Selfbound sprints and sprint
 //   assignment, rank, "reviewed", trash.
-// - If a Linear identifier collides with an issue created in XLR8, Linear keeps the
-//   identifier; the XLR8 issue gets the next free number, the old identifier becomes an
+// - If a Linear identifier collides with an issue created in Selfbound, Linear keeps the
+//   identifier; the Selfbound issue gets the next free number, the old identifier becomes an
 //   alias, and `importConflicts` records it.
 // - Deviations (`deviations`) contain only numbers and identifiers, never titles or texts.
 
@@ -133,14 +133,14 @@ async function getLocal<T extends TableNames>(ctx: QueryCtx, table: T, localId: 
   return id ? await ctx.db.get(table, id) : null;
 }
 
-/** XLR8 document for a Linear ID via linearLinks. */
+/** Selfbound document for a Linear ID via linearLinks. */
 async function localOf<T extends TableNames>(ctx: QueryCtx, table: T, kind: string, linearId: string | undefined) {
   if (!linearId) return null;
   const link = await findLink(ctx, kind, linearId);
   return link ? await getLocal(ctx, table, link.localId) : null;
 }
 
-/** Is this XLR8 document already linked to a Linear record? */
+/** Is this Selfbound document already linked to a Linear record? */
 async function isLinked(ctx: QueryCtx, localId: string) {
   return (
     (await ctx.db
@@ -207,15 +207,15 @@ async function importTeam(s: State, p: ImportTeam): Promise<Outcome> {
     await saveLink(s, link, 'team', p.linearId, teamId, hash);
     return 'created';
   }
-  // Linear fields: name, dormant, color. Key, order and logos belong to XLR8.
+  // Linear fields: name, dormant, color. Key, order and logos belong to Selfbound.
   const patch: Partial<Doc<'teams'>> = {};
   const name = clip(p.name, 100, p.key);
   if (team.name !== name) patch.name = name;
   if (team.dormant !== p.dormant) patch.dormant = p.dormant;
   const hue = hueOf(p.color);
   if (hue !== undefined && hue !== team.hue) patch.hue = hue;
-  if (team.key !== p.key.toUpperCase()) note(s, `Team ${team.key}: the key in Linear is now ${p.key}; XLR8 keeps ${team.key}.`);
-  if (adopted) note(s, `Team ${team.key}: already existed in XLR8, linked to Linear.`);
+  if (team.key !== p.key.toUpperCase()) note(s, `Team ${team.key}: the key in Linear is now ${p.key}; Selfbound keeps ${team.key}.`);
+  if (adopted) note(s, `Team ${team.key}: already existed in Selfbound, linked to Linear.`);
   if (Object.keys(patch).length) await ctx.db.patch('teams', team._id, { ...patch, updatedAt: s.now });
   await saveLink(s, link, 'team', p.linearId, team._id, hash);
   return Object.keys(patch).length || adopted ? 'updated' : 'unchanged';
@@ -325,7 +325,7 @@ async function importProject(s: State, p: ImportProject): Promise<Outcome> {
     return 'created';
   }
   if (project.teamId !== team._id) {
-    note(s, `Project assigned to a different team in Linear (${team.key}); XLR8 keeps its team.`);
+    note(s, `Project assigned to a different team in Linear (${team.key}); Selfbound keeps its team.`);
   }
   const changed = project.name !== name || project.state !== p.state;
   if (changed) await ctx.db.patch('projects', project._id, { name, state: p.state, updatedAt: s.now });
@@ -362,7 +362,7 @@ const outcomeOf = (status: ImportStatus) =>
   status === 'done' ? ('done' as const) : status === 'canceled' || status === 'duplicate' ? ('canceled' as const) : ('backlog' as const);
 
 /**
- * Frees (team, number): if another issue holds the number (created in XLR8), it gets the
+ * Frees (team, number): if another issue holds the number (created in Selfbound), it gets the
  * next free number after all of the team's Linear numbers. The old identifier becomes an
  * alias; history and importConflicts record it.
  */
@@ -384,7 +384,7 @@ async function claimNumber(s: State, team: Doc<'teams'>, teamLinearId: string, n
   const linked = await isLinked(ctx, occupant._id);
   const text = linked
     ? `${from}: number reassigned in Linear; the previous issue is now ${to} (old identifier stays as alias).`
-    : `${from} was created in XLR8. Linear keeps ${from}, the XLR8 issue is now ${to} (old identifier stays as alias).`;
+    : `${from} was created in Selfbound. Linear keeps ${from}, the Selfbound issue is now ${to} (old identifier stays as alias).`;
   await ctx.db.insert('importConflicts', { runId: s.runId, issueId: occupant._id, note: text });
   note(s, text);
 }
@@ -452,7 +452,7 @@ const TRACKED = ['title', 'status', 'priority', 'labelIds', 'projectId', 'estima
 const TIMESTAMPS = ['startedAt', 'completedAt', 'canceledAt'] as const;
 
 /**
- * Last imported Linear values of an issue in XLR8 form (`linearLinks.base`).
+ * Last imported Linear values of an issue in Selfbound form (`linearLinks.base`).
  * Basis of the three-way merge. The description only as a hash; phase 2 fills in the parent.
  */
 export interface IssueBase {
@@ -480,19 +480,19 @@ type Merge = 'keep' | 'take' | 'conflict';
 
 /**
  * Three-way decision for one field: base = last imported, linear = now in Linear,
- * local = now in XLR8. Without base (link from before the merge existed) every
- * difference counts as a conflict: XLR8 wins.
+ * local = now in Selfbound. Without base (link from before the merge existed) every
+ * difference counts as a conflict: Selfbound wins.
  */
 function merge(hasBase: boolean, base: unknown, linear: unknown, local: unknown, unordered = false): Merge {
   if (sameValue(local, linear, unordered)) return 'keep';
   if (!hasBase) return 'conflict';
-  if (sameValue(base, linear, unordered)) return 'keep'; // changed only in XLR8
+  if (sameValue(base, linear, unordered)) return 'keep'; // changed only in Selfbound
   if (sameValue(base, local, unordered)) return 'take'; // changed only in Linear
   return 'conflict';
 }
 
 async function addConflict(s: State, issueId: Id<'issues'>, identifier: string, fields: string[]) {
-  const text = `${identifier}: changed in XLR8 and in Linear (${fields.join(', ')}); the XLR8 value stays.`;
+  const text = `${identifier}: changed in Selfbound and in Linear (${fields.join(', ')}); the Selfbound value stays.`;
   await s.ctx.db.insert('importConflicts', { runId: s.runId, issueId, note: text });
   note(s, text);
 }
@@ -502,7 +502,7 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
   const hash = issueHash(p);
   const link = await findLink(ctx, 'issue', p.linearId);
   if (link?.purgedAt !== undefined) {
-    note(s, `${p.identifier}: permanently deleted in XLR8, not recreated`);
+    note(s, `${p.identifier}: permanently deleted in Selfbound, not recreated`);
     return 'skipped';
   }
   const existing = link ? await getLocal(ctx, 'issues', link.localId) : null;
@@ -734,7 +734,7 @@ async function importComment(s: State, p: ImportComment): Promise<Outcome> {
     await saveLink(s, link, 'comment', p.linearId, commentId, hash);
     return 'created';
   }
-  // Comments deleted in XLR8 stay deleted.
+  // Comments deleted in Selfbound stay deleted.
   let changed = false;
   if (existing.deletedAt === undefined && existing.body !== body) {
     await ctx.db.patch('comments', existing._id, { body, editedAt: p.editedAt ?? now });
@@ -756,7 +756,7 @@ async function importRelation(s: State, p: ImportRelation): Promise<Outcome> {
   const { ctx } = s;
   const hash = payloadHash(p);
   const link = await findLink(ctx, 'relation', p.linearId);
-  // Relations do not change. Ones removed in XLR8 stay removed.
+  // Relations do not change. Ones removed in Selfbound stay removed.
   if (link) return 'unchanged';
   const from = await localOf(ctx, 'issues', 'issue', p.fromLinearId);
   const to = await localOf(ctx, 'issues', 'issue', p.toLinearId);
@@ -765,7 +765,7 @@ async function importRelation(s: State, p: ImportRelation): Promise<Outcome> {
     return 'skipped';
   }
   if (from.deletedAt !== undefined || to.deletedAt !== undefined) {
-    note(s, 'Skipped relation to an issue in the XLR8 trash');
+    note(s, 'Skipped relation to an issue in the Selfbound trash');
     return 'skipped';
   }
   const forward = await ctx.db
@@ -949,7 +949,7 @@ export async function startImport(ctx: MutationCtx, run: string, notes: string[]
   });
 }
 
-/** Scan phase: highest Linear number per team (for collisions with XLR8 issues), one page. */
+/** Scan phase: highest Linear number per team (for collisions with Selfbound issues), one page. */
 async function scanNumbers(ctx: QueryCtx, run: string, cursor: string | null) {
   const page = await ctx.db
     .query('importStaging')

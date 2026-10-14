@@ -76,13 +76,13 @@ async function rateCount(t: T, agentId: Id<'agents'>) {
 }
 
 describe('Re-import with three-way merge', () => {
-  test('if Linear only changes updatedAt, XLR8 changes to status, priority and description stay', async () => {
+  test('if Linear only changes updatedAt, Selfbound changes to status, priority and description stay', async () => {
     const { t, owner } = setup();
     await runImport(t, 'r1');
     const kiu5 = (await find(t, 'KIU-5'))!;
     await owner.mutation(api.issues.update, { ids: [kiu5._id], patch: { status: 'done', priority: 1 } });
-    // Done clears the priority; that is an XLR8 change too, which the re-import does not revert.
-    await owner.mutation(api.issues.setDescription, { id: kiu5._id, markdown: 'Long XLR8 note from the owner', baseVersion: 1 });
+    // Done clears the priority; that is a Selfbound change too, which the re-import does not revert.
+    await owner.mutation(api.issues.setDescription, { id: kiu5._id, markdown: 'Long Selfbound note from the owner', baseVersion: 1 });
     const raw = rawData();
     const i7 = raw.issues.find((i) => i.id === 'i-7')!;
     i7.updatedAt = new Date(Date.parse(i7.updatedAt) + 1000).toISOString();
@@ -92,19 +92,19 @@ describe('Re-import with three-way merge', () => {
     const after = await getIssue(t, kiu5._id);
     expect(after).toMatchObject({ status: 'done', priority: 0 });
     expect(after.completedAt).toBeDefined();
-    expect((await bodyOf(t, kiu5._id))!.markdown).toBe('Long XLR8 note from the owner');
+    expect((await bodyOf(t, kiu5._id))!.markdown).toBe('Long Selfbound note from the owner');
   });
 
-  test('only Linear → applied (old description fully saved); only XLR8 → kept; both → XLR8 kept with a conflict', async () => {
+  test('only Linear → applied (old description fully saved); only Selfbound → kept; both → Selfbound kept with a conflict', async () => {
     const { t, owner } = setup();
     await runImport(t, 'r1');
     const kiu5 = (await find(t, 'KIU-5'))!;
     const kiu6 = (await find(t, 'KIU-6'))!;
     const before5 = (await bodyOf(t, kiu5._id))!.markdown;
-    // XLR8: priority on KIU-5, title and description on KIU-6.
+    // Selfbound: priority on KIU-5, title and description on KIU-6.
     await owner.mutation(api.issues.update, { ids: [kiu5._id], patch: { priority: 2 } });
-    await owner.mutation(api.issues.update, { ids: [kiu6._id], patch: { title: 'Title from XLR8' } });
-    await owner.mutation(api.issues.setDescription, { id: kiu6._id, markdown: 'Description from XLR8', baseVersion: 1 });
+    await owner.mutation(api.issues.update, { ids: [kiu6._id], patch: { title: 'Title from Selfbound' } });
+    await owner.mutation(api.issues.setDescription, { id: kiu6._id, markdown: 'Description from Selfbound', baseVersion: 1 });
     // Linear: title and description on KIU-5 (only there), title and description on KIU-6 (both).
     const raw = rawData();
     const i7 = raw.issues.find((i) => i.id === 'i-7')!;
@@ -122,12 +122,12 @@ describe('Re-import with three-way merge', () => {
     expect(revisions5).toEqual([expect.objectContaining({ markdown: before5, version: 1, reason: 'import_overwrite' })]);
 
     const a6 = await getIssue(t, kiu6._id);
-    expect(a6.title).toBe('Title from XLR8');
-    expect((await bodyOf(t, kiu6._id))!.markdown).toBe('Description from XLR8');
+    expect(a6.title).toBe('Title from Selfbound');
+    expect((await bodyOf(t, kiu6._id))!.markdown).toBe('Description from Selfbound');
     expect(await owner.query(api.issues.revisions, { id: kiu6._id })).toEqual([
       expect.objectContaining({ markdown: 'Other Linear description', reason: 'import_conflict' }),
     ]);
-    expect(summary.conflicts).toEqual(['KIU-6: changed in XLR8 and in Linear (title, description); the XLR8 value stays.']);
+    expect(summary.conflicts).toEqual(['KIU-6: changed in Selfbound and in Linear (title, description); the Selfbound value stays.']);
     const conflicts = await t.run(async (ctx) => await ctx.db.query('importConflicts').collect());
     expect(conflicts.map((c) => c.issueId)).toEqual([kiu6._id]);
 
@@ -137,7 +137,7 @@ describe('Re-import with three-way merge', () => {
     expect(again.counts.issue).toMatchObject({ updated: 0, created: 0 });
   });
 
-  test('parent: changed only in Linear → applied; cleared in XLR8 and changed in Linear → conflict', async () => {
+  test('parent: changed only in Linear → applied; cleared in Selfbound and changed in Linear → conflict', async () => {
     const { t, owner } = setup();
     await runImport(t, 'r1');
     const kiu1 = (await find(t, 'KIU-1'))!;
@@ -151,7 +151,7 @@ describe('Re-import with three-way merge', () => {
     const summary = await runImport(t, 'r2', raw);
     expect((await getIssue(t, kiu5._id)).parentId).toBe(kiu1._id);
     expect((await getIssue(t, kiu2._id)).parentId).toBeUndefined();
-    expect(summary.conflicts).toContain('KIU-2: changed in XLR8 and in Linear (parentId); the XLR8 value stays.');
+    expect(summary.conflicts).toContain('KIU-2: changed in Selfbound and in Linear (parentId); the Selfbound value stays.');
   });
 });
 
@@ -172,7 +172,7 @@ describe('Permanently deleted issues stay deleted', () => {
     const summary = await runImport(t, 'r2');
     expect(await find(t, 'KIU-5')).toBeNull();
     expect(summary.counts.issue).toMatchObject({ created: 0, skipped: 1 });
-    expect(summary.deviations).toContain('KIU-5: permanently deleted in XLR8, not recreated');
+    expect(summary.deviations).toContain('KIU-5: permanently deleted in Selfbound, not recreated');
   });
 });
 
@@ -469,8 +469,8 @@ describe('Paged comments, search without full descriptions', () => {
   });
 });
 
-describe('meta.get shows the most recently closed sprints, XLR8 first', () => {
-  test('XLR8 sprints stay visible after importing old Linear cycles', async () => {
+describe('meta.get shows the most recently closed sprints, Selfbound first', () => {
+  test('Selfbound sprints stay visible after importing old Linear cycles', async () => {
     const { t, owner } = setup();
     for (let i = 0; i < 2; i++) {
       const { id } = await owner.mutation(api.sprints.create, {});

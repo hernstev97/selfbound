@@ -114,7 +114,7 @@ describe('Import from Linear', () => {
     // team counter = highest number; a new issue gets KIU-7
     const kiu = await t.run(async (ctx) => (await ctx.db.query('teams').withIndex('by_key', (q) => q.eq('key', 'KIU')).unique())!);
     expect(await t.run(async (ctx) => await readCounter(ctx, teamCounter(kiu._id)))).toBe(6);
-    const created = await owner.mutation(api.issues.create, { issues: [{ teamId: kiu._id, title: 'New in XLR8' }] });
+    const created = await owner.mutation(api.issues.create, { issues: [{ teamId: kiu._id, title: 'New in Selfbound' }] });
     expect(created.issues[0].identifier).toBe('KIU-7');
 
     const detail = (await owner.query(api.issues.detail, { id: kiu2._id }))!;
@@ -191,9 +191,9 @@ describe('Import from Linear', () => {
     expect(runs.map((r) => r.status)).toEqual(['done', 'done']);
   });
 
-  test('collision: an issue created in XLR8 with a Linear identifier gets the next free number and an alias', async () => {
+  test('collision: an issue created in Selfbound with a Linear identifier gets the next free number and an alias', async () => {
     const { t, owner } = setup();
-    // The owner already created team KIU in XLR8 with two issues.
+    // The owner already created team KIU in Selfbound with two issues.
     const { teamId } = await owner.mutation(api.teams.create, { key: 'KIU', name: 'Acme local', hue: 10 });
     await owner.mutation(api.teams.create, { key: 'ZZZ', name: 'Own team' });
     const mine = await owner.mutation(api.issues.create, {
@@ -204,19 +204,19 @@ describe('Import from Linear', () => {
     });
     const summary = await runImport(t, 'r1');
     expect(summary.conflicts).toHaveLength(2);
-    expect(summary.conflicts[0]).toMatch(/^KIU-1 was created in XLR8\. Linear keeps KIU-1, the XLR8 issue is now KIU-7/);
+    expect(summary.conflicts[0]).toMatch(/^KIU-1 was created in Selfbound\. Linear keeps KIU-1, the Selfbound issue is now KIU-7/);
     const first = await t.run(async (ctx) => (await ctx.db.get('issues', mine.issues[0].id))!);
     const second = await t.run(async (ctx) => (await ctx.db.get('issues', mine.issues[1].id))!);
     expect([first.number, second.number]).toEqual([7, 8]);
     expect((await historyOf(t, first._id)).at(-1)).toMatchObject({ field: 'identifier', from: 'KIU-1', to: 'KIU-7', actor: { kind: 'import' } });
-    // KIU-1 is now the Linear issue; the old identifier is an alias of the XLR8 issue.
+    // KIU-1 is now the Linear issue; the old identifier is an alias of the Selfbound issue.
     const resolved = await owner.query(api.issues.resolve, { identifier: 'KIU-1' });
     expect(resolved?.id).not.toBe(first._id);
     const aliases = await t.run(async (ctx) =>
       await ctx.db.query('identifierAliases').withIndex('by_issue', (q) => q.eq('issueId', first._id)).collect(),
     );
     expect(aliases.map((a) => a.key)).toEqual(['KIU-1']);
-    // Team adopted instead of duplicated: key once, name from Linear, order from XLR8.
+    // Team adopted instead of duplicated: key once, name from Linear, order from Selfbound.
     const teams = await t.run(async (ctx) => await ctx.db.query('teams').collect());
     expect(teams.filter((x) => x.key === 'KIU')).toHaveLength(1);
     expect(teams.find((x) => x.key === 'KIU')).toMatchObject({ name: TEAMS.find((x) => x.key === 'KIU')!.name, order: 0 });
@@ -231,15 +231,15 @@ describe('Import from Linear', () => {
     expect((await t.run(async (ctx) => (await ctx.db.get('issues', first._id))!)).number).toBe(7);
   });
 
-  test('later import: changes only in Linear arrive with history, changes on both sides are a conflict, XLR8-owned data stays', async () => {
+  test('later import: changes only in Linear arrive with history, changes on both sides are a conflict, Selfbound-owned data stays', async () => {
     const { t, owner } = setup();
     await runImport(t, 'r1');
     const kiu5 = await byIdentifier(t, 'KIU-5');
     const kiu6 = await byIdentifier(t, 'KIU-6');
     const kiu2 = await byIdentifier(t, 'KIU-2');
-    // Changed in XLR8: titles of KIU-5 and KIU-6, rank, sprint, parent of KIU-2, team order.
-    await owner.mutation(api.issues.update, { ids: [kiu5._id], patch: { title: 'Renamed in XLR8' } });
-    await owner.mutation(api.issues.update, { ids: [kiu6._id], patch: { title: 'Only in XLR8' } });
+    // Changed in Selfbound: titles of KIU-5 and KIU-6, rank, sprint, parent of KIU-2, team order.
+    await owner.mutation(api.issues.update, { ids: [kiu5._id], patch: { title: 'Renamed in Selfbound' } });
+    await owner.mutation(api.issues.update, { ids: [kiu6._id], patch: { title: 'Only in Selfbound' } });
     await owner.mutation(api.issues.update, { ids: [kiu2._id], patch: { parentId: null } });
     await owner.mutation(api.issues.reorder, { id: kiu5._id, beforeId: kiu6._id });
     const { id: sprintId } = await owner.mutation(api.sprints.create, {});
@@ -267,10 +267,10 @@ describe('Import from Linear', () => {
     expect(summary.counts.comment).toMatchObject({ created: 1, unchanged: 32 });
 
     const after = await t.run(async (ctx) => (await ctx.db.get('issues', kiu5._id))!);
-    // Title changed in both: XLR8 stays, conflict. Priority only in Linear: taken.
-    expect(after).toMatchObject({ title: 'Renamed in XLR8', priority: 3 });
-    expect(summary.conflicts).toEqual(['KIU-5: changed in XLR8 and in Linear (title); the XLR8 value stays.']);
-    // XLR8-owned data: rank, sprint, reviewed, seq stay.
+    // Title changed in both: Selfbound stays, conflict. Priority only in Linear: taken.
+    expect(after).toMatchObject({ title: 'Renamed in Selfbound', priority: 3 });
+    expect(summary.conflicts).toEqual(['KIU-5: changed in Selfbound and in Linear (title); the Selfbound value stays.']);
+    // Selfbound-owned data: rank, sprint, reviewed, seq stay.
     expect(after.rank).toBe(before.rank);
     expect(after.sprintId).toBe(sprintId);
     expect(after.reviewedAt).toBe(before.reviewedAt);
@@ -278,12 +278,12 @@ describe('Import from Linear', () => {
     const history = await historyOf(t, kiu5._id);
     expect(history.find((h) => h.field === 'title' && h.actor.kind === 'import')).toBeUndefined();
     expect(history.find((h) => h.field === 'priority' && h.actor.kind === 'import')).toMatchObject({ from: 0, to: 3 });
-    // Unchanged in Linear: XLR8 changes stay.
-    expect((await t.run(async (ctx) => (await ctx.db.get('issues', kiu6._id))!)).title).toBe('Only in XLR8');
+    // Unchanged in Linear: Selfbound changes stay.
+    expect((await t.run(async (ctx) => (await ctx.db.get('issues', kiu6._id))!)).title).toBe('Only in Selfbound');
     expect((await t.run(async (ctx) => (await ctx.db.get('issues', kiu2._id))!)).parentId).toBeUndefined();
     const teamsAfter = await t.run(async (ctx) => await ctx.db.query('teams').collect());
     expect(teamsAfter.map((x) => x.order)).toEqual(teams.map((x) => teams.length - 1 - x.order));
-    // XLR8 sprint untouched, Linear sprints unchanged.
+    // Selfbound sprint untouched, Linear sprints unchanged.
     const sprints = await t.run(async (ctx) => await ctx.db.query('sprints').collect());
     expect(sprints.filter((s) => s.source === 'xlr8')).toEqual([expect.objectContaining({ _id: sprintId, state: 'planning' })]);
     await expectSprintInvariant(t);

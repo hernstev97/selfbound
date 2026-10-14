@@ -113,7 +113,7 @@ for (const width of WIDTHS) {
       for (const path of pages) {
         await page.goto(path);
         await expect(page.locator('.panel, [data-testid="detail"], [data-testid="settings-page"]').first()).toBeVisible();
-        await page.waitForFunction(() => (window as unknown as { __xlr8?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__xlr8?.app?.store.sync.get().phase === 'live');
+        await page.waitForFunction(() => (window as unknown as { __selfbound?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__selfbound?.app?.store.sync.get().phase === 'live');
         await expectNoOverflow(page, path);
       }
     });
@@ -177,11 +177,11 @@ for (const width of WIDTHS) {
     test('Search, command menu and filters stay on screen, even with the peek state on', async ({ page }) => {
       for (const path of ['/sprint', '/team/ORB', '/inbox', '/settings/general', '/sprint/plan']) {
         await open(page, path).catch(() => page.goto(path));
-        await page.waitForFunction(() => (window as unknown as { __xlr8?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__xlr8?.app?.store.sync.get().phase === 'live');
+        await page.waitForFunction(() => (window as unknown as { __selfbound?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__selfbound?.app?.store.sync.get().phase === 'live');
         for (const kind of ['search', 'command'] as const) {
           // Peek state on: it used to push the palette half off screen.
           await page.evaluate((k) => {
-            const app = (window as unknown as { __xlr8: { app: { palette: { open(kind: string): void }; detail: { peekOpen: { get(): boolean }; togglePeek(): void } } } }).__xlr8.app;
+            const app = (window as unknown as { __selfbound: { app: { palette: { open(kind: string): void }; detail: { peekOpen: { get(): boolean }; togglePeek(): void } } } }).__selfbound.app;
             if (!app.detail.peekOpen.get()) app.detail.togglePeek();
             app.palette.open(k);
           }, kind);

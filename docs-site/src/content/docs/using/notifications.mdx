@@ -1,30 +1,30 @@
 ---
 title: Notifications and the app
-description: Install XLR8 as an app, turn on push notifications per device, choose which events notify you, and how updates arrive.
+description: Install Selfbound as an app, turn on push notifications per device, choose which events notify you, and how updates arrive.
 sidebar:
   order: 7
 ---
 import { Steps } from '@astrojs/starlight/components';
 import Planned from '../../../components/Planned.astro';
 
-XLR8 runs in the browser and can also be installed as an app on your phone or computer. Installed or
+Selfbound runs in the browser and can also be installed as an app on your phone or computer. Installed or
 not, it can send push notifications when an agent files an issue, a pull request is merged, or
-something is due, even while XLR8 is closed. All settings for this live under **Settings →
+something is due, even while Selfbound is closed. All settings for this live under **Settings →
 Notifications**.
 
-## Installing XLR8 as an app
+## Installing Selfbound as an app
 
-XLR8 is an installable web app. Installing it gives it its own window and an icon on your home screen or
-in your app launcher; it is the same XLR8 with the same data.
+Selfbound is an installable web app. Installing it gives it its own window and an icon on your home screen or
+in your app launcher; it is the same Selfbound with the same data.
 
 - **Android, Chrome**: open the ⋮ menu and choose **Install app**. Settings → Notifications shows this
-  hint on Android while XLR8 runs in a browser tab rather than as the installed app.
+  hint on Android while Selfbound runs in a browser tab rather than as the installed app.
 - **Desktop, Chrome or Edge**: use the install icon in the address bar or the install entry in the
   browser menu.
 - **iPhone and iPad, Safari**: use **Share → Add to Home Screen**.
 
-The installed app offers two shortcuts on its icon, **Inbox** and **New issue**. On Android, once XLR8 is
-installed through Chrome, it also appears in the share menu of other apps: sharing a link or text to XLR8 creates an issue in the inbox
+The installed app offers two shortcuts on its icon, **Inbox** and **New issue**. On Android, once Selfbound is
+installed through Chrome, it also appears in the share menu of other apps: sharing a link or text to Selfbound creates an issue in the inbox
 right away, with an **Undo** button in case you shared the wrong thing.
 
 ## Turning on push notifications
@@ -45,8 +45,8 @@ registered devices, when each was last notified, and failed attempts. **Remove**
 
 If the switch is disabled, the line below it tells you why:
 
-- "Only possible over https": open XLR8 through its https address.
-- "This browser cannot receive push notifications": try another browser. On iPhone and iPad, add XLR8 to
+- "Only possible over https": open Selfbound through its https address.
+- "This browser cannot receive push notifications": try another browser. On iPhone and iPad, add Selfbound to
   the home screen first; Safari currently allows web push only for web apps on the home screen.
 - "Blocked in the browser": you declined the permission earlier. Allow notifications for the site in
   the browser's site settings (on Android, in the app settings).
@@ -73,24 +73,24 @@ summary.
 
 - **Morning notifications** (due issues, sprint ending) arrive at 08:00, German time (Europe/Berlin), at
   most once a day each.
-- **Bundling**: XLR8 waits about ten seconds before sending, so several issues from one agent run arrive
+- **Bundling**: Selfbound waits about ten seconds before sending, so several issues from one agent run arrive
   as one notification ("3 new issues") instead of a flood.
-- **No buzzing while you work**: if XLR8 is open, visible and in use on any of your devices (input within
+- **No buzzing while you work**: if Selfbound is open, visible and in use on any of your devices (input within
   the last three minutes), nothing goes to your phone. The notification appears inside the app instead,
   with a sound (if sounds are on) and an **Open** button. If no open window shows it within 45 seconds,
   for example because you just closed it, the push goes out after all.
 - **Tidy notification shade**: tapping a notification opens what it is about: the issue, the inbox for
   several new issues from an agent, the Active list sorted by due date for a summary of several due
   issues, or the sprint for Sprint ending.
-  Notifications of issues you have already read are cleared from a device the next time XLR8 is open
+  Notifications of issues you have already read are cleared from a device the next time Selfbound is open
   there.
 
 ## Updates
 
-XLR8 picks up new versions on its own. When you come back to the app and the last check was more than ten
+Selfbound picks up new versions on its own. When you come back to the app and the last check was more than ten
 minutes ago, it asks the server for the current version. If a new one is out and nothing unsaved is open,
 it reloads right away. If you are in the middle of typing or have the create dialog open, it shows **New
-version of XLR8** with a **Reload** button instead, so you can finish first.
+version of Selfbound** with a **Reload** button instead, so you can finish first.
 
 ## For self-hosters
 
@@ -107,7 +107,7 @@ environment; the private key never appears in your terminal. For production it t
 services require from `appUrl` in your instance settings; pass `--subject https://…` or `--subject mailto:…` to
 use another. You do not need to back it up: if it gets
 lost, run the script again with `--force`, and every device subscribes again the next time it opens
-XLR8. For the deployment's other settings, see [Convex setup](/start/self-hosting/convex/).
+Selfbound. For the deployment's other settings, see [Convex setup](/start/self-hosting/convex/).
 
 Notification texts are English unless the deployment sets `XLR8_LOCALE=de` (see
 [Language](/using/language/#on-the-server)).

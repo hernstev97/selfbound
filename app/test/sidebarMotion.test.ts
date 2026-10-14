@@ -1,6 +1,6 @@
 // On a team switch the sidebar follows one frame after the content on the right; everything else applies at once.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Slice, type SidebarState, type SidebarTeam } from '@xlr8/core';
+import { Slice, type SidebarState, type SidebarTeam } from '@selfbound/core';
 import { deferredSidebar } from '../src/lib/sidebarMotion.ts';
 
 const team = (key: string) => ({ id: key, key }) as unknown as SidebarTeam;

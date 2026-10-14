@@ -1,10 +1,10 @@
 <script lang="ts">
   // Earlier revisions of a knowledge page: list (newest first, 20 more per load), preview of a
   // revision and "Restore" (writes it as the new state, reversible).
-  import { api } from '@xlr8/backend/api';
-  import { intlLocale, t } from '@xlr8/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import { intlLocale, t } from '@selfbound/core/i18n';
   import type { FunctionReturnType } from 'convex/server';
-  import { actorName, fullDate, relativeTime } from '@xlr8/core';
+  import { actorName, fullDate, relativeTime } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import Markdown from '../../components/Markdown.svelte';
   import { untrack } from 'svelte';

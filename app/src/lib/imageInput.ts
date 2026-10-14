@@ -3,7 +3,7 @@
 // are in upload.ts, loaded with the first image (not in the start bundle).
 // A field is the editor (editor/RichEditor.svelte) or, while it loads or as a fallback, a textarea
 // (`textareaField`).
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 import type { Attachment } from 'svelte/attachments';
 import { app } from '../app-instance.ts';
 

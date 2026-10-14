@@ -1,11 +1,11 @@
 ---
 title: Glossary
-description: Short definitions of the terms XLR8 uses in the app and in these docs.
+description: Short definitions of the terms Selfbound uses in the app and in these docs.
 sidebar:
   order: 3
 ---
 
-The words XLR8 uses, in alphabetical order. Each entry links to the page that explains more.
+The words Selfbound uses, in alphabetical order. Each entry links to the page that explains more.
 
 ## Agent
 
@@ -17,7 +17,7 @@ The searchable list of every action, opened with Ctrl K (⌘ K on a Mac). Type a
 
 ## Connector
 
-A chat app, claude.ai or ChatGPT, connected to XLR8 by signing in rather than with an API key. You start the connection under **Settings → Agents → Connect connector** and approve it on the XLR8 consent page. A connector counts as an [agent](#agent).
+A chat app, claude.ai or ChatGPT, connected to Selfbound by signing in rather than with an API key. You start the connection under **Settings → Agents → Connect connector** and approve it on the Selfbound consent page. A connector counts as an [agent](#agent).
 
 ## Dormant team
 
@@ -29,11 +29,11 @@ The short, readable ID of an issue: the [team key](#team-key), a hyphen and a nu
 
 ## Inbox
 
-The place where issues created by [agents](#agent) wait for you, and issues shared to XLR8 from other apps on your phone. An entry stays until you remove it; removing it takes it out of the inbox but leaves the issue unchanged. Entries you have opened count as read.
+The place where issues created by [agents](#agent) wait for you, and issues shared to Selfbound from other apps on your phone. An entry stays until you remove it; removing it takes it out of the inbox but leaves the issue unchanged. Entries you have opened count as read.
 
 ## Instance
 
-One installation of XLR8: its own Convex backend, its own Clerk sign-in and its own web address. Every instance belongs to exactly one [owner](#owner). See [Self-hosting](/start/self-hosting/).
+One installation of Selfbound: its own Convex backend, its own Clerk sign-in and its own web address. Every instance belongs to exactly one [owner](#owner). See [Self-hosting](/start/self-hosting/).
 
 ## Knowledge page
 
@@ -45,7 +45,7 @@ A set of related labels, such as "Type" with Bug and Feature. A group can be sin
 
 ## MCP
 
-The Model Context Protocol, an open standard that lets AI tools call functions in other programs. XLR8's backend offers an MCP endpoint with tools such as `search_issues`, `create_issues` and `set_status`. [Agents](#agent) use it to work with your issues.
+The Model Context Protocol, an open standard that lets AI tools call functions in other programs. Selfbound's backend offers an MCP endpoint with tools such as `search_issues`, `create_issues` and `set_status`. [Agents](#agent) use it to work with your issues.
 
 ## Owner
 
@@ -61,7 +61,7 @@ A larger piece of work that groups issues, such as a release or a feature. Every
 
 ## Sprint
 
-A fixed stretch of time with a set of issues you plan to finish. XLR8 runs one sprint at a time, and it spans all teams: you plan it, start it, and complete it, deciding what happens with unfinished issues.
+A fixed stretch of time with a set of issues you plan to finish. Selfbound runs one sprint at a time, and it spans all teams: you plan it, start it, and complete it, deciding what happens with unfinished issues.
 
 ## Team key
 

@@ -1,8 +1,8 @@
 <script lang="ts">
   // Projects per team (every project belongs to exactly one team and shows its logo).
-  import { ICON, type TeamId } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import { PROJECT_STATE_LABEL, type ProjectState } from '@xlr8/core/app/admin';
+  import { ICON, type TeamId } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import { PROJECT_STATE_LABEL, type ProjectState } from '@selfbound/core/app/admin';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import TeamLogo from '../../components/TeamLogo.svelte';

@@ -128,7 +128,7 @@ describe('OAuth on', () => {
       authorization_servers: [SITE],
       bearer_methods_supported: ['header'],
       scopes_supported: ['xlr8'],
-      resource_name: 'XLR8',
+      resource_name: 'Selfbound',
     });
     expect(await (await t.fetch('/.well-known/oauth-protected-resource')).json()).toEqual(prm);
     const as = (await (await t.fetch('/.well-known/oauth-authorization-server')).json()) as Json;

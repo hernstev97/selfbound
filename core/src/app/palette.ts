@@ -18,14 +18,14 @@ import {
 } from '../format.ts';
 import { intlLocale, msg, t, tc, tn } from '../i18n.ts';
 import { ICON, PRIORITY_ICON, statusIcon } from '../icons.ts';
-import { STATE_TYPE_LABEL } from '@xlr8/backend/shared/workflow';
+import { STATE_TYPE_LABEL } from '@selfbound/backend/shared/workflow';
 import { stateGroupKey, statusFilterValue, workflowsOf, type StateGroup } from '../workflow.ts';
 import { formatShortcut } from '../keyboard.ts';
 import { hasLoss, moveLines, movePlan } from '../move.ts';
 import { Slice } from '../observable.ts';
 import { IssueSearch, looksLikeIdentifier, scoreText } from '../search.ts';
 import type { Issue, IssueId, IssuePatch, MenuItem, PaletteKind, PaletteState, Priority, StateId, Status } from '../types.ts';
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { ACTIONS, SECTION_LABEL, actionById, type Action } from './actions.ts';
 import type { App } from './index.ts';
 

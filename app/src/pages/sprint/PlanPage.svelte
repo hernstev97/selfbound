@@ -4,10 +4,10 @@
   // with its point total against the capacity, goal and date range on top. Both columns are normal
   // lists (app.main / app.side): J/K, X, S, P, Space, Enter work as everywhere, → plans in,
   // ← sends back, Tab switches the column, Alt ↑/↓ and dragging reorder.
-  import { ICON, PRIORITY_ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import { PRIORITY_BUDGET } from '@xlr8/backend/constants';
-  import { points } from '@xlr8/core/sprintlogic';
+  import { ICON, PRIORITY_ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import { PRIORITY_BUDGET } from '@selfbound/backend/constants';
+  import { points } from '@selfbound/core/sprintlogic';
   import { pages } from '../../lib/pages.ts';
   import Lazy from '../../components/Lazy.svelte';
   import { app } from '../../app-instance.ts';

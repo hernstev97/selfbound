@@ -76,7 +76,7 @@ export async function startTempBackend({ port, env = {}, log = () => {} }) {
   const url = `http://127.0.0.1:${port}`;
   const siteUrl = `http://127.0.0.1:${port + 1}`;
   if (await reachable(`${url}/version`)) throw new Error(`Port ${port} is in use; the test needs a fresh backend.`);
-  const dir = mkdtempSync(join(tmpdir(), 'xlr8-test-backend-'));
+  const dir = mkdtempSync(join(tmpdir(), 'selfbound-test-backend-'));
   cpSync(join(root, 'backend', 'convex'), join(dir, 'convex'), { recursive: true });
   cpSync(join(root, 'backend', 'package.json'), join(dir, 'package.json'));
   symlinkSync(join(root, 'backend', 'node_modules'), join(dir, 'node_modules'), 'dir');

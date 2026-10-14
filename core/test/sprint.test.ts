@@ -207,7 +207,7 @@ describe('settings', () => {
     expect(siteUrl('http://127.0.0.1:13500')).toBe('http://127.0.0.1:13501');
     expect(siteUrl('https://happy-otter-123.convex.cloud')).toBe('https://happy-otter-123.convex.site');
     expect(siteUrl('http://127.0.0.1:13500', 'https://x.example/')).toBe('https://x.example');
-    expect(mcpCommand('http://127.0.0.1:13501', 'xlr8_abc')).toBe('claude mcp add --transport http xlr8 http://127.0.0.1:13501/mcp --header "Authorization: Bearer xlr8_abc"');
+    expect(mcpCommand('http://127.0.0.1:13501', 'xlr8_abc')).toBe('claude mcp add --transport http selfbound http://127.0.0.1:13501/mcp --header "Authorization: Bearer xlr8_abc"');
   });
   test('logo precheck in the browser', () => {
     expect(precheckLogo({ name: 'a.svg', type: 'image/svg+xml', size: 100 })).toBeNull();

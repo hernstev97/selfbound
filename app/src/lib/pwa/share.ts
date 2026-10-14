@@ -1,12 +1,12 @@
-// Share to XLR8 (Web Share Target): Android sends text and links to /share?title=…&text=…&url=….
+// Share to Selfbound (Web Share Target): Android sends text and links to /share?title=…&text=…&url=….
 // main.ts keeps the values before startup, changes the URL to /inbox and loads this module.
 // They become an issue in the inbox (triage) right away, with a toast and "Undo".
-import { api } from '@xlr8/backend/api';
-import type { Id } from '@xlr8/backend/dataModel';
-import { LIMITS } from '@xlr8/backend/constants';
-import type { App } from '@xlr8/core';
-import { errorMessage } from '@xlr8/core/app/toasts';
-import { t } from '@xlr8/core/i18n';
+import { api } from '@selfbound/backend/api';
+import type { Id } from '@selfbound/backend/dataModel';
+import { LIMITS } from '@selfbound/backend/constants';
+import type { App } from '@selfbound/core';
+import { errorMessage } from '@selfbound/core/app/toasts';
+import { t } from '@selfbound/core/i18n';
 
 export interface Shared {
   title: string;

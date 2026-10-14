@@ -54,7 +54,7 @@ test('Create an agent key (shown once, with a command) and revoke it', async ({ 
   await expect(dialog).toBeVisible();
   const key = (await page.getByTestId('agent-key').textContent())!;
   expect(key).toMatch(/^xlr8_/);
-  await expect(page.getByTestId('agent-command')).toHaveText(`claude mcp add --transport http xlr8 http://127.0.0.1:${BACKEND_PORT + 1}/mcp --header "Authorization: Bearer ${key}"`);
+  await expect(page.getByTestId('agent-command')).toHaveText(`claude mcp add --transport http selfbound http://127.0.0.1:${BACKEND_PORT + 1}/mcp --header "Authorization: Bearer ${key}"`);
 
   const call = () =>
     fetch(`http://127.0.0.1:${BACKEND_PORT + 1}/mcp`, {

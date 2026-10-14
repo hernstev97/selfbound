@@ -3,8 +3,8 @@
   // right. /team/KEY/wiki and /wiki/<id> show the same page.
   import '../../styles/detail.css';
   import '../../styles/wiki.css';
-  import { ICON } from '@xlr8/core';
-  import { intlLocale, t, tn } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { intlLocale, t, tn } from '@selfbound/core/i18n';
   import { tick } from 'svelte';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';

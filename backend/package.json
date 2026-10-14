@@ -1,5 +1,5 @@
 {
-  "name": "@xlr8/backend",
+  "name": "@selfbound/backend",
   "private": true,
   "type": "module",
   "exports": {

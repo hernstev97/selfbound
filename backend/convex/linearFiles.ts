@@ -14,7 +14,7 @@ import { writeArticleBody } from './ops/wiki';
 import { identifierOf, LIMITS } from './shared/constants';
 import { linearUploadPaths, replaceLinearUploads } from './shared/linearFiles';
 
-// Copy files from Linear into XLR8 storage. Driven by the tool
+// Copy files from Linear into Selfbound storage. Driven by the tool
 // `node tooling/linear-import/index.ts files …` (docs/architecture/import.md, section "Files").
 //
 // 1. `scan`: page through texts looking for references to uploads.linear.app (read-only).

@@ -5,7 +5,7 @@ import { t, tc } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import { VIEWS } from '../views.ts';
 import type { IssueId, IssuePatch, NewIssue, Priority, StateId, Status } from '../types.ts';
-import { defaultState, statusOfState } from '@xlr8/backend/shared/workflow';
+import { defaultState, statusOfState } from '@selfbound/backend/shared/workflow';
 import { workflowsOf } from '../workflow.ts';
 import type { App } from './index.ts';
 

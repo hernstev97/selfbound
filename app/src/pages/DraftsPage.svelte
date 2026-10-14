@@ -1,7 +1,7 @@
 <script lang="ts">
   // Drafts: saved ones (Esc with content) and the open draft.
-  import { ICON, relativeTime, type Draft } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { ICON, relativeTime, type Draft } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

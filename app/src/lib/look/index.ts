@@ -2,11 +2,11 @@
 // (appearance.ts, applies on all devices) and as finished CSS in localStorage ("xlr8:look"). The
 // inline script in index.html applies that CSS before the first paint, so nothing flashes at
 // startup. This module loads idle after startup (main.ts) and then syncs with the server.
-import type { App } from '@xlr8/core';
-import { t } from '@xlr8/core/i18n';
-import { api } from '@xlr8/backend/api';
-import type { Id } from '@xlr8/backend/dataModel';
-import { Slice } from '@xlr8/core';
+import type { App } from '@selfbound/core';
+import { t } from '@selfbound/core/i18n';
+import { api } from '@selfbound/backend/api';
+import type { Id } from '@selfbound/backend/dataModel';
+import { Slice } from '@selfbound/core';
 import { builtin, loadBuiltin } from './builtin.ts';
 import { fontCss } from './fonts.ts';
 import { mapTheme, themeCss, type ContrastFix, type MappedTheme } from './map.ts';
@@ -56,7 +56,7 @@ export interface LookCache {
 }
 
 export const LOOK_KEY = 'xlr8:look';
-const BUILD = typeof __XLR8_BUILD__ === 'string' ? __XLR8_BUILD__ : 'dev';
+const BUILD = typeof __SELFBOUND_BUILD__ === 'string' ? __SELFBOUND_BUILD__ : 'dev';
 
 function readCache(): LookCache | null {
   try {
@@ -233,7 +233,7 @@ export class Look {
     write({ ...cache, settings: this.settings.get(), at: this.#at, dirty: this.#dirty || undefined });
   }
 
-  /** Load the theme for an id (null = XLR8 colors, or unknown/deleted). */
+  /** Load the theme for an id (null = Selfbound colors, or unknown/deleted). */
   async theme(ref: string): Promise<VsTheme | null> {
     if (ref === 'xlr8') return null;
     if (!ref.startsWith('custom:')) return builtin(ref) ? await loadBuiltin(ref) : null;
@@ -295,12 +295,12 @@ export class Look {
   }
 }
 
-/** Write the CSS into the style element from index.html (id "xlr8-look"). */
+/** Write the CSS into the style element from index.html (id "selfbound-look"). */
 function apply(css: string) {
-  let el = document.getElementById('xlr8-look') as HTMLStyleElement | null;
+  let el = document.getElementById('selfbound-look') as HTMLStyleElement | null;
   if (!el) {
     el = document.createElement('style');
-    el.id = 'xlr8-look';
+    el.id = 'selfbound-look';
     document.head.append(el);
   }
   if (el.textContent !== css) el.textContent = css;

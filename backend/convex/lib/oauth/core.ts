@@ -14,7 +14,7 @@ export const REFRESH_TTL_MS = 30 * 24 * 60 * 60_000;
 export const REFRESH_GRACE_MS = 60_000;
 export const CODE_TTL_MS = 5 * 60_000;
 export const REQUEST_TTL_MS = 15 * 60_000;
-/** How long XLR8 accepts new connectors after "Connect connector". */
+/** How long Selfbound accepts new connectors after "Connect connector". */
 export const ARM_TTL_MS = 15 * 60_000;
 
 // Secret prefixes. Agent keys are "xlr8_" + 43 characters (48 in total), these are
@@ -99,7 +99,7 @@ function oauthBase(env: Record<string, string | undefined>): string | null {
 
 /**
  * OAuth is on as soon as XLR8_APP_URL is set. The base is XLR8_PUBLIC_SITE_URL (a custom
- * address, e.g. https://mcp.xlr8.example.com rewriting to Convex), else CONVEX_SITE_URL. The
+ * address, e.g. https://mcp.selfbound.example.com rewriting to Convex), else CONVEX_SITE_URL. The
  * issuer must be fixed: it never comes from the request.
  */
 export function oauthConfig(env: Record<string, string | undefined> = process.env): OAuthConfig | null {
@@ -123,7 +123,7 @@ export function protectedResourceMetadata(cfg: OAuthConfig) {
     authorization_servers: [cfg.issuer],
     bearer_methods_supported: ['header'],
     scopes_supported: [SCOPE],
-    resource_name: 'XLR8',
+    resource_name: 'Selfbound',
   };
 }
 

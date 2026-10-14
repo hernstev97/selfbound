@@ -6,7 +6,7 @@ import { REPO_ROOT, runFetch, runId } from '../../../../tooling/linear-import/in
 import { CONFIRM_WORD, runPush, stageBatches } from '../../../../tooling/linear-import/push.ts';
 import { fakeLinear, SECRET_TEXT } from './fixtures';
 
-const base = mkdtempSync(join(tmpdir(), 'xlr8-import-'));
+const base = mkdtempSync(join(tmpdir(), 'selfbound-import-'));
 afterAll(() => rmSync(base, { recursive: true, force: true }));
 const keyFile = join(base, 'linear-api-key');
 writeFileSync(keyFile, 'lin_api_synthetic_0000\n', { mode: 0o600 });
@@ -68,7 +68,7 @@ describe('CLI fetch', () => {
 
 describe('CLI push --prod', () => {
   const dir = join(base, 'push-prod');
-  const instance = { convexDeployment: 'happy-otter-123', appUrl: 'https://xlr8.example.com' };
+  const instance = { convexDeployment: 'happy-otter-123', appUrl: 'https://selfbound.example.com' };
   const staging = () => {
     rmSync(dir, { recursive: true, force: true });
     mkdirSync(dir, { recursive: true });
@@ -92,7 +92,7 @@ describe('CLI push --prod', () => {
         },
       }),
     ).rejects.toThrow(/nothing uploaded/);
-    expect(lines[0]).toBe('Target: PRODUCTION happy-otter-123 (https://happy-otter-123.convex.cloud, app https://xlr8.example.com)');
+    expect(lines[0]).toBe('Target: PRODUCTION happy-otter-123 (https://happy-otter-123.convex.cloud, app https://selfbound.example.com)');
     expect(lines.join('\n')).toContain('Run:    r1, 3 rows: team 1, issue 2');
     expect(questions).toEqual([`Type "${CONFIRM_WORD}" to start in PRODUCTION: `]);
     expect(lines.some((l) => l.startsWith('Uploading'))).toBe(false);

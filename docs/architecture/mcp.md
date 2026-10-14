@@ -2,13 +2,13 @@
 
 Code: `backend/convex/http.ts`, `backend/convex/mcp.ts`, `backend/convex/ops/mcp.ts`, `backend/convex/ops/move.ts`, `backend/convex/lib/mcp/*`; OAuth: `backend/convex/lib/oauth/*`, `backend/convex/ops/oauth.ts`, `backend/convex/oauth.ts`
 
-Agents (such as Claude Code or Codex) read and change issues over MCP. They use the same operations as the UI (`ops/*.ts`); only the authentication in front is different. Claude (claude.ai, desktop, mobile) and ChatGPT connect as a **connector** via OAuth (see [OAuth for connectors](#oauth-for-connectors)); to XLR8, every connector is just another agent.
+Agents (such as Claude Code or Codex) read and change issues over MCP. They use the same operations as the UI (`ops/*.ts`); only the authentication in front is different. Claude (claude.ai, desktop, mobile) and ChatGPT connect as a **connector** via OAuth (see [OAuth for connectors](#oauth-for-connectors)); to Selfbound, every connector is just another agent.
 
 ## Endpoint
 
 | What | Value |
 |---|---|
-| URL | `<site>/mcp`. Locally `http://127.0.0.1:<port+1>/mcp` (with `--port 13480` that is `13481`). In production, either a custom domain such as `https://mcp.xlr8.example.com/mcp` (for connectors, see [Custom MCP domain](#custom-mcp-domain)) or the Convex site URL `https://happy-otter-123.convex.site/mcp` (fine for key-based agents) |
+| URL | `<site>/mcp`. Locally `http://127.0.0.1:<port+1>/mcp` (with `--port 13480` that is `13481`). In production, either a custom domain such as `https://mcp.selfbound.example.com/mcp` (for connectors, see [Custom MCP domain](#custom-mcp-domain)) or the Convex site URL `https://happy-otter-123.convex.site/mcp` (fine for key-based agents) |
 | Transport | Streamable HTTP, JSON responses only (no SSE), stateless (no session ID) |
 | Protocol | 2024-11-05 through 2025-11-25 with `initialize`, plus 2026-07-28 without handshake (`server/discover`) |
 | Required fields in 2026-07-28 | Every result carries `resultType: "complete"`. `server/discover` and `tools/list` are "cacheable" and also need `ttlMs` (integer ≥ 0) and `cacheScope` (`public`/`private`); if they are missing, Claude Code rejects the whole response. We send `ttlMs: 60000`, `cacheScope: "public"` (`CACHE_HINTS` in `protocol.ts`; the tool list is the same for every agent). `tools/call` and `ping` don't need them. Contract test: `test/lib/mcp/protocol.test.ts`, "contract: required fields per method". |
@@ -199,16 +199,16 @@ If the owner has changed the status in the meantime:
 
 ## OAuth for connectors
 
-claude.ai and ChatGPT only accept custom connectors with OAuth 2.1. XLR8 acts as its own authorization server, small and without a library. Sign-in goes through the web app's existing Clerk login.
+claude.ai and ChatGPT only accept custom connectors with OAuth 2.1. Selfbound acts as its own authorization server, small and without a library. Sign-in goes through the web app's existing Clerk login.
 
-**Why not Clerk as the authorization server?** Clerk can do it (DCR, CIMD, PKCE) but doesn't fit the requirements. Its access tokens are fixed at 1 day, refresh tokens never expire, and whether they rotate is not documented. Redirect URIs of clients registered via DCR can't be restricted to known hosts. Whether Clerk supports `resource` (RFC 8707) and `iss` (RFC 9207) is not documented, and ChatGPT needs `iss`. XLR8 would still have had to build revocation and listing per connector itself.
+**Why not Clerk as the authorization server?** Clerk can do it (DCR, CIMD, PKCE) but doesn't fit the requirements. Its access tokens are fixed at 1 day, refresh tokens never expire, and whether they rotate is not documented. Redirect URIs of clients registered via DCR can't be restricted to known hosts. Whether Clerk supports `resource` (RFC 8707) and `iss` (RFC 9207) is not documented, and ChatGPT needs `iss`. Selfbound would still have had to build revocation and listing per connector itself.
 
 ### Flow
 
-1. The owner clicks "Connect connector" in **Settings → Agents**. XLR8 then accepts new connectors for 15 minutes ("armed", `opsStatus.oauthArmed`).
+1. The owner clicks "Connect connector" in **Settings → Agents**. Selfbound then accepts new connectors for 15 minutes ("armed", `opsStatus.oauthArmed`).
 2. The owner enters the MCP URL in claude.ai or ChatGPT. The client calls `/mcp` without a token and gets `401` with `WWW-Authenticate`. It then loads the metadata and registers (`POST /oauth/register`, only while armed). Then it opens `GET /oauth/authorize` in the browser (PKCE S256, `resource`).
 3. `/oauth/authorize` checks client, redirect URI, PKCE and `resource`. The endpoint then stores the request (`oauthRequests`) and redirects to `<XLR8_APP_URL>/oauth/consent?request=<id>`, the web app's consent page (via the Clerk login first if needed). The old path `/oauth/freigabe?anfrage=<id>` still works.
-4. The consent page (`app/src/pages/OAuthConsent.svelte`, a separate lazily loaded chunk without the app shell) shows the app, the redirect host, the request's age and an editable name. The owner chooses Allow or Deny. The owner action `oauth.decide` creates the code and builds the redirect URL **on the server** from the stored redirect URI (`code` or `error`, `state`, `iss`). The page navigates there. The first approval disarms XLR8 again.
+4. The consent page (`app/src/pages/OAuthConsent.svelte`, a separate lazily loaded chunk without the app shell) shows the app, the redirect host, the request's age and an editable name. The owner chooses Allow or Deny. The owner action `oauth.decide` creates the code and builds the redirect URL **on the server** from the stored redirect URI (`code` or `error`, `state`, `iss`). The page navigates there. The first approval disarms Selfbound again.
 5. The client exchanges the code at `POST /oauth/token` (PKCE verifier, redirect URI, client). Only now is the connector created as a row in `agents` (`connector: { app, clientId }`, no key), together with an access token (1 hour) and a refresh token (30 days).
 6. Tool calls work as with keys: rate limit per agent, actor `{kind: 'agent', agentId}`, the history shows the connector name.
 
@@ -251,8 +251,8 @@ Hourly cleanup (`crons.ts`, `oauth.cleanup`): expired tokens, requests one day a
 
 | | claude.ai (also desktop, mobile) | ChatGPT |
 |---|---|---|
-| Redirect | `https://claude.ai/api/mcp/auth_callback` (possibly `claude.com` in the future) | `https://chatgpt.com/connector_platform_oauth_redirect`, because XLR8 returns `iss` and `issuer` exactly matches the entry in `authorization_servers`; otherwise `…/connector/oauth/<id>` |
-| Registration | DCR, creates a new client for every new connection. CIMD only if the server offers it (XLR8 doesn't) | DCR, once per connection |
+| Redirect | `https://claude.ai/api/mcp/auth_callback` (possibly `claude.com` in the future) | `https://chatgpt.com/connector_platform_oauth_redirect`, because Selfbound returns `iss` and `issuer` exactly matches the entry in `authorization_servers`; otherwise `…/connector/oauth/<id>` |
+| Registration | DCR, creates a new client for every new connection. CIMD only if the server offers it (Selfbound doesn't) | DCR, once per connection |
 | Starting sign-in | only HTTP `401` with `WWW-Authenticate` | same (whole server protected) |
 | Scopes | from the 401 response (`xlr8`), plus `offline_access` | `xlr8` |
 | Refresh | on 401 and up to 5 minutes before expiry; the token is shared between devices (hence the 60 s grace period) | not documented in detail |
@@ -263,7 +263,7 @@ Sources: MCP specification 2026-07-28 (Authorization), https://claude.com/docs/c
 
 ### Custom MCP domain
 
-The Convex site URL works as is, but a custom domain gives connectors a stable, readable address. The static host can forward all requests for a host (`mcpHosts` in the instance settings; `tooling/deploy-web.mjs` writes the rewrite into `deploy/web/vercel.json`) such as `mcp.xlr8.example.com` to the deployment's Convex site URL (`https://happy-otter-123.convex.site`). Set `XLR8_PUBLIC_SITE_URL` to that address so the OAuth metadata names it; the connector URL is then `https://mcp.xlr8.example.com/mcp`. Key-based agents can keep using the Convex URL; all addresses reach the same backend. Setup: [operations.md](../operations.md#custom-mcp-address).
+The Convex site URL works as is, but a custom domain gives connectors a stable, readable address. The static host can forward all requests for a host (`mcpHosts` in the instance settings; `tooling/deploy-web.mjs` writes the rewrite into `deploy/web/vercel.json`) such as `mcp.selfbound.example.com` to the deployment's Convex site URL (`https://happy-otter-123.convex.site`). Set `XLR8_PUBLIC_SITE_URL` to that address so the OAuth metadata names it; the connector URL is then `https://mcp.selfbound.example.com/mcp`. Key-based agents can keep using the Convex URL; all addresses reach the same backend. Setup: [operations.md](../operations.md#custom-mcp-address).
 
 **One address.** `XLR8_PUBLIC_SITE_URL` names exactly one address; issuer, `resource` and the `resource_metadata` in the 401 challenge always come from it, whichever host a request arrived through. The address is a connector's identity: if you change it, existing connectors must reconnect, because `resource` and `issuer` change. Access tokens, refresh tokens and clients are not bound to an address, so key-based agents and tokens keep working on the Convex URL as well.
 
@@ -273,7 +273,7 @@ The Convex site URL works as is, but a custom domain gives connectors a stable, 
 - `backend/test/regressions.test.ts`: archived labels, read limits with 3100 completed issues, `read` as a query, retry with requestId after archiving or trashing, counting invalid calls.
 - `backend/test/lib/mcp/endpoint.test.ts`: key format, order of count/read, 401 on revocation between authentication and call, separation of keys (401 without challenge) and access tokens (401 with `WWW-Authenticate`).
 - `backend/test/lib/mcp/*`: protocol and argument validation without a database, plus the official MCP SDK client against a local test server.
-- `backend/test/integration/mcp.mjs` (`pnpm --filter @xlr8/backend test:integration`): SDK client and `scripts/mcp-smoke.ts` against the real local endpoint.
+- `backend/test/integration/mcp.mjs` (`pnpm --filter @selfbound/backend test:integration`): SDK client and `scripts/mcp-smoke.ts` against the real local endpoint.
 - OAuth: `backend/test/lib/oauth.test.ts` (metadata, redirect allowlist with attack cases, authorize checks, PKCE, client authentication), `backend/test/oauth.test.ts` (full flow via `t.fetch`, rotation and grace period, code reuse, expiry after one hour, revocation, denial, not armed, cleanup), `backend/test/integration/oauth.mjs` (official SDK client signs in like claude.ai: DCR, PKCE, `resource`, `iss`, refresh with `auth()`, revocation) and `e2e/tests/oauth.spec.ts` (consent page in the browser, redirect to claude.ai intercepted, revoking the connector in the settings).
 
 Setting up Claude Code and Codex, and connectors in claude.ai and ChatGPT: [operations.md](../operations.md).

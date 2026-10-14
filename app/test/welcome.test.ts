@@ -1,10 +1,10 @@
 // Start page and sign-in: the way back after sign-in and the "signed in" marker cookie.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SIGNED_IN_COOKIE as CORE_COOKIE, signInPath } from '@xlr8/core';
+import { SIGNED_IN_COOKIE as CORE_COOKIE, signInPath } from '@selfbound/core';
 import { safeRedirect, SIGNED_IN_COOKIE } from '../src/welcome/session.ts';
 
-const origin = 'https://xlr8.example.com';
+const origin = 'https://selfbound.example.com';
 
 describe('safeRedirect', () => {
   it('leads into the app without a target', () => {
@@ -14,7 +14,7 @@ describe('safeRedirect', () => {
   it('keeps path, query and hash of the same origin', () => {
     expect(safeRedirect('/issue/ACME-106', origin)).toBe('/issue/ACME-106');
     expect(safeRedirect('/oauth/consent?request=abc#x', origin)).toBe('/oauth/consent?request=abc#x');
-    expect(safeRedirect('https://xlr8.example.com/team/ACME/backlog', origin)).toBe('/team/ACME/backlog');
+    expect(safeRedirect('https://selfbound.example.com/team/ACME/backlog', origin)).toBe('/team/ACME/backlog');
   });
   it('allows no other origin', () => {
     expect(safeRedirect('https://evil.example/issue/1', origin)).toBe('/');

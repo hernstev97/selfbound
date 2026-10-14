@@ -5,7 +5,7 @@
 // Usage:  node docs-site/scripts/deploy.mjs           build + preview deploy (prints the preview URL)
 //         node docs-site/scripts/deploy.mjs --prod    build + production deploy
 //         node docs-site/scripts/deploy.mjs --build   build only (into docs-site/.deploy/)
-// Settings: XLR8_DOCS_VERCEL_PROJECT (default xlr8-docs), XLR8_DOCS_VERCEL_SCOPE (default: vercelScope
+// Settings: XLR8_DOCS_VERCEL_PROJECT (default selfbound-docs), XLR8_DOCS_VERCEL_SCOPE (default: vercelScope
 // from the instance settings, tooling/instance.mjs).
 //
 // vercel.json is generated so that `noindex` follows the single switch in launch.mjs.
@@ -18,7 +18,7 @@ import { INDEXABLE } from '../launch.mjs';
 
 const site = join(import.meta.dirname, '..');
 const out = join(site, '.deploy');
-const project = process.env.XLR8_DOCS_VERCEL_PROJECT || 'xlr8-docs';
+const project = process.env.XLR8_DOCS_VERCEL_PROJECT || 'selfbound-docs';
 const scope = process.env.XLR8_DOCS_VERCEL_SCOPE || loadInstance().vercelScope;
 
 function run(cmd, args, opts = {}) {
@@ -50,7 +50,7 @@ const config = {
 };
 
 function main() {
-  run('pnpm', ['--filter', '@xlr8/docs', 'build']);
+  run('pnpm', ['--filter', '@selfbound/docs', 'build']);
 
   mkdirSync(out, { recursive: true });
   for (const entry of readdirSync(out)) if (entry !== '.vercel') rmSync(join(out, entry), { recursive: true, force: true });

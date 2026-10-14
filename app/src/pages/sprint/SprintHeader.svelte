@@ -1,10 +1,10 @@
 <script lang="ts">
   // Sprint view header: inline goal, points done/total, issues, capacity, share added late, date
   // range. The core computes the numbers (app.sprints.active).
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
-  import { points } from '@xlr8/core/sprintlogic';
+  import { points } from '@selfbound/core/sprintlogic';
   import Goal from './Goal.svelte';
 
   const activeSlice = fromSlice(app.sprints.active);

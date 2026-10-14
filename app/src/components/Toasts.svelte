@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { flip } from 'svelte/animate';

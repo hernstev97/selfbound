@@ -79,7 +79,7 @@ jobs:
           cache: pnpm
 
       - name: Dependencies (backend only)
-        run: pnpm install --frozen-lockfile --filter @xlr8/backend
+        run: pnpm install --frozen-lockfile --filter @selfbound/backend
 
       - name: Install age
         run: sudo apt-get update -qq && sudo apt-get install -y -qq age && age --version

@@ -27,8 +27,8 @@ import os from 'node:os';
 import { join } from 'node:path';
 import { chromium, type Browser, type BrowserContext, type CDPSession, type Page } from '@playwright/test';
 import type { ConvexHttpClient } from 'convex/browser';
-import { api } from '@xlr8/backend/api';
-import type { Id } from '@xlr8/backend/dataModel';
+import { api } from '@selfbound/backend/api';
+import type { Id } from '@selfbound/backend/dataModel';
 import { startBundleBytes } from './bundle.ts';
 import { installProbe } from './probe.ts';
 import { buildReport } from './report.ts';
@@ -106,7 +106,7 @@ async function newPage(browser: Browser, profile: Profile, context?: BrowserCont
 }
 
 async function waitSynced(page: Page, timeout = 60_000) {
-  await page.waitForFunction(() => performance.getEntriesByName('xlr8-synced').length > 0, null, { timeout, polling: 50 });
+  await page.waitForFunction(() => performance.getEntriesByName('selfbound-synced').length > 0, null, { timeout, polling: 50 });
 }
 
 async function openList(page: Page, profile: Profile, path = LIST) {
@@ -139,7 +139,7 @@ async function waitGone(page: Page, testid: string) {
 }
 
 async function waitSaves(page: Page) {
-  await page.waitForFunction(() => ((window as any).__xlr8?.saves ?? []).every((s: any) => s.confirmed !== undefined || s.failed), null, { polling: 20, timeout: 20_000 });
+  await page.waitForFunction(() => ((window as any).__selfbound?.saves ?? []).every((s: any) => s.confirmed !== undefined || s.failed), null, { polling: 20, timeout: 20_000 });
 }
 
 // ---------- Measuring one interaction ----------
@@ -194,7 +194,7 @@ const focusChanged = (prev: string | null) => {
 };
 const viewCount = () => document.querySelector('[data-testid="view-count"]')?.textContent ?? '';
 const paletteMatches = (q: string) => {
-  const p = (window as any).__xlr8.app.palette.state.get();
+  const p = (window as any).__selfbound.app.palette.state.get();
   if (!p || p.query !== q) return false;
   return [...document.querySelectorAll('[data-testid="palette-item"]')].map((e) => (e as HTMLElement).dataset.id).join('|') === p.items.map((i: any) => i.id).join('|');
 };
@@ -306,7 +306,7 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
             main: (q) => {
               const input = document.querySelector('[data-testid="quick-search"]') as HTMLInputElement | null;
               if (!input || input.value !== q) return false;
-              const app = (window as any).__xlr8.app;
+              const app = (window as any).__selfbound.app;
               if (document.querySelector('[data-testid="view-count"]')?.textContent !== String(app.list.list.get().count)) return false;
               return [...document.querySelectorAll('[data-testid="issue-row"]')].every((r) => app.store.haystack((r as HTMLElement).dataset.id)?.includes(q));
             },
@@ -339,7 +339,7 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
     // Search for an identifier (/ "ORB-1897"): last key until the issue is on top
     for (const warm of reps()) {
       const target = await page.evaluate(() => {
-        const all = (window as any).__xlr8.app.store.all() as { _id: string; key: string; deletedAt?: number }[];
+        const all = (window as any).__selfbound.app.store.all() as { _id: string; key: string; deletedAt?: number }[];
         const live = all.filter((i) => !i.deletedAt);
         const hit = live[Math.floor(Math.random() * live.length)];
         return { id: hit._id, key: hit.key };
@@ -428,7 +428,7 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
         keep(warm, 'status.set (Enter)', res);
         await waitSaves(page);
         if (!warm && !res.timedOut) {
-          const save = await page.evaluate(() => (window as any).__xlr8.saves.at(-1));
+          const save = await page.evaluate(() => (window as any).__selfbound.saves.at(-1));
           record({ ...base, metric: 'save.confirmed (key → server confirmed)', value: save.confirmed - res.start });
           record({ ...base, metric: 'save.painted (key → confirmed visible)', value: (save.painted ?? save.confirmed) - res.start });
         }
@@ -546,7 +546,7 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
       // Knowledge: click a page in the tree (hovering preloads, as with the detail) until the page
       // title and text are there. Test pages in team ORB, created once per data set.
       await wikiPages();
-      await page.evaluate(() => (window as any).__xlr8.app.nav.go({ name: 'wiki', team: 'ORB' }));
+      await page.evaluate(() => (window as any).__selfbound.app.nav.go({ name: 'wiki', team: 'ORB' }));
       await page.locator('[data-testid="wiki-row"]').first().waitFor();
       // The first two visible rows (top level, collapsed).
       const wikiIds = await page.locator('[data-testid="wiki-row"]').evaluateAll((els) => els.slice(0, 2).map((e) => (e as HTMLElement).dataset.id!));
@@ -637,8 +637,8 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
         await press(page, 'j');
         await press(page, 'x');
         for (let i = 0; i < 49; i++) await press(page, 'Shift+ArrowDown');
-        const all = await page.evaluate(() => (window as any).__xlr8.app.targets() as string[]);
-        const statuses = await page.evaluate((ids) => ids.map((id: string) => (window as any).__xlr8.app.store.get(id)?.status), all);
+        const all = await page.evaluate(() => (window as any).__selfbound.app.targets() as string[]);
+        const statuses = await page.evaluate((ids) => ids.map((id: string) => (window as any).__selfbound.app.store.get(id)?.status), all);
         all.forEach((id: string, i: number) => toRestore.push({ id, status: statuses[i] }));
         const target = statuses.every((s: string) => s === 'canceled') ? 'todo' : 'canceled';
         await press(page, 'Control+k');
@@ -774,7 +774,7 @@ async function runInteractions(profile: Profile, ws: Dataset, round: number, sma
 // Diagnosis of a stalled cold start: which buckets are missing in the store, which errors the page
 // reported, whether the rest still arrives later, and what the backend log says.
 async function diagnoseStall(page: Page, pageErrors: string[]) {
-  const have = new Set<string>(await page.evaluate(() => [...((window as any).__xlr8.app.store.issues.keys() as Iterable<string>)]));
+  const have = new Set<string>(await page.evaluate(() => [...((window as any).__selfbound.app.store.issues.keys() as Iterable<string>)]));
   const missing: Record<number, string> = {};
   for (let bucket = 0; ; bucket++) {
     const docs = (await convex.query(api.issues.bucket, { bucket })) as { _id: string }[];
@@ -809,7 +809,7 @@ async function runStarts(profile: Profile, ws: Dataset, round: number, runs: num
         } catch {
           const state = await page
             .evaluate(() => {
-              const app = (window as any).__xlr8?.app;
+              const app = (window as any).__selfbound?.app;
               return { marks: (window as any).__bench?.state.marks, sync: app?.store.sync.get(), issues: app?.store.issues?.size, rows: document.querySelectorAll('[data-testid="issue-row"]').length };
             })
             .catch((e) => ({ error: String(e) }));
@@ -825,8 +825,8 @@ async function runStarts(profile: Profile, ws: Dataset, round: number, runs: num
             fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null,
             shell: marks.shell,
             list: marks.list,
-            synced: performance.getEntriesByName('xlr8-synced')[0]?.startTime ?? null,
-            cache: performance.getEntriesByName('xlr8-cache')[0]?.startTime ?? null,
+            synced: performance.getEntriesByName('selfbound-synced')[0]?.startTime ?? null,
+            cache: performance.getEntriesByName('selfbound-cache')[0]?.startTime ?? null,
             transfer: (performance.getEntriesByType('resource') as PerformanceResourceTiming[]).reduce((n, r) => n + r.transferSize, nav.transferSize),
           };
         });
@@ -961,7 +961,7 @@ function environment(browserVersion: string, pinned: boolean) {
     commit: sh('git rev-parse --short HEAD'),
     // `convex dev` rewrites backend/convex/_generated on start; that does not count as a change.
     dirty: sh("git status --porcelain -- app core backend ':!backend/convex/_generated'") !== '',
-    build: 'vite build with VITE_XLR8_TEST=1 (measurement hooks globalThis.__xlr8, otherwise like production), vite preview',
+    build: 'vite build with VITE_XLR8_TEST=1 (measurement hooks globalThis.__selfbound, otherwise like production), vite preview',
     viewport: VIEWPORT,
     ports: PORTS,
     profiles: {

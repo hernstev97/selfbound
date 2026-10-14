@@ -1,6 +1,6 @@
 {
   // Type check for the building-block tests and the MCP smoke script:
-  //   pnpm --filter @xlr8/backend exec tsc --noEmit -p test/lib
+  //   pnpm --filter @selfbound/backend exec tsc --noEmit -p test/lib
   "compilerOptions": {
     "target": "ESNext",
     "lib": ["ES2023", "DOM"],

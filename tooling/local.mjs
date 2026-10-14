@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Runs XLR8 entirely locally, without an account and without the cloud:
+// Runs Selfbound entirely locally, without an account and without the cloud:
 //   1. local Convex (anonymous) for backend/ on 127.0.0.1:<port> (default 13410, HTTP actions <port+1>)
 //   2. local test sign-in (tooling/dev-auth.mjs) and test switches
 //   3. optionally synthetic test data (--seed small|large)
@@ -200,12 +200,12 @@ async function main() {
   if (appMode === 'dev' || appMode === 'preview') {
     if (appMode === 'preview') {
       log('Building the app …');
-      const r = spawnSync('pnpm', ['--filter', '@xlr8/app', 'build'], { cwd: root, stdio: 'inherit' });
+      const r = spawnSync('pnpm', ['--filter', '@selfbound/app', 'build'], { cwd: root, stdio: 'inherit' });
       if (r.status !== 0) throw new Error('Build failed');
     }
     const appPort = appMode === 'dev' ? 5412 : 5402;
     if (!(await reachable(`http://127.0.0.1:${appPort}/`))) {
-      const child = spawn('pnpm', ['--filter', '@xlr8/app', appMode], { cwd: root, stdio: 'ignore', detached: true });
+      const child = spawn('pnpm', ['--filter', '@selfbound/app', appMode], { cwd: root, stdio: 'ignore', detached: true });
       child.unref();
       children.push(child);
       await waitFor(() => reachable(`http://127.0.0.1:${appPort}/`), 'App');

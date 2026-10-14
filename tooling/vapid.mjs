@@ -6,9 +6,9 @@
 // Usage:  node tooling/vapid.mjs                           production (via tooling/cloud.mjs)
 //         node tooling/vapid.mjs --local [--dir <folder>]   local backend (default: backend)
 //         … --subject <url>   https: or mailto: contact for push services (default: appUrl from
-//                             tooling/instance.mjs; with --local https://xlr8.example.com)
+//                             tooling/instance.mjs; with --local https://selfbound.example.com)
 //         … --force           replace existing keys. Every device re-subscribes the next time it
-//                             opens XLR8 (app/src/lib/pwa/push.ts, syncPush).
+//                             opens Selfbound (app/src/lib/pwa/push.ts, syncPush).
 //
 // No need to back the key up anywhere: if it is lost, generate a new one with --force.
 
@@ -29,7 +29,7 @@ if (local) {
 }
 const SUBJECT =
   (subjectIndex >= 0 ? argv[subjectIndex + 1] : undefined) ??
-  (local ? 'https://xlr8.example.com' : (await import('./instance.mjs')).requireInstance(['appUrl']).appUrl);
+  (local ? 'https://selfbound.example.com' : (await import('./instance.mjs')).requireInstance(['appUrl']).appUrl);
 
 /** Calls the Convex CLI; `input` goes via stdin, output is only collected (never shown). */
 function cli(args, input) {

@@ -1,9 +1,9 @@
 <script lang="ts">
   // Ops: a readable summary of ops.status and health.status. The traffic light is only a small
   // dot; the text carries the message.
-  import { ICON, fullDate, relativeTime } from '@xlr8/core';
-  import { intlLocale, t, tn } from '@xlr8/core/i18n';
-  import { api } from '@xlr8/backend/api';
+  import { ICON, fullDate, relativeTime } from '@selfbound/core';
+  import { intlLocale, t, tn } from '@selfbound/core/i18n';
+  import { api } from '@selfbound/backend/api';
   import { useQuery } from '../../lib/live.svelte.ts';
 
   const status = useQuery(api.ops.status, {});
@@ -40,7 +40,7 @@
     return {
       tone: (r.deviations > 0 || conflicts > 0 ? 'warn' : 'ok') as Tone,
       title: t('Last import finished'),
-      text: `${t('{time}: issues {parts}.', { time: relativeTime(when), parts: parts.join(', ') })} ${conflicts ? `${t('{count} identifiers collided (XLR8 issue renamed).', { count: conflicts })} ` : ''}${r.deviations ? t('{count} deviations noted.', { count: r.deviations }) : t('No deviations.')}`,
+      text: `${t('{time}: issues {parts}.', { time: relativeTime(when), parts: parts.join(', ') })} ${conflicts ? `${t('{count} identifiers collided (Selfbound issue renamed).', { count: conflicts })} ` : ''}${r.deviations ? t('{count} deviations noted.', { count: r.deviations }) : t('No deviations.')}`,
     };
   });
 

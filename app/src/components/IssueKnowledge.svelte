@@ -2,10 +2,10 @@
   // "Knowledge" section on an issue: pages the issue links to or that mention it.
   // Its own query, only while the detail is shown (not when preloading with J/K), and only
   // when a team has a knowledge area.
-  import { api } from '@xlr8/backend/api';
+  import { api } from '@selfbound/backend/api';
   import type { FunctionReturnType } from 'convex/server';
-  import { ICON, pagePath } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, pagePath } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

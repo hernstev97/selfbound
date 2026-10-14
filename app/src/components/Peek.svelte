@@ -1,7 +1,7 @@
 <script lang="ts">
   // Peek: floating card at the top right (space; ↑/↓ moves through the list with it).
-  import { ICON, PRIORITY_ICON, statusIcon } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
+  import { ICON, PRIORITY_ICON, statusIcon } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import Markdown from './Markdown.svelte';

@@ -11,7 +11,7 @@
 // with `data-part` (surface, logo, name, counts, corners at the panel) move individually inside the
 // card: the surface grows via `scale`, the logo scales, the text slides. What exists on only one
 // side (counts, corners) fades in, or fades out as a copy.
-import { Slice, type SidebarState } from '@xlr8/core';
+import { Slice, type SidebarState } from '@selfbound/core';
 import { DUR, EASE, STAGGER, reduced, stillCopy } from './motion.ts';
 
 interface Item {

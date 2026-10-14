@@ -124,7 +124,7 @@ export const CHECK_REFRESH_DELAY_MS = 20_000;
 const SLOW_EVENTS = new Set(['check_run', 'check_suite', 'workflow_run', 'status']);
 /** A webhook fetches unlinked PRs only if they were open in the UI within this window. */
 export const VIEWED_WINDOW_MS = 30 * 60_000;
-/** Merge through XLR8 before the "edited" delivery: a new `closes` link still closes for this long afterwards. */
+/** Merge through Selfbound before the "edited" delivery: a new `closes` link still closes for this long afterwards. */
 export const LATE_LINK_MS = 10 * 60_000;
 
 export const githubConfigured = () => !!process.env.GITHUB_TOKEN;
@@ -359,7 +359,7 @@ export async function applyGithubDelivery(
   // ---- Notifications; a merge closes issues with `closes`
   const prInfo = { ref: prRef, number: analysis.number, title: analysis.title };
   await notifyPullRequest(ctx, 'pr_linked', prInfo, linkedIssues, [], now);
-  // Rare case: merged through XLR8 (the fetch already set "merged"), and only then the delivery
+  // Rare case: merged through Selfbound (the fetch already set "merged"), and only then the delivery
   // with the closing identifier arrives. If the merge was recent, it still counts.
   const lateMerge = wasMerged && newClosing.length > 0 && pr.mergedAt !== undefined && now - pr.mergedAt < LATE_LINK_MS;
   const closed = newlyMerged

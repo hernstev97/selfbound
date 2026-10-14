@@ -1,7 +1,7 @@
 // Pure sprint calculations (no Convex, no DOM, testable). The priority budget lives in budget.ts
 // (part of the start bundle; sprints are loaded lazily).
 export { budgetCheck, budgetLabel, overBudget, priorityBudget, type BudgetHit, type TeamBudget } from './budget.ts';
-import { OPEN_STATUSES } from '@xlr8/backend/constants';
+import { OPEN_STATUSES } from '@selfbound/backend/constants';
 import { addDays, daysBetween, parseDay, shortDate, today } from './format.ts';
 import { locale, t, tn } from './i18n.ts';
 import type { Issue, IssueId, SprintDoc, SprintItemKind, Status } from './types.ts';

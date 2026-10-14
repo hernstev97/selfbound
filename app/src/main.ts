@@ -1,13 +1,13 @@
 import './styles/fonts.css';
 import './styles/app.css';
 import { mount } from 'svelte';
-import { isConsentPath, rowIconCss } from '@xlr8/core';
-import { loadFuzzy } from '@xlr8/core/search';
+import { isConsentPath, rowIconCss } from '@selfbound/core';
+import { loadFuzzy } from '@selfbound/core/search';
 import Root from './Root.svelte';
 import { app, auth, client, convexUrl } from './app-instance.ts';
 import { loadMarkdown, markdownReady, renderMarkdown, setLinkKeys } from './lib/markdown.ts';
 import { pages, preloadPages } from './lib/pages.ts';
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 
 // Mask icons of the list rows (status, priority …) from the same shapes as the SVG icons.
 const icons = document.createElement('style');
@@ -150,7 +150,7 @@ function boot() {
     // Sign-in unreachable while the app runs from the cache: say once what that means.
     auth.unreachable.subscribe(() => {
       if (!auth.unreachable.get() || auth.status.get() !== 'cached' || consent) return;
-      app.toasts.show(t('Offline'), undefined, 'info', t('You are seeing the last saved state on this device. Editing works again once XLR8 is connected.'), 10_000);
+      app.toasts.show(t('Offline'), undefined, 'info', t('You are seeing the last saved state on this device. Editing works again once Selfbound is connected.'), 10_000);
     });
     void auth.start(client);
   } else if (!consent) {
