@@ -399,7 +399,7 @@ a {
 .ws-name:hover {
   background: var(--bg-sidebar-hover);
 }
-.ws-name .logo {
+.ws-name .logo-lockup {
   color: var(--text-strong);
 }
 .ws-head .spacer {

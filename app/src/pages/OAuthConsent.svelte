@@ -74,7 +74,7 @@
 
 <div class="login consent" data-testid="oauth-consent">
   <div class="login-card">
-    <div class="login-logo"><Logo kind="logo" height={36} /></div>
+    <div class="login-logo"><Logo kind="lockup" height={32} /></div>
     {#if loadError}
       <h1>{t('No access')}</h1>
       <p>{loadError}</p>

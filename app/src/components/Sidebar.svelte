@@ -149,7 +149,7 @@
   {:else}
   <div class="ws-head">
     <button class="ws-name" onclick={() => app.palette.open('command')} title="Selfbound">
-      <Logo kind="logo" height={13} />
+      <Logo kind="lockup" height={15} />
       <span class="icon mi ui-chevronDown" style="color: var(--text-muted); width: 12px"></span>
     </button>
     <span class="spacer"></span>

@@ -1,45 +1,53 @@
 # Logo and brand assets
 
-Two source files in `brand/` define the logo. Everything else is generated from them with
+Four source files in `brand/` define the logo. Everything else is generated from them with
 `node tooling/brand.mjs` (needs `rsvg-convert` and ImageMagick) and copied to the app, the landing page
-and the docs site. **To swap the logo, replace these two files and run the script.**
+and the docs site. **To swap the logo, replace these files and run the script.**
 
 | Source | Purpose |
 | --- | --- |
-| `brand/logo.svg` | the logo as shown in headers, sign-in screen, consent page, docs hero and social image (wordmark, or symbol + wordmark) |
-| `brand/mark.svg` | the compact symbol: favicon, app and notification icons, loading screen, animated landing page background |
+| `brand/symbol.svg` | the symbol: app icons, loading screen, animated landing page background |
+| `brand/wordmark.svg` | the lettering "Selfbound" |
+| `brand/lockup.svg` | symbol + wordmark: sidebar, sign-in and consent screens, landing and docs headers, social image |
+| `brand/favicon.svg` | the symbol simplified for 16 px: favicons |
 
-Requirements for both files: outlined shapes only (`<path>`; no `<text>`, strokes, gradients, masks or
-transforms), one colour (it is replaced by `currentColor`, black or white), a `viewBox` that includes the
-padding you want, `fill-rule` set on the paths when it is not `nonzero`. The script stops with a message if
-a file does not fit. Square symbols work best; other proportions are fitted without stretching.
+Requirements: outlined shapes only (`<path>`, optionally with a `translate`/`scale` transform; no `<text>`,
+strokes, gradients or masks), one colour (it is replaced), a `viewBox` that includes the padding you want,
+`fill-rule` on the paths when it is not `nonzero`. The script stops with a message if a file does not fit.
 
-The current files are a **temporary wordmark**: "Selfbound" in Inter Variable (weight 700, tracking −2.5 %),
-converted to outlines, and the letter "S" as the symbol. They are placeholders until the final logo exists.
+## Colours
+
+Only two: **white** `#FFFFFF` (`--text-strong`) and **ink** `#070707`, the dark theme's `--bg-app`
+(`oklch(0.129 0.0009 286)` in sRGB). Both are constants at the top of `tooling/brand.mjs`; the generated
+SVGs come as `-ink` (dark shapes, for light backgrounds), `-paper` (white shapes, for dark backgrounds) and
+`currentColor`. All PNGs are paper-coloured symbols on an ink tile. `app/test/brand.test.ts` checks that no
+other colour appears.
 
 ## What the script writes
 
 | File | Purpose |
 | --- | --- |
-| `app/public/brand/selfbound-logo.svg`, `selfbound-mark.svg` | `fill="currentColor"`, takes the surrounding text colour |
-| `app/public/brand/…-black.svg`, `…-white.svg` | fixed colour for places without CSS (black on light, white on dark backgrounds) |
-| `app/public/favicon.svg` | symbol with padding, black or white depending on `prefers-color-scheme` |
-| `app/public/favicon.ico`, `favicon-16/32/48.png` | fallback: white symbol on a dark rounded square (readable in light and dark tabs) |
+| `app/public/brand/selfbound-{symbol,wordmark,lockup}.svg` | `fill="currentColor"`, takes the surrounding text colour |
+| `app/public/brand/…-ink.svg`, `…-paper.svg` | fixed colour for places without CSS |
+| `app/public/favicon.svg` | simplified symbol, ink or paper depending on `prefers-color-scheme` |
+| `app/public/favicon.ico`, `favicon-16/32/48.png` | simplified symbol filling an ink tile; its gap lands on whole pixels at 16, 32 and 48 px |
 | `app/public/apple-touch-icon.png` | 180 × 180, full square (iOS rounds the corners itself) |
-| `app/public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | web manifest (`site.webmanifest`, also written by the script) |
-| `app/public/badge-96.png` | notification status bar icon (white on transparent) |
+| `app/public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | web manifest (`site.webmanifest`, also written by the script); the maskable one keeps the symbol inside the 80 % safe zone |
+| `app/public/badge-96.png` | notification status bar icon (paper on transparent) |
 | `app/public/brand/og-image.png` | 1200 × 630, social preview image (`og:image`, `twitter:image`) |
 | `app/public/brand/clerk-logo.png` | 512 × 512, for uploading in the Clerk dashboard (application logo) |
-| `app/src/lib/brand.ts` | the shapes for the inline SVG (`components/Logo.svelte`): sidebar (logo), sign-in and consent screens (logo), loading screen (mark) |
-| `site/public/…` | favicons, `brand/selfbound-logo.svg`, `selfbound-mark.svg`, `brand/og.png` for the landing page |
-| `docs-site/public/…`, `docs-site/src/assets/logo-light.svg`, `logo-dark.svg` | favicons, social image and header logo of the docs |
+| `app/src/lib/brand.ts` | the shapes for the inline SVG (`components/Logo.svelte`): sidebar, sign-in and consent screens (lockup), loading screen (symbol) |
+| `site/public/…` | favicons, `brand/selfbound-lockup.svg`, `selfbound-symbol.svg`, `brand/og.png` for the landing page |
+| `docs-site/public/…`, `docs-site/src/assets/logo-light.svg`, `logo-dark.svg` | favicons, social image and header logo of the docs (ink and paper lockup) |
 
-Two places carry the logo's aspect ratio as a number: the `.logo` rule in `app/src/welcome/welcome.css` and in
-`site/src/style.css` (`aspect-ratio: 6.13 / 1`, plus the header height). If a new logo has another ratio,
-`app/test/brand.test.ts` fails until both are updated. The logo sizes elsewhere are set by height
-(`Logo.svelte` `height`, the docs hero in `docs-site/src/components/Hero.astro`); check them once with the new logo.
+The app-icon proportions (symbol 56 % of the tile, corner radius 22.5 %) are constants in the script.
 
-After a logo change, also upload `app/public/brand/clerk-logo.png` in the Clerk dashboard and check the
-installed app icon (the browser caches manifest icons).
+Two places carry the lockup's aspect ratio as a number: the `.logo` rule in `app/src/welcome/welcome.css` and
+in `site/src/style.css` (`aspect-ratio: 7.2085 / 1`, plus the header height). If a new lockup has another ratio,
+`app/test/brand.test.ts` fails until both are updated. Other sizes are set by height (`Logo.svelte` `height`,
+the docs hero in `docs-site/src/components/Hero.astro`); check them once with new files.
 
-`app/test/brand.test.ts` makes sure the sources, the generated files, the copies and the inline paths stay in sync.
+The README shows the lockup from `app/public/brand/selfbound-lockup-{ink,paper}.svg`. After a logo change, also
+upload `app/public/brand/clerk-logo.png` in the Clerk dashboard and check the installed app icon (browsers
+cache manifest icons). The screenshots in `docs-site/src/assets/screenshots/`, `docs/images/` and
+`site/src/assets/` show the sidebar logo and have to be recaptured (`docs-site/scripts/capture-screenshots.mjs`).

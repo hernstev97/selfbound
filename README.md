@@ -1,4 +1,9 @@
-# Selfbound
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="app/public/brand/selfbound-lockup-paper.svg">
+    <img src="app/public/brand/selfbound-lockup-ink.svg" alt="Selfbound" height="36">
+  </picture>
+</h1>
 
 <p align="center">
   <picture>

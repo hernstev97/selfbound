@@ -19,7 +19,7 @@
 
 <div class="login" data-testid="login">
   <div class="login-card">
-    <div class="login-logo"><Logo kind="logo" height={36} /></div>
+    <div class="login-logo"><Logo kind="lockup" height={32} /></div>
     {#if reason === 'config'}
       <h1>{t('Selfbound is not set up')}</h1>
       <p>{t('The backend address (VITE_CONVEX_URL) or a sign-in method is missing.')} {local[0]}<code>node tooling/local.mjs</code>{local[1]}</p>
