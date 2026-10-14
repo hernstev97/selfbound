@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 // @ts-expect-error plain .mjs without types, shared with docs-site/
 import { LEGAL_PLACEHOLDER, fillLegal, legalRequired, loadLegal } from '../../tooling/site-legal.mjs';
 
-const dir = mkdtempSync(join(tmpdir(), 'xlr8-legal-'));
+const dir = mkdtempSync(join(tmpdir(), 'selfbound-legal-'));
 const write = (name: string, content: unknown) => {
   const file = join(dir, name);
   writeFileSync(file, typeof content === 'string' ? content : JSON.stringify(content));
