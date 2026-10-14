@@ -66,6 +66,7 @@ const HEAD_ICON: Partial<Record<DisplayProp, string>> = {
   sprint: 'i-sprint',
   project: 'ui-projects',
   labels: 'ui-label',
+  snoozed: 'ui-snooze',
   updated: 'ui-edit',
   created: 'ui-compose',
 };

@@ -7,6 +7,7 @@ import type { Actor } from '../lib/actor';
 // (status, `updatedAt`).
 //
 // - An issue created by an agent (or shared into the inbox) opens an entry of kind `created`.
+// - A snoozed issue that comes back (morning job) opens an entry of kind `snoozed`, or turns its open one into it.
 // - A change by an agent to an existing issue (any history field below) adds to the open entry
 //   or opens one of kind `changed`. The entry keeps the latest change per field, moves up in the
 //   list (`updatedAt`) and becomes unread again.
@@ -61,6 +62,20 @@ function valueOf(field: string, value: unknown): Change['value'] {
     if (typeof o.preview === 'string') return o.preview;
   }
   return undefined;
+}
+
+/**
+ * A snoozed issue comes back (morning job): its open entry (an agent's earlier entry waits behind
+ * the snooze) or a new one is unread again and first in the list. The changes noted so far are
+ * dropped: what happened meanwhile is in the history, the entry says "back from snooze".
+ */
+export async function openSnoozedEntry(ctx: MutationCtx, issueId: Id<'issues'>, now: number) {
+  const open = await openEntry(ctx, issueId);
+  if (open) {
+    await ctx.db.patch('inboxEntries', open._id, { kind: 'snoozed', actor: { kind: 'system' }, changes: [], updatedAt: now, readAt: undefined });
+    return open._id;
+  }
+  return await ctx.db.insert('inboxEntries', { issueId, kind: 'snoozed', actor: { kind: 'system' }, changes: [], createdAt: now, updatedAt: now });
 }
 
 /**

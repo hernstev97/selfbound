@@ -26,4 +26,7 @@ export default {
   'Sprint ending': 'Sprint endet',
   'In the morning on the day before the sprint ends and on its last day.':
     'Morgens am Tag vor dem Sprintende und am letzten Tag.',
+  'Snoozed issue is back': 'Zurückgestelltes Issue ist zurück',
+  'In the morning of the chosen day a snoozed issue returns to the inbox.':
+    'Am gewählten Tag kommt ein zurückgestelltes Issue morgens zurück in den Eingang.',
 } satisfies Dictionary;

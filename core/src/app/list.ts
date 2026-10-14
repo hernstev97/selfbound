@@ -2,7 +2,7 @@
 // Computes outside the components and passes unchanged results through (reuseList), so Svelte
 // only redraws changed rows.
 import { t, tn, translated } from '../i18n.ts';
-import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, relativeTime, shortDate, actorName } from '../format.ts';
+import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
 import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
@@ -606,6 +606,7 @@ export class ListController {
       sprint: sprint && sprint.state !== 'closed' ? { name: sprint.name, late: this.app.store.sprintKinds.get().get(id) === 'late', active: sprint.state === 'active' } : null,
       estimate: issue.estimate ?? null,
       due: issue.dueDate ? dueLabel(issue.dueDate) : null,
+      snoozed: issue.snoozedUntil ? shortDate(parseDay(issue.snoozedUntil).getTime()) : null,
       created: shortDate(issue.createdAt),
       updated: shortDate(issue.updatedAt),
       age: relativeTime(inboxAt(issue)),
@@ -674,6 +675,7 @@ export class ListController {
     if (f.project.length) chips.push({ field: 'project', label: t('Project: {values}', { values: names(f.project, new Map(meta?.projects.map((p) => [p._id, p.name]))) }) });
     if (f.sprint.length) chips.push({ field: 'sprint', label: t('Sprint: {values}', { values: names(f.sprint, new Map(meta?.sprints.map((s) => [s._id, s.name]))) }) });
     if (f.unreviewed) chips.push({ field: 'unreviewed', label: t('Unread') });
+    if (f.snoozed) chips.push({ field: 'snoozed', label: t('With snoozed') });
     return chips;
   }
 
@@ -759,7 +761,7 @@ export class ListController {
     this.#syncUrl();
   }
 
-  toggleFilter<K extends Exclude<keyof Filters, 'unreviewed'>>(field: K, value: Filters[K][number]) {
+  toggleFilter<K extends Exclude<keyof Filters, 'unreviewed' | 'snoozed'>>(field: K, value: Filters[K][number]) {
     const current = this.view.get().filters[field] as unknown[];
     const next = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     this.setFilters({ ...this.view.get().filters, [field]: next });
@@ -769,8 +771,12 @@ export class ListController {
     this.setFilters({ ...this.view.get().filters, unreviewed: !this.view.get().filters.unreviewed });
   }
 
+  toggleSnoozed() {
+    this.setFilters({ ...this.view.get().filters, snoozed: !this.view.get().filters.snoozed });
+  }
+
   removeFilter(field: keyof Filters) {
-    this.setFilters({ ...this.view.get().filters, [field]: field === 'unreviewed' ? false : [] });
+    this.setFilters({ ...this.view.get().filters, [field]: field === 'unreviewed' || field === 'snoozed' ? false : [] });
   }
 
   clearFilters() {

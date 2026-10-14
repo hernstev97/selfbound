@@ -1,0 +1,107 @@
+---
+title: Command menu and search
+description: Run any action, set values on issues and find issues with the command menu, the issue search and the right-click menu.
+sidebar:
+  order: 2
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+import Screenshot from '../../../components/Screenshot.astro';
+
+Everything XLR8 can do is in the command menu. Press <Kbd keys="mod+k" />, type a few letters of what
+you want, and press <Kbd keys="enter" />. You do not need to remember a single shortcut to use the app
+this way, and the menu shows each action's shortcut next to it, so you pick them up as you go.
+
+<Screenshot name="command-menu" alt="The command menu open over an issue list, with actions grouped by section and their shortcuts on the right" width={720} />
+
+## Running an action
+
+1. Press <Kbd keys="mod+k" />, or click the XLR8 button at the top of the sidebar.
+2. Without typing, the menu shows the most common actions. Type to search all of them: "status",
+   "board", "labels settings".
+3. Press <Kbd keys="enter" /> to run the highlighted entry.
+
+The menu only lists what makes sense where you are. "Toggle board / list" appears in a view that has a
+board, "Edit description" on an issue, "Complete sprint" while a sprint is running.
+
+Actions act on the issues you have [selected](/using/selection-and-bulk-edits/), or on the focused issue
+if nothing is selected. The search understands English and German words, so "priority" and "priorität"
+both work, whatever language the app is set to.
+
+## Values directly from the menu
+
+When an issue is focused or selected, the command menu also lists values you can set right away. Type
+"status: in progress", "prio urgent", "label bug" or "due tomorrow" and the matching value shows up as
+one entry. <Kbd keys="enter" /> applies it.
+
+The same values are available as pickers with their own shortcuts:
+
+| Keys | Picker |
+|---|---|
+| <Kbd keys="s" /> | Status |
+| <Kbd keys="p" /> | Priority |
+| <Kbd keys="l" /> | Labels |
+| <Kbd keys="shift+e" /> | Estimate |
+| <Kbd keys="shift+c" /> | Sprint |
+| <Kbd keys="shift+p" /> | Project |
+| <Kbd keys="shift+d" /> | Due date |
+| <Kbd keys="mod+shift+p" /> | Parent issue |
+| <Kbd keys="mod+shift+m" /> | Move to another team |
+
+A few pickers have shortcuts of their own:
+
+- **Status and priority by digit.** In the status picker, <Kbd keys="1" /> to <Kbd keys="9" /> pick the
+  statuses in the order of the team's workflow. In the priority picker, <Kbd keys="0" /> is No priority,
+  <Kbd keys="1" /> Urgent, <Kbd keys="2" /> High, <Kbd keys="3" /> Medium and <Kbd keys="4" /> Low. So
+  <Kbd keys="p" /> then <Kbd keys="1" /> makes an issue urgent. Digits work as long as you have not typed
+  anything into the picker.
+- **Labels** stay open so you can toggle several. If you type a name that does not exist, the last entry
+  creates that label and adds it.
+- **Estimate** accepts any number you type, not just the listed ones.
+- **Due date** understands words like "today", "tomorrow", "next week", "in 3 days" or a date like
+  "12.10.", and shows a calendar.
+
+## Searching issues
+
+Press <Kbd keys="/" /> to search issues. Before you type, the list shows the issues you opened recently.
+Then:
+
+- Titles and IDs match right away, also with partial words and small typos. Type `ACME-42` to find
+  that issue.
+- From three characters on, hits in descriptions and comments follow a moment later, in their own
+  sections with the matching text.
+- [Knowledge pages](/concepts/knowledge/) show up too, in their own section, when a team has a knowledge area.
+- An old ID still finds the issue after it moved to another team; the result says "formerly ACME-42".
+
+While you move through the results, a preview of the highlighted issue appears beside the list.
+<Kbd keys="enter" /> opens the issue.
+
+The command menu searches issues as well: from two typed characters on, matching issues appear below
+the actions.
+
+## Keys inside the menu
+
+These keys work in the command menu, the search and every picker:
+
+| Keys | Effect |
+|---|---|
+| <Kbd keys={['arrowdown', 'tab', 'mod+j', 'mod+n']} /> | next entry |
+| <Kbd keys={['arrowup', 'shift+tab', 'mod+p']} /> | previous entry |
+| <Kbd keys="enter" /> | run or pick the highlighted entry |
+| <Kbd keys="escape" /> | go back one level, or close |
+| <Kbd keys="backspace" /> | with an empty search field: back to the previous level (for example in the filter menu) |
+
+## The right-click menu
+
+Right-click an issue in a list or on the board to get the same actions as a menu: status, priority,
+labels and the other pickers as submenus, relations, copy link, select and delete. On an issue's own
+page, the **More actions** button at the top right opens it. On a phone, a long press opens it. Use the arrow keys to move, <Kbd keys="arrowright" /> to open a
+submenu, <Kbd keys="arrowleft" /> to leave it, and <Kbd keys="enter" /> to choose.
+
+If you right-click an issue that is part of your selection, the menu acts on the whole selection.
+Otherwise it acts only on the issue you clicked.
+
+<Aside type="tip">
+Press <Kbd keys="?" /> to search all shortcuts by name. The full list is on
+[Keyboard shortcuts](/reference/keyboard-shortcuts/).
+</Aside>

@@ -179,6 +179,12 @@ const listIssues = object({
   label: optional(string({ description: 'Only issues with this label (name, case-insensitive).', min: 1, max: 100 })),
   project: optional(string({ description: 'Only issues in this project (name, case-insensitive).', min: 1, max: 200 })),
   dueWithinDays: optional(integer({ description: 'Window for the "due" filter, in days.', min: 0, max: 60 }), 7),
+  snoozed: optional(
+    boolean({
+      description:
+        'true = only snoozed issues (`snoozedUntil` is set), false = only issues that are not snoozed. Without it, snoozed issues are listed like any other; each shows its `snoozedUntil`.',
+    }),
+  ),
   limit: optional(integer({ description: 'Maximum number of results.', min: 1, max: 100 }), 50),
 });
 
@@ -225,6 +231,7 @@ const expected = object(
     project: optional(nullable(string({ min: 1, max: 200 }))),
     estimate: optional(nullable(number({ min: 0, max: 100 }))),
     dueDate: optional(nullable(realDay('YYYY-MM-DD'))),
+    snoozedUntil: optional(nullable(realDay('YYYY-MM-DD'))),
     parent: optional(nullable(identifier())),
   },
   {
@@ -233,7 +240,7 @@ const expected = object(
   },
 );
 
-const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'parent', 'description'] as const;
+const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'snoozedUntil', 'parent', 'description'] as const;
 
 // For update_issue and set_status the requestId is optional: setting the same values again
 // changes nothing. With a requestId, though, a retry returns the original result instead of a
@@ -256,6 +263,13 @@ const updateIssue = object(
     project: optional(nullable(string({ description: 'Project name, or null to remove.', min: 1, max: 200 }))),
     estimate: optional(nullable(estimate())),
     dueDate: optional(nullable(realDay('Due date YYYY-MM-DD, or null to remove.'))),
+    snoozedUntil: optional(
+      nullable(
+        realDay(
+          'Snooze the issue until this day, YYYY-MM-DD (after today, Europe/Berlin), or null to unsnooze. A snoozed issue is hidden from the owner\'s lists; on that day, in the morning, it returns to the inbox with a push notification. Only open issues can be snoozed; closing an issue ends its snooze.',
+        ),
+      ),
+    ),
     parent: optional(nullable(identifier('Parent identifier, or null to remove.'))),
     description: optional(
       string({
@@ -473,7 +487,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   update_issue: {
     title: 'Update issue',
     description:
-      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date or parent. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it.',
+      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date, snooze or parent. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. Set `snoozedUntil` to a future day to snooze an issue (hidden from the owner\'s lists, back in the inbox with a push that morning) and null to unsnooze it. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   set_status: {

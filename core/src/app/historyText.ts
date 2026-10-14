@@ -110,6 +110,14 @@ export function historyText(h: Pick<HistoryDoc, 'field' | 'from' | 'to' | 'actor
       const to = (h.to as { identifier?: string } | undefined)?.identifier ?? '…';
       return say(tc('you', 'moved it from {from} to {to}', { from, to }), t('moved it from {from} to {to}', { from, to }));
     }
+    case 'snoozedUntil': {
+      if (typeof h.to !== 'string') {
+        if (h.actor.kind === 'system') return t('brought it back from the snooze');
+        return say(tc('you', 'ended the snooze'), t('ended the snooze'));
+      }
+      const date = dayLabel(h.to);
+      return say(tc('you', 'snoozed it until {date}', { date }), t('snoozed it until {date}', { date }));
+    }
     case 'deleted':
       return say(tc('you', 'moved it to the trash'), t('moved it to the trash'));
     case 'restored':

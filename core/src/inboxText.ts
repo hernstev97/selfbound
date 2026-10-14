@@ -57,6 +57,7 @@ function changeText(c: Change, store: IssueStore): string {
 /** One line for the entry. */
 export function entryText(entry: InboxEntry, store: IssueStore, agents: ReadonlyMap<string, string>): string {
   const lead = leadChange(entry);
+  if (!lead && entry.kind === 'snoozed') return t('Back from snooze');
   if (!lead) return t('{actor} created the issue', { actor: actorName(entry.actor, agents) });
   const text = t('{actor} {action}', { actor: actorName(lead.actor, agents), action: changeText(lead, store) });
   const more = entry.changes.length - 1;

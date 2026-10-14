@@ -2,7 +2,7 @@
 // undo stack. Undo sends `issues.revert` with compare-and-set: if the value is no longer one's
 // own, the server reports `conflict` and the app says who changed it in the meantime. Undo jumps
 // back to where the action happened.
-import { PRIORITY_LABEL, actorName, branchName } from '../format.ts';
+import { CLOSED, PRIORITY_LABEL, actorName, branchName, dayLabel } from '../format.ts';
 import { t, tc, tn, translated } from '../i18n.ts';
 import type { Page } from '../route.ts';
 import { applyPatch, sameValue } from '../store.ts';
@@ -48,6 +48,7 @@ const FIELD_LABEL: Record<PatchField, string> = translated({
   projectId: 'Project',
   estimate: 'Estimate',
   dueDate: 'Due date',
+  snoozedUntil: 'Snoozed until',
   parentId: 'Parent',
   sprintId: 'Sprint',
 });
@@ -181,10 +182,15 @@ export class Editor {
       }
       // Done, canceled or duplicate clears the priority (backend): include it in the undo step so
       // undo brings both back together.
-      const priority = applyPatch(issue as never, patch, 0, workflowsOf(this.app.store.meta.get())).priority;
-      if (Object.keys(after).length && priority !== issue.priority) {
+      // The same goes for the snooze: only open issues are snoozed.
+      const local = applyPatch(issue as never, patch, 0, workflowsOf(this.app.store.meta.get()));
+      if (Object.keys(after).length && local.priority !== issue.priority) {
         (before as Record<string, unknown>).priority = issue.priority;
-        (after as Record<string, unknown>).priority = priority;
+        (after as Record<string, unknown>).priority = local.priority;
+      }
+      if (Object.keys(after).length && issue.snoozedUntil !== undefined && local.snoozedUntil === undefined && patch.snoozedUntil === undefined) {
+        before.snoozedUntil = issue.snoozedUntil;
+        after.snoozedUntil = null;
       }
       if (Object.keys(after).length) items.push({ id, before, after });
     }
@@ -200,6 +206,23 @@ export class Editor {
     if (!opts.expected && !bulkToast) this.app.list.noteOwnChange(items.map((i) => i.id));
     this.#send(entry, false).catch(() => {});
     if (bulkToast) this.#undoToast(entry, tn(items.length, '{count} issue changed', '{count} issues changed'));
+  }
+
+  /**
+   * Snooze until a day (`null` = unsnooze). The issues leave the lists, so the toast with "Undo"
+   * says what happened instead of "no longer in this view". Closed issues are not snoozed.
+   */
+  snooze(ids: IssueId[], day: string | null) {
+    const open = ids.filter((id) => {
+      const issue = this.app.store.get(id);
+      return issue && !CLOSED.has(issue.status) && (day !== null || issue.snoozedUntil !== undefined);
+    });
+    if (!open.length) return;
+    const before = this.#undo.at(-1);
+    this.patch(open, { snoozedUntil: day }, { label: day ? t('Snoozed') : t('Unsnoozed'), quiet: true, expected: true });
+    if (this.#undo.at(-1) === before) return;
+    const what = this.#what(open);
+    this.toastForLast(day ? t('{what} snoozed until {day}', { what, day: dayLabel(day) }) : t('{what} is no longer snoozed', { what }));
   }
 
   /**

@@ -4,7 +4,7 @@
 // when opened); the focused issue is prefetched.
 import { api } from '@xlr8/backend/api';
 import { workflowsOf } from '../workflow.ts';
-import { PRIORITY_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
+import { CLOSED, PRIORITY_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
 import { intlLocale, t } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import { OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
@@ -69,6 +69,10 @@ export interface DetailState {
   sprint: { id: string; name: string; late: boolean; state: string } | null;
   estimate: number | null;
   due: { day: string; label: string; long: string; overdue: boolean } | null;
+  /** Snoozed until this day */
+  snoozed: { day: string; long: string } | null;
+  /** Open issues can be snoozed */
+  snoozable: boolean;
   parent: IssueBrief | null;
   children: IssueBrief[];
   created: string;
@@ -337,6 +341,8 @@ export class DetailController {
       sprint: sprint ? { id: sprint._id, name: sprint.name, late: store.sprintKinds.get().get(issue._id) === 'late', state: sprint.state } : null,
       estimate: issue.estimate ?? null,
       due: issue.dueDate && due ? { day: issue.dueDate, label: due.label, long: dayLabel(issue.dueDate), overdue: due.overdue } : null,
+      snoozed: issue.snoozedUntil ? { day: issue.snoozedUntil, long: dayLabel(issue.snoozedUntil) } : null,
+      snoozable: !CLOSED.has(issue.status),
       parent: parent ? brief(parent) : null,
       children,
       created: shortDate(issue.createdAt),
@@ -392,7 +398,7 @@ export class DetailController {
       const text = historyText(h, this.app.store);
       if (!text) continue;
       const field = (h.field === 'sprint' ? 'sprintId' : h.field) as PatchField;
-      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title';
+      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title' && !(field === 'snoozedUntil' && h.actor.kind === 'system');
       items.push({ id: h._id, kind: 'event', at: h.at, ago: relativeTime(h.at), full: fullDate(h.at), actor: h.actor.kind, actorName: actorName(h.actor, agents), text, ...(revertable ? { revert: { field, from: h.from ?? null, to: h.to ?? null } } : {}) });
     }
     const older = this.#older.get(doc.id)?.comments ?? [];

@@ -31,8 +31,8 @@
       "n": 20
     },
     "P1|large|bundle.bytes (initial, brotli)": {
-      "median": 122751,
-      "p95": 122751,
+      "median": 129255,
+      "p95": 129255,
       "n": 1
     },
     "P1|large|click.row (opens issue)": {

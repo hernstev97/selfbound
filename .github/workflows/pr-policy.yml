@@ -1,0 +1,142 @@
+# Pull request rules, see CONTRIBUTING.md.
+#
+#   branch-name  fails when the head branch is not `<type>/<issue>-<slug>` or `<type>/<slug>`.
+#   issue-first  closes pull requests from non-collaborators that do not reference an open issue
+#                labeled `accepted`, with a friendly comment.
+#
+# Why `pull_request_target`: for pull requests from forks the normal `pull_request` token is read-only,
+# so it could neither comment nor close. This is safe because the workflow never checks out or runs
+# anything from the pull request. It only reads the event data (as JavaScript values or environment
+# variables, never pasted into a shell command) and calls the GitHub API. Keep it that way: no `actions/checkout`,
+# no scripts from the repository, no `run:` that interpolates `${{ }}` expressions.
+
+name: PR policy
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+# Nothing by default; each job states what it needs.
+permissions: {}
+
+jobs:
+  branch-name:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions: {}
+    env:
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+    steps:
+      - name: Check the branch name
+        run: |
+          types='feat|fix|docs|refactor|perf|test|chore|ci'
+          # <type>/<slug>, where the slug may start with an issue (xlr8-48-…, 123-…): lower case, digits, hyphens.
+          if printf '%s' "$HEAD_REF" | grep -Eq "^($types)/[a-z0-9]+(-[a-z0-9]+)*$" && [ "${#HEAD_REF}" -le 80 ]; then
+            exit 0
+          fi
+          # Dependabot uses its own scheme.
+          if printf '%s' "$HEAD_REF" | grep -Eq '^dependabot/[A-Za-z0-9._/-]+$'; then
+            exit 0
+          fi
+          {
+            echo "::error title=Branch name::The branch name does not follow the rule."
+            echo "Branch names describe the work: <type>/<issue>-<slug>, or <type>/<slug> without an issue."
+            echo "Types: feat, fix, docs, refactor, perf, test, chore, ci. Example: feat/xlr8-48-github-issues-import"
+            echo "No tool, user or account names as prefix, no e-mail addresses. Details: CONTRIBUTING.md"
+          } >&2
+          exit 1
+
+  issue-first:
+    # A new push does not change whether the pull request was approved.
+    if: github.event.action != 'synchronize'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # Closing needs write access to the pull request; reading issues needs nothing more than read.
+    permissions:
+      pull-requests: write
+      issues: read
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          APPROVAL_LABEL: accepted
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr = context.payload.pull_request;
+            const label = process.env.APPROVAL_LABEL;
+
+            // Closed pull requests stay closed unless the maintainer reopens them (see below).
+            if (pr.state !== 'open') return;
+
+            // Dependabot works on its own schedule.
+            if (pr.user.login === 'dependabot[bot]') return;
+
+            // Collaborators (write access or more) need no approval.
+            const hasWrite = async (login) => {
+              try {
+                const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ owner, repo, username: login });
+                return ['admin', 'maintain', 'write'].includes(data.permission);
+              } catch (error) {
+                if (error.status === 404) return false;
+                throw error;
+              }
+            };
+            if (await hasWrite(pr.user.login)) return;
+
+            // A maintainer who reopens a pull request has decided; do not close it again.
+            if (context.payload.action === 'reopened' && (await hasWrite(context.payload.sender.login))) return;
+
+            // Issues the pull request refers to: closing keywords and the sidebar link (GraphQL),
+            // plus #123 and issue URLs in the description. HTML comments are ignored, so the hints
+            // in the pull request template do not count.
+            const numbers = new Set();
+            const result = await github.graphql(
+              `query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 10) { nodes { number repository { nameWithOwner } } }
+                  }
+                }
+              }`,
+              { owner, repo, number: pr.number },
+            );
+            for (const node of result.repository.pullRequest.closingIssuesReferences.nodes) {
+              if (node.repository.nameWithOwner.toLowerCase() === `${owner}/${repo}`.toLowerCase()) numbers.add(node.number);
+            }
+            const body = (pr.body ?? '').replace(/<!--[\s\S]*?-->/g, '');
+            const urlPattern = new RegExp(`github\\.com/${owner}/${repo}/issues/(\\d+)`, 'gi');
+            for (const match of body.matchAll(urlPattern)) numbers.add(Number(match[1]));
+            for (const match of body.matchAll(/(?<![\w/&])#(\d+)\b/g)) numbers.add(Number(match[1]));
+            numbers.delete(pr.number);
+
+            let approved = false;
+            for (const number of [...numbers].slice(0, 10)) {
+              try {
+                const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: number });
+                // Only people with triage rights can set labels, so the label is the maintainer's decision.
+                if (!issue.pull_request && issue.state === 'open' && issue.labels.some((l) => (typeof l === 'string' ? l : l.name) === label)) {
+                  approved = true;
+                  break;
+                }
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+            if (approved) {
+              core.info(`Pull request #${pr.number} refers to an accepted issue.`);
+              return;
+            }
+
+            const contributing = `https://github.com/${owner}/${repo}/blob/${context.payload.repository.default_branch}/CONTRIBUTING.md`;
+            const comment = [
+              `Hi @${pr.user.login}, and thank you for taking the time to contribute!`,
+              '',
+              `XLR8 is maintained by one person and works issue-first: please open an issue first, wait until it carries the \`${label}\` label, and then send a pull request that mentions it (for example "Closes #123").`,
+              'That way nobody spends time on a change that does not fit the project, and your work gets a fair review.',
+              '',
+              `This pull request does not refer to an open issue with the \`${label}\` label, so I am closing it for now. Nothing is lost: once there is an accepted issue, add the reference to the description and reopen this pull request, or open a new one.`,
+              '',
+              `The details are in [CONTRIBUTING.md](${contributing}). Thanks for your understanding!`,
+            ].join('\n');
+            await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body: comment });
+            await github.rest.pulls.update({ owner, repo, pull_number: pr.number, state: 'closed' });

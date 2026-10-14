@@ -14,6 +14,15 @@ export function anchorOf(el: Element, align: 'left' | 'right' = 'left') {
 }
 
 /**
+ * The `data-cell` a click in a row or card acts on. The label stack counts only for a touch tap
+ * (that is how touch gets to the names, no tooltip there); a mouse click on it is a click on the row.
+ */
+export function cellOf(e: MouseEvent): HTMLElement | null {
+  const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-cell]');
+  return cell && (cell.dataset.cell !== 'labels' || (e as PointerEvent).pointerType === 'touch') ? cell : null;
+}
+
+/**
  * Attachment for overlays that live only in the UI (settings dialogs, small popovers): while the
  * element exists, Back (Android gesture, browser) closes it with `close` instead of changing the
  * page. Core's overlays are registered by core/app/index.ts itself.

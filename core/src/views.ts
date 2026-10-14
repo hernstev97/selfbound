@@ -40,6 +40,8 @@ export interface ViewDef {
   style: RowStyle;
   /** Are closed issues relevant here at all (option "Show closed")? */
   closedOption: boolean;
+  /** Snoozed issues: hidden unless the filter "Snoozed" is on; `show` = the view is about them or needs them */
+  snoozed: 'hide' | 'show';
   /** Defaults for new issues */
   createDefaults?(route: ViewRoute, ctx: ViewContext): Partial<NewIssue>;
   /** Empty state without filters (translated on read) */
@@ -84,8 +86,26 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     },
     style: 'inbox',
     closedOption: false,
+    snoozed: 'hide',
     get emptyText() {
-      return t('The inbox is empty. Issues that agents create or change show up here until you remove the entry.');
+      return t('The inbox is empty. Issues that agents create or change and snoozed issues that come back show up here until you remove the entry.');
+    },
+  },
+  snoozed: {
+    kind: 'snoozed',
+    get label() {
+      return t('Snoozed');
+    },
+    icon: 'snooze',
+    includes: (i, ctx) => notDeleted(i) && i.snoozedUntil !== undefined && inTeam(i, ctx),
+    display: (r) => display('none', 'snoozed', ['priority', 'id', 'status', 'snoozed', ...(r.team ? [] : ['team' as DisplayProp])]),
+    groupings: ['none', 'team', 'priority', 'status'],
+    orderings: ['snoozed', 'priority', 'updated', 'created'],
+    style: 'issue',
+    closedOption: false,
+    snoozed: 'show',
+    get emptyText() {
+      return t('Nothing is snoozed. Snooze an issue with H to hide it until a day you choose.');
     },
   },
   triage: {
@@ -100,6 +120,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ['created', 'priority', 'updated'],
     style: 'issue',
     closedOption: false,
+    snoozed: 'hide',
     createDefaults: () => ({ status: 'triage' }),
     get emptyText() {
       return t('Triage is empty. New issues with status "Triage" land here for sorting.');
@@ -118,6 +139,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ALL_ORDERINGS,
     style: 'issue',
     closedOption: true,
+    snoozed: 'hide',
     get emptyText() {
       return t('There are no issues here yet.');
     },
@@ -135,6 +157,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ALL_ORDERINGS,
     style: 'issue',
     closedOption: false,
+    snoozed: 'hide',
     createDefaults: () => ({ status: 'todo' }),
     get emptyText() {
       return t('Nothing in progress. Issues with status Todo, In Progress or In Review show up here.');
@@ -153,6 +176,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ALL_ORDERINGS,
     style: 'issue',
     closedOption: false,
+    snoozed: 'hide',
     createDefaults: () => ({ status: 'backlog' }),
     get emptyText() {
       return t('The backlog is empty.');
@@ -171,6 +195,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: [...ALL_ORDERINGS, 'status'],
     style: 'issue',
     closedOption: true,
+    snoozed: 'hide',
     createDefaults: (_r, ctx) => (ctx.activeSprintId ? { sprintId: ctx.activeSprintId as never, status: 'todo' } : {}),
     get emptyText() {
       return t('No sprint is running. A sprint runs once you start it after planning.');
@@ -189,6 +214,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: PLAN_ORDERINGS,
     style: 'issue',
     closedOption: false,
+    snoozed: 'hide',
     createDefaults: () => ({ status: 'backlog' }),
     get emptyText() {
       return t('No open issues without a sprint. New issues land here once they are accepted.');
@@ -206,6 +232,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: PLAN_ORDERINGS,
     style: 'issue',
     closedOption: false,
+    snoozed: 'show',
     createDefaults: (_r, ctx) => (ctx.planSprintId ? { sprintId: ctx.planSprintId as never, status: 'todo' } : {}),
     get emptyText() {
       return t('Nothing planned yet. Select issues on the left and bring them here with → or drag them over.');
@@ -223,6 +250,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ['status', 'priority', 'rank'],
     style: 'issue',
     closedOption: false,
+    snoozed: 'show',
     get emptyText() {
       return t('All issues of this sprint are done or canceled. You can complete it.');
     },
@@ -239,6 +267,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ALL_ORDERINGS,
     style: 'issue',
     closedOption: true,
+    snoozed: 'hide',
     createDefaults: (r) => (r.project ? { projectId: r.project as never } : {}),
     get emptyText() {
       return t('This project has no issues yet.');
@@ -257,6 +286,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     orderings: ['updated', 'created'],
     style: 'trash',
     closedOption: false,
+    snoozed: 'show',
     get emptyText() {
       return t('The trash is empty. Deleted issues stay here for 30 days.');
     },
@@ -313,6 +343,7 @@ export const ORDERING_LABEL: Record<Ordering, string> = translated({
   created: 'Created',
   due: 'Due date',
   status: 'Status',
+  snoozed: 'Snoozed until',
 });
 
 export const PROP_LABEL: Record<DisplayProp, string> = translated({
@@ -325,6 +356,7 @@ export const PROP_LABEL: Record<DisplayProp, string> = translated({
   sprint: 'Sprint',
   estimate: 'Estimate',
   due: 'Due date',
+  snoozed: 'Snoozed until',
   created: 'Created',
   updated: 'Updated',
 });

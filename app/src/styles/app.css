@@ -1371,8 +1371,7 @@ button.crumb:hover {
   text-overflow: ellipsis;
   background: var(--row-bg);
 }
-.row-cols .pill.mi::before,
-.row-cols .pill.label::before {
+.row-cols .pill.mi::before {
   content: '';
   display: inline-block;
   vertical-align: -3px;
@@ -1380,61 +1379,128 @@ button.crumb:hover {
   height: 14px;
   margin-right: 4px;
 }
-.row-cols .pill.label::before {
-  width: 8px;
-  height: 8px;
-  vertical-align: 0;
-  margin: 0 6px 0 3px;
-  border-radius: 50%;
-  background: oklch(0.66 0.16 var(--hue));
-}
 .row-cols .pill.project .team-logo {
   display: inline-grid;
   vertical-align: middle;
   margin-top: -2px;
   margin-right: 5px;
 }
-/* Labels in their column, right to left: whatever does not fit drops out, and the remaining label
-   shows "+n" (visible only when the label to its left has dropped out; otherwise that label covers
-   it: negative margin, opaque background). */
-.c-labels {
-  display: flex;
-  flex-direction: row-reverse;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  justify-content: flex-end;
-  overflow: hidden;
-}
-.c-labels .lp {
+/* ---- Label stack (list column and board card; markup: `labelStackHtml`, lib/rowHtml.ts).
+   Up to three chips in their natural width, each one covering the end of the one before it
+   (the chip's right padding is the part that disappears under it). When the room is short the
+   chips shrink (flex) and slide further under their right neighbor, down to the dot; the last one
+   stays whole and gets the "…" if it alone is too wide. More labels: one "+n" chip with dots at
+   the end. `d1…d3`: dots on that chip, `--n`: digits of its count, `--w`: its width. */
+.lstack {
   display: flex;
   align-items: center;
-  flex: none;
-  max-width: 100%;
+  height: 24px;
+  overflow: hidden;
 }
-.c-labels > .lp {
-  margin-left: 8px;
+.lstack .label {
+  display: block;
+  flex: 0 1 auto;
+  width: auto;
+  min-width: 30px;
+  max-width: none;
+  height: 24px;
+  padding: 0 12px 0 6px;
+  line-height: 24px;
+  overflow: hidden;
+  text-overflow: clip;
+  background: var(--row-bg);
 }
-.c-labels > .lp:last-child {
-  margin-left: 0;
+.lstack .label:last-child {
+  padding-right: 8px;
+  text-overflow: ellipsis;
 }
-.c-labels .lp.covers {
-  /* -(width of "+n" 32 + gap 8 of the right neighbor) */
-  margin-right: -40px;
+.lstack > :not(:first-child) {
+  margin-left: -8px;
+}
+.lstack .label::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin: 0 6px 0 3px;
+  border-radius: 50%;
+  background: oklch(0.66 0.16 var(--hue));
+}
+.lstack .more {
+  --w: calc(var(--dw, 0px) + 18px + (var(--n, 1) + 1) * 1ch);
   position: relative;
-}
-/* Otherwise the rounded edge of the covering label lets the corner of the "+n" behind it show through. */
-.c-labels .lp.covers > .label {
-  box-shadow:
-    inset 0 0 0 1px var(--border-strong),
-    6px 0 0 0 var(--row-bg);
-}
-.row-cols .pill.more {
   flex: none;
-  width: 32px;
-  margin-right: 8px;
-  padding: 0;
-  text-align: center;
+  box-sizing: border-box;
+  width: var(--w);
+  height: 24px;
+  padding-right: 7px;
+  border-radius: 9999px;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+  background: var(--row-bg);
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-weight: 510;
+  line-height: 24px;
+  text-align: right;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.lstack .more.d1 {
+  --dw: 8px;
+}
+.lstack .more.d2 {
+  --dw: 14px;
+}
+.lstack .more.d3 {
+  --dw: 20px;
+}
+.lstack .more::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 6px;
+  width: var(--dw);
+  height: 12px;
+}
+/* Dots overlap to the right, the first on top; a ring in the row color sets each apart from the one below. */
+.lstack .more.d1::before {
+  background: radial-gradient(circle at 4px 6px, oklch(0.66 0.16 var(--c0)) 4px, transparent 4.5px);
+}
+.lstack .more.d2::before {
+  background:
+    radial-gradient(circle at 4px 6px, oklch(0.66 0.16 var(--c0)) 3.7px, var(--row-bg) 4.3px 5.3px, transparent 5.8px),
+    radial-gradient(circle at 10px 6px, oklch(0.66 0.16 var(--c1)) 4px, transparent 4.5px);
+}
+.lstack .more.d3::before {
+  background:
+    radial-gradient(circle at 4px 6px, oklch(0.66 0.16 var(--c0)) 3.7px, var(--row-bg) 4.3px 5.3px, transparent 5.8px),
+    radial-gradient(circle at 10px 6px, oklch(0.66 0.16 var(--c1)) 3.7px, var(--row-bg) 4.3px 5.3px, transparent 5.8px),
+    radial-gradient(circle at 16px 6px, oklch(0.66 0.16 var(--c2)) 4px, transparent 4.5px);
+}
+/* On the board card the stack takes its content width and gives way when other chips need room. */
+.card-labels {
+  flex: 0 1 auto;
+  min-width: 0;
+  /* The card's bottom row is 18 px high and clips. */
+  height: 18px;
+}
+.card-bottom .card-labels .label,
+.card-bottom .card-labels .more {
+  height: 18px;
+  line-height: 18px;
+}
+.card-bottom .card-labels .label {
+  flex: 0 1 auto;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.card-bottom .card-labels .label:last-child {
+  text-overflow: ellipsis;
+}
+.card-labels .more::before {
+  top: 3px;
 }
 .row-cols .pill.late {
   color: var(--warning-text);
@@ -2177,8 +2243,13 @@ button.crumb:hover {
   font-variant-numeric: tabular-nums;
   font-size: var(--fs-mini);
 }
-.cal-day:hover {
+.cal-day:hover:not(:disabled) {
   background: var(--bg-control);
+}
+.cal-day:disabled {
+  color: var(--text-subtle);
+  opacity: 0.45;
+  cursor: default;
 }
 .cal-day.other {
   color: var(--text-subtle);

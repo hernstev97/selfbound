@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
-import { berlinDay } from '../convex/lib/dates';
+import { addDays, berlinDay } from '../convex/lib/dates';
 import { dayWindow, minuteWindow, RATE_PER_MINUTE } from '../convex/ops/agents';
 import { createOne, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
@@ -198,6 +198,37 @@ describe('MCP over HTTP', () => {
     expect(history.find((h) => h.field === 'dueDate')).toMatchObject({ actor: { kind: 'agent' }, requestId: 'req-update-0001' });
     // No description without a version (argument validation).
     expect((await mcp.call('update_issue', { identifier: 'ORB-1', description: 'x' })).error).toMatch(/expectedDescriptionVersion/);
+  });
+
+  test('snooze: update_issue sets and clears snoozedUntil, get_issue and list_issues show it', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb, { status: 'todo' });
+    await createOne(owner, f.orb, { status: 'todo' });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const until = addDays(berlinDay(Date.now()), 3);
+
+    const set = await mcp.call('update_issue', { identifier: 'ORB-1', snoozedUntil: until });
+    expect(set.ok, set.error).toBe(true);
+    expect(set.value.changed).toEqual(['snoozedUntil']);
+    expect(set.value.issue.snoozedUntil).toBe(until);
+    expect((await getIssue(t, a.id)).snoozedUntil).toBe(until);
+    expect((await historyOf(t, a.id)).find((h) => h.field === 'snoozedUntil')).toMatchObject({ actor: { kind: 'agent' }, to: until });
+    expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value.snoozedUntil).toBe(until);
+
+    const only = await mcp.call('list_issues', { snoozed: true });
+    expect(only.value.issues.map((i: Json) => i.identifier)).toEqual(['ORB-1']);
+    expect((await mcp.call('list_issues', { snoozed: false })).value.issues.map((i: Json) => i.identifier)).toEqual(['ORB-2']);
+    expect((await mcp.call('list_issues', {})).value.count).toBe(2);
+
+    // Today and the past are rejected; expected protects against a changed day.
+    expect((await mcp.call('update_issue', { identifier: 'ORB-2', snoozedUntil: berlinDay(Date.now()) })).error).toMatch(/after today/);
+    const stale = await mcp.call('update_issue', { identifier: 'ORB-1', snoozedUntil: null, expected: { snoozedUntil: addDays(until, 1) } });
+    expect(stale.value.conflicts).toEqual([{ field: 'snoozedUntil', expected: addDays(until, 1), actual: until }]);
+    const cleared = await mcp.call('update_issue', { identifier: 'ORB-1', snoozedUntil: null, expected: { snoozedUntil: until } });
+    expect(cleared.value.changed).toEqual(['snoozedUntil']);
+    expect(cleared.value.issue.snoozedUntil).toBeUndefined();
   });
 
   test('set_status and add_comment (requestId: one comment), trash is rejected', async () => {
@@ -653,5 +684,18 @@ describe('MCP: knowledge', () => {
     expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(true);
     await owner.mutation(api.issues.markReviewed, { ids: [id] });
     expect((await mcp.call('list_inbox')).value.entries).toEqual([]);
+  });
+
+  test('list_inbox leaves out a snoozed issue until it is back', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const { identifier } = await createOne(owner, f.orb, { title: 'Later', status: 'todo' });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    await mcp.call('add_comment', { requestId: 'inbox-snooze-1', identifier, body: 'Noted.' });
+    expect((await mcp.call('list_inbox')).value.count).toBe(1);
+    const until = berlinDay(Date.now() + 3 * 86_400_000);
+    expect((await mcp.call('update_issue', { requestId: 'inbox-snooze-2', identifier, snoozedUntil: until })).ok).toBe(true);
+    expect((await mcp.call('list_inbox')).value).toEqual({ count: 0, unread: 0, entries: [] });
   });
 });

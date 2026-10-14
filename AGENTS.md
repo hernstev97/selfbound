@@ -20,6 +20,12 @@ low priority). Do not start full performance runs unless asked.
 
 ## Rules
 
+- Branch names describe the work: `<type>/<issue>-<slug>` with type `feat|fix|docs|refactor|perf|test|chore|ci`
+  (e.g. `feat/xlr8-48-github-issues-import`), or `<type>/<slug>` without an issue. Never a tool, user or
+  account prefix (`t3code/`, `claude/`, `codex/`, `aleister/`, user names, e-mail addresses). The CI check
+  `branch-name` fails otherwise; rename with `git branch -m`.
+- Outside contributions are issue-first (`CONTRIBUTING.md`): a pull request from a non-collaborator must
+  refer to an issue the maintainer labeled `accepted`, or it is closed automatically.
 - Everything in English: code, comments, identifiers, tests, docs, commit messages, PR texts.
 - UI text through `t()`, `tn()`, `tc()` or `translated()` from `core/src/i18n.ts`, with the German
   entry in `app/src/locales/de/*.ts` or `core/src/locales/de.ts`. Never call `t()` at module level.

@@ -25,6 +25,11 @@
   <button class="prop-row" data-testid="detail-due" title={tip(t('Due date'), 'issue.due')} onclick={(e) => open('due', e)}
     ><span class="icon" style:color={d.due?.overdue ? 'var(--danger-text)' : 'var(--text-muted)'}>{@html ICON.calendar}</span>{#if !d.due}<span class="empty-val">{t('Set due date')}</span>{:else}<span class="val" style:color={d.due.overdue ? 'var(--danger-text)' : undefined}>{d.due.long}</span>{/if}</button
   >
+  {#if d.snoozable || d.snoozed}
+    <button class="prop-row" data-testid="detail-snooze" title={tip(t('Snooze'), 'issue.snooze')} onclick={(e) => open('snooze', e)}
+      ><span class="icon" style="color: var(--text-muted)">{@html ICON.snooze}</span>{#if !d.snoozed}<span class="empty-val">{t('Snooze')}</span>{:else}<span class="val">{t('Snoozed until {date}', { date: d.snoozed.long })}</span>{/if}</button
+    >
+  {/if}
 </div>
 
 <div class="props-card">

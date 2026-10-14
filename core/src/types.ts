@@ -130,11 +130,13 @@ export interface IssuePatch {
   projectId?: ProjectId | null;
   estimate?: number | null;
   dueDate?: string | null;
+  /** Hidden from the lists until this day; `null` = unsnooze */
+  snoozedUntil?: string | null;
   parentId?: IssueId | null;
   sprintId?: SprintId | null;
 }
 export type PatchField = keyof IssuePatch;
-export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'parentId', 'sprintId'];
+export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'snoozedUntil', 'parentId', 'sprintId'];
 
 /** New issue (like `NewIssue` in the backend). */
 export interface NewIssue {
@@ -158,13 +160,13 @@ export interface NewIssue {
  * Kind of view; each has its own definition in `views.ts`. plan = backlog of sprint planning,
  * planned = content of the planned sprint (right column), close = completing the sprint.
  */
-export type ViewKind = 'inbox' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
+export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
 /** scope = planned / added later (active sprint) */
 export type Grouping = 'status' | 'team' | 'priority' | 'project' | 'sprint' | 'scope' | 'none';
-export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status';
-export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'estimate' | 'due' | 'created' | 'updated' | 'team';
-export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'estimate', 'due', 'created', 'updated'];
+export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status' | 'snoozed';
+export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'estimate' | 'due' | 'snoozed' | 'created' | 'updated' | 'team';
+export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'estimate', 'due', 'snoozed', 'created', 'updated'];
 
 export interface Display {
   grouping: Grouping;
@@ -210,6 +212,8 @@ export interface Filters {
   sprint: string[];
   /** Only unread inbox entries (URL `unreviewed=1`, an older name) */
   unreviewed: boolean;
+  /** Also show snoozed issues (URL `snoozed=1`) */
+  snoozed: boolean;
 }
 
 /** Where the list is: kind plus optional team or project. */
@@ -248,6 +252,8 @@ export interface RowState {
   sprint: { name: string; late: boolean; active: boolean } | null;
   estimate: number | null;
   due: { label: string; overdue: boolean; soon: boolean } | null;
+  /** Snoozed until (column "Snoozed") */
+  snoozed: string | null;
   created: string;
   updated: string;
   /** "3 hours ago" (inbox) */
@@ -355,6 +361,7 @@ export type PaletteKind =
   | 'sprint'
   | 'estimate'
   | 'due'
+  | 'snooze'
   | 'parent'
   | 'team'
   | 'relation'
@@ -381,7 +388,7 @@ export interface PaletteState {
   /** Second level: name of the first (for "‹ Status") */
   parent: string | null;
   /** Calendar for the due date */
-  calendar: { month: string; selected: string | null } | null;
+  calendar: { month: string; selected: string | null; /** First day that can be picked (snooze: the day after today) */ min?: string } | null;
   /** Hint below the input (e.g. "tomorrow → Fri, Oct 10") */
   hint: string | null;
   /** Counts every opening: the UI then rebuilds the picker (focus, position), even while the previous one is still fading out. */

@@ -16,6 +16,7 @@ let fixed: ReturnType<typeof fixedTexts> | null = null;
 function fixedTexts() {
   return {
     due: esc(t('Due')),
+    snoozed: esc(t('Snoozed until')),
     estimate: esc(t('Estimate')),
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
@@ -40,22 +41,37 @@ export function teamLogoHtml(team: TeamBadge, cls = '', size?: 14) {
 /** Row columns: aligned under each other when wide, right after the title when narrow. */
 export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'estimate', 'due'] as const satisfies readonly DisplayProp[];
 /** At the far right, at any width: date columns. */
-export const ROW_END = ['created', 'updated'] as const satisfies readonly DisplayProp[];
+export const ROW_END = ['snoozed', 'created', 'updated'] as const satisfies readonly DisplayProp[];
 
-/** Labels: at most three, each with "+n" for those dropped to its left (see app.css `.lp`). */
-function labelsHtml(r: RowState) {
-  const shown = r.labels.slice(0, 3);
-  const hidden = r.labels.length - shown.length;
+/** Label chips per stack; any further labels are counted in one "+n" chip. */
+const STACK_MAX = 3;
+
+/**
+ * Label stack (list column and board card, styles: app.css "Label stack"): up to three chips in
+ * their natural width, each overlapping the end of the one before it. When the room is short the
+ * chips shrink and slide under their right neighbor (the last one stays whole), down to the colored
+ * dot. More than three labels end in one "+n" chip with overlapping dots; the names of those are its
+ * tooltip. `cls` goes on the wrapper; a tap on it opens the label picker (`data-cell`, see `cellOf`:
+ * how touch screens get to the full names).
+ */
+export function labelStackHtml(labels: RowState['labels'], cls: string) {
+  const n = labels.length;
+  if (!n) return `<span class="${cls}"></span>`;
+  const shown = Math.min(n, STACK_MAX);
   let html = '';
-  // Visible order left → right: shown[0], shown[1], shown[2]; reversed in the DOM (row-reverse).
-  for (let j = shown.length - 1; j >= 0; j--) {
-    const label = shown[j];
-    const more = j + hidden;
-    const pill = `<span class="pill label" style="--hue:${label.hue}" title="${esc(label.name)}">${esc(label.name)}</span>`;
-    const covers = j < shown.length - 1;
-    html += `<span class="lp${covers ? ' covers' : ''}">${more > 0 ? `<span class="pill more" title="${esc(t('{count} more', { count: more }))}">+${more}</span>` : ''}${pill}</span>`;
+  for (let k = 0; k < shown; k++) {
+    const label = labels[k];
+    html += `<span class="pill label" style="--hue:${label.hue}" title="${esc(label.name)}">${esc(label.name)}</span>`;
   }
-  return html;
+  const rest = n - shown;
+  if (rest > 0) {
+    let hues = '';
+    for (let i = 0; i < Math.min(rest, 3); i++) hues += `--c${i}:${labels[shown + i].hue};`;
+    let names = labels[shown].name;
+    for (let i = shown + 1; i < n; i++) names += `, ${labels[i].name}`;
+    html += `<span class="more d${Math.min(rest, 3)}" style="--n:${String(rest).length};${hues}" title="${esc(names)}">+${rest}</span>`;
+  }
+  return `<span class="${cls} lstack" data-cell="labels">${html}</span>`;
 }
 
 /**
@@ -77,7 +93,7 @@ function colsHtml(r: RowState, props: ReadonlySet<DisplayProp>) {
     } else html += '<span class="c c-sprint"></span>';
   }
   if (props.has('project')) html += r.project ? `<span class="c c-project"><span class="pill project" title="${esc(t('Project of {team}', { team: r.team.name }))}">${teamLogoHtml(r.team, '', 14)}${esc(r.project)}</span></span>` : '<span class="c c-project"></span>';
-  if (props.has('labels')) html += `<span class="c c-labels">${labelsHtml(r)}</span>`;
+  if (props.has('labels')) html += labelStackHtml(r.labels, 'c c-labels');
   return html;
 }
 
@@ -93,6 +109,7 @@ function endHtml(r: RowState, props: ReadonlySet<DisplayProp>, trash: boolean) {
   } else {
     if (props.has('updated')) html += `<span class="row-date" title="${tx.updated}">${esc(r.updated)}</span>`;
     if (props.has('created')) html += `<span class="row-date" title="${tx.created}">${esc(r.created)}</span>`;
+    if (props.has('snoozed')) html += `<span class="row-date" title="${tx.snoozed}">${esc(r.snoozed ?? '')}</span>`;
   }
   if (r.decision) html += `<span class="pill decision ${r.decision.outcome}" data-testid="row-decision">${esc(r.decision.label)}</span>`;
   return html;

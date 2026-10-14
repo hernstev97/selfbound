@@ -14,7 +14,7 @@ address), `clerk.xlr8.example.com` (Clerk) and `happy-otter-123` (Convex product
 | App (static SPA) | static host, e.g. Vercel: `https://xlr8.example.com` | `http://127.0.0.1:5412` |
 | Backend (database and functions) | Convex Cloud: `https://happy-otter-123.convex.cloud` | local Convex, `http://127.0.0.1:13410` |
 | HTTP endpoints (MCP, GitHub, health) | `https://happy-otter-123.convex.site`, optionally also a custom address such as `https://mcp.xlr8.example.com` | `http://127.0.0.1:13411` |
-| Landing page | `https://xlr8.example.com/` for visitors who are not signed in (`welcome.html`) | `http://127.0.0.1:5412/welcome` |
+| Sign-in page | `https://xlr8.example.com/` for visitors who are not signed in (`welcome.html`) | `http://127.0.0.1:5412/welcome` |
 | Sign-in | Clerk production instance, embedded form at `https://xlr8.example.com/sign-in`; only the user ids in `XLR8_OWNER_IDS` get in | local test sign-in (`tooling/dev-auth.mjs`), no account needed |
 | Backup | nightly GitHub Actions workflow ([backup.md](backup.md)) | – |
 
@@ -37,6 +37,8 @@ with several worktrees). Every field can be overridden by an environment variabl
 | `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.xlr8.example.com"]` | hosts forwarded to Convex (custom MCP address) |
 | `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains redirected to `appUrl` |
 | `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
+| `siteUrl` | `XLR8_SITE_URL` | `https://example.com` | optional, only for the public landing page (`site/`, [site/README.md](../site/README.md)): canonical and link-preview URLs |
+| `siteVercelProject` | `XLR8_SITE_VERCEL_PROJECT` | `xlr8-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Secrets
 (deploy keys, tokens) never go into it.
@@ -53,9 +55,9 @@ Nothing in this file is secret: these values end up in the browser or in public 
 - **Web app:** `node tooling/deploy-web.mjs` builds the app with the production values, checks the
   bundle, copies it to `deploy/web/` and deploys that folder to Vercel as a static site (no build on
   Vercel). `--build` only builds. The checks abort the deploy if the bundle contains a local test token,
-  a local Convex address, lacks the production Convex URL, lacks `welcome.html`, or if the landing page's
+  a local Convex address, lacks the production Convex URL, lacks `welcome.html`, or if the sign-in page's
   entry imports app or Clerk chunks. The app's `index.html` is renamed to `app.html`, see
-  [Landing page and sign-in](#landing-page-and-sign-in).
+  [Sign-in page](#sign-in-page).
 
 Deploy the backend first when a change touches both: the old app keeps working against a newer backend,
 not necessarily the other way round.
@@ -68,7 +70,7 @@ not necessarily the other way round.
 | `VITE_CONVEX_SITE_URL` | `https://<deployment>.convex.site`; the address shown for MCP in the settings (falls back to one derived from `VITE_CONVEX_URL`) |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key, or a list `host=key,host=key` (one key per app domain, see [Changing the domain](#changing-the-domain)) |
 | `VITE_XLR8_BRANCH_PREFIX` | optional prefix for suggested Git branch names (from `branchPrefix`): `jane` gives `jane/acme-106-title`; without it `acme-106-title` |
-| `XLR8_PUBLIC_URL` | public app URL for absolute URLs in `index.html` and `welcome.html` (og tags); read at build time only (from `appUrl`) |
+| `XLR8_PUBLIC_URL` | public app URL for absolute URLs in `index.html` (og tags); read at build time only (from `appUrl`) |
 | `XLR8_BUILD_ID` | optional build id for `/version.json` (default: random) |
 
 `VITE_DEV_TOKEN` and `VITE_XLR8_TEST` are for local development and tests only; `deploy-web.mjs` clears them.
@@ -89,13 +91,13 @@ Served by Convex under `https://<deployment>.convex.site` (and any custom MCP ad
 
 ## Landing page and sign-in
 
-Visitors who are not signed in see the landing page at `/`. Signed in, `/` opens the app directly. Deep
+Visitors who are not signed in see the sign-in page at `/`. Signed in, `/` opens the app directly. Deep
 links like `/issue/ACME-106` work either way: without a session they lead to sign-in and back. Sign-in
 happens at `/sign-in` with the embedded Clerk form, not on Clerk's hosted pages.
 
 How the static host knows "signed in": the cookie `xlr8_signed_in`. The app sets it after sign-in and
 deletes it on sign-out. It is not a secret and unlocks nothing; it only decides whether `/` serves the
-landing page or the app. If you see the landing page although you are signed in (for example on the
+sign-in page or the app. If you see the sign-in page although you are signed in (for example on the
 first visit after a deploy), click "Sign in": Clerk recognizes the session and sends you to the app.
 
 `deploy-web.mjs` writes `deploy/web/vercel.json` at build time: the generic rules from
@@ -106,7 +108,7 @@ The resulting rules, in order:
 2. Hosts in `mcpHosts` are proxied to `https://<deployment>.convex.site/<path>` (see
    [Custom MCP address](#custom-mcp-address)).
 3. `/` without the cookie `xlr8_signed_in` serves `/welcome.html`.
-4. `/sign-in` serves `/welcome.html` (the landing page script shows the sign-in view).
+4. `/sign-in` serves `/welcome.html` (the same sign-in page).
 5. Every other path except `/assets/…` serves `/app.html` (SPA fallback).
 
 The app is deployed as `app.html` rather than `index.html` because Vercel always serves an `index.html`
@@ -127,7 +129,7 @@ and nobody can register:
    - Leave `<SignUp />` as is. Save.
 3. **Configure → Restrictions → Sign-up mode** → **Restricted**. Only the ids in `XLR8_OWNER_IDS` get
    into XLR8 anyway; this keeps strangers from creating Clerk accounts at all.
-4. Check in a private window: `https://xlr8.example.com/` shows the landing page. "Sign in" → sign in →
+4. Check in a private window: `https://xlr8.example.com/` shows the sign-in page. Sign in →
    you land in the app. Open `https://xlr8.example.com/` again: the app opens directly.
 
 The "Secured by Clerk" badge below the form is only removable on paid Clerk plans.

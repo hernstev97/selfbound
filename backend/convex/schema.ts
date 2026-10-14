@@ -46,7 +46,7 @@ export const actorValidator = v.object({
   agentId: v.optional(v.id('agents')),
 });
 
-export const inboxKindValidator = v.union(v.literal('created'), v.literal('changed'));
+export const inboxKindValidator = v.union(v.literal('created'), v.literal('changed'), v.literal('snoozed'));
 export const inboxChangeValidator = v.object({
   field: v.string(), // history field name ('stateId', 'comment', 'description', …)
   actor: actorValidator,
@@ -245,6 +245,9 @@ export default defineSchema({
     projectId: v.optional(v.id('projects')),
     estimate: v.optional(v.number()),
     dueDate: v.optional(day),
+    // Snoozed: hidden from the lists until this day (Europe/Berlin). The morning job clears it and
+    // puts the issue back into the inbox. Missing = not snoozed (no migration needed).
+    snoozedUntil: v.optional(day),
     parentId: v.optional(v.id('issues')),
     sprintId: v.optional(v.id('sprints')),
     rank: v.string(), // order in the backlog (fractional-indexing)
@@ -269,6 +272,7 @@ export default defineSchema({
     .index('by_status', ['status', 'updatedAt'])
     .index('by_sprint', ['sprintId'])
     .index('by_due', ['dueDate'])
+    .index('by_snoozed', ['snoozedUntil'])
     .index('by_completed', ['completedAt'])
     // For MCP list_issues (due/overdue, done today): read only the wanted statuses.
     .index('by_status_due', ['status', 'dueDate'])
@@ -359,7 +363,8 @@ export default defineSchema({
   // Inbox: one open entry per issue (removedAt missing). An agent that creates an issue or changes
   // an existing one adds to the open entry or opens one; reading and removing only touch the entry,
   // never the issue. Removed entries stay (undo, history) until the cleanup deletes them.
-  // `kind` is why the entry exists; later reasons (a snoozed issue coming back) add a value.
+  // `kind` is why the entry exists: an agent created the issue, an agent changed it, or it came back
+  // from a snooze (the morning job).
   inboxEntries: defineTable({
     issueId: v.id('issues'),
     kind: inboxKindValidator,

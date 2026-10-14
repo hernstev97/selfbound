@@ -18,11 +18,11 @@ export interface ListExtras {
 const STATUS_POS = new Map(STATUS_GROUP_ORDER.map((s, i) => [s, i]));
 
 export function emptyFilters(): Filters {
-  return { status: [], priority: [], team: [], label: [], project: [], sprint: [], unreviewed: false };
+  return { status: [], priority: [], team: [], label: [], project: [], sprint: [], unreviewed: false, snoozed: false };
 }
 
 export function filterCount(f: Filters) {
-  return f.status.length + f.priority.length + f.team.length + f.label.length + f.project.length + f.sprint.length + (f.unreviewed ? 1 : 0);
+  return f.status.length + f.priority.length + f.team.length + f.label.length + f.project.length + f.sprint.length + (f.unreviewed ? 1 : 0) + (f.snoozed ? 1 : 0);
 }
 
 export function hasFilters(view: ViewState) {
@@ -31,7 +31,7 @@ export function hasFilters(view: ViewState) {
 
 export function sameFilters(a: Filters, b: Filters) {
   const eq = (x: readonly unknown[], y: readonly unknown[]) => x.length === y.length && x.every((v, i) => v === y[i]);
-  return eq(a.status, b.status) && eq(a.priority, b.priority) && eq(a.team, b.team) && eq(a.label, b.label) && eq(a.project, b.project) && eq(a.sprint, b.sprint) && a.unreviewed === b.unreviewed;
+  return eq(a.status, b.status) && eq(a.priority, b.priority) && eq(a.team, b.team) && eq(a.label, b.label) && eq(a.project, b.project) && eq(a.sprint, b.sprint) && a.unreviewed === b.unreviewed && a.snoozed === b.snoozed;
 }
 
 const byRank = (a: Issue, b: Issue) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0);
@@ -48,6 +48,12 @@ export function comparator(ordering: Ordering): (a: Issue, b: Issue) => number {
       return (a, b) => b.createdAt - a.createdAt || b.seq - a.seq;
     case 'status':
       return (a, b) => STATUS_POS.get(a.status)! - STATUS_POS.get(b.status)! || priorityRank(a.priority) - priorityRank(b.priority) || b.seq - a.seq;
+    case 'snoozed':
+      return (a, b) => {
+        const x = a.snoozedUntil ?? '9999';
+        const y = b.snoozedUntil ?? '9999';
+        return x < y ? -1 : x > y ? 1 : priorityRank(a.priority) - priorityRank(b.priority) || b.seq - a.seq;
+      };
     case 'due':
       return (a, b) => {
         if (a.dueDate === b.dueDate) return priorityRank(a.priority) - priorityRank(b.priority) || b.seq - a.seq;
@@ -72,8 +78,11 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
   const hideClosed = def.closedOption && !view.display.showClosed && !status;
   const tokens = view.quick.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const unreviewed = f.unreviewed;
+  // Snoozed issues stay out of the lists unless the view is about them or the filter asks for them.
+  const hideSnoozed = def.snoozed === 'hide' && !f.snoozed;
   return (issue) => {
     if (!def.includes(issue, ctx)) return false;
+    if (hideSnoozed && issue.snoozedUntil !== undefined) return false;
     if (hideClosed && CLOSED.has(issue.status)) return false;
     if (status && !status(issue)) return false;
     if (priority && !priority.has(issue.priority)) return false;
