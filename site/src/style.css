@@ -145,7 +145,21 @@ kbd { display: inline-flex; align-items: center; justify-content: center; min-wi
 footer { width: 100%; max-width: 1200px; margin: auto auto 0; padding: 28px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; border-top: 1px solid var(--line); color: var(--faint); font-size: 14px; }
 footer a { color: var(--muted); text-decoration: none; }
 footer a:hover { color: var(--strong); }
-.foot-links { display: flex; gap: 20px; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+footer a[aria-current] { color: var(--strong); }
+
+/* Legal pages (impressum.html, datenschutz.html): plain text next to the same header and footer */
+.top-flow { position: relative; inset: auto; }
+.legal { width: 100%; max-width: 760px; margin: 0 auto; padding: 48px 28px 80px; }
+.legal h1 { font-size: clamp(30px, 4.4vw, 44px); }
+.legal .lead { margin: 12px 0 32px; color: var(--muted); }
+.legal h2 { margin: 36px 0 10px; font-size: 20px; letter-spacing: -0.015em; }
+.legal p, .legal li, .legal address { margin: 0 0 12px; font-style: normal; text-wrap: pretty; }
+.legal ul { margin: 0 0 12px; padding-left: 22px; }
+.legal a { color: var(--accent-text); text-underline-offset: 3px; }
+.legal .note-en { margin: 0 0 8px; padding: 4px 20px 8px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.legal .note-en h2 { margin-top: 16px; }
+.legal .note-en:last-child { margin-top: 40px; }
 
 @media (max-width: 1000px) {
   .points { grid-template-columns: repeat(2, minmax(0, 1fr)); }

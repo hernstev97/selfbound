@@ -8,7 +8,8 @@
 // Settings: XLR8_DOCS_VERCEL_PROJECT (default selfbound-docs), XLR8_DOCS_VERCEL_SCOPE (default: vercelScope
 // from the instance settings, tooling/instance.mjs).
 //
-// vercel.json is generated so that `noindex` follows the single switch in launch.mjs.
+// vercel.json is generated so that `noindex` follows the single switch in launch.mjs. The imprint details
+// come from ~/.config/xlr8/site-legal.json (tooling/site-legal.mjs); a --prod build fails without them.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -50,7 +51,8 @@ const config = {
 };
 
 function main() {
-  run('pnpm', ['--filter', '@selfbound/docs', 'build']);
+  const prod = process.argv.includes('--prod');
+  run('pnpm', ['--filter', '@selfbound/docs', 'build'], { env: { ...process.env, ...(prod ? { XLR8_SITE_REQUIRE_LEGAL: '1' } : {}) } });
 
   mkdirSync(out, { recursive: true });
   for (const entry of readdirSync(out)) if (entry !== '.vercel') rmSync(join(out, entry), { recursive: true, force: true });
@@ -68,7 +70,7 @@ function main() {
     // Linking inside the repo connects it to GitHub; pushes would then build without config and fail.
     run('vercel', ['git', 'disconnect', '--yes', '--scope', scope], { cwd: out });
   }
-  run('vercel', ['deploy', '--yes', '--scope', scope, ...(process.argv.includes('--prod') ? ['--prod'] : [])], { cwd: out });
+  run('vercel', ['deploy', '--yes', '--scope', scope, ...(prod ? ['--prod'] : [])], { cwd: out });
 }
 
 main();

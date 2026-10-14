@@ -847,6 +847,11 @@ footer .meta a:hover {
   height: 1.25rem;
 }
 
+/* Postal address on the imprint page: plain, not Starlight's default italics */
+.sl-markdown-content address {
+  font-style: normal;
+}
+
 .xl-site-footer {
   display: flex;
   flex-wrap: wrap;
