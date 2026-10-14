@@ -4,7 +4,7 @@ import { intlLocale, t } from './i18n.ts';
 import { stateGroupKey, statusMatcher, workflowsOf, type StateView } from './workflow.ts';
 import { VIEWS, type ViewContext } from './views.ts';
 import { haystackOf } from './haystack.ts';
-import { unread } from './inbox.ts';
+import { inboxAt, unread } from './inbox.ts';
 import type { Filters, GroupInfo, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, Priority, SprintItemKind, TeamBadge, ViewState } from './types.ts';
 
 /** Extras for groupings that do not follow from the issue itself. */
@@ -99,6 +99,8 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
 /** The view's sort order (trash: most recently deleted at the top). */
 export function viewComparator(view: ViewState): (a: Issue, b: Issue) => number {
   if (view.route.kind === 'trash' && view.display.ordering === 'updated') return (a, b) => (b.deletedAt ?? 0) - (a.deletedAt ?? 0) || b.seq - a.seq;
+  // Inbox: newest first by the entry's latest change, so an agent's new change moves it to the top.
+  if (view.route.kind === 'inbox' && view.display.ordering === 'created') return (a, b) => inboxAt(b) - inboxAt(a) || b.seq - a.seq;
   return comparator(view.display.ordering);
 }
 

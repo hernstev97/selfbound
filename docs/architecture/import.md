@@ -163,7 +163,7 @@ Principles:
    - `teamId` + `number` from Linear, so the identifier stays the same.
    - `issueBodies` with `description` (version 1).
    - `identifierAliases` for every identifier in `previousIdentifiers`.
-   - `labelIds` and `projectId` via `linearLinks`, status per the [mapping](#status-mapping). `startedAt`, `completedAt`, `canceledAt` from Linear. `createdBy: {kind: 'import'}`, `reviewedAt` set (counts as reviewed).
+   - `labelIds` and `projectId` via `linearLinks`, status per the [mapping](#status-mapping). `startedAt`, `completedAt`, `canceledAt` from Linear. `createdBy: {kind: 'import'}`, `reviewedAt` set (counts as reviewed, no inbox entry).
    - Sprint: `sprintItems` with `kind: 'imported'` for `cycleLinearId`. `outcome` by status: done → `done`, canceled/duplicate → `canceled`, otherwise `backlog`. `issue.sprintId` stays empty because the sprint is closed (sprint invariant, see [backend.md](backend.md#invariants)).
    - At the end: team counter = highest number + 1.
 

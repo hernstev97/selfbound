@@ -1,7 +1,7 @@
 // Shared test helpers: fake Convex client, reference data, issue documents.
 import { vi } from 'vitest';
 import { getFunctionName } from 'convex/server';
-import { OWNER_KIND, type IssueDoc, type Meta } from '../src/types.ts';
+import { OWNER_KIND, type InboxEntry, type IssueDoc, type Meta } from '../src/types.ts';
 import { DEFAULT_STATES } from '@xlr8/backend/shared/workflow';
 
 /** The default statuses per team with ids like "t1:todo". */
@@ -64,6 +64,15 @@ export function doc(seq: number, patch: Partial<IssueDoc> = {}): IssueDoc {
       : {}),
   } as IssueDoc;
 }
+
+/** An open inbox entry (kind "created" unless the patch says otherwise). */
+export function entry(issueId: string, patch: Partial<InboxEntry> = {}): InboxEntry {
+  return { _id: `e-${issueId}`, _creationTime: 0, issueId, kind: 'created', actor: { kind: 'agent', agentId: 'a1' }, changes: [], createdAt: 1, updatedAt: 1, ...patch } as InboxEntry;
+}
+
+/** Entries for documents as the old markers said it: no `reviewedAt` is in the inbox, `readAt` is read. */
+export const inboxOf = (docs: IssueDoc[]) =>
+  docs.filter((d) => d.reviewedAt === undefined).map((d) => entry(d._id, { createdAt: d.createdAt, updatedAt: d.createdAt, ...(d.readAt !== undefined ? { readAt: d.readAt } : {}) }));
 
 type Callback = (value: unknown) => void;
 

@@ -487,7 +487,7 @@ export class Editor {
   markRead(ids: IssueId[], read = true, opts: { undo?: boolean } = {}) {
     const targets = ids.filter((id) => {
       const issue = this.app.store.get(id);
-      return issue !== undefined && !issue.pending && issue.reviewedAt === undefined && (issue.readAt !== undefined) !== read;
+      return issue !== undefined && !issue.pending && inInbox(issue) && (issue.inbox!.readAt !== undefined) !== read;
     });
     if (!targets.length) return;
     // In the "Unread" filter a just-read issue stays for this visit.

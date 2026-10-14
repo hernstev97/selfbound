@@ -87,6 +87,7 @@ describe('legacy lifecycle (initialize)', () => {
       'list_projects',
       'list_labels',
       'list_statuses',
+      'list_inbox',
       'search_articles',
       'list_articles',
       'get_article',

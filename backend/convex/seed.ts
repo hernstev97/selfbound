@@ -5,7 +5,9 @@ import { ownerMutation, ownerQuery } from './lib/auth';
 import { setCounter, SEQ, SPRINT, teamCounter } from './lib/counters';
 import { fail } from './lib/errors';
 import { ensureTeamStates, stateFields } from './lib/workflow';
+import { DAY_MS } from './lib/dates';
 import { BODY_SEARCH_CHARS } from './ops/bodies';
+import { openCreatedEntry } from './ops/inboxChanges';
 import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import schema, {
   actorValidator,
@@ -223,6 +225,17 @@ export const insertIssues = ownerMutation({
       for (const comment of comments) await ctx.db.insert('comments', { issueId, ...comment });
       for (const item of sprintItems) await ctx.db.insert('sprintItems', { issueId, ...item });
       for (const row of history) await ctx.db.insert('history', { issueId, ...row });
+      // Inbox: issues without `reviewedAt` start in it; a recent agent comment on an issue the owner
+      // already reviewed shows up as a change, so the inbox has both kinds of entries.
+      if (issue.deletedAt === undefined) {
+        const lastAgentComment = [...comments].reverse().find((c) => c.author.kind === 'agent' && c.createdAt > Date.now() - 3 * DAY_MS);
+        if (issue.reviewedAt === undefined) await openCreatedEntry(ctx, issue.createdBy, issueId, issue.createdAt, issue.readAt);
+        else if (lastAgentComment) {
+          const at = lastAgentComment.createdAt;
+          const change = { field: 'comment', actor: lastAgentComment.author, at, value: lastAgentComment.body.slice(0, 120) };
+          await ctx.db.insert('inboxEntries', { issueId, kind: 'changed', actor: change.actor, changes: [change], createdAt: at, updatedAt: at });
+        }
+      }
     }
     return { inserted: args.issues.length };
   },

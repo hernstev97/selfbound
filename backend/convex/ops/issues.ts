@@ -25,6 +25,8 @@ import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
 import { dropLinksTo, syncArticleLinks } from './links';
 import { record } from './history';
+import { purgeEntries } from './inbox';
+import { openCreatedEntry } from './inboxChanges';
 import { notifyAgentIssues } from './notify';
 import { attachIssue, detachForTrash, setIssueSprint } from './sprints';
 import {
@@ -208,7 +210,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       ...(p.parentId ? { parentId: p.parentId } : {}),
       rank: ranks[i],
       createdBy: actor,
-      // Issues created by agents (and shared ones) stay in the inbox until the owner reviews them.
+      // Legacy marker (see schema): lets the inbox migration tell issues apart that never had an entry.
       ...(actor.kind === 'agent' || opts.inbox ? {} : { reviewedAt: now }),
       createdAt: now,
       updatedAt: now,
@@ -216,6 +218,8 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       ...(opts.recurrenceId ? { recurrenceId: opts.recurrenceId } : {}),
     });
     await insertBody(ctx, id, p.description, actor, now);
+    // Issues created by agents (and shared ones) stay in the inbox until the owner removes the entry.
+    if (actor.kind === 'agent' || opts.inbox) await openCreatedEntry(ctx, actor, id, now);
     const identifier = identifierOf(p.team.key, number);
     if (p.sprint) {
       const issue = (await ctx.db.get('issues', id))!;
@@ -518,6 +522,7 @@ export async function restoreIssues(ctx: MutationCtx, actor: Actor, args: { ids:
  */
 export async function purgeIssue(ctx: MutationCtx, issue: Doc<'issues'>, now: number) {
   const id = issue._id;
+  await purgeEntries(ctx, id);
   const sprintItems = [];
   for (const entry of await ctx.db.query('sprintItems').withIndex('by_issue', (q) => q.eq('issueId', id)).collect()) {
     const sprint = await ctx.db.get('sprints', entry.sprintId);
@@ -580,60 +585,7 @@ export async function purgeTrash(ctx: MutationCtx, now: number, limit = 25) {
   return { purged: due.length, more: due.length === limit };
 }
 
-// ---------------------------------------------------------------- Inbox, order
-
-// Inbox entries are marks on the issue: `reviewedAt` = removed from the inbox, `readAt` = read.
-// They change neither the status nor `updatedAt` (the issue does not count as changed).
-
-/** Removes issues from the inbox (formerly "mark as reviewed"). */
-export async function markReviewed(ctx: MutationCtx, actor: Actor, args: { ids: Id<'issues'>[]; requestId?: string }) {
-  return await idempotent(ctx, actor, args.requestId, 'issues.markReviewed', { ...args }, async () => {
-    if (args.ids.length === 0 || args.ids.length > LIMITS.bulkUpdateMax) invalid(`Between 1 and ${LIMITS.bulkUpdateMax} issues per call.`);
-    const now = Date.now();
-    let reviewed = 0;
-    for (const id of new Set(args.ids)) {
-      const issue = await getIssue(ctx, id, { allowDeleted: true });
-      if (issue.reviewedAt !== undefined) continue;
-      await ctx.db.patch('issues', issue._id, { reviewedAt: now });
-      await record(ctx, actor, now, args.requestId, { issueId: issue._id, field: 'reviewed', to: now });
-      reviewed++;
-    }
-    return { reviewed };
-  });
-}
-
-/** Undo of "remove from inbox": back in the inbox (only issues that are out of it). */
-export async function markUnreviewed(ctx: MutationCtx, actor: Actor, args: { ids: Id<'issues'>[]; requestId?: string }) {
-  return await idempotent(ctx, actor, args.requestId, 'issues.markUnreviewed', { ...args }, async () => {
-    if (args.ids.length === 0 || args.ids.length > LIMITS.bulkUpdateMax) invalid(`Between 1 and ${LIMITS.bulkUpdateMax} issues per call.`);
-    const now = Date.now();
-    let unreviewed = 0;
-    for (const id of new Set(args.ids)) {
-      const issue = await getIssue(ctx, id, { allowDeleted: true });
-      if (issue.reviewedAt === undefined) continue;
-      await ctx.db.patch('issues', issue._id, { reviewedAt: undefined });
-      await record(ctx, actor, now, args.requestId, { issueId: issue._id, field: 'unreviewed', from: issue.reviewedAt });
-      unreviewed++;
-    }
-    return { unreviewed };
-  });
-}
-
-/** Marks inbox entries read or unread. No history: reading is not a change to the issue. */
-export async function markRead(ctx: MutationCtx, actor: Actor, args: { ids: Id<'issues'>[]; read: boolean; requestId?: string }) {
-  return await idempotent(ctx, actor, args.requestId, 'issues.markRead', { ...args }, async () => {
-    if (args.ids.length === 0 || args.ids.length > LIMITS.bulkUpdateMax) invalid(`Between 1 and ${LIMITS.bulkUpdateMax} issues per call.`);
-    const now = Date.now();
-    let changed = 0;
-    for (const id of new Set(args.ids)) {
-      const issue = await getIssue(ctx, id, { allowDeleted: true });
-      if ((issue.readAt !== undefined) === args.read) continue;
-      await ctx.db.patch('issues', issue._id, { readAt: args.read ? now : undefined });
-      changed++;
-    }
-    return { changed };
-  });
-}
+// ---------------------------------------------------------------- Order
 
 export interface ReorderArgs {
   id: Id<'issues'>;

@@ -129,7 +129,7 @@ export function rowLeadHtml(r: RowState, props: ReadonlySet<DisplayProp>): strin
 
 export function rowRestHtml(r: RowState, props: ReadonlySet<DisplayProp>, trash: boolean): string {
   let html = '';
-  if (r.unread && !trash) html += `<span class="unseen-dot" data-testid="row-unseen" title="${esc(t('Created by {name}, still unread in the inbox', { name: r.createdBy }))}"></span>`;
+  if (r.unread && !trash) html += `<span class="unseen-dot" data-testid="row-unseen" title="${esc(r.inboxText)}"></span>`;
   html += `<span class="row-title" data-testid="row-title">${esc(r.title)}</span>`;
   if (r.pending) html += `<span class="row-tag" data-testid="row-pending">${T().saving}</span>`;
   html += `<span class="row-cols">${colsHtml(r, props)}</span>`;

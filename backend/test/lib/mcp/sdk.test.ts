@@ -26,7 +26,7 @@ describe('MCP SDK client against handleMcpHttp', () => {
       instructions: true,
       call: { tool: 'list_teams', isError: false, structuredKeys: ['teams'] },
     });
-    expect(result.tools).toHaveLength(18);
+    expect(result.tools).toHaveLength(19);
     expect(calls.at(-1)).toEqual({ name: 'list_teams', args: { includeDormant: true } });
   });
 

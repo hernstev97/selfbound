@@ -4,6 +4,8 @@ import type { Id } from './_generated/dataModel';
 import { internalAction, internalMutation, internalQuery } from './_generated/server';
 import { ensureTeamStates, teamStates } from './lib/workflow';
 import { record } from './ops/history';
+import { openCreatedEntry } from './ops/inboxChanges';
+import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import { removeTestTeam as removeTestTeamOp } from './ops/testData';
 import { CLOSED_STATUSES } from './shared/constants';
 import { stateForStatus, statusOfState } from './shared/workflow';
@@ -185,6 +187,53 @@ export const priorityClearClosed = internalMutation({
       found: Object.values(found).reduce((a, b) => a + b, 0),
       changed,
       byStatusAndPriority: found,
+      done: page.isDone,
+      ...(page.isDone ? {} : { cursor: page.continueCursor }),
+    };
+  },
+});
+
+/**
+ * Inbox entries from the old markers on issues: every issue without `reviewedAt` (the old inbox,
+ * the trash included, so a restored issue comes back as before) gets one entry of kind `created`
+ * with the issue's creation time and its `readAt`. The issues are not touched; the markers stay as
+ * they are.
+ * Without `apply: true` it only counts (`missing` = issues that would get an entry; after the real
+ * run it is 0). With `apply: true` it works page by page and reschedules itself. Safe to run again:
+ * an issue that already has an entry (open or removed) is skipped, and once the last page is done
+ * a note in `opsStatus` makes later runs do nothing, so entries the owner removed are never
+ * brought back. `force: true` ignores the note.
+ */
+export const inboxBackfill = internalMutation({
+  args: { apply: v.optional(v.boolean()), cursor: v.optional(v.union(v.string(), v.null())), numItems: v.optional(v.number()), force: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const apply = args.apply === true;
+    if (apply && !args.cursor && args.force !== true) {
+      const done = await readOpsStatus(ctx, 'inboxBackfill');
+      if (done) return { applied: false, skipped: 'already done', doneAt: done.at, scanned: 0, missing: 0, existing: 0, done: true };
+    }
+    const page = await ctx.db.query('issues').paginate({ cursor: args.cursor ?? null, numItems: args.numItems ?? PAGE, maximumBytesRead: MAX_BYTES });
+    let missing = 0;
+    let existing = 0;
+    for (const issue of page.page) {
+      if (issue.reviewedAt !== undefined) continue;
+      const entry = await ctx.db.query('inboxEntries').withIndex('by_issue', (q) => q.eq('issueId', issue._id)).first();
+      if (entry) {
+        existing++;
+        continue;
+      }
+      missing++;
+      if (apply) await openCreatedEntry(ctx, issue.createdBy, issue._id, issue.createdAt, issue.readAt);
+    }
+    if (apply && page.isDone) await writeOpsStatus(ctx, 'inboxBackfill', { done: true });
+    if (apply && !page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.migrations.inboxBackfill, { apply: true, cursor: page.continueCursor, numItems: args.numItems, force: args.force });
+    }
+    return {
+      applied: apply,
+      scanned: page.page.length,
+      missing,
+      existing,
       done: page.isDone,
       ...(page.isDone ? {} : { cursor: page.continueCursor }),
     };

@@ -72,7 +72,6 @@ export default {
   'Offline. {key} is not on this device; it appears once the network is back.': 'Ohne Verbindung. {key} liegt nicht auf diesem Gerät; es erscheint, sobald das Netz zurück ist.',
   'Offline. This issue is not on this device; it appears once the network is back.': 'Ohne Verbindung. Dieses Issue liegt nicht auf diesem Gerät; es erscheint, sobald das Netz zurück ist.',
   // InboxRow.svelte
-  '{actor} created the issue': '{actor} hat das Issue angelegt',
   Unread: 'Ungelesen',
   'Remove from inbox': 'Aus dem Eingang entfernen',
   // DisplayPopover.svelte

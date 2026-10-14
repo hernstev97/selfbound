@@ -161,7 +161,9 @@ function closeReadNotifications(app: App) {
       const issue = app.store.get(data.issueId as IssueId);
       const at = data.at ?? 0;
       const opened = open.name === 'issue' && issue?.key === open.key;
-      if (issue && (opened || (issue.readAt ?? 0) >= at || (issue.reviewedAt ?? 0) >= at || issue.deletedAt !== undefined)) n.close();
+      // Read (the entry's readAt) or removed (the entry vanished while the app was open).
+      const gone = app.store.entryGoneAt(data.issueId as IssueId);
+      if (issue && (opened || (issue.inbox?.readAt ?? 0) >= at || (gone !== undefined && gone >= at) || issue.deletedAt !== undefined)) n.close();
     }
   };
   const later = () => void run().catch(() => undefined);

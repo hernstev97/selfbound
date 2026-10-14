@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
+import { addComment } from '../convex/ops/comments';
+import { createIssues } from '../convex/ops/issues';
 import { bundleMessages } from '../convex/ops/notify';
 import { createOne, expectCode, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
@@ -106,12 +108,14 @@ describe('return in the morning', () => {
     expect((await t.mutation(internal.push.morning, {})).sent).toEqual(['snooze']);
     const issue = await getIssue(t, id);
     expect(issue.snoozedUntil).toBeUndefined();
-    expect(issue.reviewedAt).toBeUndefined();
-    expect(issue.readAt).toBeUndefined();
+    // Back in the inbox as unread through an entry of its own; the issue's markers stay as they were.
+    expect(issue.reviewedAt).toBeDefined();
+    expect(await owner.query(api.inbox.list, {})).toMatchObject([{ issueId: id, kind: 'snoozed', actor: { kind: 'system' }, changes: [], updatedAt: at(11, 6) }]);
+    expect((await owner.query(api.inbox.list, {}))[0].readAt).toBeUndefined();
     expect(issue.updatedAt).toBe(at(11, 6));
     const history = await historyOf(t, id);
     expect(history.find((h) => h.field === 'snoozedUntil' && h.actor.kind === 'system')).toMatchObject({ from: '2026-10-11' });
-    expect(history.find((h) => h.field === 'unreviewed')).toBeDefined();
+    expect(history.find((h) => h.field === 'unreviewed')).toBeUndefined();
     const rows = (await events(t)).filter((e) => e.kind === 'snooze');
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ title: 'ORB-1 is back from snooze', body: 'Call the bank', url: '/issue/ORB-1', issueId: id });
@@ -156,12 +160,38 @@ describe('return in the morning', () => {
     expect(await events(t)).toHaveLength(0);
     const issue = await getIssue(t, open.id);
     expect(issue.snoozedUntil).toBeUndefined();
-    expect(issue.reviewedAt).toBeUndefined();
     for (const id of [trashed.id, closed.id]) {
       const gone = await getIssue(t, id);
       expect(gone.snoozedUntil).toBeUndefined();
       expect(gone.reviewedAt).toBeDefined();
     }
+    // Only the open issue is back in the inbox.
+    expect((await owner.query(api.inbox.list, {})).map((e) => e.issueId)).toEqual([open.id]);
+  });
+
+  test('an issue with an entry already: the entry waits behind the snooze and comes back unread; a removed one gets a new entry', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(at(9, 12));
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const agentId = await t.run(async (ctx) => await ctx.db.insert('agents', { name: 'Aleister', keyHash: 'a'.repeat(64), keyPrefix: 'xlr8_aaaaa', createdAt: Date.now() }));
+    const created = await t.run(async (ctx) => await createIssues(ctx, { kind: 'agent', agentId }, { issues: [{ teamId: f.orb, title: 'Waiting', status: 'todo' }, { teamId: f.orb, title: 'Done with', status: 'todo' }] }));
+    const [waiting, removed] = created.issues.map((i) => i.id);
+    await owner.mutation(api.issues.markRead, { ids: [waiting], read: true });
+    await t.run(async (ctx) => await addComment(ctx, { kind: 'agent', agentId }, { issueId: waiting, body: 'meanwhile' }));
+    await owner.mutation(api.issues.markReviewed, { ids: [removed] });
+    await snooze(owner, [waiting, removed], '2026-10-11');
+    vi.setSystemTime(at(11, 6));
+    await t.mutation(internal.push.morning, {});
+    const list = await owner.query(api.inbox.list, {});
+    expect(list.map((e) => [e.issueId, e.kind, e.readAt, e.changes.length]).sort()).toEqual(
+      [
+        [waiting, 'snoozed', undefined, 0],
+        [removed, 'snoozed', undefined, 0],
+      ].sort(),
+    );
+    // One open entry per issue: the earlier entry of `waiting` was reused, `removed` got a new one.
+    expect(await t.run(async (ctx) => (await ctx.db.query('inboxEntries').collect()).length)).toBe(3);
   });
 
   test('a snoozed issue is left out of the due summary', async () => {

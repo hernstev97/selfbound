@@ -1,6 +1,7 @@
 import type { Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
+import { noteChange } from './inboxChanges';
 
 // History: one row per changed field. The actor always comes from the verified
 // identity (UI: requireOwner, MCP: agent key, cron: system).
@@ -34,4 +35,6 @@ export async function record(
     at,
     ...(requestId ? { requestId } : {}),
   });
+  // An agent's change to an existing issue also shows up in the owner's inbox.
+  await noteChange(ctx, actor, at, entry);
 }

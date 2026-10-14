@@ -1,5 +1,6 @@
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { DAY_MS } from '../lib/dates';
+import { cleanupEntries } from './inbox';
 import { cleanupPushEvents } from './notify';
 
 // Cleanup and ops status (the ops page).
@@ -27,7 +28,7 @@ export async function readOpsStatus(ctx: QueryCtx, key: string) {
 
 /**
  * Deletes old idempotency entries (30 days), webhook deliveries and check runs from deliveries (30 days),
- * rate windows (2 days) and push events (7 days) in batches. `more` = something is left.
+ * rate windows (2 days), push events (7 days) and inbox entries removed long ago (90 days) in batches. `more` = something is left.
  */
 export async function cleanupOld(ctx: MutationCtx, now = Date.now(), limit = 500) {
   const requests = await ctx.db
@@ -51,17 +52,20 @@ export async function cleanupOld(ctx: MutationCtx, now = Date.now(), limit = 500
     .take(limit);
   for (const row of windows) await ctx.db.delete('rateWindows', row._id);
   const push = await cleanupPushEvents(ctx, now, limit);
+  const inbox = await cleanupEntries(ctx, now, limit);
   return {
     requests: requests.length,
     deliveries: deliveries.length,
     checkRuns: checkRuns.length,
     rateWindows: windows.length,
     push,
+    inbox,
     more:
       requests.length === limit ||
       deliveries.length === limit ||
       checkRuns.length === limit ||
       windows.length === limit ||
-      push >= limit,
+      push >= limit ||
+      inbox === limit,
   };
 }

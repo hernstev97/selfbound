@@ -11,7 +11,8 @@ import { stateGroupKey } from '../workflow.ts';
 
 import { VIEWS, planSprint, viewKey, viewTitle, type ViewContext } from '../views.ts';
 import { revealIndex } from '../window.ts';
-import { unread } from '../inbox.ts';
+import { inboxAt, unread } from '../inbox.ts';
+import { entryText } from '../inboxText.ts';
 import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
 
@@ -608,9 +609,10 @@ export class ListController {
       snoozed: issue.snoozedUntil ? shortDate(parseDay(issue.snoozedUntil).getTime()) : null,
       created: shortDate(issue.createdAt),
       updated: shortDate(issue.updatedAt),
-      age: relativeTime(issue.createdAt),
+      age: relativeTime(inboxAt(issue)),
       deleted: issue.deletedAt !== undefined ? relativeTime(issue.deletedAt) : null,
       unread: unread(issue),
+      inboxText: issue.inbox ? entryText(issue.inbox, this.app.store, this.app.store.agents.get()) : '',
       pending: !!issue.pending,
       createdBy: actorName(issue.createdBy, this.app.store.agents.get()),
       decision: this.#decision(id),

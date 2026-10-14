@@ -6,7 +6,7 @@ import { Auth } from '../src/auth.ts';
 import { labelIdsFrom, labelParam, writeLocation } from '../src/route.ts';
 import { revealIndex } from '../src/window.ts';
 import { OWNER_KIND, type IssueId } from '../src/types.ts';
-import { callName, doc, fakeClient, flush, meta } from './helpers.ts';
+import { callName, doc, entry, fakeClient, flush, inboxOf, meta } from './helpers.ts';
 
 let n = 0;
 async function setup(docs = [doc(0), doc(1), doc(2)]) {
@@ -18,6 +18,7 @@ async function setup(docs = [doc(0), doc(1), doc(2)]) {
   client.push('meta:counter', {}, { maxSeq: docs.length - 1 });
   client.push('agents:list', {}, []);
   client.push('issues:bucket', { bucket: 0 }, docs);
+  client.push('inbox:list', {}, inboxOf(docs));
   await flush();
   // relations.add returns an id, everything else the default answer.
   let rel = 0;
@@ -273,7 +274,7 @@ describe('inbox and comments', () => {
     // No field of the issue changes (status, title …): no change through issues.update.
     expect(calls(client, 'issues:update')).toHaveLength(0);
     expect(app.toasts.list.get().at(-1)).toMatchObject({ text: 'PX-2 removed from inbox', action: { label: 'Undo' } });
-    client.push('issues:bucket', { bucket: 0 }, [doc(0, { reviewedAt: undefined }), doc(1, { reviewedAt: 9 }), doc(2)]);
+    client.push('inbox:list', {}, inboxOf([doc(0, { reviewedAt: undefined })]));
     await flush();
     expect(app.list.order()).toEqual(ids('i0'));
     expect(app.list.focusId()).toBe('i0');
@@ -387,15 +388,15 @@ describe('split inbox', () => {
     const { client, app } = await split([doc(0, { reviewedAt: undefined }), doc(1, { reviewedAt: undefined })]);
     app.list.clickRow('i1' as IssueId);
     actionById('inbox.remove')!.run(app);
-    client.push('issues:bucket', { bucket: 0 }, [doc(0, { reviewedAt: undefined }), doc(1, { reviewedAt: 9 })]);
+    client.push('inbox:list', {}, inboxOf([doc(0, { reviewedAt: undefined })]));
     await flush();
     expect(app.detail.state.get()?.id).toBe('i0');
     actionById('inbox.remove')!.run(app);
-    client.push('issues:bucket', { bucket: 0 }, [doc(0, { reviewedAt: 9 }), doc(1, { reviewedAt: 9 })]);
+    client.push('inbox:list', {}, []);
     await flush();
     expect(app.detail.splitShown()).toBe(false);
     // A new entry does not open by itself (and is not read).
-    client.push('issues:bucket', { bucket: 0 }, [doc(0, { reviewedAt: 9 }), doc(1, { reviewedAt: 9 }), doc(2, { reviewedAt: undefined })]);
+    client.push('inbox:list', {}, [entry('i2')]);
     await wait(320);
     expect(app.detail.state.get()).toBeNull();
     expect(calls(client, 'issues:markRead').flatMap((c) => c.ids as string[])).not.toContain('i2');

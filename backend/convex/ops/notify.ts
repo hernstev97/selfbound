@@ -7,6 +7,7 @@ import { pushText } from '../lib/pushText';
 import type { VapidKeys } from '../lib/webpush';
 import { identifierOf, OPEN_STATUSES } from '../shared/constants';
 import { record } from './history';
+import { openSnoozedEntry } from './inboxChanges';
 import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage } from '../shared/notifyEvents';
 
 // Notifications: collect events, bundle them and prepare them for delivery (push.ts).
@@ -284,10 +285,8 @@ export async function returnSnoozed(ctx: MutationCtx, today: string, now: number
     await ctx.db.patch('issues', issue._id, { snoozedUntil: undefined, updatedAt: now });
     await record(ctx, SYSTEM, now, undefined, { issueId: issue._id, field: 'snoozedUntil', from: until });
     if (issue.deletedAt !== undefined || !(OPEN_STATUSES as readonly string[]).includes(issue.status)) continue;
-    if (issue.reviewedAt !== undefined) {
-      await ctx.db.patch('issues', issue._id, { reviewedAt: undefined, readAt: undefined });
-      await record(ctx, SYSTEM, now, undefined, { issueId: issue._id, field: 'unreviewed', from: issue.reviewedAt });
-    } else if (issue.readAt !== undefined) await ctx.db.patch('issues', issue._id, { readAt: undefined });
+    // Back in the inbox, unread: an inbox entry of its own, the issue keeps its markers.
+    await openSnoozedEntry(ctx, issue._id, now);
     const team = await ctx.db.get('teams', issue.teamId);
     if (!team || team.dormant) continue;
     const id = identifierOf(team.key, issue.number);

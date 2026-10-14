@@ -36,7 +36,7 @@
     <span>{t('Ordering')}</span>
     <span class="dp-select">
       <select data-testid="display-ordering" value={v.display.ordering} onchange={(e) => app.main.setDisplay({ ordering: e.currentTarget.value as Ordering })}>
-        {#each def.orderings as o (o)}<option value={o}>{ORDERING_LABEL[o]}</option>{/each}
+        {#each def.orderings as o (o)}<option value={o}>{def.orderingLabels?.[o] ?? ORDERING_LABEL[o]}</option>{/each}
       </select>
       <span class="icon">{@html ICON.chevronDown}</span>
     </span>

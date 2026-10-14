@@ -9,7 +9,6 @@
   let { id, top }: { id: IssueId; top: number } = $props();
   const row = $derived(fromSlice(app.main.rows.get(id)));
   const r = $derived(row.current);
-  const created = $derived(r ? t('{actor} created the issue', { actor: r.createdBy }) : '');
 </script>
 
 {#if r}
@@ -36,7 +35,7 @@
         {#if r.unread}<span class="unseen-dot" data-testid="inbox-unread" title={t('Unread')}></span>{/if}
         <span class="key">{r.key}</span><span class="t" data-testid="row-title">{r.title}</span>
       </span>
-      <span class="inbox-l2">{created} · {r.team.name}</span>
+      <span class="inbox-l2">{r.inboxText} · {r.team.name}</span>
     </span>
     <span class="inbox-meta"><span class="icon">{@html statusIcon(r.status, r.statusColor)}</span><span>{r.age}</span></span>
     <!-- Removes only the entry; the issue stays as it is. -->

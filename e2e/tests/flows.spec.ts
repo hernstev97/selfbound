@@ -25,8 +25,8 @@ test('Triage: accept (1 → Todo) and decline (3)', async ({ page }) => {
   const accepted = (await backend().query(api.issues.bucket, { bucket: 0 })).concat(...(await Promise.all([1, 2, 3, 4, 5, 6].map((b) => backend().query(api.issues.bucket, { bucket: b })))));
   expect(accepted.find((i) => i._id === id)).toMatchObject({ status: 'todo' });
   // Accepting marks an inbox entry as read but does not remove it.
-  const done = accepted.find((i) => i._id === id)!;
-  expect(done.reviewedAt !== undefined || done.readAt !== undefined).toBe(true);
+  const entry = (await backend().query(api.inbox.list, {})).find((e) => e.issueId === id);
+  expect(entry?.readAt).toBeDefined();
   expect(accepted.find((i) => i._id === second)).toMatchObject({ status: 'canceled' });
 });
 

@@ -13,10 +13,12 @@ import { setDictionary } from '../src/i18n.ts';
 import de from '../src/locales/de.ts';
 import { eventCombo, formatShortcut } from '../src/keyboard.ts';
 import { OWNER_KIND, type Issue, type IssueDoc, type ViewRoute, type ViewState } from '../src/types.ts';
-import { doc, meta } from './helpers.ts';
+import { doc, entry, meta } from './helpers.ts';
 
 const keyOf = (d: IssueDoc) => `${d.teamId === 't1' ? 'ACME' : 'PX'}-${d.number}`;
 const enrich = (d: IssueDoc): Issue => Object.freeze({ ...d, key: keyOf(d), haystack: `${keyOf(d)} ${d.title}`.toLowerCase() }) as Issue;
+/** An issue with its open inbox entry, as the store merges it. */
+const inInbox = (d: IssueDoc, patch: Partial<Issue['inbox'] & object> = {}): Issue => ({ ...enrich(d), inbox: entry(d._id, patch) });
 const all = Array.from({ length: 200 }, (_, i) => enrich(doc(i, i === 7 ? { deletedAt: 5 } : i === 9 ? { status: 'triage' } : {})));
 const ctx = (patch: Partial<ViewContext> = {}): ViewContext => ({ teamId: null, activeSprintId: 's4', projectId: null, keep: new Set(), ...patch });
 function view(route: ViewRoute, patch: Partial<ViewState> = {}): ViewState {
@@ -47,19 +49,29 @@ describe('views and filters', () => {
     expect(active.every((i) => ['todo', 'in_progress', 'in_review'].includes(i.status))).toBe(true);
   });
 
-  test('inbox: entries without reviewedAt, read ones stay; the "Unread" filter keeps the ones read during this visit', () => {
+  test('inbox: issues with an open entry, read ones stay; the "Unread" filter keeps the ones read during this visit', () => {
     const issues = [
-      enrich(doc(1, { reviewedAt: undefined })),
+      inInbox(doc(1)),
       enrich(doc(2)),
-      enrich(doc(3, { reviewedAt: undefined, deletedAt: 1 })),
-      enrich(doc(4, { reviewedAt: undefined, readAt: 5 })),
-      enrich(doc(5, { reviewedAt: undefined, readAt: 5 })),
+      { ...inInbox(doc(3)), deletedAt: 1 },
+      inInbox(doc(4), { readAt: 5 }),
+      inInbox(doc(5), { readAt: 5 }),
     ];
     const inbox = view({ kind: 'inbox', team: null });
     expect(computeVisible(issues, inbox, meta, ctx()).map((i) => i._id).sort()).toEqual(['i1', 'i4', 'i5']);
     const unreadOnly = { ...inbox, filters: { ...inbox.filters, unreviewed: true } };
     expect(computeVisible(issues, unreadOnly, meta, ctx()).map((i) => i._id)).toEqual(['i1']);
     expect(computeVisible(issues, unreadOnly, meta, ctx({ keep: new Set(['i4' as never]) })).map((i) => i._id).sort()).toEqual(['i1', 'i4']);
+  });
+
+  test('inbox: newest activity first, so an agent\'s new change moves an old entry to the top', () => {
+    const issues = [inInbox(doc(1), { updatedAt: 10 }), inInbox(doc(2), { updatedAt: 50 }), inInbox(doc(3), { updatedAt: 30 })];
+    const inbox = view({ kind: 'inbox', team: null });
+    expect(inbox.display.ordering).toBe('created');
+    expect(computeVisible(issues, inbox, meta, ctx()).map((i) => i._id)).toEqual(['i2', 'i3', 'i1']);
+    // The other orderings still sort by the issue.
+    const updated = { ...inbox, display: { ...inbox.display, ordering: 'updated' as const } };
+    expect(computeVisible(issues, updated, meta, ctx()).map((i) => i._id)).toEqual(['i3', 'i2', 'i1']);
   });
 
   test('filters: priority, label, project "none", ordering by priority', () => {

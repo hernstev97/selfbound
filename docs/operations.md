@@ -468,6 +468,22 @@ A run consists of many small steps the backend schedules one after another; `pus
 one. A run without progress for 15 minutes (e.g. because the backend restarted) is marked failed: at the
 latest after an hour, immediately on the next `push`. Only one run can be active at a time.
 
+<a id="inbox-entries-migration"></a>
+
+**Inbox entries (migration):** the inbox has its own table now. Before the first use after the deploy,
+create the entries for what is in the inbox today (issues without `reviewedAt`, with their read marker):
+
+```sh
+node tooling/cloud.mjs run migrations:inboxBackfill                  # count only: missing = entries to create
+node tooling/cloud.mjs run migrations:inboxBackfill '{"apply":true}' # create them
+node tooling/cloud.mjs run migrations:inboxBackfill                  # again: missing must be 0
+```
+
+The issues are not changed. Safe to rerun and to run while the app is in use: an issue that already has
+an entry is skipped, and after the last page a note makes further runs do nothing (so entries you removed
+since never come back; `{"apply":true,"force":true}` ignores the note). It reschedules itself above 500
+issues; wait until no scheduled follow-up pages remain, then run the count again.
+
 **Priorities of closed issues:** in XLR8 completing an issue clears its priority. Imported issues that
 were already closed keep theirs until you run:
 

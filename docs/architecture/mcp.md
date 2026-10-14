@@ -38,7 +38,7 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 **Archived labels:** Agents cannot assign them (`list_labels` doesn't show them). If an archived label is already on the issue, `update_issue` may keep listing it in `labels`.
 
-**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner) once the owner has read or dismissed it.
+**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner): true unless an unread inbox entry is waiting; a new change by an agent makes it false again.
 
 ## Tools
 
@@ -53,6 +53,7 @@ Responses are lean: identifier, title, status (name within the team) and `status
 | `update_issue` | write | Change fields of one issue | `identifier`, fields, `expected?`, `description` + `expectedDescriptionVersion`, `requestId?` |
 | `set_status` | write | Status for 1–50 issues | `identifiers[]`, `status`, `requestId?` |
 | `list_statuses` | read | Statuses per team in workflow order: name, type, key, default | `team?` |
+| `list_inbox` | read | The owner's open inbox entries, newest first: issue brief, `kind` (`created`/`changed`/`snoozed`), `unread`, who created it, and the latest change per field (`field`, `to`, `by`, `at`). Agents cannot read or remove entries | `unreadOnly?`, `limit?` (default 50, max 100) |
 | `move_issues` | write | Move 1–50 issues to another team (one transaction) | `identifiers[]` (old identifiers work too), `team`, `requestId?` |
 | `add_comment` | write | Comment (Markdown) | `requestId`, `identifier`, `body` |
 | `get_current_sprint` | read | Active sprint (otherwise the next planned one): goal, date range, points done/total, planned and added later | – |

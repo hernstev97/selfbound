@@ -147,5 +147,4 @@ export default {
   saving: 'wird gespeichert',
   'Project of {team}': 'Projekt von {team}',
   'deleted {date}': 'gelöscht {date}',
-  'Created by {name}, still unread in the inbox': 'Von {name} angelegt, im Eingang noch ungelesen',
 } satisfies Dictionary;

@@ -6,7 +6,7 @@ import { addDays, berlinToday, berlinToday as today } from '../src/format.ts';
 import { emptyFilters } from '../src/query.ts';
 import { parsePath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import type { IssueId } from '../src/types.ts';
-import { callName, doc, fakeClient, flush, meta } from './helpers.ts';
+import { callName, doc, entry, fakeClient, flush, inboxOf, meta } from './helpers.ts';
 
 // Snooze: hidden from the lists, own view, picker with quick choices, undo, counts.
 
@@ -35,17 +35,38 @@ describe('days count in Europe/Berlin', () => {
   });
 });
 
+describe('inbox entry of a snoozed issue', () => {
+  test('hidden and not counted while snoozed; back unread with its own text once the snooze is over', async () => {
+    const { client, app } = await setup();
+    const until = addDays(today(), 3);
+    client.push('issues:bucket', { bucket: 0 }, [doc(2, { status: 'todo', snoozedUntil: until })]);
+    client.push('inbox:list', {}, [entry('i2', { kind: 'snoozed', actor: { kind: 'system' } })]);
+    await flush();
+    app.nav.goView({ kind: 'inbox', team: null });
+    expect(visible(app)).toEqual([]);
+    expect(app.sidebar.get().inbox).toBe(0);
+    // Morning job: snooze cleared, entry first in the list and unread.
+    client.push('issues:bucket', { bucket: 0 }, [doc(2, { status: 'todo' })]);
+    await flush();
+    expect(visible(app)).toEqual(['i2']);
+    expect(app.sidebar.get().inbox).toBe(1);
+    expect(app.main.rows.get('i2' as never).get()?.inboxText).toBe('Back from snooze');
+  });
+});
+
 describe('snoozed issues in the lists', () => {
   test('hidden everywhere except the Snoozed view, the trash and the filter; counted separately', async () => {
     const { client, app } = await setup();
     const until = addDays(today(), 3);
-    client.push('issues:bucket', { bucket: 0 }, [
+    const docs = [
       doc(0, { status: 'todo' }),
       doc(2, { status: 'todo', snoozedUntil: until }),
       doc(4, { status: 'triage', snoozedUntil: until }),
       doc(6, { status: 'todo', reviewedAt: undefined, snoozedUntil: until }),
       doc(8, { status: 'todo', reviewedAt: undefined }),
-    ]);
+    ];
+    client.push('issues:bucket', { bucket: 0 }, docs);
+    client.push('inbox:list', {}, inboxOf(docs));
     await flush();
 
     app.nav.goView({ kind: 'all', team: null });
