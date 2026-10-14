@@ -1,10 +1,13 @@
 // The "listed" switch and the placeholders of index.html.
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { robotsTxt, siteHtml, siteSettings, sitemapXml, vercelConfig, type SiteConfig } from '../site.plugin.ts';
+import { robotsTxt, siteHtml, siteSettings, sitemapXml, vercelConfig, type Legal, type SiteConfig } from '../site.plugin.ts';
 
 const config: SiteConfig = { listed: false, github: 'https://github.com/example/xlr8', docs: 'https://docs.example.com' };
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const page = (name: string) => readFileSync(new URL(`../${name}.html`, import.meta.url), 'utf8');
+const html = page('index');
+const legal: Legal = { name: 'Erika Beispiel', street: 'Musterweg 1', postalCode: '12345', city: 'Musterstadt', country: 'Deutschland', email: 'kontakt@example.com' };
+const ANALYTICS_SCRIPTS = ['/_vercel/insights/script.js', '/_vercel/speed-insights/script.js'];
 const headerValue = (cfg: ReturnType<typeof vercelConfig>, key: string) => cfg.headers[0]!.headers.find((h) => h.key === key)?.value;
 
 describe('siteSettings', () => {
@@ -66,5 +69,79 @@ describe('index.html', () => {
   it('has one h1 and keeps the credit line', () => {
     expect(html.match(/<h1[ >]/g)).toHaveLength(1);
     expect(html).toContain('Product, design and review by <strong>Steven Hernandez</strong>');
+  });
+});
+
+describe('visitor statistics (Vercel Web Analytics and Speed Insights)', () => {
+  const unlisted = siteSettings(config, {}, legal);
+  const listed = siteSettings({ ...config, listed: true }, {}, legal);
+  const connect = (cfg: ReturnType<typeof vercelConfig>) => headerValue(cfg, 'Content-Security-Policy')!.includes("connect-src 'self'");
+
+  it('loads nothing while the site is unlisted', () => {
+    const out = siteHtml(html, unlisted);
+    for (const src of ANALYTICS_SCRIPTS) expect(out).not.toContain(src);
+    expect(out).not.toMatch(/<!--analytics-->/);
+    expect(connect(vercelConfig(unlisted))).toBe(false);
+  });
+  it('loads both official scripts, same-origin and without inline code, once the site is listed', () => {
+    const out = siteHtml(html, listed);
+    for (const src of ANALYTICS_SCRIPTS) expect(out).toContain(`<script defer src="${src}"></script>`);
+    expect(out.match(/<script(?![^>]*\bsrc=)[^>]*>/g)).toBeNull();
+    expect(connect(vercelConfig(listed))).toBe(true);
+    expect(headerValue(vercelConfig(listed), 'Content-Security-Policy')).toContain("script-src 'self'");
+  });
+  it('leaves the scripts out of the dev server, but keeps the privacy text in step with the setting', () => {
+    expect(siteHtml(html, listed, { scripts: false })).not.toContain('/_vercel/');
+    expect(siteHtml(page('datenschutz'), listed, { scripts: false })).toContain('Vercel Web Analytics');
+  });
+  it('describes the statistics in the privacy policy exactly when they run, and only on the landing page', () => {
+    expect(siteHtml(page('datenschutz'), unlisted)).not.toMatch(/Web Analytics|Speed Insights|Besucherstatistik/);
+    const withStats = siteHtml(page('datenschutz'), listed);
+    expect(withStats).toMatch(/Besucherstatistik/);
+    expect(withStats).not.toMatch(/<!--\/?if:analytics-->/);
+    for (const name of ['impressum', 'datenschutz']) expect(siteHtml(page(name), listed)).not.toContain('/_vercel/');
+  });
+});
+
+describe('imprint and privacy pages', () => {
+  const pages = ['impressum', 'datenschutz'];
+  const s = siteSettings({ ...config, listed: true }, { XLR8_SITE_URL: 'https://example.com' }, legal);
+
+  it('hold no operator details in the source, only placeholders for the build', () => {
+    expect(page('impressum')).toContain('__LEGAL_ADDRESS__');
+    expect(page('datenschutz')).toContain('__LEGAL_ADDRESS_INLINE__');
+    expect(page('impressum') + page('datenschutz')).not.toMatch(/Steven Hernandez[,<]|mailto:[^"_]/);
+  });
+  it('fill in the operator and leave no placeholder behind', () => {
+    for (const name of pages) {
+      const out = siteHtml(page(name), s);
+      expect(out).toContain('Erika Beispiel');
+      expect(out).toContain('12345 Musterstadt');
+      expect(out).toContain('href="mailto:kontakt@example.com"');
+      expect(out).not.toMatch(/__[A-Z_]+__|<!--robots-->|<!--analytics-->/);
+    }
+  });
+  it('escape the operator details', () => {
+    const out = siteHtml(page('impressum'), siteSettings(config, {}, { ...legal, name: 'A & <B>' }));
+    expect(out).toContain('A &amp; &lt;B&gt;');
+  });
+  it('have no inline script or style, a German lang attribute and one h1', () => {
+    for (const name of pages) {
+      expect(page(name)).not.toMatch(/<script|\sstyle="|<style/);
+      expect(page(name)).toContain('<html lang="de">');
+      expect(page(name).match(/<h1[ >]/g)).toHaveLength(1);
+    }
+  });
+  it('are linked from the footer of every page', () => {
+    for (const name of ['index', ...pages]) {
+      expect(page(name)).toContain('href="/impressum"');
+      expect(page(name)).toContain('href="/datenschutz"');
+    }
+  });
+  it('name the supervisory authority, the controller and the data subject rights', () => {
+    const out = siteHtml(page('datenschutz'), s);
+    expect(out).toMatch(/Art\. 77 DSGVO/);
+    expect(out).toContain('Landesbeauftragte für Datenschutz');
+    expect(out).toContain('Art. 21');
   });
 });

@@ -1,0 +1,34 @@
+---
+// Imprint (§ 5 DDG, § 18 Abs. 1 MStV). German text is binding; operator details come from outside the repo.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { legal } from '../lib/legal';
+---
+
+<StarlightPage frontmatter={{ title: 'Impressum', description: 'Anbieterkennzeichnung für docs.getxlr8.app.', tableOfContents: false, prev: false, next: false, pagefind: false }}>
+  <div lang="de">
+    <p>Angaben nach § 5 DDG und § 18 Abs. 1 Medienstaatsvertrag.</p>
+
+    <h2 id="anbieter">Anbieter</h2>
+    <address set:html={legal.address} />
+
+    <h2 id="kontakt">Kontakt</h2>
+    <p>E-Mail: <Fragment set:html={legal.email} /></p>
+
+    <h2 id="das-angebot">Das Angebot</h2>
+    <p>
+      docs.getxlr8.app ist die Dokumentation von XLR8, einem quelloffenen Issue-Tracker (AGPL-3.0). Es ist ein nichtkommerzielles
+      Open-Source-Projekt: Es gibt keinen Verkauf, keine Werbung, keine Zahlungen und keine Abonnements. Dieses Impressum gilt auch für die
+      Projektseite getxlr8.app.
+    </p>
+  </div>
+
+  <div lang="en">
+    <h2 id="legal-notice-english">Legal notice (English)</h2>
+    <p>
+      The German text above is the binding version. Provider of docs.getxlr8.app and getxlr8.app, a non-commercial open-source
+      project (no sales, advertising or payments):
+    </p>
+    <address set:html={legal.address} />
+    <p>E-mail: <Fragment set:html={legal.email} /></p>
+  </div>
+</StarlightPage>

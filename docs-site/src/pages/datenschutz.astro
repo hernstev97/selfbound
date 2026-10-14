@@ -1,0 +1,106 @@
+---
+// Privacy policy of the docs site. German text is binding. It describes this build: no visitor statistics,
+// only the browser storage Starlight uses for the display choices. Change it together with such code.
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { legal } from '../lib/legal';
+---
+
+<StarlightPage frontmatter={{ title: 'Datenschutzerklärung', description: 'Datenschutzerklärung für docs.getxlr8.app.', tableOfContents: false, prev: false, next: false, pagefind: false }}>
+  <div lang="de">
+    <p>Stand: 14. Oktober 2026</p>
+
+    <div lang="en">
+      <h2 id="summary-english">Summary (English)</h2>
+      <p>
+        The German text is the binding version. In short: this site is hosted on Vercel, which processes your IP address and request data to
+        deliver the pages. It sets no cookies and runs no visitor statistics. If you choose a colour theme or a tab, your browser remembers
+        that choice locally; it is never sent anywhere. Fonts and search run from this site, nothing is embedded from third parties. Contact
+        and your rights: see sections 1 and 8.
+      </p>
+    </div>
+
+    <h2 id="verantwortlicher">1. Verantwortlicher</h2>
+    <p>
+      <Fragment set:html={legal.addressInline} />. Für Datenschutzanfragen erreichst du mich unter <Fragment set:html={legal.email} /> oder
+      auf dem Postweg an der genannten Anschrift.
+    </p>
+
+    <h2 id="geltungsbereich">2. Geltungsbereich</h2>
+    <p>
+      Diese Erklärung gilt für die Dokumentation unter docs.getxlr8.app. Für die Projektseite getxlr8.app gilt eine eigene Erklärung. XLR8
+      selbst ist Software, die jede Person auf eigenen Konten betreibt; für eine solche Instanz ist ihr Betreiber verantwortlich. Diese
+      Erklärung betrifft keine Instanz.
+    </p>
+
+    <h2 id="hosting">3. Besuch der Seite und Hosting bei Vercel</h2>
+    <p>
+      Die Seite besteht aus statischen Dateien, die Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, USA („Vercel“) ausliefert. Beim
+      Abruf verarbeitet Vercel technisch notwendige Daten: deine IP-Adresse, Datum und Uhrzeit, die angeforderte Adresse, die verweisende
+      Seite (Referrer), Browser- und Betriebssystemangaben sowie den Antwortstatus und die übertragene Datenmenge. Diese Daten fallen in
+      Zugriffsprotokollen an. Ich nutze sie nicht, um Besucher zu identifizieren, und führe sie nicht mit anderen Daten zusammen.
+    </p>
+    <p>
+      Rechtsgrundlage ist Art. 6 Abs. 1 Buchst. f DSGVO. Mein berechtigtes Interesse besteht darin, die Seite sicher, stabil und schnell
+      bereitzustellen und Missbrauch abzuwehren. Vercel handelt als mein Auftragsverarbeiter; dafür besteht ein Vertrag nach Art. 28 DSGVO
+      (Data Processing Addendum).
+    </p>
+    <p>
+      Vercel kann Daten in den USA verarbeiten. Vercel nennt sich nach eigenen Angaben zertifiziert unter dem EU-U.S. Data Privacy Framework;
+      für dieses Framework hat die EU-Kommission ein angemessenes Schutzniveau festgestellt (Art. 45 DSGVO). Zusätzlich enthält der Vertrag
+      die Standardvertragsklauseln der EU-Kommission. Wie lange Vercel Zugriffsprotokolle vorhält, richtet sich nach dessen Vorgaben und dem
+      gebuchten Tarif. Mehr dazu: <a href="https://vercel.com/legal/privacy-policy" rel="noreferrer">Datenschutzhinweise von Vercel</a>.
+    </p>
+
+    <h2 id="speicherung">4. Cookies und Speicherung auf deinem Gerät</h2>
+    <p>
+      Die Seite setzt keine Cookies. Sie speichert nur dann etwas im lokalen Speicher (Local Storage) deines Browsers, wenn du es selbst
+      auslöst: deine Wahl des Farbschemas (hell, dunkel oder automatisch) über den Schalter in der Kopfzeile und die zuletzt gewählte
+      Registerkarte, wenn eine Seite Varianten als Registerkarten anbietet. Die Seite liest diesen Eintrag bei jedem Aufruf, um die Wahl
+      anzuwenden. Die Einträge bleiben in deinem Browser und werden nicht an einen Server gesendet. Du kannst sie über die Einstellungen
+      deines Browsers löschen.
+    </p>
+    <p>
+      Der Zugriff dient allein dazu, die von dir ausdrücklich gewählte Darstellung bereitzustellen und ist dafür erforderlich (§ 25 Abs. 2
+      Nr. 2 TDDDG). Eine Besucherstatistik läuft auf dieser Seite nicht.
+    </p>
+
+    <h2 id="schriften">5. Schriften, Bilder und Suche</h2>
+    <p>
+      Die Schrift (Inter), alle Bilder und Skripte werden von dieser Seite selbst geladen. Es gibt keine Google Fonts, keine eingebetteten
+      Videos, Karten, Social-Media-Schaltflächen oder Werbung. Die Suche arbeitet mit einem Index, den dein Browser von dieser Seite lädt;
+      deine Suchbegriffe verlassen den Browser nicht.
+    </p>
+
+    <h2 id="links">6. Externe Links</h2>
+    <p>
+      Die Seite verlinkt auf GitHub (<a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" rel="noreferrer">Datenschutzhinweise von GitHub</a>)
+      und auf weitere Seiten, etwa zu Convex, Clerk und Vercel. Erst wenn du einen Link anklickst, erhält die jeweilige Seite deine
+      IP-Adresse und Anfragedaten; für sie gilt deren eigene Datenschutzerklärung.
+    </p>
+
+    <h2 id="kontaktaufnahme">7. Kontaktaufnahme</h2>
+    <p>
+      Wenn du mir schreibst, verarbeite ich deine E-Mail-Adresse und den Inhalt deiner Nachricht, um sie zu beantworten (Art. 6 Abs. 1
+      Buchst. f DSGVO, bei Vertragsbezug Buchst. b). Ich lösche die Nachricht, sobald die Sache erledigt ist, spätestens nach Ablauf
+      gesetzlicher Aufbewahrungspflichten.
+    </p>
+
+    <h2 id="rechte">8. Deine Rechte</h2>
+    <p>
+      Du hast nach den gesetzlichen Voraussetzungen das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung (Art. 16), Löschung (Art. 17),
+      Einschränkung der Verarbeitung (Art. 18) und Datenübertragbarkeit (Art. 20). Du kannst einer Verarbeitung, die auf berechtigten
+      Interessen beruht, aus Gründen, die sich aus deiner besonderen Situation ergeben, jederzeit widersprechen (Art. 21). Wende dich dafür
+      an die Adresse in Abschnitt 1.
+    </p>
+    <p>
+      Du kannst dich außerdem bei einer Datenschutzaufsichtsbehörde beschweren (Art. 77 DSGVO), insbesondere an deinem Aufenthaltsort,
+      Arbeitsplatz oder dem Ort des vermuteten Verstoßes. Am Sitz des Verantwortlichen ist das die
+      <a href="https://www.ldi.nrw.de/" rel="noreferrer">Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen</a>,
+      Kavalleriestraße 2–4, 40213 Düsseldorf.
+    </p>
+    <p>
+      Du bist nicht verpflichtet, personenbezogene Daten bereitzustellen; ohne die technischen Daten aus Abschnitt 3 kann die Seite jedoch
+      nicht angezeigt werden. Es gibt keine automatisierte Entscheidungsfindung einschließlich Profiling.
+    </p>
+  </div>
+</StarlightPage>

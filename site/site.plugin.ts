@@ -1,7 +1,20 @@
 // Build-time settings of the landing page. One switch decides whether search engines may list it
 // (`listed` in site.config.json, or XLR8_SITE_LISTED=1 for a single build): off means a robots meta
-// tag, an X-Robots-Tag header and a robots.txt that disallows everything.
+// tag, an X-Robots-Tag header and a robots.txt that disallows everything. The same switch decides
+// whether Vercel Web Analytics and Speed Insights are loaded, so nothing is collected before launch.
 import type { Plugin } from 'vite';
+// @ts-expect-error plain .mjs without types, shared with docs-site/
+import { fillLegal } from '../tooling/site-legal.mjs';
+
+export interface Legal {
+  name: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  email: string;
+  phone?: string;
+}
 
 export interface SiteConfig {
   listed: boolean;
@@ -12,23 +25,47 @@ export interface SiteConfig {
 export interface SiteSettings extends SiteConfig {
   /** Public origin for canonical and link-preview URLs, from XLR8_SITE_URL; without it those tags are left out */
   url?: string;
+  /** Vercel Web Analytics and Speed Insights: on exactly when the site is listed */
+  analytics: boolean;
+  /** Operator details of the imprint, from outside the repository (tooling/site-legal.mjs) */
+  legal: Legal;
 }
 
-export function siteSettings(config: SiteConfig, env: Record<string, string | undefined>): SiteSettings {
+const NO_LEGAL: Legal = { name: '', street: '', postalCode: '', city: '', country: '', email: '' };
+
+export function siteSettings(config: SiteConfig, env: Record<string, string | undefined>, legal: Legal = NO_LEGAL): SiteSettings {
   const url = env.XLR8_SITE_URL?.trim().replace(/\/+$/, '');
   if (url && !/^https?:\/\/[^/\s]+$/.test(url)) throw new Error(`XLR8_SITE_URL must be an origin like https://example.com, got "${url}"`);
   const flag = env.XLR8_SITE_LISTED?.trim().toLowerCase();
   const listed = flag ? ['1', 'true', 'yes'].includes(flag) : config.listed;
-  return { ...config, listed, url: url || undefined };
+  return { ...config, listed, url: url || undefined, analytics: listed, legal };
 }
 
 const URL_LINE = /^[ \t]*<[^>]*__SITE_URL__[^>]*>\n?/gm;
 
-/** Fills the placeholders in index.html: absolute URLs (or no tag at all) and the robots tag. */
-export function siteHtml(html: string, s: SiteSettings): string {
+// Official scripts of the two Vercel products. Same-origin paths that Vercel serves once the products
+// are enabled for the project; with the script-src 'self' policy no inline script is needed.
+const ANALYTICS_TAGS = '<script defer src="/_vercel/insights/script.js"></script>\n    <script defer src="/_vercel/speed-insights/script.js"></script>\n    ';
+const IF_ANALYTICS = /<!--if:analytics-->([\s\S]*?)<!--\/if:analytics-->\n?/g;
+
+/**
+ * Fills the placeholders of the pages: absolute URLs (or no tag at all), the robots tag, the imprint
+ * details, and the analytics scripts (<!--analytics-->, only with `scripts`; the dev server leaves them out)
+ * and the privacy paragraphs about them (<!--if:analytics-->…<!--/if:analytics-->, always follow the setting,
+ * so the text never describes more or less than the build does).
+ */
+export function siteHtml(html: string, s: SiteSettings, { scripts = true } = {}): string {
   const out = s.url ? html.replaceAll('__SITE_URL__', s.url) : html.replace(URL_LINE, '');
   const robots = s.listed ? '' : '<meta name="robots" content="noindex, nofollow" />\n    ';
-  return out.replace('<!--robots-->', robots).replaceAll('__GITHUB__', s.github).replaceAll('__DOCS__', s.docs);
+  return fillLegal(
+    out
+      .replace('<!--robots-->', robots)
+      .replace('<!--analytics-->', s.analytics && scripts ? ANALYTICS_TAGS : '')
+      .replace(IF_ANALYTICS, s.analytics ? '$1' : '')
+      .replaceAll('__GITHUB__', s.github)
+      .replaceAll('__DOCS__', s.docs),
+    s.legal,
+  );
 }
 
 export function robotsTxt(s: SiteSettings): string {
@@ -42,10 +79,12 @@ export function sitemapXml(s: SiteSettings): string | undefined {
 }
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// The two scripts report to the same origin (/_vercel/insights/…, /_vercel/speed-insights/…).
+const CSP_ANALYTICS = CSP.replace("img-src", "connect-src 'self'; img-src");
 
 export function vercelConfig(s: SiteSettings) {
   const all = [
-    { key: 'Content-Security-Policy', value: CSP },
+    { key: 'Content-Security-Policy', value: s.analytics ? CSP_ANALYTICS : CSP },
     { key: 'X-Content-Type-Options', value: 'nosniff' },
     { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
     { key: 'X-Frame-Options', value: 'DENY' },
@@ -68,7 +107,7 @@ export function vercelConfig(s: SiteSettings) {
 export function sitePlugin(s: SiteSettings): Plugin {
   return {
     name: 'selfbound-site',
-    transformIndexHtml: { order: 'pre', handler: (html) => siteHtml(html, s) },
+    transformIndexHtml: { order: 'pre', handler: (html, ctx) => siteHtml(html, s, { scripts: !ctx.server }) },
     generateBundle() {
       const emit = (fileName: string, source: string) => this.emitFile({ type: 'asset', fileName, source });
       emit('robots.txt', robotsTxt(s));

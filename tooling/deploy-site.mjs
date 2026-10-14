@@ -8,8 +8,10 @@
 //         node tooling/deploy-site.mjs --build    build only (into deploy/site/), upload nothing
 //
 // Whether search engines may list the page is the `listed` switch in site/site.config.json
-// (XLR8_SITE_LISTED=1 overrides it for one build). Upload directory deploy/site/ (gitignored;
-// .vercel/ keeps the project link).
+// (XLR8_SITE_LISTED=1 overrides it for one build). The same switch loads Vercel Web Analytics and Speed
+// Insights. The imprint details come from ~/.config/xlr8/site-legal.json (tooling/site-legal.mjs); a
+// production build fails without them. Upload directory deploy/site/ (gitignored; .vercel/ keeps the
+// project link).
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
@@ -31,7 +33,10 @@ function run(cmd, args, opts = {}) {
 function main() {
   const buildOnly = process.argv.includes('--build');
   const instance = requireInstance(buildOnly ? [] : ['vercelScope', 'siteVercelProject']);
-  run('pnpm', ['--filter', '@selfbound/site', 'build'], { env: { ...process.env, ...(instance.siteUrl ? { XLR8_SITE_URL: instance.siteUrl } : {}) } });
+  const prod = process.argv.includes('--prod');
+  run('pnpm', ['--filter', '@selfbound/site', 'build'], {
+    env: { ...process.env, ...(instance.siteUrl ? { XLR8_SITE_URL: instance.siteUrl } : {}), ...(prod ? { XLR8_SITE_REQUIRE_LEGAL: '1' } : {}) },
+  });
 
   mkdirSync(out, { recursive: true });
   for (const entry of readdirSync(out)) if (entry !== '.vercel') rmSync(join(out, entry), { recursive: true, force: true });
@@ -45,7 +50,7 @@ function main() {
     // whole repo on Vercel and fail. The site is only ever uploaded from here.
     run('vercel', ['git', 'disconnect', '--yes', '--scope', instance.vercelScope], { cwd: out });
   }
-  run('vercel', ['deploy', ...(process.argv.includes('--prod') ? ['--prod'] : []), '--yes', '--scope', instance.vercelScope], { cwd: out });
+  run('vercel', ['deploy', ...(prod ? ['--prod'] : []), '--yes', '--scope', instance.vercelScope], { cwd: out });
 }
 
 main();

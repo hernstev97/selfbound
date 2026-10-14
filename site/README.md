@@ -20,6 +20,33 @@ pnpm --filter @selfbound/site preview   # http://127.0.0.1:5403/
   2560 px wide, dark and light. `public/` holds copies of the logo, mark and icons from
   `app/public/`; refresh them there when the brand files change.
 
+## Imprint, privacy policy and visitor statistics
+
+`impressum.html` and `datenschutz.html` are the imprint (§ 5 DDG, § 18 Abs. 1 MStV) and the privacy policy
+(German text is binding, with a short English note), linked from the footers of the page and of the docs
+(`docs-site/src/pages/`, same texts for its own host). They name a person and a postal address, so the
+details are **not in this repository**. They are filled in at build time from a file outside it:
+
+```json
+// ~/.config/xlr8/site-legal.json  ($XDG_CONFIG_HOME/xlr8/, or the path in XLR8_SITE_LEGAL_FILE)
+{ "name": "…", "street": "…", "postalCode": "…", "city": "…", "country": "…", "email": "…", "phone": "optional" }
+```
+
+The build **fails** if the file is missing or incomplete when the site is listed or for a production deploy
+(`node tooling/deploy-site.mjs --prod` sets `XLR8_SITE_REQUIRE_LEGAL=1`); other builds show visible
+placeholders. Loader and tests: `tooling/site-legal.mjs`, `site/test/legal.test.ts`.
+
+When `listed` is true (and only then) the built `index.html` loads
+[Vercel Web Analytics](https://vercel.com/docs/analytics/privacy-policy) and
+[Speed Insights](https://vercel.com/docs/speed-insights/privacy-policy) from `/_vercel/insights/script.js` and
+`/_vercel/speed-insights/script.js`, the CSP gets `connect-src 'self'`, and the privacy policy gets its section
+on them (it always describes exactly what the build does). Neither product sets cookies; the imprint and
+privacy pages do not load them. Enable both products once in the Vercel dashboard of the landing project,
+otherwise the two paths answer 404. Not on the docs site and never in the app. The plan limits (Hobby: 50,000
+events a month, Speed Insights 10,000 events in 30 days, collection pauses above that) are on Vercel's
+pricing pages for [Web Analytics](https://vercel.com/docs/analytics/limits-and-pricing) and
+[Speed Insights](https://vercel.com/docs/speed-insights/limits-and-pricing).
+
 ## Unlisted until launch
 
 `"listed": false` in `site.config.json` keeps the page out of search engines three ways: a
