@@ -1,4 +1,4 @@
-// Pull requests in XLR8: list on the issue, PR next to the issue, full view.
+// Pull requests in Selfbound: list on the issue, PR next to the issue, full view.
 // The sample PRs come from backend/data/pullRequests.ts (local backend without a GitHub token:
 // reading works, actions are hidden, see "not set up").
 import { expect, test } from '@playwright/test';

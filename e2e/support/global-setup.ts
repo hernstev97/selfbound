@@ -29,14 +29,14 @@ export default async function globalSetup() {
   writeFileSync(state('token'), token);
 
   if (process.env.E2E_SKIP_BUILD !== '1' || !existsSync(join(root, 'e2e/.dist/index.html'))) {
-    const app = spawnSync('pnpm', ['--filter', '@xlr8/app', 'exec', 'vite', 'build', '--outDir', '../e2e/.dist', '--emptyOutDir'], { cwd: root, env, stdio: 'inherit' });
+    const app = spawnSync('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'build', '--outDir', '../e2e/.dist', '--emptyOutDir'], { cwd: root, env, stdio: 'inherit' });
     // The welcome page (welcome.html) as a separate build into the same output
-    const build = app.status === 0 ? spawnSync('pnpm', ['--filter', '@xlr8/app', 'exec', 'vite', 'build', '-c', 'vite.welcome.config.ts', '--outDir', '../e2e/.dist'], { cwd: root, env, stdio: 'inherit' }) : app;
+    const build = app.status === 0 ? spawnSync('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'build', '-c', 'vite.welcome.config.ts', '--outDir', '../e2e/.dist'], { cwd: root, env, stdio: 'inherit' }) : app;
     if (build.status !== 0) throw new Error('Test build of the app failed');
   }
 
   if (!(await reachable(`http://127.0.0.1:${APP_PORT}/`))) {
-    const preview = spawn('pnpm', ['--filter', '@xlr8/app', 'exec', 'vite', 'preview', '--outDir', '../e2e/.dist', '--host', '127.0.0.1', '--port', String(APP_PORT), '--strictPort'], {
+    const preview = spawn('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'preview', '--outDir', '../e2e/.dist', '--host', '127.0.0.1', '--port', String(APP_PORT), '--strictPort'], {
       cwd: root,
       env,
       stdio: 'ignore',

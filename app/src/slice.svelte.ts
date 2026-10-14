@@ -1,5 +1,5 @@
 import { createSubscriber } from 'svelte/reactivity';
-import type { Slice } from '@xlr8/core';
+import type { Slice } from '@selfbound/core';
 
 /** Binds a core slice: `fromSlice(s).current` is reactive. */
 export function fromSlice<T>(slice: Slice<T>): { readonly current: T } {

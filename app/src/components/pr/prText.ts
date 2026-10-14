@@ -1,6 +1,6 @@
 // Texts of the pull request view.
-import { t, tn, translated } from '@xlr8/core/i18n';
-import type { MergeMethod, PrCheckState, PrDetail, PrReviewState, PrState, PrView } from '@xlr8/backend/shared/pullRequests';
+import { t, tn, translated } from '@selfbound/core/i18n';
+import type { MergeMethod, PrCheckState, PrDetail, PrReviewState, PrState, PrView } from '@selfbound/backend/shared/pullRequests';
 
 export const STATE_LABEL: Record<PrState, string> = translated({ open: 'Open', draft: 'Draft', merged: 'Merged', closed: 'Closed' });
 

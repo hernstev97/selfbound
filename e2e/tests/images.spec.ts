@@ -36,7 +36,7 @@ async function pngBytes(page: Page, width = 320, height = 200) {
       g.fillRect(0, 0, w, h);
       g.fillStyle = '#fff';
       g.font = `${Math.round(h / 5)}px sans-serif`;
-      g.fillText('XLR8', w / 6, h / 2);
+      g.fillText('Selfbound', w / 6, h / 2);
       // Noise so large images stay large (downscaling becomes necessary).
       if (w * h > 1e6) for (let i = 0; i < 4000; i++) g.fillRect(Math.random() * w, Math.random() * h, 3, 3);
       const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), 'image/png'));

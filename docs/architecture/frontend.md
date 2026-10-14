@@ -51,7 +51,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 | `app/keys.ts` | Keyboard |
 | `app/toasts.ts`, `prefs.ts`, `perf.ts` | Toasts, theme/font, perf overlay |
 | `app/sprints.ts` | SprintController (own chunk, `app.loadSprints()`): header numbers of the current sprint, planning, decisions when closing, overview `/sprints`, sprint mutations, drag and drop; registers the keys of the sprint pages (→ ← Tab, 1/2/3/0, Ctrl Enter) |
-| `app/admin.ts` | Settings (`@xlr8/core/app/admin`, only in the settings chunk): teams, logos, projects, labels, groups, agent keys, recurrences; site URL and MCP command |
+| `app/admin.ts` | Settings (`@selfbound/core/app/admin`, only in the settings chunk): teams, logos, projects, labels, groups, agent keys, recurrences; site URL and MCP command |
 | `app/repeat.ts` | “Repeat …”: template from an issue (small chunk) |
 | `app/wiki.ts`, `wikiTree.ts` | WikiController (own chunk, `app.loadWiki()`): a team's wiki, page, trash, dragging in the tree ([below](#wiki-appwikits-pageswiki)) |
 | `bodyEdit.ts` | `BodyEditSession`: editing a versioned text (autosave, draft, conflict), for the description and wiki pages |
@@ -70,7 +70,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 - **Detail subscriptions:** `watchDetail(id, listener)`; up to 16 without listeners stay in memory. Cleanup only runs after the new entry has its listener and timestamp (regression test in `core/test/store.test.ts`).
 - **Sync indicator** (`sync`): visible only when something is stuck (> 1 s pending) or there is no connection.
 - **General subscriptions and mutations** (settings, sprints): `store.watch(query, args)` returns a slice plus `release` (same query = one subscription); `store.call(mutation, args, optimisticUpdate?)` and `store.act(action, args)` go through the sync indicator and the perf hooks. In Svelte: `useQuery(api.x, args)` from `app/src/lib/live.svelte.ts` (subscription ends with the component).
-- **Perf hooks** (`globalThis.__xlr8` with `saves` and `app`) exist only with `debug`: in development, with `?perf=1` or in the test build (`VITE_XLR8_TEST=1`), never in the normal production build.
+- **Perf hooks** (`globalThis.__selfbound` with `saves` and `app`) exist only with `debug`: in development, with `?perf=1` or in the test build (`VITE_XLR8_TEST=1`), never in the normal production build.
 
 ### Data flow of a change (example: S → “In Progress”)
 
@@ -82,7 +82,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 
 ### Statuses per team (`workflow.ts`)
 
-`meta.get` returns all statuses of all teams (`workflowStates`, including archived ones). `workflowsOf(meta)` builds an index (`Workflows`) once per meta revision: an issue's status (`of(issue)`: name, status type for icon and default colour, custom colour), a team's statuses in workflow order, statuses for a status type (`forStatus`), groups across teams (`groups()`: same type and name = one entry; pickers, filters, board columns). Rules and order come from `@xlr8/backend/shared/workflow`, so they match the backend.
+`meta.get` returns all statuses of all teams (`workflowStates`, including archived ones). `workflowsOf(meta)` builds an index (`Workflows`) once per meta revision: an issue's status (`of(issue)`: name, status type for icon and default colour, custom colour), a team's statuses in workflow order, statuses for a status type (`forStatus`), groups across teams (`groups()`: same type and name = one entry; pickers, filters, board columns). Rules and order come from `@selfbound/backend/shared/workflow`, so they match the backend.
 
 - **Status type** (`issue.status`, eight keys) remains the client's basis for views (Triage, Active, Backlog), “Show completed”, sprint logic, budget and sorting. Name, icon colour and group come from the status.
 - **Setting a status:** The picker (S) shows the statuses of the affected teams; with several teams only those that exist in all of them (same name and type). Digits 1–9 pick the first nine. `edit.setState` sends each issue the `stateId` of its own team (`patchEach`, one undo step). A bare status type (accept from triage, decline, duplicate) is first translated by `edit.patch` into the team's status, so undo restores exactly the old status. Optimistically, the status type follows the status (`applyPatch` with `Workflows`).
@@ -225,7 +225,7 @@ The placeholder alt texts come from `app/src/lib/uploadNote.ts` and are stored i
 | `/team/KIU/projects`, `/team/KIU/project/<id>` | Projects, issues of one project |
 | `/team/KIU/wiki`, `/wiki/<id>` | A team's wiki, one page (permanent URL without team); older `/wissen` paths still work |
 | `/issue/KIU-106` | Detail (old identifiers are redirected through `issues.resolve`) |
-| `/pr/<owner>/<repo>/<number>` | Pull request full size; only PRs XLR8 knows (linked to an issue) |
+| `/pr/<owner>/<repo>/<number>` | Pull request full size; only PRs Selfbound knows (linked to an issue) |
 | `/sprint` | Current sprint: header (goal inline, points done/total, issues, capacity, share added later, date range), list grouped by “Planned” / “Added later” (`grouping: 'scope'`, from `sprints.items`), then by status |
 | `/sprint/plan`, `/sprint/plan/5` | Planning of the next (or the given) sprint in planning; without one: “Create sprint” |
 | `/sprint/close` | Closing the current sprint with a decision per open issue |
@@ -243,8 +243,8 @@ Filters and display as query parameters: `status`, `prio`, `fteam`, `label` (nam
 ### New action (shows up automatically in shortcuts, command menu, context menu, help)
 
 ```ts
-import { registerAction } from '@xlr8/core';
-import { msg } from '@xlr8/core/i18n';
+import { registerAction } from '@selfbound/core';
+import { msg } from '@selfbound/core/i18n';
 
 registerAction({
   id: 'sprint.start',
@@ -287,7 +287,7 @@ The list, peek, filters, display options, undo and all shortcuts then work witho
 1. Extend `Page` in `route.ts` (`parsePath`, `pagePath`).
 2. Component under `app/src/pages/`, registered as a chunk in `app/src/lib/pages.ts` and mounted in `Shell.svelte` with `{#await pages.x() then m}`.
 3. Data: own slices in a new module `core/src/app/<name>.ts` (e.g. `sprints.ts` with subscriptions `sprints.list`/`sprints.items`), instantiated in `App`. For issue lists inside the page, reuse `computeVisible`/`computeList`.
-4. Settings: an entry in `app/src/pages/settings/sections.ts` plus a case in `SettingsPage.svelte`, each section a component under `pages/settings/`. On settings pages the left navigation (`SettingsNav.svelte`) replaces the sidebar. Operations through `admin` (`pages/settings/admin.ts`, class `Admin` from `@xlr8/core/app/admin`), data through `useQuery` or `app.store.meta`. Team logos: `Admin.uploadLogo` (browser pre-check → `teams.generateLogoUploadUrl` → `fetch POST` → `teams.setLogo`; the server's message appears at the field). Logos are always displayed as `<img>` through `TeamLogo.svelte` (14/16/20/32/40 px); the URL points to `GET <site>/logo/<id>`.
+4. Settings: an entry in `app/src/pages/settings/sections.ts` plus a case in `SettingsPage.svelte`, each section a component under `pages/settings/`. On settings pages the left navigation (`SettingsNav.svelte`) replaces the sidebar. Operations through `admin` (`pages/settings/admin.ts`, class `Admin` from `@selfbound/core/app/admin`), data through `useQuery` or `app.store.meta`. Team logos: `Admin.uploadLogo` (browser pre-check → `teams.generateLogoUploadUrl` → `fetch POST` → `teams.setLogo`; the server's message appears at the field). Logos are always displayed as `<img>` through `TeamLogo.svelte` (14/16/20/32/40 px); the URL points to `GET <site>/logo/<id>`.
 
 ### New picker (e.g. milestone)
 
@@ -347,11 +347,11 @@ A separate entry next to `index.html`, without Svelte, Convex or the core: the s
 ## Installable app, service worker and notifications
 
 - **Manifest** (`app/public/site.webmanifest`, generated by `tooling/brand.mjs`): `id`/`start_url`/`scope` `/`, `display: standalone`, shortcuts Inbox and New issue, `share_target` (GET `/share?title&text&url`). Icons as in [brand.md](../brand.md), plus `badge-96.png` (white star, for the status bar on notifications). The status bar colour (`meta theme-color`) follows the theme: inline script in `index.html` and `Prefs.apply` (`THEME_COLOR` = `--bg-panel` light/dark).
-- **Service worker for push only** (`app/sw/sw.js`, JavaScript with JSDoc, type-checked through `app/sw/tsconfig.json`): the `pwaFiles` plugin (`vite.plugins.ts`) emits it with the build ID as `/sw.js`, plus `/version.json`. Registered with the scope **`/push/`**, so it controls no page of the app. A controlling SW made every warm start 16–40 ms slower, even without any fetch handler, so the project keeps startup unchanged instead. Consequences: no custom offline page (without network the browser shows its own page), `navigator.serviceWorker.ready` never resolves (use `registration()` in `lib/pwa/push.ts` instead), messages to windows go through `clients.matchAll({ includeUncontrolled: true })`. XLR8 is installable anyway (Chrome does not require a controlling SW).
-- **Push in the SW:** `push` shows the notification (`tag` replaces an older one with the same tag, `renotify`), unless an XLR8 window is visible and focused: then that window gets it as an `xlr8-push` message (toast with sound). `notificationclick` focuses an open app window and sends `xlr8-open` with the path (the app navigates through `Navigator.open`, with filters from the URL); otherwise it opens a new window.
+- **Service worker for push only** (`app/sw/sw.js`, JavaScript with JSDoc, type-checked through `app/sw/tsconfig.json`): the `pwaFiles` plugin (`vite.plugins.ts`) emits it with the build ID as `/sw.js`, plus `/version.json`. Registered with the scope **`/push/`**, so it controls no page of the app. A controlling SW made every warm start 16–40 ms slower, even without any fetch handler, so the project keeps startup unchanged instead. Consequences: no custom offline page (without network the browser shows its own page), `navigator.serviceWorker.ready` never resolves (use `registration()` in `lib/pwa/push.ts` instead), messages to windows go through `clients.matchAll({ includeUncontrolled: true })`. Selfbound is installable anyway (Chrome does not require a controlling SW).
+- **Push in the SW:** `push` shows the notification (`tag` replaces an older one with the same tag, `renotify`), unless a Selfbound window is visible and focused: then that window gets it as an `xlr8-push` message (toast with sound). `notificationclick` focuses an open app window and sends `xlr8-open` with the path (the app navigates through `Navigator.open`, with filters from the URL); otherwise it opens a new window.
 - **Offline:** in the open app, “Offline” or “Offline · n pending” appears in the sidebar on desktop and above the toasts at the bottom on mobile (`Toasts.svelte`, `mobile-sync-state`).
 - **App part** `app/src/lib/pwa/` (own chunk, loaded by `main.ts` when idle after the first list; the SW is not registered in the Vite dev server or with `?sw=0`):
-  - `index.ts`: registers the SW (and removes an old registration with scope `/`), SW messages, **presence** (`push.presence` every minute while visible and with input in the last 3 minutes; unregisters at once when hidden), **notifications in the app** (subscription `push.recent`; a visible window shows them as a toast with “Open” and the `notification` sound, and confirms them with `push.seen`), **new version** (on return, at most every 10 minutes, `/version.json` against `__XLR8_BUILD__`; reloads if there is no dialog, no focused input and no pending change, otherwise a “Reload” toast), **closing read notifications** (notification for an issue that was read, removed or is currently open).
+  - `index.ts`: registers the SW (and removes an old registration with scope `/`), SW messages, **presence** (`push.presence` every minute while visible and with input in the last 3 minutes; unregisters at once when hidden), **notifications in the app** (subscription `push.recent`; a visible window shows them as a toast with “Open” and the `notification` sound, and confirms them with `push.seen`), **new version** (on return, at most every 10 minutes, `/version.json` against `__SELFBOUND_BUILD__`; reloads if there is no dialog, no focused input and no pending change, otherwise a “Reload” toast), **closing read notifications** (notification for an issue that was read, removed or is currently open).
   - `push.ts`: turning push on and off on this device (`PushManager.subscribe` on the `/push/` registration with the public VAPID key from `push.config`, recorded via `push.subscribe`), device name, reconciliation at startup (server no longer knows the device or has a new key → resubscribe).
   - `share.ts`: sharing. `main.ts` remembers `/share?…` before startup and rewrites the URL to `/inbox`. After the metadata has loaded, `issues.share` creates the issue (title from `title`, otherwise the first text line without a link, otherwise the URL; link and text into the description; team = current team; `requestId` per content remembered in `localStorage` for 10 minutes, so sharing twice or “Try again” never creates a second issue). Toast with “Undo”.
 - **Missing chunks after a deploy:** Vercel replaces `assets/`; if loading a chunk fails (`vite:preloadError`), `main.ts` reloads the page once (at most every 30 s), but only when online and with no pending changes. Otherwise the chunk reports the error itself and offers “Try again” (`components/Lazy.svelte`).
@@ -360,7 +360,7 @@ A separate entry next to `index.html`, without Svelte, Convex or the core: the s
 
 ## Tests
 
-- `pnpm --filter @xlr8/core test`: Vitest, including per-field comparison, pending issues, undo/conflict with agent name, description conflict, search with 2–6 character identifiers, windowing with unknown height, focus while loading, detail subscription cleanup, routing, mirror with schema version.
+- `pnpm --filter @selfbound/core test`: Vitest, including per-field comparison, pending issues, undo/conflict with agent name, description conflict, search with 2–6 character identifiers, windowing with unknown height, focus while loading, detail subscription cleanup, routing, mirror with schema version.
 - Images and Drive: `e2e/tests/images.spec.ts` (real Ctrl V from the clipboard, dragging, button, resizing to 2560 px WebP, error with “Try again”, SVG rejected, peek, Drive player only on scroll, CSP); mobile: `mobile.spec.ts`.
 - `pnpm e2e`: Playwright against its own backend (port 13470, `tooling/local.mjs --dir e2e/.backend --no-env`) and a test build (`vite preview` on 5472). `E2E_KEEP=1` keeps both running, `E2E_SKIP_BUILD=1` skips the build. Other ports (e.g. parallel worktrees): `E2E_BACKEND_PORT=13510 E2E_APP_PORT=5512 pnpm e2e`. Sprints: `e2e/tests/sprint.spec.ts`, settings: `e2e/tests/settings.spec.ts`.
 - Sprint page performance: `node e2e/tools/bench-sprint.mjs <url> [repetitions]` against `--seed large`.

@@ -1,9 +1,9 @@
 <script lang="ts">
   // Activity: history and comments in chronological order, with the source as a small icon:
   // the owner, an agent (with its name), GitHub, import, system.
-  import { ICON, type ActivityItem, type DetailState } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import { OWNER_KIND } from '@xlr8/core/types';
+  import { ICON, type ActivityItem, type DetailState } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import { OWNER_KIND } from '@selfbound/core/types';
   import { app } from '../app-instance.ts';
   import type { ImageField } from '../lib/imageInput.ts';
   import { uploadNote } from '../lib/uploadNote.ts';

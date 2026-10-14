@@ -7,9 +7,9 @@ export default defineConfig({
   trailingSlash: 'ignore',
   integrations: [
     starlight({
-      title: 'XLR8 Docs',
-      description: 'XLR8 is a fast, keyboard-first issue tracker for solo developers and their AI agents. Self-hosted, open source.',
-      logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg', replacesTitle: true, alt: 'XLR8' },
+      title: 'Selfbound Docs',
+      description: 'Selfbound is a fast, keyboard-first issue tracker for solo developers and their AI agents. Self-hosted, open source.',
+      logo: { light: './src/assets/logo-light.svg', dark: './src/assets/logo-dark.svg', replacesTitle: true, alt: 'Selfbound' },
       favicon: '/favicon.svg',
       social: [{ icon: 'github', label: 'GitHub', href: REPO_URL }],
       editLink: { baseUrl: `${REPO_URL}/edit/main/docs-site/` },
@@ -105,7 +105,7 @@ export default defineConfig({
         { label: 'Concepts', items: [{ autogenerate: { directory: 'concepts' } }] },
         { label: 'Working with agents', items: [{ autogenerate: { directory: 'agents' } }] },
         { label: 'Integrations', items: [{ autogenerate: { directory: 'integrations' } }] },
-        { label: 'Using XLR8', items: [{ autogenerate: { directory: 'using' } }] },
+        { label: 'Using Selfbound', items: [{ autogenerate: { directory: 'using' } }] },
         { label: 'Reference', items: [{ autogenerate: { directory: 'reference' } }] },
         { label: 'Project', items: [{ autogenerate: { directory: 'project' } }] },
       ],

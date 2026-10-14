@@ -1,4 +1,4 @@
-// Pull requests in XLR8: types shared by backend and UI.
+// Pull requests in Selfbound: types shared by backend and UI.
 // Runs in the backend and in the browser. Import nothing from Convex.
 //
 // A PR's state comes from two sources:

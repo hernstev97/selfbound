@@ -279,7 +279,7 @@ export function actorName(actor: Actor, agents: ReadonlyMap<string, string>, fal
     case 'import':
       return fallback ?? t('Import');
     case 'system':
-      return 'XLR8';
+      return 'Selfbound';
   }
 }
 

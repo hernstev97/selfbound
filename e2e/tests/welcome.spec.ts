@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 
 test('Sign-in page: plain content, not indexable, nothing from the app', async ({ page }) => {
   await page.goto('/welcome');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sign in to XLR8' })).toBeAttached();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Selfbound' })).toBeAttached();
   await expect(page.getByRole('status')).toContainText('Sign-in is not set up here');
   await expect(page.getByRole('heading', { level: 2 })).toHaveCount(0);
   await expect(page.locator('canvas')).toHaveCount(0);
@@ -19,7 +19,7 @@ test('Sign-in page: plain content, not indexable, nothing from the app', async (
 
 test('Opening sign-in directly keeps the way back', async ({ page }) => {
   await page.goto('/sign-in?redirect_url=%2Fissue%2FFOO-1');
-  await expect(page.getByRole('heading', { level: 1, name: 'Sign in to XLR8' })).toBeAttached();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sign in to Selfbound' })).toBeAttached();
   await page.getByRole('status').getByRole('link', { name: 'open the app' }).click();
   await expect(page).toHaveURL(/\/issue\/FOO-1$/);
 });

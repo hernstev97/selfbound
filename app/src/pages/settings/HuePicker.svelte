@@ -1,7 +1,7 @@
 <script lang="ts">
   // Color picker: the dot shows the color, a click opens the palette.
-  import { HUES } from '@xlr8/core/app/admin';
-  import { t } from '@xlr8/core/i18n';
+  import { HUES } from '@selfbound/core/app/admin';
+  import { t } from '@selfbound/core/i18n';
   import { backCloses } from '../../lib/ui.ts';
 
   let { hue, pick, label = t('Color'), testid }: { hue: number; pick: (hue: number) => void; label?: string; testid?: string } = $props();

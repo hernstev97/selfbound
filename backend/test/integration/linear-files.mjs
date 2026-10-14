@@ -21,7 +21,7 @@ const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0
 const urls0 = (markdown) => /\]\(([^)]+)\)/.exec(markdown)[1];
 
 export async function linearFilesSuite(backend, log) {
-  const work = mkdtempSync(join(tmpdir(), 'xlr8-linear-files-test-'));
+  const work = mkdtempSync(join(tmpdir(), 'selfbound-linear-files-test-'));
   try {
     const admin = new ConvexHttpClient(backend.url);
     admin.setAuth(backend.token);

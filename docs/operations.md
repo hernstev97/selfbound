@@ -1,21 +1,21 @@
 # Operations
 
-Running an XLR8 instance in production: configuration, deploys, integrations and troubleshooting. To
+Running a Selfbound instance in production: configuration, deploys, integrations and troubleshooting. To
 set up a new instance from scratch, start with [self-hosting.md](self-hosting.md). Backups:
 [backup.md](backup.md).
 
-The examples use the placeholders `xlr8.example.com` (app), `mcp.xlr8.example.com` (optional custom MCP
-address), `clerk.xlr8.example.com` (Clerk) and `happy-otter-123` (Convex production deployment).
+The examples use the placeholders `selfbound.example.com` (app), `mcp.selfbound.example.com` (optional custom MCP
+address), `clerk.selfbound.example.com` (Clerk) and `happy-otter-123` (Convex production deployment).
 
 ## What runs where
 
 | Part | Production | Local development |
 |---|---|---|
-| App (static SPA) | static host, e.g. Vercel: `https://xlr8.example.com` | `http://127.0.0.1:5412` |
+| App (static SPA) | static host, e.g. Vercel: `https://selfbound.example.com` | `http://127.0.0.1:5412` |
 | Backend (database and functions) | Convex Cloud: `https://happy-otter-123.convex.cloud` | local Convex, `http://127.0.0.1:13410` |
-| HTTP endpoints (MCP, GitHub, health) | `https://happy-otter-123.convex.site`, optionally also a custom address such as `https://mcp.xlr8.example.com` | `http://127.0.0.1:13411` |
-| Sign-in page | `https://xlr8.example.com/` for visitors who are not signed in (`welcome.html`) | `http://127.0.0.1:5412/welcome` |
-| Sign-in | Clerk production instance, embedded form at `https://xlr8.example.com/sign-in`; only the user ids in `XLR8_OWNER_IDS` get in | local test sign-in (`tooling/dev-auth.mjs`), no account needed |
+| HTTP endpoints (MCP, GitHub, health) | `https://happy-otter-123.convex.site`, optionally also a custom address such as `https://mcp.selfbound.example.com` | `http://127.0.0.1:13411` |
+| Sign-in page | `https://selfbound.example.com/` for visitors who are not signed in (`welcome.html`) | `http://127.0.0.1:5412/welcome` |
+| Sign-in | Clerk production instance, embedded form at `https://selfbound.example.com/sign-in`; only the user ids in `XLR8_OWNER_IDS` get in | local test sign-in (`tooling/dev-auth.mjs`), no account needed |
 | Backup | nightly GitHub Actions workflow ([backup.md](backup.md)) | – |
 
 Start locally: `pnpm dev` (same as `node tooling/local.mjs --seed small --app dev`). Stop with Ctrl+C.
@@ -30,15 +30,15 @@ with several worktrees). Every field can be overridden by an environment variabl
 | Field | Env override | Example | Used for |
 |---|---|---|---|
 | `convexDeployment` | `XLR8_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex URLs baked into the build; deploy key check |
-| `appUrl` | `XLR8_APP_URL` | `https://xlr8.example.com` | absolute URLs in the build (`XLR8_PUBLIC_URL`, og tags), redirect target for `redirectHosts`, default VAPID subject |
+| `appUrl` | `XLR8_APP_URL` | `https://selfbound.example.com` | absolute URLs in the build (`XLR8_PUBLIC_URL`, og tags), redirect target for `redirectHosts`, default VAPID subject |
 | `clerkPublishableKey` | `XLR8_CLERK_PUBLISHABLE_KEY` | `pk_live_…`, or `host=pk_live_…,host2=pk_live_…` | Clerk in the browser |
-| `vercelProject` | `XLR8_VERCEL_PROJECT` | `xlr8` | `vercel link` |
+| `vercelProject` | `XLR8_VERCEL_PROJECT` | `selfbound` | `vercel link` |
 | `vercelScope` | `XLR8_VERCEL_SCOPE` | your Vercel team slug | `vercel link` / `vercel deploy` |
-| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.xlr8.example.com"]` | hosts forwarded to Convex (custom MCP address) |
+| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | hosts forwarded to Convex (custom MCP address) |
 | `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains redirected to `appUrl` |
 | `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
 | `siteUrl` | `XLR8_SITE_URL` | `https://example.com` | optional, only for the public landing page (`site/`, [site/README.md](../site/README.md)): canonical and link-preview URLs |
-| `siteVercelProject` | `XLR8_SITE_VERCEL_PROJECT` | `xlr8-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
+| `siteVercelProject` | `XLR8_SITE_VERCEL_PROJECT` | `selfbound-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Secrets
 (deploy keys, tokens) never go into it.
@@ -124,13 +124,13 @@ and nobody can register:
 
 1. https://dashboard.clerk.com → your application → **Production**.
 2. **Configure → Developers → Paths**:
-   - **`<SignIn />`**: "Sign-in page on application domain" → `https://xlr8.example.com/sign-in`.
-   - **Signing out**: "Page on application domain" → `https://xlr8.example.com/`.
+   - **`<SignIn />`**: "Sign-in page on application domain" → `https://selfbound.example.com/sign-in`.
+   - **Signing out**: "Page on application domain" → `https://selfbound.example.com/`.
    - Leave `<SignUp />` as is. Save.
 3. **Configure → Restrictions → Sign-up mode** → **Restricted**. Only the ids in `XLR8_OWNER_IDS` get
-   into XLR8 anyway; this keeps strangers from creating Clerk accounts at all.
-4. Check in a private window: `https://xlr8.example.com/` shows the sign-in page. Sign in →
-   you land in the app. Open `https://xlr8.example.com/` again: the app opens directly.
+   into Selfbound anyway; this keeps strangers from creating Clerk accounts at all.
+4. Check in a private window: `https://selfbound.example.com/` shows the sign-in page. Sign in →
+   you land in the app. Open `https://selfbound.example.com/` again: the app opens directly.
 
 The "Secured by Clerk" badge below the form is only removable on paid Clerk plans.
 
@@ -144,7 +144,7 @@ lets old and new domains run side by side while Clerk moves:
    in `XLR8_OWNER_IDS`). Redeploy the backend after changing `CLERK_JWT_ISSUER_DOMAIN`: `auth.config.ts` is
    evaluated when functions are pushed, not on every request.
 2. In the Clerk dashboard: Domains → Configure → Danger zone → "Change domain" (for a subdomain such as
-   `xlr8.example.com` choose "Secondary application"; Clerk then lives at `clerk.<subdomain>`). Add the
+   `selfbound.example.com` choose "Secondary application"; Clerk then lives at `clerk.<subdomain>`). Add the
    new DNS records Clerk shows.
 3. Point the old domain at the new one (`redirectHosts`) and remove the old key and issuer.
 
@@ -158,17 +158,17 @@ production value in a password manager.**
 
 | Name | Meaning | Production value |
 |---|---|---|
-| `CLERK_JWT_ISSUER_DOMAIN` | Clerk issuer (Frontend API URL) whose tokens Convex accepts; several separated by commas (only while changing the domain). `none` disables Clerk. **Redeploy the backend after changing it** | `https://clerk.xlr8.example.com` |
-| `XLR8_OWNER_IDS` | who gets in: comma-separated `tokenIdentifier`s, each `<Clerk issuer>\|<Clerk user id>`. Empty: nobody | `https://clerk.xlr8.example.com\|user_…`. **When the Clerk domain changes, change the issuer here too**, otherwise the app stays empty after sign-in |
+| `CLERK_JWT_ISSUER_DOMAIN` | Clerk issuer (Frontend API URL) whose tokens Convex accepts; several separated by commas (only while changing the domain). `none` disables Clerk. **Redeploy the backend after changing it** | `https://clerk.selfbound.example.com` |
+| `XLR8_OWNER_IDS` | who gets in: comma-separated `tokenIdentifier`s, each `<Clerk issuer>\|<Clerk user id>`. Empty: nobody | `https://clerk.selfbound.example.com\|user_…`. **When the Clerk domain changes, change the issuer here too**, otherwise the app stays empty after sign-in |
 | `XLR8_DEV_JWKS` | public key of the local test sign-in. Must be set (the CLI requires it); `none` disables it | **`none`** |
-| `XLR8_APP_URL` | address of the app (hosts the OAuth consent page); turns on connectors (OAuth). Unset: no connectors | `https://xlr8.example.com` |
-| `XLR8_PUBLIC_SITE_URL` | optional custom address for MCP and OAuth instead of `…convex.site` (issuer and `resource` for connectors). One address | `https://mcp.xlr8.example.com` |
+| `XLR8_APP_URL` | address of the app (hosts the OAuth consent page); turns on connectors (OAuth). Unset: no connectors | `https://selfbound.example.com` |
+| `XLR8_PUBLIC_SITE_URL` | optional custom address for MCP and OAuth instead of `…convex.site` (issuer and `resource` for connectors). One address | `https://mcp.selfbound.example.com` |
 | `XLR8_OWNER_NAME` | the owner's display name in MCP output (e.g. who wrote a comment). Default `Owner` | e.g. `Jane` |
 | `XLR8_LOCALE` | `de`: push notification texts in German, and new teams get German default status names. Default English | unset or `de` |
 | `GITHUB_WEBHOOK_SECRET` | verifies that webhook deliveries come from GitHub | long random value |
 | `GITHUB_WEBHOOK_SECRET_PREVIOUS` | only while rotating the secret (below) | usually unset |
-| `GITHUB_TOKEN` | GitHub API access for the PR view (description, checks, comments, merging) and for managing webhooks. Unset: XLR8 shows only title and state from the webhook | fine-grained personal access token, see [GitHub](#github) |
-| `GITHUB_MANAGE_WEBHOOKS` | `1`: XLR8 creates missing webhooks in the token's repos and fixes their events (daily and via a button in Settings → GitHub). Unset: only checks and reports. Never acts on a local backend, and only with `GITHUB_WEBHOOK_SECRET` | `1` |
+| `GITHUB_TOKEN` | GitHub API access for the PR view (description, checks, comments, merging) and for managing webhooks. Unset: Selfbound shows only title and state from the webhook | fine-grained personal access token, see [GitHub](#github) |
+| `GITHUB_MANAGE_WEBHOOKS` | `1`: Selfbound creates missing webhooks in the token's repos and fixes their events (daily and via a button in Settings → GitHub). Unset: only checks and reports. Never acts on a local backend, and only with `GITHUB_WEBHOOK_SECRET` | `1` |
 | `GITHUB_REPOS` | optional: manage only these repos, `owner/name` or `owner/*`, comma-separated. Unset: all repos the token owns | usually unset |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | key pair for Web Push. Unset: no push notifications | set only with `node tooling/vapid.mjs`. No need to keep them: if lost, generate new ones |
 | `VAPID_SUBJECT` | contact for push services (`https:` or `mailto:`). Unset: `XLR8_APP_URL` is used; with keys but neither set, sending fails | set by `tooling/vapid.mjs` |
@@ -185,7 +185,7 @@ change it to `none`. Further fields: `clerk`, `oauth` (connectors on), `push` (V
 
 ## Installable app and push notifications
 
-XLR8 is an installable PWA with Web Push. Design: [architecture/frontend.md](architecture/frontend.md) and
+Selfbound is an installable PWA with Web Push. Design: [architecture/frontend.md](architecture/frontend.md) and
 [architecture/backend.md](architecture/backend.md).
 
 ### Push keys (once)
@@ -198,17 +198,17 @@ node tooling/vapid.mjs --local    # local backend (backend/)
 The script generates a P-256 key pair and stores `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` and
 `VAPID_PUBLIC_KEY` directly in the Convex environment. The private key never appears in the terminal; it
 goes to the Convex CLI through stdin. If keys exist, the script changes nothing; `--force` replaces them,
-and every device re-subscribes the next time it opens XLR8. `/health` shows `"push": true` once both keys
+and every device re-subscribes the next time it opens Selfbound. `/health` shows `"push": true` once both keys
 are set. The subject defaults to `appUrl` from the instance settings; `--subject <https: or mailto: URL>`
 overrides it.
 
 ### On a phone (Android, Chrome)
 
-1. Open the app in Chrome and sign in. Menu ⋮ → "Install app" (or "Add to home screen"). XLR8 then starts
+1. Open the app in Chrome and sign in. Menu ⋮ → "Install app" (or "Add to home screen"). Selfbound then starts
    full screen from the home screen.
 2. In the app: Settings → Notifications → turn on notifications on this device and allow them.
-3. Send a test notification. It arrives right away; tapping it opens XLR8.
-4. Sharing: "Share" → XLR8 in another app creates an issue in triage (last used team), with undo.
+3. Send a test notification. It arrives right away; tapping it opens Selfbound.
+4. Sharing: "Share" → Selfbound in another app creates an issue in triage (last used team), with undo.
 
 On desktop (Chrome, Edge, Firefox) the same; installing is optional.
 
@@ -216,7 +216,7 @@ On desktop (Chrome, Edge, Firefox) the same; installing is optional.
 
 - Which events trigger one is set under Settings → Notifications (for all devices). Morning notifications
   (due today, sprint ending) arrive at 08:00 Europe/Berlin.
-- If XLR8 is visibly open and in use on any device (input in the last 3 minutes), no push goes out; the
+- If Selfbound is visibly open and in use on any device (input in the last 3 minutes), no push goes out; the
   app shows an in-app notice with a sound instead. If no app acknowledges the notice within 45 s (window
   just closed), the push is sent after all.
 - Several events at once arrive as one notification. The same event never arrives twice (unique key in
@@ -240,7 +240,7 @@ version is missing after a deploy, the app reloads once. The service worker only
 no pages, so no stale version can get stuck; the browser picks up a new `/sw.js` on the next start.
 
 Offline with the app open, an "Offline" indicator appears (phone: above the bottom bar, desktop: in the
-sidebar); changes wait and go out once the network is back. Opening XLR8 without network shows the
+sidebar); changes wait and go out once the network is back. Opening Selfbound without network shows the
 browser's own offline page; an offline page of our own would slow down every start.
 
 ## Agents over MCP
@@ -251,26 +251,26 @@ time. Protocol and tools: [architecture/mcp.md](architecture/mcp.md).
 ### Create a key
 
 1. In the app: **Settings → Agents**, create a key and give it a name (e.g. "Claude Code").
-2. The key (`xlr8_…`) is shown **exactly once**. Copy it into your password manager right away. XLR8 only
+2. The key (`xlr8_…`) is shown **exactly once**. Copy it into your password manager right away. Selfbound only
    stores a hash and cannot show it again.
 3. Lost it? Create a new one and revoke the old one.
 
 ### Claude Code
 
 ```sh
-claude mcp add --transport http xlr8 <address>/mcp --header "Authorization: Bearer <key>"
+claude mcp add --transport http selfbound <address>/mcp --header "Authorization: Bearer <key>"
 ```
 
 `<address>` is `https://<deployment>.convex.site` or your custom MCP address; locally
 `http://127.0.0.1:13411`. With `--scope user` the entry applies to all projects. Check with `/mcp` in
-Claude Code: "xlr8" should show as connected.
+Claude Code: "selfbound" should show as connected.
 
 ### Codex
 
 In `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.xlr8]
+[mcp_servers.selfbound]
 url = "<address>/mcp"
 bearer_token_env_var = "XLR8_MCP_KEY"
 ```
@@ -310,8 +310,8 @@ connection shows up under **Settings → Agents** as its own entry ("Connector �
 ### Turn on
 
 ```sh
-node tooling/cloud.mjs env set XLR8_APP_URL https://xlr8.example.com
-node tooling/cloud.mjs env set XLR8_PUBLIC_SITE_URL https://mcp.xlr8.example.com   # optional
+node tooling/cloud.mjs env set XLR8_APP_URL https://selfbound.example.com
+node tooling/cloud.mjs env set XLR8_PUBLIC_SITE_URL https://mcp.selfbound.example.com   # optional
 ```
 
 `/health` then shows `"oauth": true`. Without `XLR8_APP_URL` there are no connectors and the OAuth
@@ -320,7 +320,7 @@ endpoints return 404.
 ### Custom MCP address
 
 By default connectors use `https://<deployment>.convex.site/mcp`. A custom address such as
-`https://mcp.xlr8.example.com/mcp` is optional and works through the static host: add the host to
+`https://mcp.selfbound.example.com/mcp` is optional and works through the static host: add the host to
 `mcpHosts`, point its DNS (CNAME) at the static host, and set `XLR8_PUBLIC_SITE_URL` to that one
 address. The host rewrite forwards every request to Convex. Only the consent page lives under
 `XLR8_APP_URL`.
@@ -330,25 +330,25 @@ existing connectors must be reconnected.
 
 Agents with a key can use either the Convex address or the custom one.
 
-Check: `https://mcp.xlr8.example.com/.well-known/oauth-protected-resource/mcp` shows
-`"resource":"https://mcp.xlr8.example.com/mcp"`, and
-`https://mcp.xlr8.example.com/.well-known/oauth-authorization-server` shows
-`"issuer":"https://mcp.xlr8.example.com"`.
+Check: `https://mcp.selfbound.example.com/.well-known/oauth-protected-resource/mcp` shows
+`"resource":"https://mcp.selfbound.example.com/mcp"`, and
+`https://mcp.selfbound.example.com/.well-known/oauth-authorization-server` shows
+`"issuer":"https://mcp.selfbound.example.com"`.
 
 ### Connect
 
-1. In XLR8: **Settings → Agents → connect a connector**. For the next 15 minutes XLR8 accepts new
-   connectors; the card shows the address to copy and a countdown. Without this step XLR8 rejects every
+1. In Selfbound: **Settings → Agents → connect a connector**. For the next 15 minutes Selfbound accepts new
+   connectors; the card shows the address to copy and a countdown. Without this step Selfbound rejects every
    new connection, which protects you from consent links someone else started.
-2. **claude.ai** (in the browser): Settings → Connectors → "Add custom connector". Name "XLR8", URL from
+2. **claude.ai** (in the browser): Settings → Connectors → "Add custom connector". Name "Selfbound", URL from
    step 1. Leave registration on automatic; client id and secret stay empty. Add, then "Connect".
    **ChatGPT** (in the browser): Settings → Apps (or Connectors) → Advanced → turn on developer mode if
-   asked. Then create a custom MCP server: name "XLR8", URL as above, authentication "OAuth", confirm
+   asked. Then create a custom MCP server: name "Selfbound", URL as above, authentication "OAuth", confirm
    that you trust the application.
-3. A window opens with the XLR8 sign-in (if needed) and the **consent page**. Check the details: the app
+3. A window opens with the Selfbound sign-in (if needed) and the **consent page**. Check the details: the app
    and the return address (claude.ai or chatgpt.com). Adjust the name (it appears in the history) and
    click **Allow**. The window returns to the app and the tools appear.
-4. XLR8 stops accepting new connectors again. For another connection, start step 1 again.
+4. Selfbound stops accepting new connectors again. For another connection, start step 1 again.
 
 On mobile the connector appears automatically once it is connected on the web.
 
@@ -358,7 +358,7 @@ On mobile the connector appears automatically once it is connected on the web.
   disconnect and reconnect it in the client (after step 1 above). That creates a new entry; the old one
   stays revoked as the source in the history.
 - If the client disconnects by itself, the entry shows it as revoked by the app.
-- Revoked because a refresh token or authorization code was used twice: XLR8 detected possible theft
+- Revoked because a refresh token or authorization code was used twice: Selfbound detected possible theft
   and revoked the connector as a precaution. Reconnect.
 - Sessions renew themselves: access tokens are valid for 1 hour and are refreshed by the client; a
   connection lasts 30 days from its last use.
@@ -378,7 +378,7 @@ The webhook links pull requests to issues and closes issues when a PR is merged.
 - Links are never removed automatically. Canceled, duplicate and already completed issues are never touched.
 - Each delivery takes effect exactly once, even if GitHub retries it. The history shows "GitHub" as the source.
 
-### Pull requests in XLR8
+### Pull requests in Selfbound
 
 An issue lists its PRs with state, checks, review and comments. Clicking one opens the PR next to the
 issue; the expand button opens it full size (`/pr/<owner>/<repo>/<n>`), Esc closes. Inside: description
@@ -386,22 +386,22 @@ with images and videos, checks with log links, comments and reviews (bots includ
 selectable, delete branch), close and reopen, comment. Comments and merges appear on GitHub under the
 token's account. The code diff is only on GitHub (link to the changed files).
 
-- **Data source:** the webhook reports every change; XLR8 then fetches the current state through the
-  GitHub API (`GITHUB_TOKEN`), and again on opening if it is older than 30 s. Without a token XLR8 shows
+- **Data source:** the webhook reports every change; Selfbound then fetches the current state through the
+  GitHub API (`GITHUB_TOKEN`), and again on opening if it is older than 30 s. Without a token Selfbound shows
   only title and state.
 - **Which PRs:** every PR a webhook delivery arrived for, i.e. from every repo with the webhook. An issue
   shows the linked ones (identifier in branch, title or body).
 - **Settings → GitHub** shows the account, the repos and whether the webhook is installed everywhere.
-  Daily at 03:30 UTC XLR8 installs it in new repos itself (with `GITHUB_MANAGE_WEBHOOKS=1`); that needs the
+  Daily at 03:30 UTC Selfbound installs it in new repos itself (with `GITHUB_MANAGE_WEBHOOKS=1`); that needs the
   token permission **Webhooks (read and write)**. Without it the page says so, and new repos need the
   webhook by hand (below).
-- **Images and videos from private repos** go through `/ghmedia/…`: XLR8 redirects to a fresh,
+- **Images and videos from private repos** go through `/ghmedia/…`: Selfbound redirects to a fresh,
   short-lived GitHub URL; the files themselves never pass through Convex. Like `/img/…`, anyone with the
-  address can see the file, but only people who can see the PR in XLR8 know it.
+  address can see the file, but only people who can see the PR in Selfbound know it.
 
 ### The token
 
-A fine-grained personal access token for all repos whose PRs XLR8 should show. Permissions:
+A fine-grained personal access token for all repos whose PRs Selfbound should show. Permissions:
 
 - Pull requests: read and write
 - Contents: read and write
@@ -484,7 +484,7 @@ an entry is skipped, and after the last page a note makes further runs do nothin
 since never come back; `{"apply":true,"force":true}` ignores the note). It reschedules itself above 500
 issues; wait until no scheduled follow-up pages remain, then run the count again.
 
-**Priorities of closed issues:** in XLR8 completing an issue clears its priority. Imported issues that
+**Priorities of closed issues:** in Selfbound completing an issue clears its priority. Imported issues that
 were already closed keep theirs until you run:
 
 ```sh
@@ -516,7 +516,7 @@ WebP); phone photos lose their camera metadata (location, device) on the way.
   browser for a year.
 - **Agents** see images as Markdown links in descriptions and comments. They cannot upload.
 
-**Videos** are not stored in XLR8 (1 GB is too little) but in Google Drive. A Drive link
+**Videos** are not stored in Selfbound (1 GB is too little) but in Google Drive. A Drive link
 (`https://drive.google.com/file/d/<ID>/…`) alone on a line renders as a player that loads when scrolled
 into view, with "Open in Drive" below it. Links inside a sentence stay links.
 
@@ -527,7 +527,7 @@ into view, with "Open in Drive" below it. Links inside a sentence stay links.
 | file does not exist | Drive says the file does not exist |
 | "Restricted", signed in to Google in the browser | depends on third-party cookies: expected to play in Chrome and Edge; Firefox, Safari and Brave block the embedded frame, so only "Open in Drive" helps |
 
-Recommendation: share videos for XLR8 as "Anyone with the link"; such a link is as hard to guess as an
+Recommendation: share videos for Selfbound as "Anyone with the link"; such a link is as hard to guess as an
 image address. A thumbnail fallback does not help, because Drive's thumbnail URL also redirects to
 Google sign-in for restricted files.
 
@@ -559,6 +559,6 @@ itself fails, it shows `ok: false` with `error`.
 
 | Command | What |
 |---|---|
-| `pnpm --filter @xlr8/backend test` | all backend unit tests (no running backend needed) |
-| `pnpm --filter @xlr8/backend test:integration` | starts a fresh local backend on port 13490, tests import (twice), MCP with the official client, logo delivery, `/health` and concurrency, stops it again |
+| `pnpm --filter @selfbound/backend test` | all backend unit tests (no running backend needed) |
+| `pnpm --filter @selfbound/backend test:integration` | starts a fresh local backend on port 13490, tests import (twice), MCP with the official client, logo delivery, `/health` and concurrency, stops it again |
 | `node tooling/concurrency-test.mjs --port 13480 --report <file>` | full concurrency test with a report against a running local backend |

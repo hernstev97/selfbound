@@ -1,8 +1,8 @@
 <script lang="ts">
   // Card: identifier with team logo, title (two lines), priority, status, labels (stack as in the
   // list, `labelStackHtml`), estimate, due date. Reads the same row state as the list (one slice per issue).
-  import type { IssueId, PaletteKind } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import type { IssueId, PaletteKind } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { anchorOf, cellOf, tip } from '../../lib/ui.ts';

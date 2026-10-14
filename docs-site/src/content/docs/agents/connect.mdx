@@ -18,7 +18,7 @@ The server lives at `/mcp` on your backend's HTTP address:
 | Setup | MCP address |
 |---|---|
 | Convex Cloud | `https://<deployment>.convex.site/mcp`, for example `https://happy-otter-123.convex.site/mcp` |
-| Custom address | for example `https://mcp.xlr8.example.com/mcp` (see [Use your own MCP address](#use-your-own-mcp-address)) |
+| Custom address | for example `https://mcp.selfbound.example.com/mcp` (see [Use your own MCP address](#use-your-own-mcp-address)) |
 | Local (`pnpm dev`) | `http://127.0.0.1:13411/mcp` |
 
 You don't have to work it out: **Settings → Agents** shows the address at the top of the page.
@@ -38,7 +38,7 @@ You don't have to work it out: **Settings → Agents** shows the address at the 
 </Steps>
 
 <Aside type="caution">
-The key is shown only once. XLR8 stores only a hash of it and cannot show it again. Keep it in a password
+The key is shown only once. Selfbound stores only a hash of it and cannot show it again. Keep it in a password
 manager or your agent's configuration. If you lose it, create a new key and revoke the old one.
 </Aside>
 
@@ -47,7 +47,7 @@ manager or your agent's configuration. If you lose it, create a new key and revo
 The list shows each agent with the first characters of its key, when it was created and last used, and how
 many calls it made today.
 
-### Add XLR8 to your client
+### Add Selfbound to your client
 
 Every client sends the key in an `Authorization: Bearer <key>` header to the MCP address. Replace the
 address and key in these examples with yours.
@@ -56,12 +56,12 @@ address and key in these examples with yours.
 <TabItem label="Claude Code">
 
 ```sh
-claude mcp add --transport http xlr8 https://happy-otter-123.convex.site/mcp \
+claude mcp add --transport http selfbound https://happy-otter-123.convex.site/mcp \
   --header "Authorization: Bearer xlr8_…"
 ```
 
-Add `--scope user` to make XLR8 available in all your projects. In Claude Code, `/mcp` should list
-"xlr8" as connected.
+Add `--scope user` to make Selfbound available in all your projects. In Claude Code, `/mcp` should list
+"selfbound" as connected.
 
 </TabItem>
 <TabItem label="Codex">
@@ -69,7 +69,7 @@ Add `--scope user` to make XLR8 available in all your projects. In Claude Code, 
 In `~/.codex/config.toml`:
 
 ```toml
-[mcp_servers.xlr8]
+[mcp_servers.selfbound]
 url = "https://happy-otter-123.convex.site/mcp"
 bearer_token_env_var = "XLR8_MCP_KEY"
 ```
@@ -86,7 +86,7 @@ configuration like this:
 ```json
 {
   "mcpServers": {
-    "xlr8": {
+    "selfbound": {
       "url": "https://happy-otter-123.convex.site/mcp",
       "headers": {
         "Authorization": "Bearer xlr8_…"
@@ -107,7 +107,7 @@ environment variable, use that.
 
 ### Test the connection
 
-Ask your agent something like "List my XLR8 teams". If you have the XLR8 repository checked out and
+Ask your agent something like "List my Selfbound teams". If you have the Selfbound repository checked out and
 installed (`pnpm install`), you can also test from the command line:
 
 ```sh
@@ -128,8 +128,8 @@ key. The revoked entry stays in the list, so the history still shows which agent
 
 ### Turn on connectors
 
-Connectors need the backend environment variable `XLR8_APP_URL`, set to the address of your XLR8 app (for
-example `https://xlr8.example.com`). The sign-in and consent page lives there. Without it, the connector
+Connectors need the backend environment variable `XLR8_APP_URL`, set to the address of your Selfbound app (for
+example `https://selfbound.example.com`). The sign-in and consent page lives there. Without it, the connector
 card in **Settings → Agents** says it is not enabled. Setting environment variables is covered in
 [Self-hosting: Convex](/start/self-hosting/convex/). Once it is set, `https://<deployment>.convex.site/health`
 reports `"oauth": true`.
@@ -138,11 +138,11 @@ reports `"oauth": true`.
 
 <Steps>
 
-1. In XLR8, open **Settings → Agents** and click **Connect connector**. For the next 15 minutes XLR8
+1. In Selfbound, open **Settings → Agents** and click **Connect connector**. For the next 15 minutes Selfbound
    accepts new connections; the card shows a countdown and the address to copy.
 
 2. In claude.ai or ChatGPT (in the browser), add a **custom connector** and enter the address from the
-   card, for example `https://happy-otter-123.convex.site/mcp`. Name it "XLR8".
+   card, for example `https://happy-otter-123.convex.site/mcp`. Name it "Selfbound".
    - **claude.ai:** in the connector settings, add a custom connector. Leave the advanced OAuth fields
      (client ID and secret) empty.
    - **ChatGPT:** in the settings for apps or connectors, add your own MCP server with OAuth
@@ -150,11 +150,11 @@ reports `"oauth": true`.
 
    The menus of both products change from time to time; look for "custom connector" or "MCP server".
 
-3. A window opens with the XLR8 sign-in (if you aren't signed in) and the consent page **Connect … to
-   XLR8?**. Check that the app and the **Returns to** address (claude.ai, claude.com or chatgpt.com) are what you
+3. A window opens with the Selfbound sign-in (if you aren't signed in) and the consent page **Connect … to
+   Selfbound?**. Check that the app and the **Returns to** address (claude.ai, claude.com or chatgpt.com) are what you
    expect. Adjust the **Name in the history** if you like, then click **Allow**.
 
-4. The window returns to Claude or ChatGPT and the XLR8 tools appear. In XLR8 the connector shows up in the
+4. The window returns to Claude or ChatGPT and the Selfbound tools appear. In Selfbound the connector shows up in the
    list as "Connector · claude.ai" or "Connector · ChatGPT".
 
 </Steps>
@@ -164,7 +164,7 @@ again. On mobile, the connector is available once you have connected it on the w
 
 <Aside type="caution" title="Why the 15-minute window">
 Someone could send you a consent link that they started from their own Claude or ChatGPT account. One
-click on **Allow** would give them access to your tracker. XLR8 therefore accepts new connectors only
+click on **Allow** would give them access to your tracker. Selfbound therefore accepts new connectors only
 right after you click **Connect connector** yourself. Only click **Allow** for a connection you just
 started.
 </Aside>
@@ -176,28 +176,28 @@ started.
 - To cut a connector off, click **Revoke** next to it in **Settings → Agents**. It loses access at once.
   To use it again, disconnect and reconnect it in Claude or ChatGPT (after clicking **Connect
   connector**). That creates a new entry; the old one stays revoked.
-- If the list shows a connector as revoked with "Code used twice" or "Refresh token used twice", XLR8
+- If the list shows a connector as revoked with "Code used twice" or "Refresh token used twice", Selfbound
   detected a sign-in credential being reused and revoked the connector as a precaution. Reconnect it.
 - "Disconnected by the app" means Claude or ChatGPT ended the connection itself.
 
 ## Use your own MCP address
 
-The Convex address works as it is. A custom address such as `https://mcp.xlr8.example.com/mcp` is optional
+The Convex address works as it is. A custom address such as `https://mcp.selfbound.example.com/mcp` is optional
 and gives connectors a stable, readable address. It works through your static host, which forwards all
 requests for that host to Convex:
 
 <Steps>
 
 1. Add the host to `mcpHosts` in your instance settings (`deploy/instance.json`), for example
-   `["mcp.xlr8.example.com"]`, and deploy the web app again with `node tooling/deploy-web.mjs`. The deploy
+   `["mcp.selfbound.example.com"]`, and deploy the web app again with `node tooling/deploy-web.mjs`. The deploy
    writes the forwarding rule for the host (a rewrite in the Vercel configuration).
 2. Point the host's DNS (a CNAME record) at your static host.
-3. Set the backend environment variable `XLR8_PUBLIC_SITE_URL` to `https://mcp.xlr8.example.com`.
+3. Set the backend environment variable `XLR8_PUBLIC_SITE_URL` to `https://mcp.selfbound.example.com`.
 
 </Steps>
 
-To check, open `https://mcp.xlr8.example.com/.well-known/oauth-protected-resource/mcp`: it should show
-`"resource":"https://mcp.xlr8.example.com/mcp"`.
+To check, open `https://mcp.selfbound.example.com/.well-known/oauth-protected-resource/mcp`: it should show
+`"resource":"https://mcp.selfbound.example.com/mcp"`.
 
 `XLR8_PUBLIC_SITE_URL` names exactly one address, and that address is part of every connector's identity.
 If you change it later, reconnect your connectors. Agents with a key can keep using either address.

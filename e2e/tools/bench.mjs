@@ -24,12 +24,12 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 
 async function settle() {
-  await page.waitForFunction(() => (window.__xlr8?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed), null, { timeout: 15000 });
+  await page.waitForFunction(() => (window.__selfbound?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed), null, { timeout: 15000 });
 }
 
 async function last() {
   await page.waitForTimeout(40);
-  return page.evaluate(() => window.__xlr8.app.perf.state.get().last?.ms ?? NaN);
+  return page.evaluate(() => window.__selfbound.app.perf.state.get().last?.ms ?? NaN);
 }
 
 const results = {};
@@ -37,7 +37,7 @@ async function measure(name, action, before) {
   const samples = [];
   for (let i = 0; i < reps; i++) {
     if (before) await before(i);
-    await page.evaluate(() => window.__xlr8.app.perf.state.set({ ...window.__xlr8.app.perf.state.get(), last: null }));
+    await page.evaluate(() => window.__selfbound.app.perf.state.set({ ...window.__selfbound.app.perf.state.get(), last: null }));
     await action(i);
     samples.push(await last());
   }
@@ -49,18 +49,18 @@ async function measure(name, action, before) {
 
 const t0 = Date.now();
 await page.goto(`${base}/all?group=none&perf=1`);
-await page.waitForFunction(() => window.__xlr8?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
-const total = await page.evaluate(() => window.__xlr8.app.list.list.get().count);
-console.log(`Start to "live": ${Date.now() - t0} ms, ${total} issues in the list, ${await page.evaluate(() => window.__xlr8.app.store.all().length)} in memory`);
+await page.waitForFunction(() => window.__selfbound?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
+const total = await page.evaluate(() => window.__selfbound.app.list.list.get().count);
+console.log(`Start to "live": ${Date.now() - t0} ms, ${total} issues in the list, ${await page.evaluate(() => window.__selfbound.app.store.all().length)} in memory`);
 await page.mouse.move(2, 890);
 await page.waitForTimeout(500);
 
 await measure('J (focus down)', () => page.keyboard.press('j'));
 await measure('K (focus up)', () => page.keyboard.press('k'));
 await measure('Space (peek open/close)', () => page.keyboard.press(' '));
-if (await page.evaluate(() => window.__xlr8.app.detail.peekOpen.get())) await page.keyboard.press(' ');
+if (await page.evaluate(() => window.__selfbound.app.detail.peekOpen.get())) await page.keyboard.press(' ');
 await measure('S (open status picker)', () => page.keyboard.press('s'), async () => {
-  if (await page.evaluate(() => !!window.__xlr8.app.palette.state.get())) await page.keyboard.press('Escape');
+  if (await page.evaluate(() => !!window.__selfbound.app.palette.state.get())) await page.keyboard.press('Escape');
 });
 await page.keyboard.press('Escape');
 await measure('S + Enter (set status)', () => page.keyboard.press('Enter'), async (i) => {
@@ -69,27 +69,27 @@ await measure('S + Enter (set status)', () => page.keyboard.press('Enter'), asyn
 });
 await settle();
 await measure('Ctrl K (command menu)', () => page.keyboard.press('Control+k'), async () => {
-  if (await page.evaluate(() => !!window.__xlr8.app.palette.state.get())) await page.keyboard.press('Escape');
+  if (await page.evaluate(() => !!window.__selfbound.app.palette.state.get())) await page.keyboard.press('Escape');
 });
 await page.keyboard.press('Escape');
 await measure('Set filter (F, "high", Enter)', () => page.keyboard.press('Enter'), async (i) => {
-  if (i > 0) await page.evaluate(() => window.__xlr8.app.list.clearFilters());
+  if (i > 0) await page.evaluate(() => window.__selfbound.app.list.clearFilters());
   await page.keyboard.press('f');
   await page.keyboard.type(i % 2 ? 'low' : 'high');
 });
-await page.evaluate(() => window.__xlr8.app.list.clearFilters());
+await page.evaluate(() => window.__selfbound.app.list.clearFilters());
 await page.keyboard.press('/');
 await measure('Typing in / (search)', (i) => page.keyboard.press('abcdefghijklmnopqrstuvwxyz'[i % 26]), async (i) => {
-  if (i % 6 === 0) await page.evaluate(() => window.__xlr8.app.palette.setQuery(''));
+  if (i % 6 === 0) await page.evaluate(() => window.__selfbound.app.palette.setQuery(''));
 });
 await page.keyboard.press('Escape');
 await measure('Ctrl F + typing (quick search)', (i) => page.keyboard.press('aeinrst'[i % 7]), async (i) => {
   if (i === 0) await page.keyboard.press('Control+f');
-  if (i % 4 === 0) await page.evaluate(() => window.__xlr8.app.list.setQuick(''));
+  if (i % 4 === 0) await page.evaluate(() => window.__selfbound.app.list.setQuick(''));
 });
 await page.keyboard.press('Escape');
 await measure('Enter (open issue)', () => page.keyboard.press('Enter'), async () => {
-  if (await page.evaluate(() => window.__xlr8.app.nav.page.get().name === 'issue')) {
+  if (await page.evaluate(() => window.__selfbound.app.nav.page.get().name === 'issue')) {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(60);
   }
@@ -99,7 +99,7 @@ await page.keyboard.press('Escape');
 await page.waitForTimeout(200);
 await measure('G then A/B (switch view)', (i) => page.keyboard.press(i % 2 ? 'a' : 'b'), () => page.keyboard.press('g'));
 await page.goto(`${base}/all?group=none&perf=1`);
-await page.waitForFunction(() => window.__xlr8?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
+await page.waitForFunction(() => window.__selfbound?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
 
 // Scrolling: measure frame intervals during fast mouse wheel scrolling.
 await page.mouse.move(700, 400);
@@ -127,10 +127,10 @@ await page.reload();
 await page.waitForSelector('[data-testid="issue-row"]');
 const marks = await page.evaluate(() => {
   const at = (n) => performance.getEntriesByName(n)[0]?.startTime ?? null;
-  return { boot: at('xlr8-boot'), cache: at('xlr8-cache'), synced: at('xlr8-synced'), fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null };
+  return { boot: at('selfbound-boot'), cache: at('selfbound-cache'), synced: at('selfbound-synced'), fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null };
 });
-await page.waitForFunction(() => window.__xlr8?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
-const synced = await page.evaluate(() => performance.getEntriesByName('xlr8-synced')[0]?.startTime ?? null);
+await page.waitForFunction(() => window.__selfbound?.app?.store.sync.get().phase === 'live', null, { timeout: 120000 });
+const synced = await page.evaluate(() => performance.getEntriesByName('selfbound-synced')[0]?.startTime ?? null);
 const fmt = (n) => (n === null ? '–' : `${Math.round(n)} ms`);
 console.log(`Warm start: shell (FCP) ${fmt(marks.fcp)}, data from the mirror ${fmt(marks.cache)}, everything from the server ${fmt(synced)}`);
 results.warm = { fcp: marks.fcp, cache: marks.cache, synced };

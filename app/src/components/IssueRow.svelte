@@ -6,9 +6,9 @@
   // The row recognizes clicks on status/priority through `data-cell`.
   // The checkbox is in every row; CSS shows it on focus/hover, selection or an existing selection in
   // the list (inserting and removing it on every J cost more than the one node).
-  import type { DisplayProp, IssueId, PaletteKind } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import type { ListController } from '@xlr8/core/app/list';
+  import type { DisplayProp, IssueId, PaletteKind } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import type { ListController } from '@selfbound/core/app/list';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { anchorOf, cellOf, tip } from '../lib/ui.ts';

@@ -5,8 +5,8 @@
 // masks. Clicks on status/priority go through `data-cell` on the row.
 //
 // ALL user text (title, labels, project, team, logo URL) goes through `esc`.
-import type { DisplayProp, RowState, TeamBadge } from '@xlr8/core';
-import { t } from '@xlr8/core/i18n';
+import type { DisplayProp, RowState, TeamBadge } from '@selfbound/core';
+import { t } from '@selfbound/core/i18n';
 
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (text: string | number) => String(text).replace(/[&<>"']/g, (c) => ESC[c]);

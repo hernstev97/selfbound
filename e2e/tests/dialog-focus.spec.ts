@@ -257,7 +257,7 @@ test('Opening stays fast: key press to dialog visible and focused in at most 100
         else
           await page.evaluate(() => {
             (window as unknown as { __focus: { begin: number } }).__focus.begin = performance.now();
-            (window as unknown as { __xlr8: { app: { openNewTeam(): void } } }).__xlr8.app.openNewTeam();
+            (window as unknown as { __selfbound: { app: { openNewTeam(): void } } }).__selfbound.app.openNewTeam();
           });
       });
       results[name].push(ms);

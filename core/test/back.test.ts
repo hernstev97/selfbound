@@ -72,7 +72,7 @@ afterEach(() => {
 
 let n = 0;
 async function setup(path = '/all') {
-  const browser = fakeWindow(`https://xlr8.test${path}`);
+  const browser = fakeWindow(`https://selfbound.test${path}`);
   (globalThis as { window?: unknown }).window = browser.win;
   const client = fakeClient();
   const app = new App({ client: client as never, auth: new Auth({ devToken: 'x' }), debug: false, perf: false, cacheName: `back-${++n}` });
@@ -229,7 +229,7 @@ describe('back closes overlays', () => {
   });
 
   test('reloaded on an overlay entry: leaves it right away', async () => {
-    const browser = fakeWindow('https://xlr8.test/all');
+    const browser = fakeWindow('https://selfbound.test/all');
     browser.win.history.pushState({ xlr8Overlay: true }, '', '/all');
     (globalThis as { window?: unknown }).window = browser.win;
     const client = fakeClient();

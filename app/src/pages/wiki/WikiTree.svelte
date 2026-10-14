@@ -1,8 +1,8 @@
 <script lang="ts">
   // Page tree of a team: click opens, the caret expands/collapses, dragging reorders and nests
   // (top or bottom quarter of a row: before or after, middle: as a subpage).
-  import { ICON, type WikiState } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { ICON, type WikiState } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
 
   let { state: s }: { state: WikiState } = $props();

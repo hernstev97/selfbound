@@ -18,7 +18,7 @@ import { KEY_FORMAT } from '../../convex/lib/mcp/endpoint';
 
 // OAuth for connectors, pure logic (lib/oauth/core.ts).
 
-const cfg = oauthConfig({ CONVEX_SITE_URL: 'https://happy-otter-123.convex.site/', XLR8_APP_URL: 'https://xlr8.example.com' })!;
+const cfg = oauthConfig({ CONVEX_SITE_URL: 'https://happy-otter-123.convex.site/', XLR8_APP_URL: 'https://selfbound.example.com' })!;
 const CLAUDE = 'https://claude.ai/api/mcp/auth_callback';
 const CHATGPT = 'https://chatgpt.com/connector_platform_oauth_redirect';
 const CHALLENGE = 'A'.repeat(43);
@@ -30,19 +30,19 @@ describe('configuration and metadata', () => {
     expect(cfg).toEqual({
       issuer: 'https://happy-otter-123.convex.site',
       resource: 'https://happy-otter-123.convex.site/mcp',
-      appUrl: 'https://xlr8.example.com',
+      appUrl: 'https://selfbound.example.com',
     });
     expect(
-      oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: 'https://mcp.xlr8.example.com', XLR8_APP_URL: 'https://xlr8.example.com' })
+      oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: 'https://mcp.selfbound.example.com', XLR8_APP_URL: 'https://selfbound.example.com' })
         ?.resource,
-    ).toBe('https://mcp.xlr8.example.com/mcp');
+    ).toBe('https://mcp.selfbound.example.com/mcp');
   });
 
   test('XLR8_PUBLIC_SITE_URL is one address; without a valid one the Convex site URL applies', () => {
-    const env = { CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: ' https://mcp.xlr8.example.com/ ', XLR8_APP_URL: 'https://xlr8.example.com' };
-    expect(oauthConfig(env)).toMatchObject({ issuer: 'https://mcp.xlr8.example.com', resource: 'https://mcp.xlr8.example.com/mcp' });
+    const env = { CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: ' https://mcp.selfbound.example.com/ ', XLR8_APP_URL: 'https://selfbound.example.com' };
+    expect(oauthConfig(env)).toMatchObject({ issuer: 'https://mcp.selfbound.example.com', resource: 'https://mcp.selfbound.example.com/mcp' });
     expect(oauthConfig({ ...env, XLR8_PUBLIC_SITE_URL: 'broken' })?.issuer).toBe('https://a.convex.site');
-    expect(oauthConfig({ XLR8_APP_URL: 'https://xlr8.example.com' })).toBeNull();
+    expect(oauthConfig({ XLR8_APP_URL: 'https://selfbound.example.com' })).toBeNull();
   });
 
   test('issuer = authorization_servers[0], iss parameter, S256 only, resource = MCP URL', () => {

@@ -1,5 +1,5 @@
 // German UI strings (lib), English text → German. See core/src/i18n.ts.
-import { ctx, type Dictionary } from '@xlr8/core/i18n';
+import { ctx, type Dictionary } from '@selfbound/core/i18n';
 
 export default {
   // lib/editor/RichEditor.svelte
@@ -122,7 +122,7 @@ export default {
   // lib/pwa/push.ts, lib/pwa/index.ts, lib/pwa/share.ts
   Device: 'Gerät',
   [ctx('verb', 'Open')]: 'Öffnen',
-  'New version of XLR8': 'Neue Version von XLR8',
+  'New version of Selfbound': 'Neue Version von Selfbound',
   Reload: 'Neu laden',
   Shared: 'Geteilt',
   'Not saved': 'Nicht gespeichert',

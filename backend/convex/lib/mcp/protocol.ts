@@ -22,9 +22,9 @@ export const MODERN_VERSIONS = ['2026-07-28'] as const;
 export const LEGACY_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'] as const;
 export const SUPPORTED_VERSIONS: readonly string[] = [...MODERN_VERSIONS, ...LEGACY_VERSIONS];
 
-export const SERVER_NAME = 'xlr8';
+export const SERVER_NAME = 'selfbound';
 export const INSTRUCTIONS = [
-  'This XLR8 instance is a single-owner issue tracker.',
+  'This Selfbound instance is a single-owner issue tracker.',
   'Use these tools to find, read and manage issues across its teams: search_issues and list_issues to find work, get_issue for details with comments, relations and pull requests, create_issues / update_issue / set_status / move_issues / add_comment to make changes, and get_current_sprint for the sprint that spans all teams.',
   'Identifiers look like "ACME-106" (team key + number). Teams are referenced by key, labels, projects and statuses by name; call list_teams, list_labels, list_projects or list_statuses to look up valid values. Each team has its own workflow statuses.',
   'There is a single user (the owner) and no assignee field: the "assigned" filter means all open issues outside triage in teams that are not dormant and not knowledge-only.',
@@ -243,7 +243,7 @@ function initializeResult(version: string, deps: McpDeps): Json {
   return {
     protocolVersion: version,
     capabilities: { tools: { listChanged: false } },
-    serverInfo: { name: SERVER_NAME, title: 'XLR8', version: deps.serverVersion },
+    serverInfo: { name: SERVER_NAME, title: 'Selfbound', version: deps.serverVersion },
     instructions: INSTRUCTIONS,
   };
 }

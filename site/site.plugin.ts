@@ -67,7 +67,7 @@ export function vercelConfig(s: SiteSettings) {
 
 export function sitePlugin(s: SiteSettings): Plugin {
   return {
-    name: 'xlr8-site',
+    name: 'selfbound-site',
     transformIndexHtml: { order: 'pre', handler: (html) => siteHtml(html, s) },
     generateBundle() {
       const emit = (fileName: string, source: string) => this.emitFile({ type: 'asset', fileName, source });

@@ -1,110 +1,119 @@
 #!/usr/bin/env node
-// Generates all logo files from the original (app/public/brand/xlr8-logo-original.svg):
-// mark (star), wordmark ("XLR8") and full logo as SVG, colour variants, favicon, app icons
-// (PNG, ICO), social image and web manifest. The shapes stay unchanged; the path is only split
-// into its subpaths and cropped via viewBox.
+// Generates every logo file from the four source files in brand/:
+//   brand/symbol.svg    the symbol (loading screen, app icons, animated landing page background)
+//   brand/wordmark.svg  the lettering "Selfbound"
+//   brand/lockup.svg    symbol + wordmark (headers, sign-in screen, social image)
+//   brand/favicon.svg   the symbol simplified for 16 px (favicons)
+// Outputs: SVG variants, favicons, app icons (PNG, ICO), social image, web manifest, the inline paths
+// for the app (app/src/lib/brand.ts) and the copies for the landing page and the docs site.
 //
 // Usage:  node tooling/brand.mjs        (needs rsvg-convert and ImageMagick)
 //
-// Never edit the original by hand; put a new version there and run the script again.
-// Output file names: xlr8-mark, xlr8-wordmark, xlr8-logo, each also -black and -white
+// Source files: outlined shapes only (<path>, optional translate/scale transform; no text, strokes,
+// gradients or masks), one colour (replaced by the two brand colours below), a viewBox.
+// Drop new files over the old ones and run the script again; see docs/brand.md.
 
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const root = join(import.meta.dirname, '..');
+const src = join(root, 'brand');
 const pub = join(root, 'app', 'public');
 const brand = join(pub, 'brand');
-const original = readFileSync(join(brand, 'xlr8-logo-original.svg'), 'utf8');
+const sitePub = join(root, 'site', 'public');
+const docsPub = join(root, 'docs-site', 'public');
+const docsAssets = join(root, 'docs-site', 'src', 'assets');
 
-// ---- Subpaths; the star is the only one starting at x = 0, the lettering starts to its right.
-const d = original.match(/ d="([^"]+)"/)[1];
-const subs = d.split(/(?=M)/).map((s) => s.trim()).filter(Boolean).map((s) => {
-  const n = s.replace(/[MZ]/g, ' ').trim().split(/\s+/).map(Number);
-  const xs = n.filter((_, i) => i % 2 === 0);
-  const ys = n.filter((_, i) => i % 2 === 1);
-  return { s, minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys) };
-});
-const mark = subs.filter((p) => p.maxX <= 140);
-const word = subs.filter((p) => p.minX > 140);
-if (mark.length !== 1 || mark.length + word.length !== subs.length) throw new Error('Unexpected subpaths in the original');
-const bounds = (ps) => {
-  const minX = Math.min(...ps.map((p) => p.minX)), minY = Math.min(...ps.map((p) => p.minY));
-  const maxX = Math.max(...ps.map((p) => p.maxX)), maxY = Math.max(...ps.map((p) => p.maxY));
-  const r = (v) => Math.round(v * 100) / 100;
-  return { x: r(minX), y: r(minY), w: r(maxX - minX), h: r(maxY - minY) };
-};
-const markPath = mark.map((p) => p.s).join('');
-const wordPath = word.map((p) => p.s).join('');
-const mb = bounds(mark);
-const wb = bounds(word);
-const lb = { x: 0, y: 0, w: 581.89, h: 138.62 };
+// The only two colours: white (--text-strong) and the dark theme's --bg-app, oklch(0.129 0.0009 286) in sRGB.
+const INK = '#070707';
+const PAPER = '#FFFFFF';
+const LABEL = 'Selfbound';
 
-const BLACK = '#000000';
-const WHITE = '#ffffff';
-const DARK_BG = '#101113';
-
-const logoSvg = (b, path, fill, title, extra = '') =>
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${b.x} ${b.y} ${b.w} ${b.h}" width="${b.w}" height="${b.h}" role="img" aria-label="${title}">\n<title>${title}</title>\n<path fill="${fill}" fill-rule="evenodd"${extra} d="${path}"/>\n</svg>\n`;
-
-const parts = [
-  ['mark', mb, markPath, 'XLR8 mark'],
-  ['wordmark', wb, wordPath, 'XLR8 wordmark'],
-  ['logo', lb, d, 'XLR8 Logo'],
-];
-for (const [name, b, path, title] of parts) {
-  writeFileSync(join(brand, `xlr8-${name}.svg`), logoSvg(b, path, 'currentColor', title));
-  writeFileSync(join(brand, `xlr8-${name}-black.svg`), logoSvg(b, path, BLACK, title));
-  writeFileSync(join(brand, `xlr8-${name}-white.svg`), logoSvg(b, path, WHITE, title));
+function readShape(file) {
+  const svg = readFileSync(join(src, file), 'utf8');
+  const bad = svg.match(/<(text|image|rect|circle|ellipse|line|polyline|polygon|linearGradient|radialGradient|clipPath|mask|use|g)\b/);
+  if (bad) throw new Error(`${file}: <${bad[1]}> is not supported, convert everything to outlined paths`);
+  if (/\bstroke=|stroke:/.test(svg)) throw new Error(`${file}: strokes are not supported, outline them`);
+  const vb = svg.match(/viewBox="([^"]+)"/)?.[1].trim().split(/[\s,]+/).map(Number);
+  if (!vb || vb.length !== 4 || vb.some(Number.isNaN)) throw new Error(`${file}: viewBox missing`);
+  const tags = [...svg.matchAll(/<path\b[^>]*>/g)].map((m) => m[0]);
+  if (!tags.length) throw new Error(`${file}: no <path> found`);
+  const paths = tags.map((t) => {
+    const d = t.match(/\sd="([^"]+)"/)?.[1];
+    if (!d) throw new Error(`${file}: <path> without d`);
+    const transform = t.match(/\stransform="([^"]+)"/)?.[1];
+    if (transform && !/^(translate\([^()]*\)|scale\([^()]*\)|\s)+$/.test(transform)) throw new Error(`${file}: only translate and scale transforms are supported`);
+    return transform ? { d, transform } : { d };
+  });
+  const rules = new Set(tags.map((t) => t.match(/fill-rule="([^"]+)"/)?.[1] ?? 'nonzero'));
+  if (rules.size !== 1) throw new Error(`${file}: mixed fill-rule`);
+  const [x, y, w, h] = vb;
+  return { viewBox: vb.join(' '), x, y, w, h, ratio: Math.round((w / h) * 1e4) / 1e4, paths, rule: [...rules][0] };
 }
 
-// ---- Favicon: star with padding, follows the browser's colour scheme.
-const pad = 12;
+const symbol = readShape('symbol.svg');
+const wordmark = readShape('wordmark.svg');
+const lockup = readShape('lockup.svg');
+const small = readShape('favicon.svg');
+
+const attrs = (p) => (p.transform ? ` transform="${p.transform}"` : '');
+const pathsIn = (s, fill) => s.paths.map((p) => `<path fill="${fill}" fill-rule="${s.rule}"${attrs(p)} d="${p.d}"/>`).join('');
+const shapeSvg = (s, fill, title) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${s.viewBox}" width="${s.w}" height="${s.h}" role="img" aria-label="${title}">\n<title>${title}</title>\n${s.paths
+    .map((p) => `<path fill="${fill}" fill-rule="${s.rule}"${attrs(p)} d="${p.d}"/>`)
+    .join('\n')}\n</svg>\n`;
+
+mkdirSync(brand, { recursive: true });
+for (const [name, s] of [['symbol', symbol], ['wordmark', wordmark], ['lockup', lockup]]) {
+  writeFileSync(join(brand, `selfbound-${name}.svg`), shapeSvg(s, 'currentColor', LABEL));
+  writeFileSync(join(brand, `selfbound-${name}-ink.svg`), shapeSvg(s, INK, LABEL));
+  writeFileSync(join(brand, `selfbound-${name}-paper.svg`), shapeSvg(s, PAPER, LABEL));
+}
+
+// ---- Favicon: simplified symbol, ink on light tabs and paper on dark tabs.
 writeFileSync(
   join(pub, 'favicon.svg'),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${-pad} ${-pad} ${mb.w + 2 * pad} ${mb.h + 2 * pad}">\n<title>XLR8</title>\n<style>path{fill:${BLACK}}@media (prefers-color-scheme:dark){path{fill:${WHITE}}}</style>\n<path fill-rule="evenodd" d="${markPath}"/>\n</svg>\n`,
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${small.viewBox}">\n<title>${LABEL}</title>\n<style>path{fill:${INK}}@media (prefers-color-scheme:dark){path{fill:${PAPER}}}</style>\n${small.paths
+    .map((p) => `<path fill-rule="${small.rule}"${attrs(p)} d="${p.d}"/>`)
+    .join('\n')}\n</svg>\n`,
 );
 
-// ---- PNG sources: white star on a dark background (readable everywhere, in light and dark tabs).
-const tile = (size, share, radiusShare) => {
-  const k = (size * share) / mb.w;
-  const o = (size - mb.w * k) / 2;
-  const rect = `<rect width="${size}" height="${size}" rx="${size * radiusShare}" fill="${DARK_BG}"/>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">${rect}<g transform="translate(${o} ${o}) scale(${k})"><path fill="${WHITE}" fill-rule="evenodd" d="${markPath}"/></g></svg>`;
+// ---- Raster sources: paper symbol on an ink tile (readable everywhere, in light and dark tabs).
+const place = (s, box, share) => {
+  const k = (box * share) / Math.max(s.w, s.h);
+  return `translate(${(box - s.w * k) / 2 - s.x * k} ${(box - s.h * k) / 2 - s.y * k}) scale(${k})`;
 };
-// Status bar icon for notifications (Android uses only the alpha channel): white star, transparent.
-const badge = (size) => {
-  const k = (size * 0.84) / mb.w;
-  const o = (size - mb.w * k) / 2;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><g transform="translate(${o} ${o}) scale(${k})"><path fill="${WHITE}" fill-rule="evenodd" d="${markPath}"/></g></svg>`;
-};
+const tile = (s, size, share, radiusShare) =>
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${size * radiusShare}" fill="${INK}"/><g transform="${place(s, size, share)}">${pathsIn(s, PAPER)}</g></svg>`;
+// Status bar icon for notifications (Android uses only the alpha channel): paper symbol, transparent.
+const badge = (size) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}"><g transform="${place(symbol, size, 0.84)}">${pathsIn(symbol, PAPER)}</g></svg>`;
 const og = () => {
   const w = 1200, h = 630, lw = 640;
-  const k = lw / lb.w;
-  const lh = lb.h * k;
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="${DARK_BG}"/><g transform="translate(${(w - lw) / 2} ${(h - lh) / 2}) scale(${k})"><path fill="${WHITE}" fill-rule="evenodd" d="${d}"/></g></svg>`;
+  const k = lw / lockup.w;
+  const lh = lockup.h * k;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="${INK}"/><g transform="translate(${(w - lw) / 2 - lockup.x * k} ${(h - lh) / 2 - lockup.y * k}) scale(${k})">${pathsIn(lockup, PAPER)}</g></svg>`;
 };
 
-const tmp = mkdtempSync(join(tmpdir(), 'xlr8-brand-'));
+const tmp = mkdtempSync(join(tmpdir(), 'selfbound-brand-'));
 function png(name, svg, size, outDir = brand) {
-  const src = join(tmp, `${name}.svg`);
-  writeFileSync(src, svg);
-  const args = ['-w', String(size[0]), '-h', String(size[1]), '-o', join(outDir, `${name}.png`), src];
-  const r = spawnSync('rsvg-convert', args, { stdio: 'inherit' });
+  const file = join(tmp, `${name}.svg`);
+  writeFileSync(file, svg);
+  const r = spawnSync('rsvg-convert', ['-w', String(size[0]), '-h', String(size[1]), '-o', join(outDir, `${name}.png`), file], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error(`rsvg-convert failed: ${name}`);
 }
-mkdirSync(brand, { recursive: true });
-// Favicons: small padding, rounded; the large versions with more room.
-for (const s of [16, 32, 48]) png(`favicon-${s}`, tile(s, s === 16 ? 0.84 : 0.76, 0.2), [s, s], pub);
-png('apple-touch-icon', tile(180, 0.6, 0), [180, 180], pub); // iOS rounds the corners itself
-png('icon-192', tile(192, 0.62, 0.2), [192, 192], pub);
-png('icon-512', tile(512, 0.62, 0.2), [512, 512], pub);
-png('icon-maskable-512', tile(512, 0.52, 0), [512, 512], pub); // star inside the safe zone (80 %)
+// App icon proportions: symbol 56 % of the tile, corner radius 22.5 %. Favicons use the simplified symbol.
+const APP = [0.5625, 0.225];
+// The simplified symbol fills the whole tile: its 2-unit gap then lands on whole pixels (16 → 2 px, 32 → 4 px, 48 → 6 px).
+for (const s of [16, 32, 48]) png(`favicon-${s}`, tile(small, s, 1, 0.2), [s, s], pub);
+png('apple-touch-icon', tile(symbol, 180, APP[0], 0), [180, 180], pub); // iOS rounds the corners itself
+png('icon-192', tile(symbol, 192, APP[0], APP[1]), [192, 192], pub);
+png('icon-512', tile(symbol, 512, APP[0], APP[1]), [512, 512], pub);
+png('icon-maskable-512', tile(symbol, 512, 0.47, 0), [512, 512], pub); // symbol inside the safe zone (80 %)
 png('badge-96', badge(96), [96, 96], pub);
 png('og-image', og(), [1200, 630], brand);
-png('clerk-logo', tile(512, 0.62, 0.2), [512, 512], brand);
+png('clerk-logo', tile(symbol, 512, APP[0], APP[1]), [512, 512], brand);
 const ico = spawnSync('magick', [join(pub, 'favicon-16.png'), join(pub, 'favicon-32.png'), join(pub, 'favicon-48.png'), join(pub, 'favicon.ico')], { stdio: 'inherit' });
 if (ico.status !== 0) throw new Error('magick failed');
 rmSync(tmp, { recursive: true, force: true });
@@ -115,15 +124,15 @@ writeFileSync(
     {
       // Installable app. `/` is the last visited view (the welcome page when signed out).
       id: '/',
-      name: 'XLR8',
-      short_name: 'XLR8',
+      name: LABEL,
+      short_name: LABEL,
       description: 'Issues, sprints and projects.',
       lang: 'en',
       start_url: '/',
       scope: '/',
       display: 'standalone',
-      background_color: DARK_BG,
-      theme_color: DARK_BG,
+      background_color: INK,
+      theme_color: INK,
       icons: [
         { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },
         { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -143,8 +152,24 @@ writeFileSync(
 );
 
 // ---- Paths for the app (inline SVG with currentColor, no request).
+const q = (v) => `'${v}'`;
+const entry = (s) =>
+  `{ viewBox: ${q(s.viewBox)}, ratio: ${s.ratio}, rule: ${q(s.rule)}, paths: [${s.paths.map((p) => `{ d: ${q(p.d)}${p.transform ? `, transform: ${q(p.transform)}` : ''} }`).join(', ')}] }`;
 writeFileSync(
   join(root, 'app', 'src', 'lib', 'brand.ts'),
-  `// Generated by tooling/brand.mjs from app/public/brand/xlr8-logo-original.svg. Do not edit by hand.\nexport const BRAND = {\n  mark: { viewBox: '${mb.x} ${mb.y} ${mb.w} ${mb.h}', ratio: ${mb.w / mb.h}, d: '${markPath}' },\n  word: { viewBox: '${wb.x} ${wb.y} ${wb.w} ${wb.h}', ratio: ${wb.w / wb.h}, d: '${wordPath}' },\n  full: { viewBox: '${lb.x} ${lb.y} ${lb.w} ${lb.h}', ratio: ${lb.w / lb.h}, d: '${d}' },\n} as const;\n`,
+  `// Generated by tooling/brand.mjs from brand/*.svg. Do not edit by hand.\nexport const BRAND = {\n  symbol: ${entry(symbol)},\n  wordmark: ${entry(wordmark)},\n  lockup: ${entry(lockup)},\n} as const;\n`,
 );
-console.log('Logo files generated in', pub);
+
+// ---- Copies for the landing page and the docs site.
+for (const f of ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png']) {
+  copyFileSync(join(pub, f), join(sitePub, f));
+  copyFileSync(join(pub, f), join(docsPub, f));
+}
+copyFileSync(join(pub, 'favicon-32.png'), join(sitePub, 'favicon-32.png'));
+mkdirSync(join(sitePub, 'brand'), { recursive: true });
+for (const f of ['selfbound-lockup.svg', 'selfbound-symbol.svg']) copyFileSync(join(brand, f), join(sitePub, 'brand', f));
+copyFileSync(join(brand, 'og-image.png'), join(sitePub, 'brand', 'og.png'));
+copyFileSync(join(brand, 'og-image.png'), join(docsPub, 'og-image.png'));
+copyFileSync(join(brand, 'selfbound-lockup-ink.svg'), join(docsAssets, 'logo-light.svg'));
+copyFileSync(join(brand, 'selfbound-lockup-paper.svg'), join(docsAssets, 'logo-dark.svg'));
+console.log('Logo files generated from brand/ in app/public, site/public, docs-site');

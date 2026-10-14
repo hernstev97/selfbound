@@ -1,7 +1,7 @@
 <script lang="ts">
   // Buttons in the location bar of the sprint view: all sprints, plan, close.
-  import { ICON } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
 

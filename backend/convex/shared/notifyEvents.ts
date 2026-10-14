@@ -78,6 +78,6 @@ export interface PushMessage {
   issueId?: string;
   /** time of the event (ms) */
   at: number;
-  /** test notification only: show it even when XLR8 is open */
+  /** test notification only: show it even when Selfbound is open */
   test?: boolean;
 }

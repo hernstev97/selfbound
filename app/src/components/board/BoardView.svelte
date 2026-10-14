@@ -2,7 +2,7 @@
   // Board: columns are the teams' statuses, cards are windowed per column. Its own chunk, loaded
   // on the first Ctrl B. Computation, focus and rules live in the core (ListController).
   import '../../styles/board.css';
-  import type { IssueId } from '@xlr8/core';
+  import type { IssueId } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import Column from './Column.svelte';

@@ -8,7 +8,7 @@ import type { PrItem } from '../convex/shared/pullRequests';
 import { createOne, expectCode, fixture, getIssue, setup, type T } from './helpers';
 import { fakeGithub, prJson, prRoutes, repoJson, REPO, SHA, TOKEN, user } from './lib/githubFake';
 
-// PRs in XLR8: webhook schedules fetches, fetch stores state and items, merge transition,
+// PRs in Selfbound: webhook schedules fetches, fetch stores state and items, merge transition,
 // actions, media proxy, webhooks in all repos. fetch is always mocked (fakeGithub).
 
 const SECRET = 'synthetic-test-secret';
@@ -205,7 +205,7 @@ describe('webhook: immediate checks, linked PRs, late link', () => {
     expect((await detailRow(t, prId))!.data!.checks).toHaveLength(1);
   });
 
-  test('merge through XLR8 before the edited delivery: a new closes link still closes (< 10 min), later not', async () => {
+  test('merge through Selfbound before the edited delivery: a new closes link still closes (< 10 min), later not', async () => {
     const { t, owner } = init();
     const f = await fixture(owner);
     const a = await createOne(owner, f.orb, { status: 'in_progress' });
@@ -406,7 +406,7 @@ describe('rate limit: no duplicate fetches', () => {
     expect((await detailRow(t, prId))!.error).toBeUndefined();
   });
 
-  test('merge through XLR8: state fetched right away, issue closed exactly once, webhook afterwards has no effect', async () => {
+  test('merge through Selfbound: state fetched right away, issue closed exactly once, webhook afterwards has no effect', async () => {
     const { t, owner } = init();
     const f = await fixture(owner);
     const issue = await createOne(owner, f.orb, { status: 'in_progress' });

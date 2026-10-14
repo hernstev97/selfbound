@@ -2,8 +2,8 @@
   import '../styles/settings.css';
   // Settings (own chunk): navigation on the left (replaces the sidebar, SettingsNav), the section on
   // the right. Extension point: settings/sections.ts plus a case here.
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { SECTION_LABEL } from './settings/sections.ts';

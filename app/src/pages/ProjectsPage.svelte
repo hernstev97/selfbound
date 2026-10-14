@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { ICON } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
-  import { PROJECT_STATE_LABEL } from '@xlr8/core/app/admin';
-  import { api } from '@xlr8/backend/api';
+  import { ICON } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
+  import { PROJECT_STATE_LABEL } from '@selfbound/core/app/admin';
+  import { api } from '@selfbound/backend/api';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import TeamLogo from '../components/TeamLogo.svelte';

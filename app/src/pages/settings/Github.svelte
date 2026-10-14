@@ -1,9 +1,9 @@
 <script lang="ts">
-  // GitHub: is XLR8 connected to GitHub, which repos can the token see, is the webhook in place
+  // GitHub: is Selfbound connected to GitHub, which repos can the token see, is the webhook in place
   // everywhere? The token itself lives only in the backend (GITHUB_TOKEN) and never comes here.
-  import { api } from '@xlr8/backend/api';
-  import { t, tn, translated } from '@xlr8/core/i18n';
-  import { fullDate, relativeTime } from '@xlr8/core';
+  import { api } from '@selfbound/backend/api';
+  import { t, tn, translated } from '@selfbound/core/i18n';
+  import { fullDate, relativeTime } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
 
@@ -27,7 +27,7 @@
 </script>
 
 <h1 class="page-title">GitHub</h1>
-<p class="page-lead">{t('Pull requests from all repos the token can access appear on the linked issue: with description, checks, comments and reviews; merge and comment right in XLR8.')}</p>
+<p class="page-lead">{t('Pull requests from all repos the token can access appear on the linked issue: with description, checks, comments and reviews; merge and comment right in Selfbound.')}</p>
 
 {#if !c}
   <div class="card-list"><div class="card-row muted">{t('Loading …')}</div></div>
@@ -43,7 +43,7 @@
           {:else if c.error}
             {c.error}
           {:else if c.checkedAt}
-            {t('{count} repos, checked {time} ({date}).', { count: c.repos.length, time: relativeTime(c.checkedAt), date: fullDate(c.checkedAt) })} {c.manage ? t('XLR8 checks again daily and sets up the webhook in new repos.') : t('XLR8 checks again daily.')}
+            {t('{count} repos, checked {time} ({date}).', { count: c.repos.length, time: relativeTime(c.checkedAt), date: fullDate(c.checkedAt) })} {c.manage ? t('Selfbound checks again daily and sets up the webhook in new repos.') : t('Selfbound checks again daily.')}
           {:else}
             {t('Not checked yet.')}
           {/if}

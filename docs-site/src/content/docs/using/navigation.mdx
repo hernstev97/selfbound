@@ -1,6 +1,6 @@
 ---
 title: Navigation
-description: Find your way around XLR8 with the sidebar, the views of each team, two-key shortcuts and direct links.
+description: Find your way around Selfbound with the sidebar, the views of each team, two-key shortcuts and direct links.
 sidebar:
   order: 1
 ---
@@ -8,17 +8,17 @@ import { Aside } from '@astrojs/starlight/components';
 import Kbd from '../../../components/Kbd.astro';
 import Screenshot from '../../../components/Screenshot.astro';
 
-XLR8 has a sidebar on the left and the current page on the right. You can reach every place with the
+Selfbound has a sidebar on the left and the current page on the right. You can reach every place with the
 mouse, but most people quickly switch to a handful of two-key shortcuts like <Kbd keys="g i" /> for the
 inbox. This page explains the layout, the views and the fastest ways to move between them.
 
-<Screenshot name="list" alt="XLR8 with the sidebar on the left and an issue list grouped by status on the right" />
+<Screenshot name="list" alt="Selfbound with the sidebar on the left and an issue list grouped by status on the right" />
 
 ## The sidebar
 
 From top to bottom, the sidebar holds:
 
-- **The header**: the XLR8 button opens the [command menu](/using/command-menu/), the magnifier opens the
+- **The header**: the Selfbound button opens the [command menu](/using/command-menu/), the magnifier opens the
   issue search, and the pen opens the [create dialog](/using/creating-issues/). A dot on the pen means you
   have unsent drafts.
 - **Views across all teams**: Inbox and Triage (each with a count when something is waiting), All issues,
@@ -100,13 +100,13 @@ Places without a shortcut, like Drafts, All sprints or a settings page, are one 
 
 <Kbd keys="o i" /> opens the issue search with your recently opened issues already listed, newest
 first. Pick one with the arrow keys and <Kbd keys="enter" />, or start typing to search all issues
-instead. XLR8 remembers the last 12 issues you opened in this browser.
+instead. Selfbound remembers the last 12 issues you opened in this browser.
 
 ## Going back
 
 <Kbd keys="escape" /> on an open issue takes you back to the list you came from, with its filters and
 scroll position. The browser's back button works the same way. If you opened the issue from a link,
-XLR8 returns you to the last list you used.
+Selfbound returns you to the last list you used.
 
 If something sits on top, <Kbd keys="escape" /> closes that first, one step per press: the menu drawer on
 a phone, the preview, the open issue, then the selection in the list.
@@ -133,7 +133,7 @@ Filters, grouping, ordering and the board layout are part of the address too (se
 list copies the address of the view as you see it. For an issue, <Kbd keys="mod+shift+," /> copies its
 link and <Kbd keys="mod+." /> copies its ID, like `ACME-42`.
 
-When you type an issue ID such as `ACME-42` in a description or comment, XLR8 turns it into a link to
+When you type an issue ID such as `ACME-42` in a description or comment, Selfbound turns it into a link to
 that issue.
 
 ## Inbox side by side
@@ -153,7 +153,7 @@ On a narrow screen (up to 768 pixels), the sidebar moves into a drawer and a bar
 sidebar. The round button above the bar creates an issue. A long press on an issue opens the same menu
 you get with a right click on a computer.
 
-<Screenshot name="mobile-list" alt="XLR8 on a phone: an issue list with the navigation bar at the bottom and a round button to create an issue" width={360} />
+<Screenshot name="mobile-list" alt="Selfbound on a phone: an issue list with the navigation bar at the bottom and a round button to create an issue" width={360} />
 
 <Aside type="tip">
 All shortcuts are listed on [Keyboard shortcuts](/reference/keyboard-shortcuts/). In the app, press

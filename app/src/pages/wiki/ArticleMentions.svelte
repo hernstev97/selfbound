@@ -1,10 +1,10 @@
 <script lang="ts">
   // "Mentioned in" on a knowledge page: issues and pages that link to it, plus the issues the page
   // itself mentions. Own subscription while the page is open.
-  import { api } from '@xlr8/backend/api';
-  import { t } from '@xlr8/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import { t } from '@selfbound/core/i18n';
   import type { FunctionReturnType } from 'convex/server';
-  import { ICON, statusIcon } from '@xlr8/core';
+  import { ICON, statusIcon } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
 
   type Links = FunctionReturnType<typeof api.wiki.backlinks>;

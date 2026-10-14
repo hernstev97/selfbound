@@ -1,6 +1,6 @@
 ---
 title: Deploy the web app
-description: Build the XLR8 web app for your instance and serve it from Vercel or another static host.
+description: Build the Selfbound web app for your instance and serve it from Vercel or another static host.
 sidebar:
   label: Web app
   order: 3
@@ -22,7 +22,7 @@ Before you start, `deploy/instance.json` needs `convexDeployment`, `appUrl` and 
 1. **Set up the Vercel CLI.** Install the [Vercel CLI](https://vercel.com/docs/cli) and log in with
    `vercel login`.
 
-2. **Name the project.** In `deploy/instance.json`, set `vercelProject` (for example `xlr8`) and
+2. **Name the project.** In `deploy/instance.json`, set `vercelProject` (for example `selfbound`) and
    `vercelScope` (your Vercel team slug).
 
 3. **Build and deploy:**
@@ -31,7 +31,7 @@ Before you start, `deploy/instance.json` needs `convexDeployment`, `appUrl` and 
    node tooling/deploy-web.mjs
    ```
 
-4. **Add your domain.** In the Vercel dashboard, add `xlr8.example.com` as a domain of the project and
+4. **Add your domain.** In the Vercel dashboard, add `selfbound.example.com` as a domain of the project and
    create the DNS record Vercel shows you.
 
 </Steps>
@@ -58,12 +58,12 @@ still expects all instance settings, including the two Vercel fields.
    VITE_CONVEX_URL=https://happy-otter-123.convex.cloud \
    VITE_CONVEX_SITE_URL=https://happy-otter-123.convex.site \
    VITE_CLERK_PUBLISHABLE_KEY=pk_live_… \
-   XLR8_PUBLIC_URL=https://xlr8.example.com \
+   XLR8_PUBLIC_URL=https://selfbound.example.com \
    VITE_DEV_TOKEN= \
-   pnpm --filter @xlr8/app build
+   pnpm --filter @selfbound/app build
    ```
 
-   The empty `VITE_DEV_TOKEN=` matters if you have run XLR8 locally: `pnpm dev` writes a local test token
+   The empty `VITE_DEV_TOKEN=` matters if you have run Selfbound locally: `pnpm dev` writes a local test token
    into `app/.env.local`, and it must not end up in a production build. Alternatively, delete that file.
 
 2. **Rename the app's entry page:**
@@ -106,9 +106,9 @@ backend on every request.
 
 ## Check the result
 
-1. Open `https://xlr8.example.com/` in a private window: the landing page appears.
+1. Open `https://selfbound.example.com/` in a private window: the landing page appears.
 2. Click **Sign in** and sign in with the user you created in Clerk. You land in the app.
-3. Open `https://xlr8.example.com/` again: the app opens directly.
+3. Open `https://selfbound.example.com/` again: the app opens directly.
 
 If you see the landing page although you are signed in, for example on the first visit after a deploy,
 click **Sign in**. Clerk recognizes the session and sends you to the app.
@@ -120,7 +120,7 @@ click **Sign in**. Clerk recognizes the session and sends you to the app.
 Both mean that the backend does not accept your sign-in. Work through these checks:
 
 - **The issuer.** `CLERK_JWT_ISSUER_DOMAIN` on Convex must be exactly your Clerk Frontend API URL, for
-  example `https://clerk.xlr8.example.com`, without a trailing slash. If you changed it, redeploy the
+  example `https://clerk.selfbound.example.com`, without a trailing slash. If you changed it, redeploy the
   backend (`node tooling/cloud.mjs deploy`): Convex reads it only when the functions are pushed.
 - **The JWT template.** In Clerk, a template of type Convex must exist with the name `convex`.
 - **The owner list.** `XLR8_OWNER_IDS` must contain exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>`:
@@ -129,10 +129,10 @@ Both mean that the backend does not accept your sign-in. Work through these chec
 - **After a change of your Clerk domain,** the issuer changes, so update it in both
   `CLERK_JWT_ISSUER_DOMAIN` and `XLR8_OWNER_IDS`.
 
-The **No access** screen ("You are signed in, but this account has no access to XLR8.") has a
+The **No access** screen ("You are signed in, but this account has no access to Selfbound.") has a
 **Sign out** button, so you can try another account.
 
-### "XLR8 is not set up"
+### "Selfbound is not set up"
 
 The build has no Convex address or no sign-in method. Build again with `VITE_CONVEX_URL` and
 `VITE_CLERK_PUBLISHABLE_KEY` set, or check `convexDeployment` and `clerkPublishableKey` in your instance

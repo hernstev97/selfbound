@@ -49,7 +49,7 @@ test('Choosing a theme: applies at once, saved on the server, present after a re
   await expect.poll(() => cssVar(other, '--bg-panel'), { timeout: 15_000 }).toBe('#1e1e2e');
   await other.close();
 
-  // Back to XLR8: the theme's variables disappear.
+  // Back to Selfbound: the theme's variables disappear.
   await openAppearance(page);
   await page.locator('[data-testid="theme-card"][data-id="xlr8"][data-mode="dark"]').click();
   await expect.poll(() => cssVar(page, '--bg-panel')).not.toBe('#1e1e2e');
@@ -125,7 +125,7 @@ test('Custom theme: paste JSONC, preview, use, override a color, rename, delete 
   await row.getByTestId('custom-theme-name').press('Enter');
   await expect(page.getByTestId('theme-selected-dark')).toHaveText('Purple');
 
-  // Delete: back to XLR8; undo restores the theme, the selection and the color
+  // Delete: back to Selfbound; undo restores the theme, the selection and the color
   await row.hover();
   await row.getByTestId('custom-theme-delete').click();
   await expect(page.getByTestId('custom-theme')).toHaveCount(0);

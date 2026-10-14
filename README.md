@@ -1,17 +1,22 @@
-# XLR8
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="app/public/brand/selfbound-lockup-paper.svg">
+    <img src="app/public/brand/selfbound-lockup-ink.svg" alt="Selfbound" height="36">
+  </picture>
+</h1>
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/list-dark.webp">
-    <img src="docs/images/list-light.webp" alt="XLR8 issue list with sidebar, grouped by status" width="900">
+    <img src="docs/images/list-light.webp" alt="Selfbound issue list with sidebar, grouped by status" width="900">
   </picture>
 </p>
 
-XLR8 is a fast, keyboard-first issue tracker built for solo developers and their AI agents. One person, no
+Selfbound is a fast, keyboard-first issue tracker built for solo developers and their AI agents. One person, no
 assignees, no permissions to configure. It keeps issues, projects, sprints and a knowledge base in one
 place, answers within a frame, and is open to AI agents through MCP.
 
-> **Status: early, not announced.** XLR8 runs in daily use for one person. Expect rough edges, breaking
+> **Status: early, not announced.** Selfbound runs in daily use for one person. Expect rough edges, breaking
 > changes and missing docs. Issues are welcome; code contributions are issue-first, see
 > [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -36,9 +41,9 @@ place, answers within a frame, and is open to AI agents through MCP.
 
 The screenshots show the sample data of `pnpm dev`, in the light or dark theme of your GitHub settings.
 
-**Teams are areas, not people.** As in Linear, a team in XLR8 is a workspace for one area of work (a
+**Teams are areas, not people.** As in Linear, a team in Selfbound is a workspace for one area of work (a
 product, a client, a private project) with its own key such as `ORB-12`, statuses, labels and
-knowledge pages. XLR8 has one user; its teams are never groups of people. Why it is built this way:
+knowledge pages. Selfbound has one user; its teams are never groups of people. Why it is built this way:
 [docs/decisions.md](docs/decisions.md).
 
 ## What it does

@@ -1,6 +1,6 @@
 // German UI strings (shared), English text → German. See core/src/i18n.ts.
 // Labels defined in backend/convex/shared; the UI translates them with t(label).
-import type { Dictionary } from '@xlr8/core/i18n';
+import type { Dictionary } from '@selfbound/core/i18n';
 
 export default {
   // backend/convex/shared/workflow.ts: STATE_TYPE_LABEL (Triage and Backlog are the same in German)

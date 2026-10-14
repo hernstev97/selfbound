@@ -3,7 +3,7 @@
 // for measuring.
 //
 // Usage: node perf/record.ts [--out=<file.mp4>] [--reuse-data] [--skip-build] [--keep] [--encode-only]
-// Output: raw files in /tmp/xlr8-media/ (walkthrough-desktop.webm, walkthrough-mobile.webm) and
+// Output: raw files in /tmp/selfbound-media/ (walkthrough-desktop.webm, walkthrough-mobile.webm) and
 // walkthrough.mp4 with captions (H.264), copied to --out if given. Needs ffmpeg and fontconfig.
 
 import { execFileSync } from 'node:child_process';
@@ -15,7 +15,7 @@ import { appBase, startStack } from './stack.ts';
 const argv = process.argv.slice(2);
 const args = new Set(argv);
 const out = argv.find((a) => a.startsWith('--out='))?.slice(6);
-const RAW = '/tmp/xlr8-media';
+const RAW = '/tmp/selfbound-media';
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };
 const FPS = 25;
@@ -74,7 +74,7 @@ async function desktopTour(captions: Caption[]) {
   const r = recorder(page, captions);
   await page.goto(`${appBase('P1')}/all?group=none&order=created`);
   await page.getByTestId('issue-row').first().waitFor();
-  await page.waitForFunction(() => performance.getEntriesByName('xlr8-synced').length > 0, null, { timeout: 30_000 });
+  await page.waitForFunction(() => performance.getEntriesByName('selfbound-synced').length > 0, null, { timeout: 30_000 });
   await page.mouse.move(2, DESKTOP.height - 10);
   await r.pause(300);
   const start = r.now();
@@ -145,7 +145,7 @@ async function phoneTour(captions: Caption[]) {
   const r = recorder(page, captions);
   await page.goto(`${appBase('P1')}/all`);
   await page.getByTestId('issue-row').first().waitFor();
-  await page.waitForFunction(() => performance.getEntriesByName('xlr8-synced').length > 0, null, { timeout: 30_000 });
+  await page.waitForFunction(() => performance.getEntriesByName('selfbound-synced').length > 0, null, { timeout: 30_000 });
   await r.pause(300);
   const start = r.now();
   r.caption('Phone: one column, large rows');

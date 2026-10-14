@@ -1,6 +1,6 @@
 // @ts-check
 /// <reference lib="webworker" />
-// XLR8 service worker, for notifications only. The pwaFiles plugin (app/vite.plugins.ts) inserts
+// Selfbound service worker, for notifications only. The pwaFiles plugin (app/vite.plugins.ts) inserts
 // the build id and emits the file as /sw.js; every build changes it.
 //
 // Registered with the scope /push/ (app/src/lib/pwa/push.ts), so it controls no page of the app:
@@ -9,7 +9,7 @@
 // page; the open app shows "Offline".
 
 /** Build id: changes the file on every build so the browser picks up the new version. */
-const BUILD = '__XLR8_BUILD__';
+const BUILD = '__SELFBOUND_BUILD__';
 const sw = /** @type {ServiceWorkerGlobalScope} */ (/** @type {unknown} */ (self));
 
 sw.addEventListener('install', () => void sw.skipWaiting());
@@ -28,14 +28,14 @@ sw.addEventListener('push', (event) => {
   }
   event.waitUntil(
     (async () => {
-      // XLR8 is in the foreground on this device: the app shows the message itself (toast and sound).
+      // Selfbound is in the foreground on this device: the app shows the message itself (toast and sound).
       const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const front = windows.find((c) => c.visibilityState === 'visible' && c.focused && isApp(c.url));
       if (front && !message.test) {
         front.postMessage({ type: 'xlr8-push', message });
         return;
       }
-      await sw.registration.showNotification(message.title || 'XLR8', {
+      await sw.registration.showNotification(message.title || 'Selfbound', {
         body: message.body ?? '',
         tag: message.tag || undefined,
         // @ts-ignore renotify is missing from the types: the same tag replaces the old notification but alerts again

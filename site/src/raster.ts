@@ -1,4 +1,4 @@
-// Start page background ("dot grid"): a grid of dots like an LED board. The XLR8 star shows in it
+// Start page background ("dot grid"): a grid of dots like an LED board. The Selfbound star shows in it
 // and turns slowly; a wave runs faster and faster from left to right and makes it flash; the mouse
 // casts circular ripples.
 //
@@ -363,8 +363,12 @@ export async function loadStar(url: string, size = 512): Promise<HTMLCanvasEleme
     c.width = c.height = size;
     const g = c.getContext('2d')!;
     const pad = size * 0.02;
+    // Fit without stretching: the symbol does not have to be square.
+    const k = size - 2 * pad / Math.max(img.naturalWidth, img.naturalHeight);
+    const w = img.naturalWidth * k;
+    const h = img.naturalHeight * k;
     g.filter = `blur(${Math.round(size / 85)}px)`;
-    g.drawImage(img, pad, pad, size - 2 * pad, size - 2 * pad);
+    g.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
     return c;
   } catch {
     return null;

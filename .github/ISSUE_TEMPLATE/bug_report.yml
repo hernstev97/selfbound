@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting! XLR8 works issue-first: if you want to send a pull request, please wait until the maintainer has added the label `accepted` to this issue. See [CONTRIBUTING.md](https://github.com/hernstev97/xlr8/blob/main/CONTRIBUTING.md).
+        Thanks for reporting! Selfbound works issue-first: if you want to send a pull request, please wait until the maintainer has added the label `accepted` to this issue. See [CONTRIBUTING.md](https://github.com/hernstev97/xlr8/blob/main/CONTRIBUTING.md).
   - type: textarea
     id: what
     attributes:

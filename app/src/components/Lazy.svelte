@@ -6,7 +6,7 @@
   // Without `children` it shows the module's `default` (with `props`), otherwise the snippet with the module.
   // `quiet`: small parts (bar, header, peek) show nothing on failure but reload once online.
   import type { Component, Snippet } from 'svelte';
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
 
   let {
     load,

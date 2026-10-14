@@ -20,7 +20,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/lib/search.ts` | Search terms, "contains all words" matching and snippets for `issues.search` and `wiki.search` |
 | `convex/mcp.ts`, `convex/ops/mcp.ts`, `convex/lib/mcp/*` | MCP: read tools as a query (after a counting mutation), write tools as one mutation, tools mapped onto the shared operations ([`mcp.md`](mcp.md)) |
 | `convex/github.ts`, `convex/ops/github.ts` | GitHub webhook: one delivery per transaction |
-| `convex/githubPr.ts`, `convex/ops/githubPr.ts`, `convex/lib/githubApi.ts`, `convex/lib/githubMedia.ts`, `convex/shared/pullRequests.ts` | Pull requests in XLR8: fetching via the GitHub API, view, actions, media proxy, webhooks in all repos ([below](#githubpr-pull-requests-in-xlr8)) |
+| `convex/githubPr.ts`, `convex/ops/githubPr.ts`, `convex/lib/githubApi.ts`, `convex/lib/githubMedia.ts`, `convex/shared/pullRequests.ts` | Pull requests in Selfbound: fetching via the GitHub API, view, actions, media proxy, webhooks in all repos ([below](#githubpr-pull-requests-in-selfbound)) |
 | `convex/importer.ts`, `convex/ops/import.ts` | Linear import: staging → tables ([`import.md`](import.md)) |
 | `convex/opsStatus.ts` | Reports for the ops page (backup) |
 | `convex/migrations.ts` | One-off data migrations (internal, safe to rerun), e.g. `workflowBackfill`/`workflowVerify` ([statuses](#statuses-per-team)), `inboxBackfill` ([inbox](#inbox)) |
@@ -59,9 +59,9 @@ This document is the contract between the backend and the UI. It describes the t
 | `rateWindows` | Counter per agent and window (`m:<minute>`, `d:<day>`) | `by_agent_window` |
 | `requests` | Idempotency: `owner`, `requestId`, `argsHash`, `operation`, `result` | `by_owner_request`, `by_created` |
 | `pullRequests`, `issuePullRequests`, `githubDeliveries` | GitHub. `pullRequests.headSha`: last known head commit | `pullRequests.by_repo_number`, `by_repo_head` |
-| `pullRequestDetails`, `pullRequestItems`, `githubCheckRuns` | Pull requests in XLR8 ([below](#githubpr-pull-requests-in-xlr8)) | `by_pr`, `by_media_key`; `by_pr_created`, `by_pr_key`; `by_repo_sha`, `by_check`, `by_received` |
+| `pullRequestDetails`, `pullRequestItems`, `githubCheckRuns` | Pull requests in Selfbound ([below](#githubpr-pull-requests-in-selfbound)) | `by_pr`, `by_media_key`; `by_pr_created`, `by_pr_key`; `by_repo_sha`, `by_check`, `by_received` |
 | `recurrences`, `recurrenceRuns` | Recurring issues, one run per due date | `by_next`, `by_recurrence_date` |
-| `linearLinks`, `importStaging`, `importRuns`, `importConflicts` | Import. `linearLinks.base`: the last imported Linear values of an issue (three-way merge), `purgedAt`: permanently deleted in XLR8. `importRuns.phase`/`cursor`/`maxNumbers`/`heartbeatAt`: progress of the run | `by_kind_linear`, `by_local`, `importRuns.by_status` |
+| `linearLinks`, `importStaging`, `importRuns`, `importConflicts` | Import. `linearLinks.base`: the last imported Linear values of an issue (three-way merge), `purgedAt`: permanently deleted in Selfbound. `importRuns.phase`/`cursor`/`maxNumbers`/`heartbeatAt`: progress of the run | `by_kind_linear`, `by_local`, `importRuns.by_status` |
 | `files` | Uploaded images: `token` (access protection, appears in the Markdown), `storageId`, validated `contentType`, `size`, `createdAt`, `uploadedBy`, `deleteAfter` (deletion time once unreferenced) | `by_token`, `by_delete_after` |
 | `fileRefs` | Image references: one row per text (`owner` = ID of a description, comment, earlier revision or recurrence) and token. Only through `ops/files.ts` | `by_owner`, `by_token` |
 | `articles` | Knowledge page: `teamId`, `parentId?` (tree), `projectId?` (project docs), title, `rank` (among siblings), `topicIds`, `createdAt`/`createdBy`, `updatedAt`/`updatedBy` (text changes at most once per minute), `deletedAt?` | `by_team_deleted`, `by_team_parent` (`teamId`, `parentId`, `rank`), `by_project`, `by_updated`, `by_deleted`, search `search_title` (filter `teamId`) |
@@ -81,7 +81,7 @@ This document is the contract between the backend and the UI. It describes the t
 - `identifierAliases.by_issue`: finds an issue's aliases when it is permanently deleted.
 - `issues.by_project` (`projectId`, `status`): MCP `list_issues` with a project filter without a scan.
 - `issues.by_status_due` (`status`, `dueDate`) and `issues.by_status_completed` (`status`, `completedAt`): MCP "due/overdue" reads only open statuses, "done today" only `done`.
-- `sprints.by_source_state_closed` (`source`, `state`, `closedAt`): the most recently closed sprints per source (`meta.get`, capacity). `source` comes first so that XLR8 sprints and imported Linear cycles can be queried separately.
+- `sprints.by_source_state_closed` (`source`, `state`, `closedAt`): the most recently closed sprints per source (`meta.get`, capacity). `source` comes first so that Selfbound sprints and imported Linear cycles can be queried separately.
 - `issues.by_snoozed` (`snoozedUntil`): the morning job finds the issues whose snooze has ended (`gt('')` skips the many issues without one); MCP `list_issues` with `snoozed: true` reads only these.
 - `bodySearch` instead of a search index on `issueBodies`: a search hit reads the whole document, so the search text is kept separate and capped at 8000 characters.
 - `importRuns.by_status`: finds running imports (only one at a time; detects stuck runs).
@@ -154,7 +154,7 @@ Only effective with `XLR8_TEST_SWITCHES=1` (local only). `admin.setRejectWrites(
 
 ## Public functions
 
-All require sign-in (exception: `health.status`). A test calls every exported public function of every module without an identity and with a foreign identity and expects `access_denied`. Write mutations also check the test switch. Types: `Id<'issues'>` etc. from `@xlr8/backend/dataModel`, function references from `@xlr8/backend/api`. `day` = calendar day `"YYYY-MM-DD"`. For optional fields in a patch, `null` means "clear".
+All require sign-in (exception: `health.status`). A test calls every exported public function of every module without an identity and with a foreign identity and expects `access_denied`. Write mutations also check the test switch. Types: `Id<'issues'>` etc. from `@selfbound/backend/dataModel`, function references from `@selfbound/backend/api`. `day` = calendar day `"YYYY-MM-DD"`. For optional fields in a patch, `null` means "clear".
 
 ### health
 
@@ -167,7 +167,7 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, XLR8 sprints first; imported Linear cycles only fill up while there are fewer than 6 XLR8 sprints; descending by number), `rejectWrites }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
+| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, Selfbound sprints first; imported Linear cycles only fill up while there are fewer than 6 Selfbound sprints; descending by number), `rejectWrites }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
 | `meta.counter` (query) | – | `{ maxSeq }` (−1 without issues). The buckets `0 … floor(maxSeq/64)` follow from it. |
 
 ### issues
@@ -387,7 +387,7 @@ Pages per team. In code `wiki`/`article`; in the UI "Knowledge", "Page", "Topic"
 
 **Permanent deletion** (`purgeArticle`): text, search text, revisions, sources and image references; Linear links get `purgedAt`; a tombstone is written to `articleTombstones`. Sub-pages that were not deleted with it move to the top level.
 
-### githubPr (pull requests in XLR8)
+### githubPr (pull requests in Selfbound)
 
 Types in `shared/pullRequests.ts` (`PrView`, `PrDetail`, `PrItem`, `PrCheck`, `PrSummary`, `GithubConnection`). Access to GitHub only via `GITHUB_TOKEN` (the instance's fine-grained PAT, [`operations.md`](../operations.md#github)); the token never leaves the backend and appears in no message.
 
@@ -451,7 +451,7 @@ If a mutation fails on write conflicts (Convex retried several times and gave up
 4. Create `issuePullRequests` per identifier; existing ones are only raised from `closes: false` to `true`, never removed. History `pull_request` with actor `github`.
 5. On merge, i.e. only on the **transition** of the stored PR state to `merged`: all links of the PR with `closes` → status `done` via `applyPatch` (actor `github`). Never for `done`, `canceled`, `duplicate` or issues in the trash. Further deliveries for an already merged PR (including a "Redeliver" after the 30-day list has expired, or a merged PR imported from Linear) close nothing; an issue reopened in the meantime stays open.
 6. Schedule a fetch (debounced, see above). `pull_request` with **any** action (including `synchronize`, `labeled` …) updates `headSha`; link analysis stays limited to `opened`, `edited`, `reopened`, `ready_for_review`, `converted_to_draft`, `closed`. Also `issue_comment` (only with `issue.pull_request`), `pull_request_review`, `pull_request_review_comment`, `pull_request_review_thread`, `check_run`, `check_suite`, `workflow_run` (PR via `pull_requests[].number` with its base in this repo, otherwise via `head_sha`) and `status` (via `sha` → `pullRequests.by_repo_head`). Only PRs that exist in `pullRequests`; otherwise `ignored`. `check_run` also stores the run in `githubCheckRuns` (a late "still running" delivery does not overwrite a result). Team keys are only read for `pull_request`.
-7. Special case, merge through XLR8 before the `edited` delivery: if a new link with `closes` is created for an already merged PR (or `closes` is raised) and `mergedAt` is less than 10 minutes ago, it still closes its issue (as on the transition).
+7. Special case, merge through Selfbound before the `edited` delivery: if a new link with `closes` is created for an already merged PR (or `closes` is raised) and `mergedAt` is less than 10 minutes ago, it still closes its issue (as on the transition).
 
 Returns `{ duplicate, kind: 'pull_request'|'ping'|'ignored'|'refresh', pr?, linked[], closed[], refresh? }` (`refresh`: PRs for which a fetch is scheduled or pending). The cron `requests-aufraeumen` deletes deliveries and `githubCheckRuns` after 30 days.
 
@@ -466,7 +466,7 @@ Returns `{ duplicate, kind: 'pull_request'|'ping'|'ignored'|'refresh', pr?, link
 3. Phases: `scan` (highest Linear number per team), then paginated over `importStaging.by_run_kind` (`numItems` 100 issues or 200 others, `maximumBytesRead` 1 MB): `team`, `labelGroup`, `label`, `project`, `sprint`, `issue`, then `parent`, `comment`, `relation`, `pullRequest`, `link`. Each row yields `created`, `updated`, `unchanged` or `skipped`; the counts are in `importRuns.counts[step]`.
 4. `cleanup`: delete the run's staging rows, then `done`. If a step throws → immediately `failed` with the error (staging stays). No progress for 15 minutes → `failed` (on the next start and via the cron `fail-stale-imports`).
 
-Rules: matching via `linearLinks` (kind + Linear ID → XLR8 ID + checksum). Same checksum → untouched (for issues, `order`, `updatedAt`, `url` don't count). Issues: three-way merge per field against `linearLinks.base` (changed only in Linear → apply, old value in the history, old description in full in `bodyRevisions`; changed only in XLR8 → stays; changed in both → XLR8 wins, `importConflicts`). Permanently deleted issues (`purgedAt`) don't come back. Details: [`import.md`](import.md). Never touched: logos, team order and keys, XLR8 sprints and `sprintId`, `rank`, `reviewedAt`, `seq`, `deletedAt`, removed comments and relations. Teams, label groups, labels and projects that already exist in XLR8 with the same key or name are adopted instead of duplicated. If a Linear identifier collides with an XLR8 issue: Linear keeps the identifier, the XLR8 issue gets the next number after all of the team's Linear numbers, an alias and a history row (`identifier`), and an entry in `importConflicts`. Cycles become closed sprints (`source: 'linear'`, number from the shared counter); entries `kind: 'imported'` with `removedAt` (end of the sprint) and `outcome`; `issue.sprintId` stays empty. Only `ops/sprints.ts` writes these entries (`setImportedSprintItem`).
+Rules: matching via `linearLinks` (kind + Linear ID → Selfbound ID + checksum). Same checksum → untouched (for issues, `order`, `updatedAt`, `url` don't count). Issues: three-way merge per field against `linearLinks.base` (changed only in Linear → apply, old value in the history, old description in full in `bodyRevisions`; changed only in Selfbound → stays; changed in both → Selfbound wins, `importConflicts`). Permanently deleted issues (`purgedAt`) don't come back. Details: [`import.md`](import.md). Never touched: logos, team order and keys, Selfbound sprints and `sprintId`, `rank`, `reviewedAt`, `seq`, `deletedAt`, removed comments and relations. Teams, label groups, labels and projects that already exist in Selfbound with the same key or name are adopted instead of duplicated. If a Linear identifier collides with a Selfbound issue: Linear keeps the identifier, the Selfbound issue gets the next number after all of the team's Linear numbers, an alias and a history row (`identifier`), and an entry in `importConflicts`. Cycles become closed sprints (`source: 'linear'`, number from the shared counter); entries `kind: 'imported'` with `removedAt` (end of the sprint) and `outcome`; `issue.sprintId` stays empty. Only `ops/sprints.ts` writes these entries (`setImportedSprintItem`).
 
 ### Notifications (`push.ts`, `ops/notify.ts`, `lib/webpush.ts`)
 
@@ -521,11 +521,11 @@ Queries go through indexes. Unbounded `.collect()` only happens on small sets (o
 pnpm install
 node tooling/local.mjs --port 13420 --seed small --no-wait   # anonymous Convex, local sign-in, test data
 node tooling/local.mjs --port 13420 --seed large --reset --no-wait
-pnpm --filter @xlr8/backend test        # Vitest + convex-test (edge-runtime)
-pnpm --filter @xlr8/backend typecheck   # tsc 7 for convex/ and for scripts/, data/, test/
-pnpm --filter @xlr8/backend test:integration   # fresh backend on 13490: import, MCP, concurrency
+pnpm --filter @selfbound/backend test        # Vitest + convex-test (edge-runtime)
+pnpm --filter @selfbound/backend typecheck   # tsc 7 for convex/ and for scripts/, data/, test/
+pnpm --filter @selfbound/backend test:integration   # fresh backend on 13490: import, MCP, concurrency
 ```
 
 `local.mjs` sets `XLR8_DEV_JWKS`, `XLR8_OWNER_IDS`, `XLR8_ALLOW_SEED=1` and `XLR8_TEST_SWITCHES=1` in the local backend and writes `app/.env.local` with the URL and a local token. On start, Convex regenerates `convex/_generated` (it is checked in). The seed skips if the same data set is already complete, and refuses any non-local URL. Rough timings (on a busy machine, order of magnitude only): `small` on an empty backend under 1 s, `large` 27–75 s; clearing after `large` (`seed.reset`, 2000 documents per call because of the read limits) takes one to one and a half minutes.
 
-Tests (`backend/test/`): regression tests from an earlier backend review (`regressions.test.ts`, one block per finding), MCP over HTTP (`mcp.test.ts`), GitHub webhook (`github.test.ts`), pull requests in XLR8 with a mocked GitHub (`githubPr.test.ts`: scheduling and debouncing fetches, reconciling entries, trimming, merge transition, actions, media proxy, webhooks in all repos; building blocks in `lib/githubApi.test.ts`), import with retry, collision and update (`import.test.ts`), sign-in sweep over all modules, issues (create, numbering with batches of 50 and parallel calls, update, compare-and-set with label sets, undo, parent cycles, budget, rank), idempotency, description versioning, trash and permanent deletion, relations, comments, search, identifiers, test switches, sprints (start/add/close rules, one active sprint, invariant after every operation, capacity, nightly audit), teams and team permissions, logo validation, images (type check, serving, references in several places, cleanup after the grace period and after permanent deletion, `files.test.ts`), agent keys and rate limit, recurrences (month boundaries, DST, idempotency), calendar days against `Intl`, generator and seed.
+Tests (`backend/test/`): regression tests from an earlier backend review (`regressions.test.ts`, one block per finding), MCP over HTTP (`mcp.test.ts`), GitHub webhook (`github.test.ts`), pull requests in Selfbound with a mocked GitHub (`githubPr.test.ts`: scheduling and debouncing fetches, reconciling entries, trimming, merge transition, actions, media proxy, webhooks in all repos; building blocks in `lib/githubApi.test.ts`), import with retry, collision and update (`import.test.ts`), sign-in sweep over all modules, issues (create, numbering with batches of 50 and parallel calls, update, compare-and-set with label sets, undo, parent cycles, budget, rank), idempotency, description versioning, trash and permanent deletion, relations, comments, search, identifiers, test switches, sprints (start/add/close rules, one active sprint, invariant after every operation, capacity, nightly audit), teams and team permissions, logo validation, images (type check, serving, references in several places, cleanup after the grace period and after permanent deletion, `files.test.ts`), agent keys and rate limit, recurrences (month boundaries, DST, idempotency), calendar days against `Intl`, generator and seed.

@@ -5,9 +5,9 @@
   // error); the page takes nothing from its own URL except the request id.
   import type { FunctionReturnType } from 'convex/server';
   import '../styles/forms.css';
-  import { api } from '@xlr8/backend/api';
-  import { relativeTime } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import { relativeTime } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { auth, client } from '../app-instance.ts';
   import Logo from '../components/Logo.svelte';
 
@@ -74,7 +74,7 @@
 
 <div class="login consent" data-testid="oauth-consent">
   <div class="login-card">
-    <div class="login-logo"><Logo kind="full" height={36} /></div>
+    <div class="login-logo"><Logo kind="lockup" height={32} /></div>
     {#if loadError}
       <h1>{t('No access')}</h1>
       <p>{loadError}</p>
@@ -93,11 +93,11 @@
       <h1>{t('Request expired')}</h1>
       <p data-testid="oauth-expired">{t('Start the connection again in {app}.', { app: pending.appName })}</p>
     {:else}
-      <h1>{t('Connect {app} to XLR8?', { app: pending.appName })}</h1>
+      <h1>{t('Connect {app} to Selfbound?', { app: pending.appName })}</h1>
       <p>
         {pending.clientName && pending.clientName !== pending.appName
-          ? t('{app} ("{client}") wants to access XLR8 as a connector.', { app: pending.appName, client: pending.clientName })
-          : t('{app} wants to access XLR8 as a connector.', { app: pending.appName })}
+          ? t('{app} ("{client}") wants to access Selfbound as a connector.', { app: pending.appName, client: pending.clientName })
+          : t('{app} wants to access Selfbound as a connector.', { app: pending.appName })}
         {t('It may do everything an agent may do: search, read, create, change and comment on issues.')}
       </p>
       <div class="facts">
@@ -111,7 +111,7 @@
       <p class="warn">{t('Only allow this if you just started the connection yourself in {app}.', { app: pending.appName })}</p>
       {#if !armed}
         <p class="warn strong" data-testid="oauth-not-armed">
-          {t('XLR8 is not accepting new connectors right now. In another tab, press "Connect connector" under Settings → Agents, then press "Allow" here.')}
+          {t('Selfbound is not accepting new connectors right now. In another tab, press "Connect connector" under Settings → Agents, then press "Allow" here.')}
         </p>
       {/if}
       {#if actionError}<p class="warn strong" data-testid="oauth-error">{actionError}</p>{/if}

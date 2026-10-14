@@ -3,23 +3,23 @@
 //
 //   - register the service worker (app/sw/sw.js, push only, controls no page): show notifications, tap opens the issue
 //   - detect a new version after a deploy and reload (version.json)
-//   - report presence: while XLR8 is visible and in use here, no pushes go out; the app shows the
+//   - report presence: while Selfbound is visible and in use here, no pushes go out; the app shows the
 //     notifications itself as a toast with a sound
 //   - read issues: close their notifications on this device
-import { api } from '@xlr8/backend/api';
-import type { Id } from '@xlr8/backend/dataModel';
-import type { App, IssueId } from '@xlr8/core';
-import { t, tc } from '@xlr8/core/i18n';
+import { api } from '@selfbound/backend/api';
+import type { Id } from '@selfbound/backend/dataModel';
+import type { App, IssueId } from '@selfbound/core';
+import { t, tc } from '@selfbound/core/i18n';
 import { getRegistration, registration, syncPush } from './push.ts';
 
-/** After this long without input, XLR8 counts as "open but not in use". */
+/** After this long without input, Selfbound counts as "open but not in use". */
 const IDLE_MS = 3 * 60_000;
 const HEARTBEAT_MS = 60_000;
 /** Check for a new version at most this often (when returning to the app). */
 const VERSION_CHECK_MS = 10 * 60_000;
 const DEVICE_KEY = 'xlr8:device';
 
-export const BUILD: string = typeof __XLR8_BUILD__ === 'string' ? __XLR8_BUILD__ : 'dev';
+export const BUILD: string = typeof __SELFBOUND_BUILD__ === 'string' ? __SELFBOUND_BUILD__ : 'dev';
 
 interface PushMessage {
   title?: string;
@@ -50,11 +50,11 @@ export function startPwa(app: App, opts: { serviceWorker: boolean }) {
 
 function showInApp(app: App, message: PushMessage) {
   const url = message.url;
-  app.toasts.show(message.title ?? 'XLR8', url ? { label: tc('verb', 'Open'), run: () => app.nav.open(url) } : undefined, 'info', message.body, 8000);
+  app.toasts.show(message.title ?? 'Selfbound', url ? { label: tc('verb', 'Open'), run: () => app.nav.open(url) } : undefined, 'info', message.body, 8000);
   app.cues.emit('notification');
 }
 
-/** Notifications the server sends into the app instead of a push (XLR8 was active on a device). */
+/** Notifications the server sends into the app instead of a push (Selfbound was active on a device). */
 function watchInApp(app: App) {
   const since = Date.now();
   const seen = new Set<string>();
@@ -139,7 +139,7 @@ function watchVersion(app: App) {
       location.reload();
     } else if (!offered) {
       offered = true;
-      app.toasts.show(t('New version of XLR8'), { label: t('Reload'), run: () => location.reload() }, 'info', undefined, 60_000);
+      app.toasts.show(t('New version of Selfbound'), { label: t('Reload'), run: () => location.reload() }, 'info', undefined, 60_000);
     }
   };
   document.addEventListener('visibilitychange', () => {

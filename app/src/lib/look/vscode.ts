@@ -1,6 +1,6 @@
 // Read VS Code themes: JSON with comments and trailing commas (JSONC) as in VS Code, then check
 // what is needed: name, light or dark, `colors`, `tokenColors`.
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 
 export type ThemeType = 'dark' | 'light';
 

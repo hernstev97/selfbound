@@ -1,9 +1,9 @@
 <script lang="ts">
   // Recurring tasks: templates from which the hourly cron creates an issue on the due day
   // (Europe/Berlin). Create them here or from an issue via "Repeat …".
-  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, dayLabel, type LabelId, type Priority, type TeamId } from '@xlr8/core';
-  import { intlLocale, t } from '@xlr8/core/i18n';
-  import { api } from '@xlr8/backend/api';
+  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, dayLabel, type LabelId, type Priority, type TeamId } from '@selfbound/core';
+  import { intlLocale, t } from '@selfbound/core/i18n';
+  import { api } from '@selfbound/backend/api';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
@@ -68,7 +68,7 @@
   <h1 class="page-title">{t('Recurrences')}</h1>
   <button class="btn small" data-testid="recurrence-add" onclick={() => (adding = !adding)}><span class="icon">{@html ICON.plus}</span>{t('New recurrence')}</button>
 </div>
-<p class="page-lead">{t('On the due day, XLR8 creates an issue with status Todo, due that day. From an issue, use the More menu: "Repeat …".')}</p>
+<p class="page-lead">{t('On the due day, Selfbound creates an issue with status Todo, due that day. From an issue, use the More menu: "Repeat …".')}</p>
 
 {#if adding}
   <form class="card-list form" onsubmit={create} data-testid="recurrence-form">

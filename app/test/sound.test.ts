@@ -1,10 +1,10 @@
-import { CUES } from '@xlr8/core';
+import { CUES } from '@selfbound/core';
 import { describe, expect, it } from 'vitest';
 import { detuneOf } from '../src/lib/sound/engine.ts';
 import { DEFAULT_GAP, GAP, Gate, MAX_SOFT, WINDOW_MS } from '../src/lib/sound/gate.ts';
 import { JITTER, SOUNDS } from '../src/lib/sound/patch.ts';
 
-describe('sound values (own xlr8-ui patch)', () => {
+describe('sound values (own selfbound-ui patch)', () => {
   it('have a sound and a jitter for every core cue, and nothing beyond', () => {
     expect(Object.keys(SOUNDS).sort()).toEqual([...CUES].sort());
     expect(Object.keys(JITTER).sort()).toEqual([...CUES].sort());

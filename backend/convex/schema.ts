@@ -78,7 +78,7 @@ export const projectStateValidator = v.union(
 
 export const wikiModeValidator = v.union(v.literal('on'), v.literal('only'));
 
-// ---- Pull requests in XLR8. Types as in shared/pullRequests.ts.
+// ---- Pull requests in Selfbound. Types as in shared/pullRequests.ts.
 
 export const prStateValidator = v.union(v.literal('open'), v.literal('closed'), v.literal('merged'), v.literal('draft'));
 export const mergeMethodValidator = v.union(v.literal('merge'), v.literal('squash'), v.literal('rebase'));
@@ -608,16 +608,16 @@ export default defineSchema({
     issueId: v.id('issues'),
   }).index('by_recurrence_date', ['recurrenceId', 'date']),
 
-  // Mapping Linear ID → XLR8 ID for a repeatable import without duplicates.
+  // Mapping Linear ID → Selfbound ID for a repeatable import without duplicates.
   linearLinks: defineTable({
     kind: v.string(), // 'team' | 'label' | 'labelGroup' | 'project' | 'issue' | 'comment' | 'cycle'
     linearId: v.string(),
     localId: v.string(),
     hash: v.optional(v.string()), // checksum of the imported state
     runId: v.optional(v.id('importRuns')),
-    // Issues: last imported Linear values per field (in XLR8 form) for the three-way merge.
+    // Issues: last imported Linear values per field (in Selfbound form) for the three-way merge.
     base: v.optional(v.any()),
-    // Issue purged in XLR8 (trash emptied): the import does not recreate it.
+    // Issue purged in Selfbound (trash emptied): the import does not recreate it.
     purgedAt: v.optional(v.number()),
   })
     .index('by_kind_linear', ['kind', 'linearId'])
@@ -730,7 +730,7 @@ export default defineSchema({
       v.literal('pending'), // waiting to be sent
       v.literal('sending'), // picked up by the sender
       v.literal('sent'), // sent to the devices
-      v.literal('in_app'), // XLR8 was open: shown in the app instead of a push
+      v.literal('in_app'), // Selfbound was open: shown in the app instead of a push
       v.literal('skipped'), // no device, or push not configured
     ),
     at: v.number(),
@@ -745,7 +745,7 @@ export default defineSchema({
     .index('by_state', ['state', 'at'])
     .index('by_at', ['at']),
 
-  // Devices on which XLR8 is currently open, visible and in use. While one is active, no push goes
+  // Devices on which Selfbound is currently open, visible and in use. While one is active, no push goes
   // out; the app shows the notification itself.
   pushPresence: defineTable({
     device: v.string(), // random ID per browser (localStorage)
@@ -756,7 +756,7 @@ export default defineSchema({
 
   // ---- Appearance (appearance.ts): themes and fonts, shared across all devices.
 
-  // Chosen themes and fonts (one row). If missing, the default applies (XLR8 colors, Inter).
+  // Chosen themes and fonts (one row). If missing, the default applies (Selfbound colors, Inter).
   // Theme ID: "xlr8", a bundled theme ("catppuccin-mocha") or "custom:<id>".
   appearance: defineTable({
     dark: v.string(),

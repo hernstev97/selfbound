@@ -13,8 +13,8 @@
   // Esc closes, ←/→ step through the images of the same text, a click on the image shows it at
   // original size (scrollable), a click beside it closes. The viewer catches these keys before the
   // app's shortcuts, otherwise Esc would also close the pull request next to it.
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { modal } from '../../lib/modal.ts';
 
   let { images, index = $bindable(0), onclose }: { images: ViewerImage[]; index?: number; onclose: () => void } = $props();

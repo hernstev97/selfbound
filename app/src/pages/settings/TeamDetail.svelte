@@ -2,8 +2,8 @@
   // One team: name, key (only while it has no issues), color, dormant, light/dark logos with a
   // preview on light and dark ground at 16/20/32 px. Upload: upload URL → file → check on the
   // server (SVG/PNG, square, ≤ 256 KB, SVG without scripts); errors show at the field.
-  import { ICON, type TeamBadge, type TeamId } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
+  import { ICON, type TeamBadge, type TeamId } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import TeamLogo from '../../components/TeamLogo.svelte';
@@ -11,7 +11,7 @@
   import HuePicker from './HuePicker.svelte';
   import Workflow from './Workflow.svelte';
   import { admin } from './admin.ts';
-  import type { LogoVariant } from '@xlr8/core/app/admin';
+  import type { LogoVariant } from '@selfbound/core/app/admin';
 
   let { teamKey }: { teamKey: string } = $props();
   const metaSlice = fromSlice(app.store.meta);

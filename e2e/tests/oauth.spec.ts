@@ -59,7 +59,7 @@ test('Connect a connector, approve, work as a connector, revoke', async ({ page,
   expect(new URL(flow.consentUrl).pathname).toBe('/oauth/consent');
   const seen = await captureClaude(page);
   await page.goto(flow.consentUrl);
-  await expect(page.getByTestId('oauth-consent')).toContainText('Connect Claude to XLR8?');
+  await expect(page.getByTestId('oauth-consent')).toContainText('Connect Claude to Selfbound?');
   await expect(page.getByTestId('oauth-host')).toHaveText('claude.ai');
   await expect(page.getByTestId('sidebar')).toHaveCount(0);
   await expect(page).toHaveURL(flow.consentUrl);
@@ -79,7 +79,7 @@ test('Connect a connector, approve, work as a connector, revoke', async ({ page,
   expect((await mcpCall(access)).status).toBe(200);
 
   await page.goto('/settings/agents');
-  // After the approval XLR8 no longer accepts new connectors.
+  // After the approval Selfbound no longer accepts new connectors.
   await expect(page.getByTestId('connector-arm')).toBeVisible();
   const row = page.locator('[data-testid="agent-row"][data-name="E2E Claude"]');
   await expect(row.getByTestId('agent-connector')).toHaveText('Connector · claude.ai');

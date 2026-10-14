@@ -5,7 +5,7 @@
   // windows pull requests open as their own page (IssuePullRequests), so there is nothing to split.
   import '../../styles/pr.css';
   import type { Snippet } from 'svelte';
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
 

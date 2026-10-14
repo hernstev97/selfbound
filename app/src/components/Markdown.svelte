@@ -5,8 +5,8 @@
   // `onlang` the language chosen (description, your own comments); the change happens in the source
   // text (lib/tasks.ts, lib/codeLang.ts), not here.
   import type { Attachment } from 'svelte/attachments';
-  import { parsePath } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { parsePath } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { languageLabel } from '../lib/languages.ts';
   import { driveEmbeds, highlightReady, loadHighlight, needsHighlight, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';

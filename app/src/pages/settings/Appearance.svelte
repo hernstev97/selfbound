@@ -2,11 +2,11 @@
   // Appearance: color scheme and font size (this device only), themes for light and dark, custom
   // VS Code themes and fonts for text and code (all devices, stored in Convex: appearance.ts).
   import '../../styles/appearance.css';
-  import type { FontSize, Theme } from '@xlr8/core';
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import { api } from '@xlr8/backend/api';
-  import type { Id } from '@xlr8/backend/dataModel';
+  import type { FontSize, Theme } from '@selfbound/core';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import { api } from '@selfbound/backend/api';
+  import type { Id } from '@selfbound/backend/dataModel';
   import { app } from '../../app-instance.ts';
   import { FONTS, LOCAL_NAME, type FontKind } from '../../lib/look/fonts.ts';
   import { look, type CustomThemeMeta } from '../../lib/look/index.ts';
@@ -130,7 +130,7 @@
 </div>
 
 <h2 class="section-title">{t('Themes')}</h2>
-<p class="section-lead">{t('Well-known VS Code themes, one each for light and dark. The color scheme decides which one applies. Text, warnings and errors stay readable: where a theme has too little contrast, XLR8 adjusts the lightness.')}</p>
+<p class="section-lead">{t('Well-known VS Code themes, one each for light and dark. The color scheme decides which one applies. Text, warnings and errors stay readable: where a theme has too little contrast, Selfbound adjusts the lightness.')}</p>
 <ThemePicker mode="dark" />
 <ThemePicker mode="light" />
 

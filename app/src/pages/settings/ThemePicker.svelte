@@ -1,7 +1,7 @@
 <script lang="ts">
-  // Pick the theme for one mode: XLR8, bundled and custom themes of matching lightness as cards with
+  // Pick the theme for one mode: Selfbound, bundled and custom themes of matching lightness as cards with
   // color swatches, below them a preview, contrast notes and custom colors.
-  import { t } from '@xlr8/core/i18n';
+  import { t } from '@selfbound/core/i18n';
   import { BUILTIN } from '../../lib/look/builtin.ts';
   import { look } from '../../lib/look/index.ts';
   import { varLabel, type MappedTheme } from '../../lib/look/map.ts';
@@ -12,8 +12,8 @@
 
   let { mode }: { mode: 'dark' | 'light' } = $props();
 
-  // XLR8 without a theme: values from app.css (sidebar, content, text, accent, keyword, string, function).
-  const XLR8_SWATCH = {
+  // Selfbound without a theme: values from app.css (sidebar, content, text, accent, keyword, string, function).
+  const SELFBOUND_SWATCH = {
     dark: ['#0a0a0b', '#131315', '#e4e4e7', '#5e6ad2', '#c39bea', '#8fd19d', '#8db8f0'],
     light: ['#f3f3f4', '#fcfcfd', '#2d2d33', '#5e6ad2', '#8237ad', '#2c6a39', '#245ea8'],
   };
@@ -24,11 +24,11 @@
   const fixesSlice = fromSlice(look.fixes);
   const selected = $derived(settings[mode]);
   const options = $derived([
-    { ref: 'xlr8', name: 'XLR8', author: t('Default'), swatch: XLR8_SWATCH[mode] as string[] | null },
+    { ref: 'xlr8', name: 'Selfbound', author: t('Default'), swatch: SELFBOUND_SWATCH[mode] as string[] | null },
     ...BUILTIN.filter((b) => b.type === mode).map((b) => ({ ref: b.id, name: b.name, author: b.author, swatch: SWATCHES[b.id] as string[] | null })),
     ...themesSlice.current.filter((c) => c.type === mode).map((c) => ({ ref: `custom:${c.id}`, name: c.name, author: t('Custom theme'), swatch: null as string[] | null, at: c.updatedAt })),
   ]);
-  const selectedName = $derived(options.find((o) => o.ref === selected)?.name ?? 'XLR8');
+  const selectedName = $derived(options.find((o) => o.ref === selected)?.name ?? 'Selfbound');
 
   // Mapping of the selected theme for preview and colors (loads only this theme).
   let mapped = $state<MappedTheme | null>(null);
@@ -96,7 +96,7 @@
     <ThemePreview {mode} vars={mapped?.vars ?? null} testid="theme-preview-{mode}" />
     <div class="theme-notes">
       {#if selected === 'xlr8'}
-        <p class="theme-note">{t('The XLR8 colors. Pick a theme to adjust its colors.')}</p>
+        <p class="theme-note">{t('The Selfbound colors. Pick a theme to adjust its colors.')}</p>
       {:else}
         {#if fixes.length}
           <p class="theme-note" data-testid="contrast-note-{mode}">

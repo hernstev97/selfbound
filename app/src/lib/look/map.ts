@@ -1,9 +1,9 @@
-// VS Code theme → XLR8 CSS custom properties. Each variable takes the user's override first, then
+// VS Code theme → Selfbound CSS custom properties. Each variable takes the user's override first, then
 // the matching workbench key from `colors`, otherwise a value derived from the surface
 // (editor.background) and text (editor.foreground). Then `ensureContrast` checks every pair that
 // must be readable (text 4.5 : 1, focus ring 3 : 1) and shifts only the lightness until it passes.
 // Syntax colors are approximated from `tokenColors`.
-import { translated } from '@xlr8/core/i18n';
+import { translated } from '@selfbound/core/i18n';
 import { BLACK, contrast, ensureContrast, fromOklch, mix, over, parseHex, toHex, toOklch, WHITE, type Rgba } from './color.ts';
 import type { ThemeType, TokenRule, VsTheme } from './vscode.ts';
 
@@ -169,7 +169,7 @@ const SYNTAX_FALLBACK: Record<string, { from?: string; keys?: string[] }> = {
   'syn-del': { keys: ['gitDecoration.deletedResourceForeground', 'terminal.ansiRed'] },
 };
 
-/** XLR8 syntax colors (OKLCH as in md.css), for themes without a rule. */
+/** Selfbound syntax colors (OKLCH as in md.css), for themes without a rule. */
 const SYNTAX_DEFAULT: Record<ThemeType, Record<string, [number, number, number]>> = {
   dark: { 'syn-keyword': [0.76, 0.12, 300], 'syn-string': [0.8, 0.11, 150], 'syn-number': [0.8, 0.11, 65], 'syn-func': [0.79, 0.1, 250], 'syn-type': [0.8, 0.09, 195], 'syn-tag': [0.76, 0.12, 20], 'syn-add': [0.8, 0.11, 150], 'syn-del': [0.76, 0.12, 20] },
   light: { 'syn-keyword': [0.48, 0.16, 300], 'syn-string': [0.47, 0.11, 150], 'syn-number': [0.5, 0.13, 55], 'syn-func': [0.47, 0.14, 255], 'syn-type': [0.47, 0.09, 195], 'syn-tag': [0.5, 0.16, 20], 'syn-add': [0.47, 0.11, 150], 'syn-del': [0.5, 0.16, 20] },
@@ -200,7 +200,7 @@ const DEFAULTS: Record<ThemeType, { panel: string; text: string; accent: string;
   light: { panel: '#ffffff', text: '#333333', accent: '#5e6ad2', warning: '#7d6400', danger: '#bf2a2a', triage: '#b34100' },
 };
 
-/** Mix ratios surface → text, measured from the XLR8 colors (app.css). */
+/** Mix ratios surface → text, measured from the Selfbound colors (app.css). */
 const SHARE: Record<ThemeType, Record<string, number>> = {
   dark: { app: 0.25, rowHover: 0.035, group: 0.05, raised: 0.06, popover: 0.07, active: 0.085, control: 0.14, controlOn: 0.23, sidebarHover: 0.05, line: 0.06, border: 0.1, borderStrong: 0.135, borderPopover: 0.225, muted: 0.66, faint: 0.38, subtle: 0.64, toggle: 0.51, code: 0.045, selection: 0.2 },
   light: { app: 0.04, rowHover: 0.05, group: 0.035, raised: 0.01, popover: 0, active: 0.1, control: 0.055, controlOn: 0.1, sidebarHover: 0.04, line: 0.1, border: 0.1, borderStrong: 0.17, borderPopover: 0.17, muted: 0.75, faint: 0.45, subtle: 0.67, toggle: 0.67, code: 0.035, selection: 0.12 },
@@ -278,7 +278,7 @@ export function mapTheme(theme: VsTheme, overrides: Record<string, string> = {})
   const readable = (c: Rgba | null, fg: Rgba) => (c && contrast(c, fg) >= MIN_TEXT ? c : null);
   /** Theme line only if it stands out from the surface (often transparent). */
   const visible = (c: Rgba | null, bg: Rgba) => (c && contrast(c, bg) >= 1.12 ? c : null);
-  /** Dividers stay subtle as in XLR8 (some themes draw editor borders strongly). */
+  /** Dividers stay subtle as in Selfbound (some themes draw editor borders strongly). */
   const subtle = (c: Rgba | null, bg: Rgba) => (c && contrast(c, bg) >= 1.12 && contrast(c, bg) <= 1.8 ? c : null);
   /** Muted text only if it differs from the text (Catppuccin sets descriptionForeground = text). */
   const dimmer = (c: Rgba | null) => (c && contrast(c, panel) < contrast(text, panel) / 1.25 ? c : null);
@@ -431,10 +431,10 @@ export function previewStyle(vars: Record<string, string>): string {
 }
 
 /**
- * Preview of the XLR8 colors: syntax colors as in md.css, and every variable that only themes set
+ * Preview of the Selfbound colors: syntax colors as in md.css, and every variable that only themes set
  * reset to its default (otherwise the preview would inherit it from the active theme).
  */
-export function xlr8PreviewStyle(type: ThemeType): string {
+export function selfboundPreviewStyle(type: ThemeType): string {
   const vars: Record<string, string> = { 'accent-fg': 'white' };
   for (const name of Object.keys(SYNTAX_SCOPES)) {
     const c = syntaxDefault(type, name);

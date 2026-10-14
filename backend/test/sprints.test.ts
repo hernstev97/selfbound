@@ -262,7 +262,7 @@ describe('Sprints', () => {
     });
   });
 
-  test('capacitySuggestion: average done points of the last 3 closed XLR8 sprints', async () => {
+  test('capacitySuggestion: average done points of the last 3 closed Selfbound sprints', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     expect(await owner.query(api.sprints.capacitySuggestion, {})).toEqual({ capacity: null, basis: [] });

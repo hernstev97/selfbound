@@ -2,9 +2,9 @@
   import '../../styles/sprint.css';
   // All sprints: active, planning, closed (cycles imported from Linear are marked) with goal, date
   // range, points done/planned and share added late.
-  import { ICON, type SprintId } from '@xlr8/core';
-  import { t, tn, translated } from '@xlr8/core/i18n';
-  import { points } from '@xlr8/core/sprintlogic';
+  import { ICON, type SprintId } from '@selfbound/core';
+  import { t, tn, translated } from '@selfbound/core/i18n';
+  import { points } from '@selfbound/core/sprintlogic';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
 

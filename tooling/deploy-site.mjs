@@ -31,7 +31,7 @@ function run(cmd, args, opts = {}) {
 function main() {
   const buildOnly = process.argv.includes('--build');
   const instance = requireInstance(buildOnly ? [] : ['vercelScope', 'siteVercelProject']);
-  run('pnpm', ['--filter', '@xlr8/site', 'build'], { env: { ...process.env, ...(instance.siteUrl ? { XLR8_SITE_URL: instance.siteUrl } : {}) } });
+  run('pnpm', ['--filter', '@selfbound/site', 'build'], { env: { ...process.env, ...(instance.siteUrl ? { XLR8_SITE_URL: instance.siteUrl } : {}) } });
 
   mkdirSync(out, { recursive: true });
   for (const entry of readdirSync(out)) if (entry !== '.vercel') rmSync(join(out, entry), { recursive: true, force: true });

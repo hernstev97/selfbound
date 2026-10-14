@@ -1,4 +1,4 @@
-import { formatShortcut, shortcutOf } from '@xlr8/core';
+import { formatShortcut, shortcutOf } from '@selfbound/core';
 import { app } from '../app-instance.ts';
 
 /** Tooltip with shortcut: "Filter · F" */

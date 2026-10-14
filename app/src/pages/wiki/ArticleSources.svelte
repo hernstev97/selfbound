@@ -1,8 +1,8 @@
 <script lang="ts">
   // Sources of a knowledge page: list with URL or title, author, publication and access date, note.
   // Add, edit, move up/down, remove.
-  import { ICON, type ArticleView, type SourceInput } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, type ArticleView, type SourceInput } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
 
   type Source = ArticleView['sources'][number];

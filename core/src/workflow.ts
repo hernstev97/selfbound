@@ -1,5 +1,5 @@
 // Per-team statuses in the client: lookup, groups across teams, picker values.
-// The rules themselves (order, status type, fixed order) live in @xlr8/backend/shared/workflow
+// The rules themselves (order, status type, fixed order) live in @selfbound/backend/shared/workflow
 // and apply the same way in the backend.
 import {
   activeStates,
@@ -9,7 +9,7 @@ import {
   statusOfState,
   typeRank,
   type StateType,
-} from '@xlr8/backend/shared/workflow';
+} from '@selfbound/backend/shared/workflow';
 import { STATUS_LABEL } from './format.ts';
 import { intlLocale } from './i18n.ts';
 import type { Issue, Meta, StateDoc, Status } from './types.ts';

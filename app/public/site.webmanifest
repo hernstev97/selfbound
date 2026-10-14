@@ -1,14 +1,14 @@
 {
   "id": "/",
-  "name": "XLR8",
-  "short_name": "XLR8",
+  "name": "Selfbound",
+  "short_name": "Selfbound",
   "description": "Issues, sprints and projects.",
   "lang": "en",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#101113",
-  "theme_color": "#101113",
+  "background_color": "#070707",
+  "theme_color": "#070707",
   "icons": [
     {
       "src": "/icon-192.png",

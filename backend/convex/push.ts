@@ -125,7 +125,7 @@ export const presence = ownerMutation({
   },
 });
 
-/** Notifications shown in the app instead of by push (XLR8 was open), since `since`. */
+/** Notifications shown in the app instead of by push (Selfbound was open), since `since`. */
 export const recent = ownerQuery({
   args: { since: v.number() },
   handler: async (ctx, args) => {
@@ -246,7 +246,7 @@ export const sendTest = ownerAction({
     const sub = await ctx.runQuery(internal.push.subscriptionByEndpoint, { endpoint: args.endpoint });
     if (!sub) return { ok: false, error: 'This device is not registered.' };
     const message: PushMessage = {
-      title: 'XLR8',
+      title: 'Selfbound',
       body: pushText('Test notification: notifications work on this device.'),
       url: '/settings/notifications',
       tag: 'test',

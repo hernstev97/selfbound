@@ -1,14 +1,14 @@
 {
   "convexDeployment": "happy-otter-123",
-  "appUrl": "https://xlr8.example.com",
+  "appUrl": "https://selfbound.example.com",
   "clerkPublishableKey": "pk_live_REPLACE_ME",
-  "vercelProject": "xlr8",
+  "vercelProject": "selfbound",
   "vercelScope": "your-vercel-team",
   "mcpHosts": [
-    "mcp.xlr8.example.com"
+    "mcp.selfbound.example.com"
   ],
   "redirectHosts": [],
   "branchPrefix": "your-github-login",
   "siteUrl": "https://example.com",
-  "siteVercelProject": "xlr8-landing"
+  "siteVercelProject": "selfbound-landing"
 }

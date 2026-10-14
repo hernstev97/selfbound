@@ -3,8 +3,8 @@
   // Click, J/K and space show it on the right; the list stays put. The list width can be dragged at
   // the divider (or ←/→ on the divider) and is remembered.
   import type { Snippet } from 'svelte';
-  import { ICON, INBOX_SPLIT_DEFAULT, formatShortcut, shortcutOf } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, INBOX_SPLIT_DEFAULT, formatShortcut, shortcutOf } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { pages } from '../lib/pages.ts';

@@ -1,6 +1,6 @@
 // Priority budget: at most 1 urgent and 3 high open issues per team. Only a hint, not a ban;
 // the same rule as `budget_warning` in the backend. Pure calculations, testable.
-import { OPEN_STATUSES, PRIORITY_BUDGET } from '@xlr8/backend/constants';
+import { OPEN_STATUSES, PRIORITY_BUDGET } from '@selfbound/backend/constants';
 import { t } from './i18n.ts';
 import type { Issue, IssueId, Status } from './types.ts';
 

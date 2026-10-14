@@ -16,7 +16,7 @@ import os from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ConvexHttpClient } from 'convex/browser';
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { startProxy, type ProxyHandle } from './latency-proxy.ts';
 
 export const here = dirname(fileURLToPath(import.meta.url));
@@ -236,7 +236,7 @@ export async function startStack(opts: StackOptions): Promise<Stack> {
     log(`Building the app for ${profile} (Convex ${convexUrl(profile)}) …`);
     const env = { ...process.env, VITE_CONVEX_URL: convexUrl(profile), VITE_DEV_TOKEN: token, VITE_XLR8_TEST: '1' };
     const out = `../perf/.dist/${profile.toLowerCase()}`;
-    const b = spawnSync('pnpm', ['--filter', '@xlr8/app', 'exec', 'vite', 'build', '--outDir', out, '--emptyOutDir', '--logLevel', 'warn'], { cwd: root, env, stdio: 'inherit' });
+    const b = spawnSync('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'build', '--outDir', out, '--emptyOutDir', '--logLevel', 'warn'], { cwd: root, env, stdio: 'inherit' });
     if (b.status !== 0) throw new Error(`Build for ${profile} failed`);
   }
 
@@ -272,7 +272,7 @@ export async function startStack(opts: StackOptions): Promise<Stack> {
       if (previewProfile === profile) return;
       await stopPreview();
       if (await reachable(`http://127.0.0.1:${PORTS.preview}/`)) throw new Error(`Port ${PORTS.preview} is already in use`);
-      const [c, a] = pin.wrap('pnpm', ['--filter', '@xlr8/app', 'exec', 'vite', 'preview', '--outDir', `../perf/.dist/${profile.toLowerCase()}`, '--host', '127.0.0.1', '--port', String(PORTS.preview), '--strictPort']);
+      const [c, a] = pin.wrap('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'preview', '--outDir', `../perf/.dist/${profile.toLowerCase()}`, '--host', '127.0.0.1', '--port', String(PORTS.preview), '--strictPort']);
       preview = spawn(c, a, { cwd: root, stdio: 'ignore', detached: true });
       previewProfile = profile;
       writeFileSync(join(here, '.dist', 'preview.pid'), String(preview.pid));

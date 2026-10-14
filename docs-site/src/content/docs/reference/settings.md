@@ -1,6 +1,6 @@
 ---
 title: Settings
-description: A map of the Settings pages in XLR8 and what each one controls.
+description: A map of the Settings pages in Selfbound and what each one controls.
 sidebar:
   order: 2
 ---
@@ -18,7 +18,7 @@ Settings for this device:
 - **Language**: English, Deutsch (German), or **Automatic (browser language)**. The page reloads after a change. See [Language](/using/language/).
 - **Teams in the sidebar**: **Small** shows logo and name, **Large** adds the counts.
 - **Sounds**: soft sounds for clicks, keys, menus, success and errors, with a volume slider.
-- **Local cache**: XLR8 keeps a copy of your issues in the browser for a fast start. **Clear** empties it.
+- **Local cache**: Selfbound keeps a copy of your issues in the browser for a fast start. **Clear** empties it.
 - **Sign out** (not shown with the local test sign-in).
 
 ### Appearance
@@ -62,7 +62,7 @@ Details: [Labels](/concepts/labels/).
 
 ### Recurrences
 
-Issues that come back every week or every month. On the due day, XLR8 creates the issue for you. You can also set up a recurrence from an issue with **Repeat …** in its context menu.
+Issues that come back every week or every month. On the due day, Selfbound creates the issue for you. You can also set up a recurrence from an issue with **Repeat …** in its context menu.
 
 ## Agents and ops
 

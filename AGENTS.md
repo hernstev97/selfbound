@@ -1,6 +1,6 @@
 # Notes for coding agents
 
-XLR8 is a keyboard-first issue tracker: Svelte 5 SPA (`app/`), framework-neutral core (`core/`),
+Selfbound is a keyboard-first issue tracker: Svelte 5 SPA (`app/`), framework-neutral core (`core/`),
 Convex backend (`backend/`), Playwright tests (`e2e/`), performance harness (`perf/`). Read
 `docs/architecture/frontend.md` and `docs/architecture/backend.md` before larger changes.
 
@@ -10,7 +10,7 @@ Convex backend (`backend/`), Playwright tests (`e2e/`), performance harness (`pe
 |---|---|
 | `pnpm dev` | local Convex backend (no account) + sample data + app on http://127.0.0.1:5412/ |
 | `pnpm typecheck` | types for all packages |
-| `pnpm test` | unit tests; `pnpm --filter @xlr8/backend test:lib` and `test:integration` for the rest |
+| `pnpm test` | unit tests; `pnpm --filter @selfbound/backend test:lib` and `test:integration` for the rest |
 | `pnpm e2e` | browser tests with their own backend and build |
 | `node tooling/i18n-check.mjs` | every UI string has a German entry |
 | `node perf/run.ts --quick` | quick performance run; the full run (`pnpm perf`) needs an idle machine |
@@ -26,6 +26,9 @@ low priority). Do not start full performance runs unless asked.
   `branch-name` fails otherwise; rename with `git branch -m`.
 - Outside contributions are issue-first (`CONTRIBUTING.md`): a pull request from a non-collaborator must
   refer to an issue the maintainer labeled `accepted`, or it is closed automatically.
+- Naming: the product is called Selfbound (formerly XLR8). Legacy names stay until they are migrated: env vars
+  `XLR8_*`, storage keys and prefixes (`xlr8:*`, `xlr8_signed_in`, `xlr8_rt_`), the team key `XLR8` with its issue
+  ids, the instance URL `xlr8.kiumu.app` and the repository `hernstev97/xlr8`. Packages are `@selfbound/*`.
 - Everything in English: code, comments, identifiers, tests, docs, commit messages, PR texts.
 - UI text through `t()`, `tn()`, `tc()` or `translated()` from `core/src/i18n.ts`, with the German
   entry in `app/src/locales/de/*.ts` or `core/src/locales/de.ts`. Never call `t()` at module level.

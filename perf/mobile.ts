@@ -66,7 +66,7 @@ async function starts(browser: Browser, ws: Dataset, cpu: number) {
       await page.goto(`${appBase('P2')}/all`);
       try {
         await page.waitForFunction(() => (window as any).__bench?.state.marks.list > 0, null, { timeout: 60_000, polling: 50 });
-        await page.waitForFunction(() => performance.getEntriesByName('xlr8-synced').length > 0, null, { timeout: 90_000, polling: 100 });
+        await page.waitForFunction(() => performance.getEntriesByName('selfbound-synced').length > 0, null, { timeout: 90_000, polling: 100 });
       } catch {
         samples.push({ ws, cpu, metric: `${kind}.failed`, value: 1 });
         break;
@@ -74,7 +74,7 @@ async function starts(browser: Browser, ws: Dataset, cpu: number) {
       const t = await page.evaluate(() => ({
         fcp: performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? null,
         list: (window as any).__bench.state.marks.list,
-        synced: performance.getEntriesByName('xlr8-synced')[0]?.startTime ?? null,
+        synced: performance.getEntriesByName('selfbound-synced')[0]?.startTime ?? null,
       }));
       samples.push({ ws, cpu, metric: `${kind}.fcp`, value: t.fcp }, { ws, cpu, metric: `${kind}.list`, value: t.list }, { ws, cpu, metric: `${kind}.synced`, value: t.synced });
       await page.waitForTimeout(2500);
@@ -89,7 +89,7 @@ async function interactions(browser: Browser, ws: Dataset, cpu: number) {
   try {
     await page.goto(`${appBase('P2')}/all?group=none&order=created`);
     await page.getByTestId('issue-row').first().waitFor({ timeout: 60_000 });
-    await page.waitForFunction(() => performance.getEntriesByName('xlr8-synced').length > 0, null, { timeout: 90_000 });
+    await page.waitForFunction(() => performance.getEntriesByName('selfbound-synced').length > 0, null, { timeout: 90_000 });
     await page.waitForTimeout(500);
     const reps = [...Array(WARMUP).fill(true), ...Array(REPS).fill(false)] as boolean[];
 

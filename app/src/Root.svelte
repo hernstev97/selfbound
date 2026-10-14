@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isConsentPath } from '@xlr8/core';
+  import { isConsentPath } from '@selfbound/core';
   import { auth, convexUrl } from './app-instance.ts';
   import { fromSlice } from './slice.svelte.ts';
   import Shell from './components/Shell.svelte';
@@ -27,7 +27,7 @@
   <LoginScreen reason="offline" />
 {:else if status.current === 'loading' || status.current === 'cached' || (status.current === 'signed-out' && auth.kind === 'clerk')}
   <!-- Signed out with Clerk: continues straight to the sign-in page (main.ts) -->
-  <div class="login" data-testid="loading"><Logo kind="mark" height={40} /></div>
+  <div class="login" data-testid="loading"><Logo kind="symbol" height={40} /></div>
 {:else}
   <LoginScreen reason={status.current === 'unconfigured' ? 'config' : status.current === 'denied' ? 'denied' : status.current === 'offline' ? 'offline' : 'signin'} />
 {/if}

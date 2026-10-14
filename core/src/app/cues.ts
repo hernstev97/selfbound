@@ -2,7 +2,7 @@
 // sounds (app/src/lib/sound). That keeps core free of audio, and without listeners (tests, server)
 // an event costs nothing.
 
-/** Sound names, the same as in the `xlr8-ui` patch (app/src/lib/sound/patch.ts) */
+/** Sound names, the same as in the `selfbound-ui` patch (app/src/lib/sound/patch.ts) */
 export const CUES = ['tap', 'select', 'toggleOn', 'toggleOff', 'open', 'close', 'tick', 'sliderTick', 'destructive', 'key', 'success', 'error', 'warning', 'copy', 'notification', 'swoosh', 'chirp', 'command', 'blocked'] as const;
 export type Cue = (typeof CUES)[number];
 

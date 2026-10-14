@@ -1,7 +1,7 @@
 // Wiki: pages per team as a tree, a page with text (like an issue description), trash. Its own
 // chunk (app.loadWiki): start and sidebar load nothing of it. Data comes via subscriptions while a
 // wiki page is open (`wiki.list` of the team, `wiki.get` of the page).
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import type { FunctionReturnType } from 'convex/server';
 import { BodyEditSession, type BodyEdit } from '../bodyEdit.ts';
 import { actorName, fullDate, relativeTime } from '../format.ts';
@@ -253,7 +253,7 @@ export class WikiController {
       projects: teamDoc ? (meta?.projects ?? []).filter((p) => p.teamId === teamDoc._id).map((p) => ({ id: p._id, name: p.name })) : [],
       filter,
     });
-    if (typeof document !== 'undefined' && page.name === 'article' && doc) document.title = t('{title} · Knowledge · XLR8', { title: doc.article.title });
+    if (typeof document !== 'undefined' && page.name === 'article' && doc) document.title = t('{title} · Knowledge · Selfbound', { title: doc.article.title });
   }
 
   #view(doc: NonNullable<DetailResult>): ArticleView {

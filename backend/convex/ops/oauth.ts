@@ -42,7 +42,7 @@ const invalidGrant = (description: string): GrantResult => ({ ok: false, error: 
 
 // ---------------------------------------------------------------- Arming
 
-/** Until when XLR8 accepts new connectors (timestamp, may be in the past), else null. */
+/** Until when Selfbound accepts new connectors (timestamp, may be in the past), else null. */
 export async function armedUntil(ctx: QueryCtx): Promise<number | null> {
   const until = ((await readOpsStatus(ctx, ARMED))?.value as { until?: unknown } | undefined)?.until;
   return typeof until === 'number' && until > 0 ? until : null;
@@ -142,7 +142,7 @@ export async function approveRequest(ctx: MutationCtx, args: { publicId: string;
   if (r.expiresAt <= now) fail('invalid', 'The request has expired. Restart the connection in the app.');
   if (!(await findClient(ctx, r.clientId))) notFound('The client');
   if (!(await isArmed(ctx, now))) {
-    fail('access_denied', 'XLR8 is not accepting new connectors right now. First press "Connect connector" under Settings → Agents.');
+    fail('access_denied', 'Selfbound is not accepting new connectors right now. First press "Connect connector" under Settings → Agents.');
   }
   const name = checkName(args.name, 'The connector', 60);
   await ctx.db.patch('oauthRequests', r._id, { status: 'approved', name, codeHash: args.codeHash, codeExpiresAt: now + CODE_TTL_MS });

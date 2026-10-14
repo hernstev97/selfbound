@@ -1,6 +1,6 @@
 // Custom node views in the editor: tasks with a clickable checkbox, code blocks with a language
 // picker, images (a note instead of a broken image while uploading).
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 import type { Node } from 'prosemirror-model';
 import type { EditorView, NodeView, NodeViewConstructor, ViewMutationRecord } from 'prosemirror-view';
 import { languageLabel } from '../languages.ts';

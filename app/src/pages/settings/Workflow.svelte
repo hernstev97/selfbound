@@ -2,10 +2,10 @@
   // Workflow statuses of a team, grouped by type. Per status: name, color, order within the type,
   // default for new issues, archive with "move issues to …". The type is fixed; for another type,
   // create a new status and move the issues.
-  import { ICON, statusIcon, workflowsOf, type StateDoc, type StateId, type TeamDoc, type TeamId } from '@xlr8/core';
-  import { t, tn } from '@xlr8/core/i18n';
-  import { STATE_COLORS } from '@xlr8/core/app/admin';
-  import { STATE_TYPES, STATE_TYPE_LABEL, defaultState, statusOfState, suggestedExceptions, type StateType } from '@xlr8/backend/shared/workflow';
+  import { ICON, statusIcon, workflowsOf, type StateDoc, type StateId, type TeamDoc, type TeamId } from '@selfbound/core';
+  import { t, tn } from '@selfbound/core/i18n';
+  import { STATE_COLORS } from '@selfbound/core/app/admin';
+  import { STATE_TYPES, STATE_TYPE_LABEL, defaultState, statusOfState, suggestedExceptions, type StateType } from '@selfbound/backend/shared/workflow';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import InlineText from './InlineText.svelte';

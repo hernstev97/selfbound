@@ -2,7 +2,7 @@
 // The lists themselves are regular views (views.ts: sprint, plan, planned, close), so all
 // shortcuts, peek, selection and undo work as everywhere else. This file holds only the header
 // numbers, the decisions when completing a sprint and the sprint mutations.
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { msg, t, tn } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import type { Page } from '../route.ts';
@@ -48,7 +48,7 @@ export interface SprintSummary {
 export interface PlanState {
   /** null: no sprint in planning (the page offers to create one) */
   sprint: SprintSummary | null;
-  /** Suggestion from the last 3 XLR8 sprints */
+  /** Suggestion from the last 3 Selfbound sprints */
   suggestion: { capacity: number | null; basis: string } | null;
   /** Is a sprint running? Then the planned one can only start after it is completed. */
   running: { name: string; number: number } | null;
@@ -173,7 +173,7 @@ export class SprintController {
     const next: PlanState = {
       sprint: doc ? this.#summary(doc) : null,
       suggestion: suggestion
-        ? { capacity: suggestion.capacity, basis: suggestion.basis.length ? suggestion.basis.map((b) => `${b.name}: ${b.donePoints}`).join(' · ') : t('No completed XLR8 sprints yet') }
+        ? { capacity: suggestion.capacity, basis: suggestion.basis.length ? suggestion.basis.map((b) => `${b.name}: ${b.donePoints}`).join(' · ') : t('No completed Selfbound sprints yet') }
         : null,
       running: running ? { name: running.name, number: running.number } : null,
       others: (meta?.sprints ?? []).filter((s) => s.state === 'planning').sort((a, b) => a.number - b.number).map((s) => ({ number: s.number, name: s.name })),

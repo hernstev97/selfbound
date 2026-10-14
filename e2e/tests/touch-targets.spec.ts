@@ -77,7 +77,7 @@ async function expectHit(el: Locator, label: string, min = 44) {
 }
 
 const live = (page: Page) =>
-  page.waitForFunction(() => (window as unknown as { __xlr8?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__xlr8?.app?.store.sync.get().phase === 'live');
+  page.waitForFunction(() => (window as unknown as { __selfbound?: { app?: { store: { sync: { get(): { phase: string } } } } } }).__selfbound?.app?.store.sync.get().phase === 'live');
 
 for (const width of [360, 412]) {
   test.describe(`${width} px, touch`, () => {

@@ -4,11 +4,11 @@
 // shrink if needed (WebP) → upload URL → POST → files.register (the server checks type and size) →
 // replace the placeholder with `![name](<url>)`. On error the placeholder becomes "Upload failed"
 // and a sticky toast offers a retry.
-import { api } from '@xlr8/backend/api';
-import type { Id } from '@xlr8/backend/dataModel';
-import { IMAGE_TYPES, LIMITS, OWNER_KIND } from '@xlr8/backend/constants';
-import type { IssueId } from '@xlr8/core';
-import { intlLocale, t } from '@xlr8/core/i18n';
+import { api } from '@selfbound/backend/api';
+import type { Id } from '@selfbound/backend/dataModel';
+import { IMAGE_TYPES, LIMITS, OWNER_KIND } from '@selfbound/backend/constants';
+import type { IssueId } from '@selfbound/core';
+import { intlLocale, t } from '@selfbound/core/i18n';
 import { app } from '../app-instance.ts';
 import { imageMarkdown, type ImageField, type ImageRef, type UploadTarget } from './imageInput.ts';
 import { failedAlt, uploadingAlt } from './uploadNote.ts';

@@ -284,7 +284,7 @@ export default {
 
   // app/index.ts
   Click: 'Klick',
-  'Offline: you can make changes again once XLR8 is connected and signed in.': 'Ohne Verbindung: Ändern geht wieder, sobald XLR8 verbunden und angemeldet ist.',
+  'Offline: you can make changes again once Selfbound is connected and signed in.': 'Ohne Verbindung: Ändern geht wieder, sobald Selfbound verbunden und angemeldet ist.',
   'Not signed in: the change was not saved.': 'Nicht angemeldet: Die Änderung wurde nicht gespeichert.',
   'Still saving, you can open it in a moment': 'Wird noch gespeichert, gleich lässt es sich öffnen',
   Settings: 'Einstellungen',
@@ -479,7 +479,7 @@ export default {
   'Recurrence not deleted': 'Wiederholung nicht gelöscht',
 
   // app/sprints.ts
-  'No completed XLR8 sprints yet': 'Noch keine abgeschlossenen XLR8-Sprints',
+  'No completed Selfbound sprints yet': 'Noch keine abgeschlossenen Selfbound-Sprints',
   'New sprint (will be created)': 'Neuer Sprint (wird angelegt)',
   'End date set to today': 'Ende auf heute gesetzt',
   '{name} completed: {done} done, {next} carried over, {backlog} back to the backlog, {canceled} canceled': '{name} abgeschlossen: {done} erledigt, {next} übernommen, {backlog} zurück in den Backlog, {canceled} abgebrochen',
@@ -507,7 +507,7 @@ export default {
 
   // app/wiki.ts
   'Page not saved': 'Seite nicht gespeichert',
-  '{title} · Knowledge · XLR8': '{title} · Wissen · XLR8',
+  '{title} · Knowledge · Selfbound': '{title} · Wissen · Selfbound',
   'New page': 'Neue Seite',
   'Page not created': 'Seite nicht angelegt',
   'Title not saved': 'Titel nicht gespeichert',

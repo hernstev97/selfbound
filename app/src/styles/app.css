@@ -1,4 +1,4 @@
-/* XLR8 styles. Colors derive from three values (base hue, base chroma, accent) plus contrast. */
+/* Selfbound styles. Colors derive from three values (base hue, base chroma, accent) plus contrast. */
 
 :root {
   --base-hue: 286;
@@ -399,15 +399,7 @@ a {
 .ws-name:hover {
   background: var(--bg-sidebar-hover);
 }
-.ws-logo {
-  width: 18px;
-  height: 18px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  color: var(--text-strong);
-}
-.ws-name .logo-word {
+.ws-name .logo-lockup {
   color: var(--text-strong);
 }
 .ws-head .spacer {

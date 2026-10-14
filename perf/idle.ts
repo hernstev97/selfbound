@@ -202,7 +202,7 @@ function diffRuns(before: string, after: string, dir: string) {
 }
 
 function notify(title: string, body: string) {
-  sh('notify-send', ['--app-name=XLR8 performance', title, body]);
+  sh('notify-send', ['--app-name=Selfbound performance', title, body]);
 }
 
 function openIssue(title: string, body: string) {

@@ -42,8 +42,8 @@ jobs:
       - name: Types
         run: |
           pnpm typecheck
-          pnpm --filter @xlr8/backend exec tsc --noEmit -p test/lib
-          pnpm --filter @xlr8/backend exec tsc --noEmit -p ../tooling/linear-import
+          pnpm --filter @selfbound/backend exec tsc --noEmit -p test/lib
+          pnpm --filter @selfbound/backend exec tsc --noEmit -p ../tooling/linear-import
 
       - name: Translations
         run: node tooling/i18n-check.mjs
@@ -51,19 +51,19 @@ jobs:
       - name: Tests
         run: |
           pnpm test
-          pnpm --filter @xlr8/backend test:lib
+          pnpm --filter @selfbound/backend test:lib
 
       # Fresh local backend in the runner (port 13490): import twice, MCP SDK client,
       # concurrency with 20 clients, 5 agents and parallel webhooks.
       - name: Integration (local backend)
-        run: pnpm --filter @xlr8/backend test:integration
+        run: pnpm --filter @selfbound/backend test:integration
 
       # Performance regression, quick run (perf/README.md): own backend (13520), two builds, vite preview (5522),
       # only P1 · 10,000 issues, few repetitions. Threshold 250 ms p95 instead of 100 ms because shared
       # runners fluctuate. Initial bundle and DOM nodes are load-independent and may be at most 5 % above
       # perf/baseline.json; other deviations from the baseline are only warnings.
       - name: Playwright browser
-        run: pnpm --filter @xlr8/perf exec playwright install --with-deps chromium
+        run: pnpm --filter @selfbound/perf exec playwright install --with-deps chromium
 
       - name: UI (Playwright, own local backend)
         run: pnpm e2e

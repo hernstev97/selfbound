@@ -1,7 +1,7 @@
 <script lang="ts">
   // Phone: floating bar at the bottom plus a round button to create an issue.
-  import { t } from '@xlr8/core/i18n';
-  import { ICON } from '@xlr8/core';
+  import { t } from '@selfbound/core/i18n';
+  import { ICON } from '@selfbound/core';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
 

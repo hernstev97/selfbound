@@ -1,5 +1,5 @@
 #!/bin/sh
-# Applies the repository settings XLR8 relies on, idempotently, with the GitHub CLI (`gh`, admin rights).
+# Applies the repository settings Selfbound relies on, idempotently, with the GitHub CLI (`gh`, admin rights).
 #
 # Usage: tooling/github-repo-settings.sh OWNER/REPO
 #

@@ -47,7 +47,7 @@ export async function oauthSuite(backend, log) {
   // 2. Arm, connect: 401 → registration → redirect to the consent page.
   await admin.mutation(api.oauth.arm, { on: true });
   const transport = new StreamableHTTPClientTransport(url, { authProvider: p });
-  await assert.rejects(new Client({ name: 'xlr8-oauth', version: '1' }).connect(transport), UnauthorizedError);
+  await assert.rejects(new Client({ name: 'selfbound-oauth', version: '1' }).connect(transport), UnauthorizedError);
   assert.match(p.store.client.client_id, /^xlr8-claude-/);
   const authorizationUrl = p.store.authorizationUrl;
   assert.equal(authorizationUrl.searchParams.get('resource'), url.href);
@@ -68,7 +68,7 @@ export async function oauthSuite(backend, log) {
   log('OAuth: registration, approval, tokens (PKCE, resource, iss)');
 
   // 4. Tools as a connector; the change records it as the source.
-  const client = new Client({ name: 'xlr8-oauth', version: '1' });
+  const client = new Client({ name: 'selfbound-oauth', version: '1' });
   await client.connect(new StreamableHTTPClientTransport(url, { authProvider: p }));
   const { tools } = await client.listTools();
   assert.equal(tools.length, 19);

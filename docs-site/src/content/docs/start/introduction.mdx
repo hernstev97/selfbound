@@ -1,6 +1,6 @@
 ---
 title: Introduction
-description: What XLR8 is, who it is for, what it leaves out on purpose, and how fast it is meant to be.
+description: What Selfbound is, who it is for, what it leaves out on purpose, and how fast it is meant to be.
 sidebar:
   order: 1
 ---
@@ -8,11 +8,11 @@ import { Aside } from '@astrojs/starlight/components';
 import Kbd from '../../../components/Kbd.astro';
 import Screenshot from '../../../components/Screenshot.astro';
 
-XLR8 is a fast, keyboard-first issue tracker for solo developers and their AI agents. You run your own
+Selfbound is a fast, keyboard-first issue tracker for solo developers and their AI agents. You run your own
 copy of it: it is open source (AGPL-3.0), self-hosted, and keeps issues, sprints, projects and knowledge
 pages for one person in one place.
 
-<Screenshot name="list" alt="The XLR8 issue list with teams in the sidebar and issues grouped by status" />
+<Screenshot name="list" alt="The Selfbound issue list with teams in the sidebar and issues grouped by status" />
 
 ## Who it is for
 
@@ -20,22 +20,22 @@ pages for one person in one place.
   of slowing you down.
 - **You work with AI agents** such as Claude Code, Codex, claude.ai or ChatGPT, and want them to read
   and write issues directly. Each agent gets its own key, and the history shows which agent changed what.
-- **You are fine with running it yourself.** XLR8 needs a Convex account for the backend and a Clerk
+- **You are fine with running it yourself.** Selfbound needs a Convex account for the backend and a Clerk
   account for sign-in. There is no hosted version.
 
 Every instance belongs to one owner. The backend lets in only the sign-in accounts listed in
 `XLR8_OWNER_IDS`. You can list more than one account there, for example two ways you sign in, but they
-all act as the same owner: XLR8 does not tell people apart. Small teams are not the target today.
+all act as the same owner: Selfbound does not tell people apart. Small teams are not the target today.
 
-## What XLR8 is not
+## What Selfbound is not
 
-- **Not a hosted service.** There is no XLR8 cloud to sign up for. You deploy your own instance (see
+- **Not a hosted service.** There is no Selfbound cloud to sign up for. You deploy your own instance (see
   [Self-hosting](/start/self-hosting/)).
 - **Not a tool for collaboration between people.** Issues have no assignees, and there are no user
   accounts, roles or permissions.
 - **Not a replacement for Jira or Linear in an organization.** It covers what one developer and their
   agents need, and stays small for that reason.
-- **Not a native mobile app.** XLR8 is a web app with a phone layout. You can install it on your phone
+- **Not a native mobile app.** Selfbound is a web app with a phone layout. You can install it on your phone
   or desktop and get push notifications.
 
 ## Speed
@@ -69,7 +69,7 @@ themes), an English and a German interface, and an [import from Linear](/integra
 ## Status
 
 <Aside type="caution" title="Early software">
-XLR8 is in daily use by one person and has not been announced yet. Expect rough edges, breaking changes
+Selfbound is in daily use by one person and has not been announced yet. Expect rough edges, breaking changes
 and gaps in these docs. Bug reports are welcome on
 [GitHub](https://github.com/hernstev97/xlr8/issues); for larger pull requests, please open an issue
 first.
@@ -77,13 +77,13 @@ first.
 
 ## How it is built
 
-XLR8 is a Svelte single-page app on a [Convex](https://convex.dev) backend, with sign-in through
+Selfbound is a Svelte single-page app on a [Convex](https://convex.dev) backend, with sign-in through
 [Clerk](https://clerk.com). For you as a self-hoster this means two accounts: one at Convex (database and
 backend functions) and one at Clerk (sign-in). The Convex free plan is enough for one person. The web
 app itself is a set of static files that any static host can serve.
 
 ## Next steps
 
-- [Try it locally](/start/try-locally/): run XLR8 on your machine with sample data, no accounts needed.
+- [Try it locally](/start/try-locally/): run Selfbound on your machine with sample data, no accounts needed.
 - [Self-hosting](/start/self-hosting/): set up your own instance.
 - [First steps](/start/first-steps/): create a team and your first issues.

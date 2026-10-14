@@ -1,5 +1,5 @@
 // List row as table columns (rowHtml) and thresholds of the column stages (columns).
-import type { DisplayProp, IssueId, RowState } from '@xlr8/core';
+import type { DisplayProp, IssueId, RowState } from '@selfbound/core';
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { COLUMN_WIDTH, columnPlan, groupColsHtml, stageOf } from '../src/lib/columns.ts';

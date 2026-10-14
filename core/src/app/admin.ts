@@ -1,13 +1,13 @@
 // Settings: teams and logos, projects, labels, agent keys, recurrences, ops.
-// A separate module (`@xlr8/core/app/admin`), loaded only from the settings chunk so the start
+// A separate module (`@selfbound/core/app/admin`), loaded only from the settings chunk so the start
 // bundle does not grow. Every change shows errors as a toast with the server's reason; metadata
 // (teams, projects, labels) changes optimistically in `meta.get`.
 import type { OptimisticLocalStore } from 'convex/browser';
-import { api } from '@xlr8/backend/api';
-import { LIMITS } from '@xlr8/backend/constants';
-import type { Id } from '@xlr8/backend/dataModel';
+import { api } from '@selfbound/backend/api';
+import { LIMITS } from '@selfbound/backend/constants';
+import type { Id } from '@selfbound/backend/dataModel';
 import type { LabelDoc, LabelGroupDoc, Meta, ProjectDoc, StateDoc, StateId, TeamDoc, TeamId } from '../types.ts';
-import type { StateType } from '@xlr8/backend/shared/workflow';
+import type { StateType } from '@selfbound/backend/shared/workflow';
 import type { App } from './index.ts';
 import { errorMessage } from './toasts.ts';
 import { t, tc } from '../i18n.ts';
@@ -55,7 +55,7 @@ export function siteUrl(convexUrl: string, explicit?: string) {
 
 /** Ready-made command for Claude Code. */
 export function mcpCommand(site: string, key: string) {
-  return `claude mcp add --transport http xlr8 ${site}/mcp --header "Authorization: Bearer ${key}"`;
+  return `claude mcp add --transport http selfbound ${site}/mcp --header "Authorization: Bearer ${key}"`;
 }
 
 /** Precheck in the browser (the server does the real check). */

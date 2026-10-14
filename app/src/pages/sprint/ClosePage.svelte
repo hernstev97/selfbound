@@ -3,9 +3,9 @@
   // Close a sprint: every open issue gets a decision. 1 = next sprint, 2 = backlog, 3 = cancel,
   // 0 = clear the decision; with a selection (X, Shift J/K, Ctrl A) for all at once. Done issues
   // count automatically. "Close" only once nothing is missing (the server checks again).
-  import { ICON } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
-  import { points } from '@xlr8/core/sprintlogic';
+  import { ICON } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
+  import { points } from '@selfbound/core/sprintlogic';
   import { pages } from '../../lib/pages.ts';
   import Lazy from '../../components/Lazy.svelte';
   import { app } from '../../app-instance.ts';

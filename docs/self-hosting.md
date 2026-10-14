@@ -1,6 +1,6 @@
 # Self-hosting
 
-From zero to a running XLR8 instance. XLR8 is single-user: one owner (or a short list of Clerk user ids)
+From zero to a running Selfbound instance. Selfbound is single-user: one owner (or a short list of Clerk user ids)
 per instance. Day-to-day operation (integrations, troubleshooting) is in [operations.md](operations.md).
 
 ## Try it locally first
@@ -31,28 +31,28 @@ loads a small set of sample data and starts the app at `http://127.0.0.1:5412`. 
 - Optional: a GitHub repository for the nightly backup ([backup.md](backup.md)) and a GitHub token for
   the pull request integration.
 
-The examples use `xlr8.example.com` for the app, `clerk.xlr8.example.com` for Clerk and
+The examples use `selfbound.example.com` for the app, `clerk.selfbound.example.com` for Clerk and
 `happy-otter-123` for the Convex production deployment. Replace them with your own values.
 
 ## 1. Clerk
 
 1. Create an application in the [Clerk dashboard](https://dashboard.clerk.com) and switch to (or create)
-   the **Production** instance. Add your domain (`xlr8.example.com`) and the DNS records Clerk shows.
+   the **Production** instance. Add your domain (`selfbound.example.com`) and the DNS records Clerk shows.
    Optional: upload `app/public/brand/clerk-logo.png` as the application logo.
 2. **JWT template:** Configure → JWT templates → New template → **Convex**. Keep the name `convex`: the app
    requests tokens with `getToken({ template: 'convex' })` and the backend expects the audience `convex`
    (`backend/convex/auth.config.ts`).
 3. Note two values (Configure → API keys / Domains):
    - the **publishable key** (`pk_live_…`), for the web app;
-   - the **Frontend API URL** (`https://clerk.xlr8.example.com`), the token issuer for the backend.
+   - the **Frontend API URL** (`https://clerk.selfbound.example.com`), the token issuer for the backend.
 4. **Create your user:** Users → Create user (or sign up once before restricting sign-ups). Copy the
    **user id** (`user_…`) from the user's page.
 5. **Restrict sign-ups:** Configure → Restrictions → Sign-up mode → **Restricted**.
 6. **Paths:** Configure → Developers → Paths: `<SignIn />` "Sign-in page on application domain" →
-   `https://xlr8.example.com/sign-in`; Signing out "Page on application domain" →
-   `https://xlr8.example.com/`. See [operations.md](operations.md#clerk-settings).
+   `https://selfbound.example.com/sign-in`; Signing out "Page on application domain" →
+   `https://selfbound.example.com/`. See [operations.md](operations.md#clerk-settings).
 
-To try XLR8 out, a Clerk **development** instance is fine: it needs no domain, its publishable key is
+To try Selfbound out, a Clerk **development** instance is fine: it needs no domain, its publishable key is
 `pk_test_…` and its issuer `https://<slug>.clerk.accounts.dev`. Use a production instance for real use:
 development instances are meant for testing and show a development badge.
 
@@ -78,11 +78,11 @@ dashboard (Settings → Environment Variables) or `node tooling/cloud.mjs env se
 
 | Variable | Value | Required |
 |---|---|---|
-| `CLERK_JWT_ISSUER_DOMAIN` | Clerk Frontend API URL, e.g. `https://clerk.xlr8.example.com` (no trailing slash) | yes |
+| `CLERK_JWT_ISSUER_DOMAIN` | Clerk Frontend API URL, e.g. `https://clerk.selfbound.example.com` (no trailing slash) | yes |
 | `XLR8_DEV_JWKS` | `none` (disables the local test sign-in) | yes |
-| `XLR8_OWNER_IDS` | `<issuer>\|<user id>`, e.g. `https://clerk.xlr8.example.com\|user_2abc…`. Several owners separated by commas. Empty means nobody gets in | yes |
-| `XLR8_APP_URL` | `https://xlr8.example.com`. Turns on OAuth for connectors (claude.ai, ChatGPT) | no |
-| `XLR8_PUBLIC_SITE_URL` | custom address for MCP/OAuth instead of `…convex.site`, e.g. `https://mcp.xlr8.example.com` | no |
+| `XLR8_OWNER_IDS` | `<issuer>\|<user id>`, e.g. `https://clerk.selfbound.example.com\|user_2abc…`. Several owners separated by commas. Empty means nobody gets in | yes |
+| `XLR8_APP_URL` | `https://selfbound.example.com`. Turns on OAuth for connectors (claude.ai, ChatGPT) | no |
+| `XLR8_PUBLIC_SITE_URL` | custom address for MCP/OAuth instead of `…convex.site`, e.g. `https://mcp.selfbound.example.com` | no |
 | `XLR8_OWNER_NAME` | the owner's display name in MCP output (default `Owner`) | no |
 | `XLR8_LOCALE` | `de` for German push notification texts and German default status names of new teams (default English) | no |
 | `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_MANAGE_WEBHOOKS`, `GITHUB_REPOS`, `GITHUB_WEBHOOK_SECRET_PREVIOUS` | pull request integration, see [operations.md](operations.md#github) | no |
@@ -129,7 +129,7 @@ It builds the app with `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL`, `VITE_CLERK_PU
 local test token or local address, production URL present, sign-in page does not load the app), copies
 the result to `deploy/web/`, writes `deploy/web/vercel.json` from `deploy/vercel.base.json` plus the host
 rules for `mcpHosts` and `redirectHosts`, links the folder to your Vercel project on first use and deploys it to
-production as a static site. `--build` stops after building. Then add `xlr8.example.com` as a domain of
+production as a static site. `--build` stops after building. Then add `selfbound.example.com` as a domain of
 the Vercel project.
 
 ### Hosting elsewhere
@@ -140,8 +140,8 @@ Build by hand:
 VITE_CONVEX_URL=https://happy-otter-123.convex.cloud \
 VITE_CONVEX_SITE_URL=https://happy-otter-123.convex.site \
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_… \
-XLR8_PUBLIC_URL=https://xlr8.example.com \
-pnpm --filter @xlr8/app build
+XLR8_PUBLIC_URL=https://selfbound.example.com \
+pnpm --filter @selfbound/app build
 mv app/dist/index.html app/dist/app.html
 ```
 
@@ -167,7 +167,7 @@ The app is named `app.html` instead of `index.html` because many hosts (Vercel i
 
 ## 5. First sign-in
 
-1. Open `https://xlr8.example.com/`: the sign-in page appears. Sign in with the user
+1. Open `https://selfbound.example.com/`: the sign-in page appears. Sign in with the user
    from step 1.4.
 2. You land in the app with an empty workspace. Create a team to start, or import from Linear
    ([architecture/import.md](architecture/import.md)).

@@ -15,7 +15,7 @@ import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage 
 // Flow: a change calls notify() in the same transaction. That writes a row to pushEvents (unique
 // key, so never twice) and schedules delivery after a short delay, so several issues from one
 // agent call arrive as one notification. Delivery claims all waiting rows in one mutation
-// (claimPending): if XLR8 is active on a device right now, they go to the app instead of the phone.
+// (claimPending): if Selfbound is active on a device right now, they go to the app instead of the phone.
 //
 // Texts are English, or German with XLR8_LOCALE=de (lib/pushText.ts). They are translated when
 // the event is recorded, so a stored event keeps its language.
@@ -361,7 +361,7 @@ export interface ClaimResult {
   more: boolean;
 }
 
-/** Is XLR8 currently open, visible and in use on any device? */
+/** Is Selfbound currently open, visible and in use on any device? */
 export async function anyDeviceActive(ctx: QueryCtx, now: number) {
   const row = await ctx.db
     .query('pushPresence')

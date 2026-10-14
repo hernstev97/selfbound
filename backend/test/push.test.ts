@@ -48,7 +48,7 @@ beforeEach(async () => {
   const keys = await generateVapidKeys();
   process.env.VAPID_PUBLIC_KEY = keys.publicKey;
   process.env.VAPID_PRIVATE_KEY = keys.privateKey;
-  process.env.VAPID_SUBJECT = 'https://xlr8.example.com';
+  process.env.VAPID_SUBJECT = 'https://selfbound.example.com';
 });
 
 afterEach(() => {
@@ -129,7 +129,7 @@ describe('delivery', () => {
     expect(config.devices.every((d) => d.lastSentAt !== null && d.failures === 0)).toBe(true);
   });
 
-  test('XLR8 is active on a device: no push, the app shows the notification', async () => {
+  test('Selfbound is active on a device: no push, the app shows the notification', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     await subscribe(owner, await fakeBrowser());
@@ -222,7 +222,7 @@ describe('delivery', () => {
     await owner.mutation(api.push.presence, { device: 'here', active: true });
     const calls = stubPushService();
     expect(await owner.action(api.push.sendTest, { endpoint })).toEqual({ ok: true, error: null });
-    expect(await payload(calls[0], browser)).toMatchObject({ title: 'XLR8', test: true, url: '/settings/notifications', body: 'Test notification: notifications work on this device.' });
+    expect(await payload(calls[0], browser)).toMatchObject({ title: 'Selfbound', test: true, url: '/settings/notifications', body: 'Test notification: notifications work on this device.' });
     expect(await owner.action(api.push.sendTest, { endpoint: 'https://push.example/unknown' })).toMatchObject({ ok: false });
   });
 
@@ -368,8 +368,8 @@ describe('VAPID subject', () => {
   test('VAPID_SUBJECT, else XLR8_APP_URL, else a clear error when sending', () => {
     const keys = { VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' };
     expect(vapidForSending({})).toBeNull();
-    expect(vapidForSending({ ...keys, VAPID_SUBJECT: 'mailto:ops@example.com', XLR8_APP_URL: 'https://xlr8.example.com' })?.subject).toBe('mailto:ops@example.com');
-    expect(vapidForSending({ ...keys, XLR8_APP_URL: 'https://xlr8.example.com' })?.subject).toBe('https://xlr8.example.com');
+    expect(vapidForSending({ ...keys, VAPID_SUBJECT: 'mailto:ops@example.com', XLR8_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('mailto:ops@example.com');
+    expect(vapidForSending({ ...keys, XLR8_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('https://selfbound.example.com');
     expect(() => vapidForSending(keys)).toThrow('VAPID_SUBJECT');
   });
 

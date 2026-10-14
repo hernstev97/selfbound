@@ -35,7 +35,7 @@ describe('legacy lifecycle (initialize)', () => {
       result: {
         protocolVersion: v,
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'xlr8', title: 'XLR8', version: '0.0.0-test' },
+        serverInfo: { name: 'selfbound', title: 'Selfbound', version: '0.0.0-test' },
         instructions: INSTRUCTIONS,
       },
     });
@@ -228,8 +228,8 @@ describe('transport and JSON-RPC errors', () => {
   test('Origin: allowed values only', async () => {
     const msg = { jsonrpc: '2.0', id: 1, method: 'ping' };
     expect((await handleMcpHttp(post(msg, { origin: 'https://evil.example' }), fakeDeps())).status).toBe(403);
-    const deps = { ...fakeDeps(), allowedOrigins: ['https://xlr8.example.com'] };
-    expect((await handleMcpHttp(post(msg, { origin: 'https://xlr8.example.com' }), deps)).status).toBe(200);
+    const deps = { ...fakeDeps(), allowedOrigins: ['https://selfbound.example.com'] };
+    expect((await handleMcpHttp(post(msg, { origin: 'https://selfbound.example.com' }), deps)).status).toBe(200);
   });
 
   test('401 without WWW-Authenticate, with the id from the body', () => {
@@ -268,7 +268,7 @@ describe('modern protocol (2026-07-28, no handshake)', () => {
       instructions: INSTRUCTIONS,
       ttlMs: 60_000,
       cacheScope: 'public',
-      _meta: { 'io.modelcontextprotocol/serverInfo': { name: 'xlr8', version: '0.0.0-test' } },
+      _meta: { 'io.modelcontextprotocol/serverInfo': { name: 'selfbound', version: '0.0.0-test' } },
     });
   });
 

@@ -2,10 +2,10 @@
 // it is in the start bundle. Code blocks: codeblock.ts.
 // Images load lazily and open full size on click; upload placeholders (`#upload-…`) show as a note.
 // A Google Drive link alone on a line becomes a player (`driveEmbeds`).
-import { t } from '@xlr8/core/i18n';
+import { t } from '@selfbound/core/i18n';
 import type { Marked as MarkedClass } from 'marked';
 import type DOMPurifyType from 'dompurify';
-import { BARE_IDENTIFIER_RE } from '@xlr8/backend/shared/links';
+import { BARE_IDENTIFIER_RE } from '@selfbound/backend/shared/links';
 import { codeBlockHtml, escapeHtml } from './codeblock.ts';
 import { uploadNote } from './uploadNote.ts';
 

@@ -1,11 +1,11 @@
 ---
 title: Contributing
-description: How to propose changes to XLR8, run it locally, and which rules a pull request has to follow.
+description: How to propose changes to Selfbound, run it locally, and which rules a pull request has to follow.
 sidebar:
   order: 1
 ---
 
-XLR8 is early and maintained by one person, so focused contributions help most. This page gives an overview. The authoritative rules are in [CONTRIBUTING.md](https://github.com/hernstev97/xlr8/blob/main/CONTRIBUTING.md) and, for coding agents, [AGENTS.md](https://github.com/hernstev97/xlr8/blob/main/AGENTS.md) in the repository.
+Selfbound is early and maintained by one person, so focused contributions help most. This page gives an overview. The authoritative rules are in [CONTRIBUTING.md](https://github.com/hernstev97/xlr8/blob/main/CONTRIBUTING.md) and, for coding agents, [AGENTS.md](https://github.com/hernstev97/xlr8/blob/main/AGENTS.md) in the repository.
 
 ## Issue first, then pull request
 

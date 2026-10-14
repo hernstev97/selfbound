@@ -61,7 +61,7 @@ test('Create: Back closes the dialog, the plus button brings the text back', asy
   expect(path(page)).toBe('/all');
   await page.getByTestId('mobile-create').click();
   await expect(page.getByTestId('create-title')).toHaveValue(title);
-  await page.evaluate(() => (window as unknown as { __xlr8: { app: { create: { discard(): void } } } }).__xlr8.app.create.discard());
+  await page.evaluate(() => (window as unknown as { __selfbound: { app: { create: { discard(): void } } } }).__selfbound.app.create.discard());
 });
 
 test('Esc closes: no dead history entry, the next Back changes the page', async ({ page }) => {
@@ -81,7 +81,7 @@ test('Esc closes: no dead history entry, the next Back changes the page', async 
 test('A command in the command menu changes the page: Back returns, without a dead entry', async ({ page }) => {
   await open(page, '/all');
   // Phones have no Ctrl K; the menu is the same as search (close and navigate in the same step).
-  await page.evaluate(() => (window as unknown as { __xlr8: { app: { palette: { open(kind: string): void } } } }).__xlr8.app.palette.open('command'));
+  await page.evaluate(() => (window as unknown as { __selfbound: { app: { palette: { open(kind: string): void } } } }).__selfbound.app.palette.open('command'));
   await page.getByTestId('palette-input').fill('All sprints');
   await page.locator('[data-testid="palette-item"]', { hasText: 'All sprints' }).first().click();
   await expect(page).toHaveURL(/\/sprints/);

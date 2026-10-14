@@ -2,7 +2,7 @@
 import { vi } from 'vitest';
 import { getFunctionName } from 'convex/server';
 import { OWNER_KIND, type InboxEntry, type IssueDoc, type Meta } from '../src/types.ts';
-import { DEFAULT_STATES } from '@xlr8/backend/shared/workflow';
+import { DEFAULT_STATES } from '@selfbound/backend/shared/workflow';
 
 /** The default statuses per team with ids like "t1:todo". */
 function defaultStates(teamId: string) {

@@ -1,5 +1,5 @@
-import type { Doc, Id } from '@xlr8/backend/dataModel';
-import type { Priority, Status } from '@xlr8/backend/constants';
+import type { Doc, Id } from '@selfbound/backend/dataModel';
+import type { Priority, Status } from '@selfbound/backend/constants';
 
 export type { Priority, Status };
 export type IssueDoc = Doc<'issues'>;
@@ -186,7 +186,7 @@ export interface BoardColumn {
   key: string;
   label: string;
   status: Status;
-  type: import('@xlr8/backend/shared/workflow').StateType;
+  type: import('@selfbound/backend/shared/workflow').StateType;
   color: string | null;
   /** The column's issues in the view's order (even when collapsed) */
   ids: IssueId[];

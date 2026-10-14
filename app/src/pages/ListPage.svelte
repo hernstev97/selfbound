@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { ICON, VIEWS, actionById, viewPath } from '@xlr8/core';
-  import { t, tc } from '@xlr8/core/i18n';
+  import { ICON, VIEWS, actionById, viewPath } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { autofocus, tip } from '../lib/ui.ts';

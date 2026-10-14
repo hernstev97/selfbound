@@ -20,7 +20,7 @@ const idle = globalThis.requestIdleCallback ?? ((cb: () => void) => setTimeout(c
 requestAnimationFrame(() =>
   idle(
     () => {
-      const raster = mountRaster(canvas, { place, theme, star: loadStar('/brand/xlr8-mark.svg') });
+      const raster = mountRaster(canvas, { place, theme, star: loadStar('/brand/selfbound-symbol.svg') });
       dark.addEventListener('change', () => raster.refresh());
     },
     { timeout: 1000 },

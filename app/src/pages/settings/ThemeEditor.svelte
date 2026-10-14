@@ -1,9 +1,9 @@
 <script lang="ts">
   // Paste or upload a custom VS Code theme. JSON with comments and trailing commas is allowed (as in
   // VS Code). While typing: an error, or a preview with contrast notes.
-  import { api } from '@xlr8/backend/api';
-  import { t } from '@xlr8/core/i18n';
-  import type { Id } from '@xlr8/backend/dataModel';
+  import { api } from '@selfbound/backend/api';
+  import { t } from '@selfbound/core/i18n';
+  import type { Id } from '@selfbound/backend/dataModel';
   import { untrack } from 'svelte';
   import { app } from '../../app-instance.ts';
   import { look } from '../../lib/look/index.ts';

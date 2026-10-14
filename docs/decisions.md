@@ -1,11 +1,11 @@
 # Design decisions
 
-Decisions that shape XLR8 and look like gaps if you do not know the reason. Each entry says what was
+Decisions that shape Selfbound and look like gaps if you do not know the reason. Each entry says what was
 decided, why, and where it shows up. To change one, change the entry in the same pull request.
 
 ## One user, no assignees
 
-**Decided:** XLR8 is built exclusively for solo developers and their AI agents. An instance has one
+**Decided:** Selfbound is built exclusively for solo developers and their AI agents. An instance has one
 owner. There are no assignees, no roles, no invitations and no per-user permissions.
 
 **Why:** Every feature that exists for groups (assignment, workload, notifications about other people,
@@ -18,7 +18,7 @@ MCP filter `assigned` means "all open issues outside triage" (`mcp.md`); self-ho
 
 ## Teams are areas, not groups of people
 
-**Decided:** A *team* in XLR8 is a workspace or area of work, like a team in Linear: it has its own key
+**Decided:** A *team* in Selfbound is a workspace or area of work, like a team in Linear: it has its own key
 (`KIU-106`), statuses, labels, projects and knowledge pages. It is not a group of people.
 
 **Why:** One person works in several areas (products, clients, private projects) and wants separate
@@ -41,7 +41,7 @@ rule; capacity suggested from the points done in the last closed sprints across 
 the sidebar that show how much of the one sprint a team contributes (`backend.md`, `frontend.md`).
 
 **Not a bug:** a team without issues in the sprint is normal, and "sprint per team" is a deliberate
-non-goal. Revisit only if XLR8 ever supports more than one person.
+non-goal. Revisit only if Selfbound ever supports more than one person.
 
 ## Contributions are issue-first
 
@@ -49,9 +49,27 @@ non-goal. Revisit only if XLR8 ever supports more than one person.
 `accepted`, and only then comes a pull request. Pull requests from non-collaborators without such an issue
 are closed automatically with a friendly note.
 
-**Why:** XLR8 is maintained by one person, and a design that stays small is more important than the
+**Why:** Selfbound is maintained by one person, and a design that stays small is more important than the
 number of features. Agreeing on the idea before the code saves contributors from writing something that
 cannot be merged.
 
 **Shows up as:** `CONTRIBUTING.md`, the issue forms and the pull request template, and the workflow
 `.github/workflows/pr-policy.yml`.
+
+## The product is called Selfbound; stored names stay XLR8
+
+**Decided:** The product was renamed from XLR8 to Selfbound on 2026-10-14. Packages are `@selfbound/*`,
+the landing page is `selfbound.kiumu.app` and the docs are `docs.selfbound.kiumu.app` (Vercel projects
+`selfbound-landing` and `selfbound-docs`; the old `getxlr8.app` addresses redirect permanently). Names
+that are stored or cross deploy versions keep their XLR8 spelling until they are migrated.
+
+**Why:** XLR8 collides with existing trademarks, and the name should not become part of more public
+material. Renaming stored names would need data migrations and would break connected MCP clients, signed-in
+browsers and the running instance, so it is done separately and only where it pays off.
+
+**Shows up as:** unchanged: `XLR8_*` environment variables, Convex tables, fields, function names and HTTP
+routes, MCP tool names and parameters, token prefixes (`xlr8_rt_`, `xlr8_ac_`, `xlr8_`), browser storage
+keys and the cookie `xlr8_signed_in`, the team key `XLR8` with identifiers like `XLR8-48` and branch names
+built from them, the instance `xlr8.kiumu.app`, the MCP address `mcp.xlr8.kiumu.app`, the Vercel project
+`xlr8` of the app and the repository `hernstev97/xlr8`. Historical reports under `docs/reports/` and
+`docs/brand.md` describe the past and stay as they are.

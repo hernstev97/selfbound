@@ -1,6 +1,6 @@
-# Performance regression tests (`@xlr8/perf`)
+# Performance regression tests (`@selfbound/perf`)
 
-Measures the real app (`app/` + `core/`) in a browser against its own local Convex backend and checks a fixed latency budget. XLR8 is meant to answer every key press within the next frame or two, even with 10,000 issues; this harness keeps it that way.
+Measures the real app (`app/` + `core/`) in a browser against its own local Convex backend and checks a fixed latency budget. Selfbound is meant to answer every key press within the next frame or two, even with 10,000 issues; this harness keeps it that way.
 
 ## Quick reference
 
@@ -73,7 +73,7 @@ Other ports (e.g. for a second worktree) via the environment; the defaults stay 
 | `inbox.next (J)`, `inbox.prev (K)` (`:content`) | inbox (G I), Space opens the split view, J/K | identifier of the shown issue changed (and description there) |
 | `detail.open (Enter)` (`:content`), `detail.close (Esc)` | Enter / Esc | detail title (and description) / list with focus |
 | `picker.open (S)`, `status.set (Enter)`, `priority.set (Enter)` | S, "prog", Enter etc. | row has the new value |
-| `save.confirmed (key → server confirmed)`, `save.painted (key → confirmed visible)` | as `status.set` | server confirmed (`__xlr8.saves`) |
+| `save.confirmed (key → server confirmed)`, `save.painted (key → confirmed visible)` | as `status.set` | server confirmed (`__selfbound.saves`) |
 | `bulk50.status (Enter)` | X, 49× ⇧↓, Ctrl K "status: …" | all selected rows changed |
 | `palette.open (Ctrl+K)`, `palette.key` | Ctrl K, "status" per key | entries in the DOM = state |
 | `search.key`, `search.id (identifier)` | `/` + search word per key; `/` + identifier | hits in the DOM = state; the issue on top |
@@ -90,7 +90,7 @@ Other ports (e.g. for a second worktree) via the environment; the defaults stay 
 | `agent.change (server → row)` | mutation from Node | row shows the new priority |
 | `agent.mcp (MCP call → row)` | real agent over MCP `set_status` | row shows the new status |
 
-**Start:** cold (fresh browser context, empty cache and IndexedDB) and warm (reload): shell (sidebar), first paint, list, all buckets synced (`xlr8-synced`), list from the mirror (`xlr8-cache`), transferred bytes. Full 20×, quick 3×.
+**Start:** cold (fresh browser context, empty cache and IndexedDB) and warm (reload): shell (sidebar), first paint, list, all buckets synced (`selfbound-synced`), list from the mirror (`selfbound-cache`), transferred bytes. Full 20×, quick 3×.
 **Scrolling:** 3 s at an even 4,800 px/s through `/all` (grouped), CPU 1× and 4×: share of frames over 25 ms, p95 frame interval, long animation frames.
 **Memory:** JS heap and DOM nodes after loading and after opening/closing the detail 20×.
 **Initial bundle:** brotli size of everything `index.html` loads at start (`perf/bundle.ts`, same rule as `tooling/bundle-size.mjs`).
@@ -181,11 +181,11 @@ No budget, no exit code for limits: this measurement belongs to tier 4.
 
 ## Walkthrough video
 
-`node perf/record.ts` seeds `small` into a fresh backend, records P1 at 1440×900 (list, J/K, peek, status, filter, command menu, create, detail with comment, triage, sprint, briefly the phone view), adds a caption per step (ffmpeg `drawtext`, font via `fc-match`) and writes `/tmp/xlr8-media/walkthrough.mp4`; `--out=<file.mp4>` copies it elsewhere. `--encode-only` only redoes captions and encoding.
+`node perf/record.ts` seeds `small` into a fresh backend, records P1 at 1440×900 (list, J/K, peek, status, filter, command menu, create, detail with comment, triage, sprint, briefly the phone view), adds a caption per step (ffmpeg `drawtext`, font via `fc-match`) and writes `/tmp/selfbound-media/walkthrough.mp4`; `--out=<file.mp4>` copies it elsewhere. `--encode-only` only redoes captions and encoding.
 
 ## Limits
 
-- **Measurement build:** what is measured is `vite build` with `VITE_XLR8_TEST=1`, otherwise like production. Only that build has the measurement hooks (`globalThis.__xlr8`: save confirmations, state for the search checks). Cost: one more entry in the command menu and one array per save, not measurable.
+- **Measurement build:** what is measured is `vite build` with `VITE_XLR8_TEST=1`, otherwise like production. Only that build has the measurement hooks (`globalThis.__selfbound`: save confirmations, state for the search checks). Cost: one more entry in the command menu and one array per save, not measurable.
 - **A fast desktop PC, headless Chromium.** P2 imitates a weak laptop via CPU throttling. Absolute times in a regular desktop Chrome can differ by a few milliseconds.
 - **Convex runs locally**, not in the cloud. The proxy delay roughly matches a transatlantic connection. "Agent" mutations go from Node directly to the backend (without the proxy); only the path to the browser is delayed.
 - **Sprint:** `G S` on `/sprint` measures the current sprint as a list. If the sprint page changes, adjust the check in `viewShown`.

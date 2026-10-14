@@ -1,7 +1,7 @@
 // "Move to team": what is lost or changes when issues switch teams, computed up front from the
 // metadata (same rules as backend/convex/ops/move.ts). A pure function, so it is testable without
 // UI and costs the list nothing.
-import { matchingState } from '@xlr8/backend/shared/workflow';
+import { matchingState } from '@selfbound/backend/shared/workflow';
 import { t, tn } from './i18n.ts';
 import type { Issue, Meta } from './types.ts';
 

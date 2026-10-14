@@ -421,7 +421,7 @@ export async function recentClosedSprints(ctx: QueryCtx, source: 'xlr8' | 'linea
 }
 
 /**
- * Suggested capacity: average of the done points of the last 3 closed XLR8 sprints.
+ * Suggested capacity: average of the done points of the last 3 closed Selfbound sprints.
  * Counts every entry with outcome 'done' with the points recorded at close (older
  * entries without `points`: the current estimate).
  */
@@ -552,7 +552,7 @@ export interface ImportedSprintFields {
 
 /**
  * A Linear cycle as a closed sprint (`source: 'linear'`). New: number from the shared
- * counter. Existing: only Linear sprints are updated, never XLR8 sprints.
+ * counter. Existing: only Linear sprints are updated, never Selfbound sprints.
  */
 export async function upsertImportedSprint(
   ctx: MutationCtx,

@@ -19,7 +19,7 @@ export async function mcpSuite(backend, log) {
 
   // 1. Smoke script: initialize, tools/list, read calls
   const smoke = await runMcpSmoke({ url, key });
-  assert.equal(smoke.serverName, 'xlr8');
+  assert.equal(smoke.serverName, 'selfbound');
   assert.equal(smoke.instructions, true);
   assert.equal(smoke.tools.length, 19);
   assert.deepEqual(smoke.call, { tool: 'list_teams', isError: false, textBytes: smoke.call.textBytes, structuredKeys: ['teams'] });
@@ -31,7 +31,7 @@ export async function mcpSuite(backend, log) {
   log(`MCP: protocol ${smoke.protocolVersion}, ${smoke.tools.length} tools, list_teams and list_issues ok`);
 
   // 2. create_issues twice with the same requestId → exactly one issue
-  const client = new Client({ name: 'xlr8-integration', version: '1' });
+  const client = new Client({ name: 'selfbound-integration', version: '1' });
   await client.connect(new StreamableHTTPClientTransport(new URL(url), { requestInit: { headers: { Authorization: `Bearer ${key}` } } }));
   const args = { requestId: 'integration-create-0001', issues: [{ team: 'INT', title: 'From the agent', priority: 'high' }] };
   const first = await client.callTool({ name: 'create_issues', arguments: args });

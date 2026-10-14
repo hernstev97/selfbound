@@ -1,8 +1,8 @@
 <script lang="ts">
   // Project and topics of a knowledge page: a project of the team (project docs), topics as chips
   // with a picker; a new topic is created straight from the input.
-  import { ICON, type ArticleView, type WikiState } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON, type ArticleView, type WikiState } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { backCloses } from '../../lib/ui.ts';
 

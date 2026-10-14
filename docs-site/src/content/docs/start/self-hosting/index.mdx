@@ -1,6 +1,6 @@
 ---
 title: Self-hosting
-description: What an XLR8 instance consists of, what you need, and the order of the setup steps.
+description: What a Selfbound instance consists of, what you need, and the order of the setup steps.
 sidebar:
   label: Overview
   order: 0
@@ -8,7 +8,7 @@ sidebar:
 import { Aside, Steps } from '@astrojs/starlight/components';
 import Planned from '../../../../components/Planned.astro';
 
-Each XLR8 instance belongs to one owner and runs on accounts you control: a Convex project for the
+Each Selfbound instance belongs to one owner and runs on accounts you control: a Convex project for the
 backend, a Clerk application for sign-in, and a static host for the web app. This page gives you the
 overview; the pages after it walk through each part.
 
@@ -21,13 +21,13 @@ guided setup script that does most of this for you is planned.
 
 | Part | Service | Example address | What it does |
 |---|---|---|---|
-| Web app | a static host, for example Vercel | `https://xlr8.example.com` | serves the landing page, the sign-in page and the app |
-| Sign-in | a Clerk application (production instance) | `https://clerk.xlr8.example.com` | shows the sign-in form, issues tokens |
+| Web app | a static host, for example Vercel | `https://selfbound.example.com` | serves the landing page, the sign-in page and the app |
+| Sign-in | a Clerk application (production instance) | `https://clerk.selfbound.example.com` | shows the sign-in form, issues tokens |
 | Backend | a Convex project (production deployment) | `https://happy-otter-123.convex.cloud` | database and backend functions |
 | HTTP endpoints | the same Convex deployment | `https://happy-otter-123.convex.site` | MCP for agents, GitHub webhook, health check |
-| Domain | yours | `xlr8.example.com` | points to the static host; Clerk needs DNS records under it |
+| Domain | yours | `selfbound.example.com` | points to the static host; Clerk needs DNS records under it |
 
-The examples in these docs use `xlr8.example.com` for the app, `clerk.xlr8.example.com` for Clerk and
+The examples in these docs use `selfbound.example.com` for the app, `clerk.selfbound.example.com` for Clerk and
 `happy-otter-123` for the Convex deployment. Replace them with your own values.
 
 ## How the parts work together
@@ -36,7 +36,7 @@ The examples in these docs use `xlr8.example.com` for the app, `clerk.xlr8.examp
 - If you are not signed in, `/` shows the landing page. **Sign in** leads to `/sign-in`, where Clerk's
   sign-in form is embedded in the page.
 - After sign-in, the app asks Clerk for a token and sends it with every request to Convex.
-- Convex checks that the token comes from your Clerk instance, and XLR8 checks that your account is in
+- Convex checks that the token comes from your Clerk instance, and Selfbound checks that your account is in
   the `XLR8_OWNER_IDS` list. Anyone else is turned away.
 - Agents talk to the Convex HTTP endpoint (`…convex.site/mcp`) directly, with their own key or as an
   OAuth connector.
@@ -69,16 +69,16 @@ can also be overridden with an environment variable.
 | Field | Environment variable | Example | Used for |
 |---|---|---|---|
 | `convexDeployment` | `XLR8_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex addresses in the build, deploy key check |
-| `appUrl` | `XLR8_APP_URL` | `https://xlr8.example.com` | absolute links in the build, target of redirects |
+| `appUrl` | `XLR8_APP_URL` | `https://selfbound.example.com` | absolute links in the build, target of redirects |
 | `clerkPublishableKey` | `XLR8_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Clerk in the browser |
-| `vercelProject` | `XLR8_VERCEL_PROJECT` | `xlr8` | Vercel project to deploy to |
+| `vercelProject` | `XLR8_VERCEL_PROJECT` | `selfbound` | Vercel project to deploy to |
 | `vercelScope` | `XLR8_VERCEL_SCOPE` | your Vercel team slug | Vercel team to deploy to |
-| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.xlr8.example.com"]` | optional custom address for MCP |
+| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | optional custom address for MCP |
 | `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
 | `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
 
 <Aside type="caution">
-The example file contains `mcp.xlr8.example.com` in `mcpHosts`. Set `mcpHosts` to `[]` unless you set up
+The example file contains `mcp.selfbound.example.com` in `mcpHosts`. Set `mcpHosts` to `[]` unless you set up
 a custom MCP address (see [Connect an agent](/agents/connect/)).
 </Aside>
 

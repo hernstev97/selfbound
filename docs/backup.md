@@ -22,7 +22,7 @@ The unencrypted ZIP never leaves the runner.
 | all issues with descriptions, comments, history, relations | the code: it lives in Git |
 | teams, labels, projects, sprints, knowledge pages | environment variables (Clerk settings, webhook secret, …): keep them in a password manager ([operations.md](operations.md#backend-environment-variables)) |
 | team logos and images from descriptions and comments (files with checksums) | scheduled background jobs that have not run yet: they are recreated after the import |
-| agents (only the hashes of their keys), import data, pull request links | videos: they are links to Google Drive, not stored in XLR8 |
+| agents (only the hashes of their keys), import data, pull request links | videos: they are links to Google Drive, not stored in Selfbound |
 
 A backup is a ZIP with one JSONL file per table and a folder with the files (`convex export
 --include-file-storage`). The restore test compares every table (row count and checksum over the sorted

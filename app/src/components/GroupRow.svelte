@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { type ListRow, type Draft } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
-  import type { ListController } from '@xlr8/core/app/list';
+  import { type ListRow, type Draft } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
+  import type { ListController } from '@selfbound/core/app/list';
   import { app } from '../app-instance.ts';
   import TeamLogo from './TeamLogo.svelte';
 

@@ -72,7 +72,7 @@ test('The current team docks onto the content panel; in the phone drawer it stan
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const phone = await context.newPage();
   await open(phone);
-  await phone.evaluate(() => (globalThis as unknown as { __xlr8: { app: { mobileDrawer: { set(v: boolean): void } } } }).__xlr8.app.mobileDrawer.set(true));
+  await phone.evaluate(() => (globalThis as unknown as { __selfbound: { app: { mobileDrawer: { set(v: boolean): void } } } }).__selfbound.app.mobileDrawer.set(true));
   const card = phone.locator('.team-card.current');
   await expect(card).toBeVisible();
   const free = await card.evaluate((el) => ({ gap: el.closest('.sidebar')!.getBoundingClientRect().right - el.getBoundingClientRect().right, dock: getComputedStyle(el.querySelector('.tc-dock')!).display }));

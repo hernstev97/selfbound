@@ -1,6 +1,6 @@
 <script lang="ts">
   // Team logo always through <img> (never inline SVG from user data), otherwise a placeholder from key and color.
-  import type { TeamBadge } from '@xlr8/core';
+  import type { TeamBadge } from '@selfbound/core';
 
   let { team, size = 16, cls = '' }: { team: TeamBadge; size?: 14 | 16 | 20 | 24 | 32 | 40; cls?: string } = $props();
   // Logo failed to load: placeholder until a different URL arrives.

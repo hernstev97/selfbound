@@ -14,11 +14,11 @@
 
 import type { ConvexClient, OptimisticLocalStore } from 'convex/browser';
 import type { FunctionArgs, FunctionReference, FunctionReturnType } from 'convex/server';
-import { api } from '@xlr8/backend/api';
-import { BUCKET_SIZE, CLOSED_STATUSES, LIMITS, type Status } from '@xlr8/backend/constants';
+import { api } from '@selfbound/backend/api';
+import { BUCKET_SIZE, CLOSED_STATUSES, LIMITS, type Status } from '@selfbound/backend/constants';
 import { t, tc, tn } from './i18n.ts';
 import { Mirror } from './idb.ts';
-import { statusOfState, TYPE_OF_STATUS } from '@xlr8/backend/shared/workflow';
+import { statusOfState, TYPE_OF_STATUS } from '@selfbound/backend/shared/workflow';
 import { workflowsOf, type Workflows } from './workflow.ts';
 import { haystackOf } from './haystack.ts';
 import { unread } from './inbox.ts';
@@ -93,7 +93,7 @@ export interface DebugHooks {
 }
 
 declare global {
-  var __xlr8: DebugHooks | undefined;
+  var __selfbound: DebugHooks | undefined;
 }
 
 function omitRead({ readAt: _, ...entry }: InboxEntry): InboxEntry {
@@ -215,7 +215,7 @@ export class IssueStore {
   }
 
   async start() {
-    if (typeof performance !== 'undefined') performance.mark('xlr8-boot');
+    if (typeof performance !== 'undefined') performance.mark('selfbound-boot');
     this.#unsubs.push(
       this.client.onUpdate(api.meta.get, {}, (meta) => {
         if (meta) this.#applyMeta(meta as Meta, true);
@@ -246,7 +246,7 @@ export class IssueStore {
     }
     if (this.sync.get().phase === 'empty' && this.issues.size > 0) {
       this.#updateSync({ phase: 'cache' });
-      if (typeof performance !== 'undefined') performance.mark('xlr8-cache');
+      if (typeof performance !== 'undefined') performance.mark('selfbound-cache');
     }
   }
 
@@ -616,7 +616,7 @@ export class IssueStore {
     for (let b = 0; b < wanted; b++) if (this.#liveBuckets.has(b)) live++;
     if (live >= wanted) {
       this.#updateSync({ phase: 'live' });
-      if (typeof performance !== 'undefined') performance.mark('xlr8-synced');
+      if (typeof performance !== 'undefined') performance.mark('selfbound-synced');
     }
   }
 

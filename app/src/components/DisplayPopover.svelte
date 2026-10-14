@@ -1,8 +1,8 @@
 <script lang="ts">
   // Display options (Shift V): grouping, ordering, completed issues, visible properties.
   // Saved per view.
-  import { DISPLAY_PROPS, GROUPING_LABEL, ICON, ORDERING_LABEL, PROP_LABEL, VIEWS, type Grouping, type Ordering } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { DISPLAY_PROPS, GROUPING_LABEL, ICON, ORDERING_LABEL, PROP_LABEL, VIEWS, type Grouping, type Ordering } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { leave } from '../lib/motion.ts';

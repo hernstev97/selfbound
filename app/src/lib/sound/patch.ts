@@ -1,6 +1,6 @@
 // Sound values of the UI sounds.
 //
-// XLR8's own values, designed for this project and picked by ear on a phone. They are under the
+// Selfbound's own values, designed for this project and picked by ear on a phone. They are under the
 // same license as the rest of the repository. Names (core/src/app/cues.ts) and mapping (listen.ts)
 // are independent of them; a test (test/sound.test.ts) keeps names and values in sync.
 //
@@ -13,9 +13,9 @@
 //
 // Structure: @web-kits/audio (MIT), `SoundDefinition`: source, filter, envelope, gain; `layers` mixes several.
 import type { SoundDefinition } from '@web-kits/audio';
-import type { Cue } from '@xlr8/core';
+import type { Cue } from '@selfbound/core';
 
-export const PATCH_NAME = 'xlr8-ui';
+export const PATCH_NAME = 'selfbound-ui';
 
 const GLAS = [1, 0.1, 0.14, 0.02, 0.04];
 const WARM = [1, 0.3, 0.12, 0.05];

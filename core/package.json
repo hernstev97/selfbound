@@ -1,5 +1,5 @@
 {
-  "name": "@xlr8/core",
+  "name": "@selfbound/core",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@leeoniya/ufuzzy": "1.0.19",
-    "@xlr8/backend": "workspace:*",
+    "@selfbound/backend": "workspace:*",
     "convex": "1.46.0",
     "fractional-indexing": "4.0.0"
   },

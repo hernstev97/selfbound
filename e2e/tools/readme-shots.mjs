@@ -7,7 +7,7 @@ import { chromium } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
-const [base = 'http://127.0.0.1:5412', out = '/tmp/xlr8-readme'] = process.argv.slice(2);
+const [base = 'http://127.0.0.1:5412', out = '/tmp/selfbound-readme'] = process.argv.slice(2);
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch();
 

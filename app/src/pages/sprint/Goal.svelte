@@ -1,7 +1,7 @@
 <script lang="ts">
   // Inline sprint goal (1–3 sentences): Enter saves, Shift Enter adds a line, Esc discards.
-  import type { SprintId } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import type { SprintId } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
 
   let { sprintId, goal, placeholder = t('Add a sprint goal: what should be achieved by the end?') }: { sprintId: SprintId; goal: string; placeholder?: string } = $props();

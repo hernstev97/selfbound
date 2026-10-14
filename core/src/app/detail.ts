@@ -2,7 +2,7 @@
 // one on the detail page; in the list with peek open, the focused one or the preview from the
 // command menu. Description, comments and history come from a detail subscription (loaded only
 // when opened); the focused issue is prefetched.
-import { api } from '@xlr8/backend/api';
+import { api } from '@selfbound/backend/api';
 import { workflowsOf } from '../workflow.ts';
 import { CLOSED, PRIORITY_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
 import { intlLocale, t } from '../i18n.ts';

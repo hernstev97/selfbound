@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => {
   const build = process.env.XLR8_BUILD_ID || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   return {
     appType: 'spa',
-    define: { __XLR8_BUILD__: JSON.stringify(build) },
+    define: { __SELFBOUND_BUILD__: JSON.stringify(build) },
     plugins: [svelte(), preloadFont(), welcomeRoutes(), signedOutGuard(!!env.VITE_CLERK_PUBLISHABLE_KEY && !env.VITE_DEV_TOKEN), pwaFiles(build), publicUrl(env.XLR8_PUBLIC_URL)],
     build: {
       target: 'es2023',

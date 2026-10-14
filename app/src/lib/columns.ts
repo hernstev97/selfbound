@@ -6,8 +6,8 @@
 // changes when a threshold is crossed. CSS does the rest (app.css, "column stages"). This used to
 // be a container query, which cost noticeably on every row change (an agent edit went from 32 to
 // 50 ms in benchmarks) because the browser then recalculates more style.
-import type { DisplayProp } from '@xlr8/core';
-import { PROP_LABEL } from '@xlr8/core';
+import type { DisplayProp } from '@selfbound/core';
+import { PROP_LABEL } from '@selfbound/core';
 import { ROW_COLUMNS, ROW_END } from './rowHtml.ts';
 
 /** Fixed column widths in px (wide and medium), same as app.css; when narrow each column is as wide as its content. */

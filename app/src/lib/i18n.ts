@@ -1,6 +1,6 @@
 // Picks the UI language at startup and loads its dictionary before the app mounts.
 // English has no dictionary, so English starts without waiting (core/src/i18n.ts).
-import { resolveLocale, setDictionary, type Locale, type LocalePref } from '@xlr8/core/i18n';
+import { resolveLocale, setDictionary, type Locale, type LocalePref } from '@selfbound/core/i18n';
 
 /** Resolves the language and activates it. Resolves when strings can be rendered. */
 export function startLocale(pref: LocalePref | undefined): Promise<Locale> | Locale {

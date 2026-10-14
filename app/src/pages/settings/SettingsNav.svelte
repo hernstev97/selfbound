@@ -1,8 +1,8 @@
 <script lang="ts">
   import '../../styles/settings.css';
   // Left-hand settings navigation: replaces the sidebar, with "Back to app" at the top.
-  import { ICON } from '@xlr8/core';
-  import { t } from '@xlr8/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import TeamLogo from '../../components/TeamLogo.svelte';

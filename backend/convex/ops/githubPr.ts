@@ -6,7 +6,7 @@ import { clipHtml, clipItemsHtml, rewriteMedia, type MediaEntry, type MediaState
 import { checkCounts, type PrDetail, type PrItem, type PrSummary, type PrView } from '../shared/pullRequests';
 import { closeIssuesOnMerge, detailOf, githubConfigured } from './github';
 
-// Pull requests in XLR8: read state from the GitHub API and store it.
+// Pull requests in Selfbound: read state from the GitHub API and store it.
 //
 // - `pullRequests` stays the source for title, state and links. A fetch updates title, branch,
 //   head commit and state. It handles the transition to "merged" like the webhook

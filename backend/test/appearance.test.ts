@@ -51,7 +51,7 @@ describe('custom themes', () => {
     await expectCode(owner.mutation(api.appearance.saveTheme, { name: 'x', type: 'dark', source: big }), 'invalid');
   });
 
-  test('selected and deleted: XLR8 applies there again, its colors are dropped', async () => {
+  test('selected and deleted: Selfbound applies there again, its colors are dropped', async () => {
     const { owner } = setup();
     const { id } = await owner.mutation(api.appearance.saveTheme, { name: 'A', type: 'dark', source: THEME });
     const ref = `custom:${id}`;

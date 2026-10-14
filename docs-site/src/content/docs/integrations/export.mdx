@@ -1,6 +1,6 @@
 ---
 title: Export your data
-description: How to get your data out of XLR8 today, through a database export, the nightly backups or an AI agent, and the export that is planned.
+description: How to get your data out of Selfbound today, through a database export, the nightly backups or an AI agent, and the export that is planned.
 sidebar:
   order: 4
 ---
@@ -23,22 +23,22 @@ An export of everything as JSON and as a ZIP of Markdown files, started from Set
 
 Convex can export a deployment as a ZIP file. This is the same export the nightly backup uses, and it contains everything: issues with descriptions, comments and history, teams, labels, projects, sprints, knowledge pages, and the uploaded images and team logos.
 
-You need a checkout of the XLR8 repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/xlr8/convex-deploy-key`), run:
+You need a checkout of the Selfbound repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/xlr8/convex-deploy-key`), run:
 
 ```sh
-node tooling/cloud.mjs export --include-file-storage --path ~/xlr8-export.zip
+node tooling/cloud.mjs export --include-file-storage --path ~/selfbound-export.zip
 ```
 
-Without the XLR8 tooling, run the Convex CLI in the `backend` folder with the deploy key in the environment:
+Without the Selfbound tooling, run the Convex CLI in the `backend` folder with the deploy key in the environment:
 
 ```sh
 cd backend
 read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY   # paste the production deploy key, then Enter
-pnpm exec convex export --include-file-storage --path ~/xlr8-export.zip
+pnpm exec convex export --include-file-storage --path ~/selfbound-export.zip
 unset CONVEX_DEPLOY_KEY
 ```
 
-The ZIP holds one JSONL file per table (one JSON document per line) and a folder with the stored files. The data is in XLR8's internal format: for example, issue descriptions are stored in a separate table from the issues. The tables and fields are defined in [`backend/convex/schema.ts`](https://github.com/hernstev97/xlr8/blob/main/backend/convex/schema.ts). The same ZIP can be imported into another Convex deployment with `convex import`.
+The ZIP holds one JSONL file per table (one JSON document per line) and a folder with the stored files. The data is in Selfbound's internal format: for example, issue descriptions are stored in a separate table from the issues. The tables and fields are defined in [`backend/convex/schema.ts`](https://github.com/hernstev97/xlr8/blob/main/backend/convex/schema.ts). The same ZIP can be imported into another Convex deployment with `convex import`.
 
 <Aside type="caution">
 The export contains all your data unencrypted. Store it somewhere safe and delete copies you no longer need.
@@ -46,7 +46,7 @@ The export contains all your data unencrypted. Store it somewhere safe and delet
 
 ## Nightly backups
 
-The XLR8 repository includes a GitHub Actions workflow that backs up your production deployment every night at 03:30 (Berlin time). It is meant for operators and disaster recovery, not for reading your data, but it is a complete copy:
+The Selfbound repository includes a GitHub Actions workflow that backs up your production deployment every night at 03:30 (Berlin time). It is meant for operators and disaster recovery, not for reading your data, but it is a complete copy:
 
 - Each backup is the database export described above.
 - Before it is stored, it is restored into an empty backend and compared table by table and file by file.
@@ -58,11 +58,11 @@ The workflow does nothing until you add a deploy key and your public age key as 
 
 Setup, restore and the quarterly decryption test are described in the [backup guide on GitHub](https://github.com/hernstev97/xlr8/blob/main/docs/backup.md).
 
-Not part of a backup: environment variables such as secrets and tokens (keep them in a password manager), and videos, which are links to Google Drive rather than files in XLR8.
+Not part of a backup: environment variables such as secrets and tokens (keep them in a password manager), and videos, which are links to Google Drive rather than files in Selfbound.
 
 ## Ask an agent
 
-An AI agent connected to XLR8 over MCP can read any issue with its full description, comments, relations, sub-issues, linked pull requests and recent history, and any knowledge page. That makes it a practical way to export a slice of your data in a format you choose, for example:
+An AI agent connected to Selfbound over MCP can read any issue with its full description, comments, relations, sub-issues, linked pull requests and recent history, and any knowledge page. That makes it a practical way to export a slice of your data in a format you choose, for example:
 
 > Write every open issue of team ACME to a Markdown file, one section per issue, with its description and comments.
 

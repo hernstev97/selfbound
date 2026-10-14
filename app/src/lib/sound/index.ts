@@ -7,7 +7,7 @@
 //      └─ here: opening and closing of menus, dialogs, peek (read from the state)
 //
 // Settings (Settings › General): `prefs.sound` and `prefs.soundVolume`, per device.
-import type { App, Cue, Slice } from '@xlr8/core';
+import type { App, Cue, Slice } from '@selfbound/core';
 import { Engine } from './engine.ts';
 import { lastPointerAt, listen } from './listen.ts';
 
@@ -34,8 +34,8 @@ export function startSound(app: App): () => void {
   engine.setVolume(prefs().soundVolume);
 
   // Play what gets reported (core, listeners, state).
-  // Test hook (only where `__xlr8` exists): loaded, what actually played, AudioContext state.
-  const hooks = globalThis.__xlr8;
+  // Test hook (only where `__selfbound` exists): loaded, what actually played, AudioContext state.
+  const hooks = globalThis.__selfbound;
   const played: string[] = [];
   if (hooks) hooks.sound = { played, state: () => engine.state };
   let lastChoiceAt = -Infinity;
