@@ -9,10 +9,12 @@ import type { MarkType, Node } from 'prosemirror-model';
 import { Plugin, PluginKey, TextSelection, type Command, type EditorState } from 'prosemirror-state';
 import { goToNextCell, tableEditing } from 'prosemirror-tables';
 import { Decoration, DecorationSet, type EditorView } from 'prosemirror-view';
+import { calloutKind } from '../blocks/callout.ts';
 import type { CodeRange } from '../highlight.ts';
 import {
   backspaceToParagraph,
   codeToText,
+  enterFromCalloutTitle,
   exitCodeOnEmptyLine,
   fenceToCode,
   hardBreak,
@@ -75,11 +77,29 @@ const autolinkRule = new InputRule(/(?:^|\s)((?:https?:\/\/|www\.)[^\s<]+?)([.,;
   return tr.insertText(' ', end).removeStoredMark(m.link);
 });
 
+/** In a quote's first line: `[!warning] ` (after `> `) turns the quote into an info panel. */
+const calloutRule = new InputRule(/^\[!([A-Za-z]+)\]\s$/, (state, match, start) => {
+  const kind = calloutKind(match[1]!);
+  const $start = state.doc.resolve(start);
+  if (!kind || $start.parent.type !== n.paragraph || $start.depth < 2) return null;
+  const quote = $start.node($start.depth - 1);
+  if (quote.type !== n.blockquote || $start.index($start.depth - 1) !== 0) return null;
+  const pos = $start.before($start.depth - 1);
+  // The typed paragraph is dropped; the rest of the quote becomes the content.
+  const rest: Node[] = [];
+  quote.forEach((child, _o, i) => {
+    if (i > 0) rest.push(child);
+  });
+  const tr = state.tr.replaceWith(pos, pos + quote.nodeSize, n.callout.create({ kind, word: match[1]! }, [n.callout_title.create(), ...(rest.length ? rest : [n.paragraph.create()])]));
+  return tr.setSelection(TextSelection.create(tr.doc, pos + 2));
+});
+
 function rules() {
   return inputRules({
     rules: [
       textblockTypeInputRule(/^(#{1,6})\s$/, n.heading, (match) => ({ level: match[1]!.length })),
       wrappingInputRule(/^\s*>\s$/, n.blockquote),
+      calloutRule,
       wrappingInputRule(/^\s*([-+*])\s$/, n.bullet_list, (match) => ({ bullet: match[1] })),
       wrappingInputRule(
         /^(\d+)([.)])\s$/,
@@ -197,7 +217,7 @@ function keys(hooks: KeyHooks) {
       'Mod-Alt-ArrowRight': inTableOnly(tableCommands.columnAfter),
       'Mod-Alt-Backspace': inTableOnly(tableCommands.deleteRow),
       'Mod-Alt-Shift-Backspace': inTableOnly(tableCommands.deleteColumn),
-      Enter: chainCommands(fenceToCode, exitCodeOnEmptyLine, splitItem),
+      Enter: chainCommands(enterFromCalloutTitle, fenceToCode, exitCodeOnEmptyLine, splitItem),
       'Shift-Enter': hardBreak,
       Backspace: backspaceToParagraph,
       Tab: tab,

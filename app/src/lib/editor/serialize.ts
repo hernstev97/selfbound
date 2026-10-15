@@ -6,6 +6,7 @@
 // Freshly written blocks are escaped sparingly first ("5 * 3" stays "5 * 3"). If reading the text
 // back does not give the same block, everything is escaped ("5 \* 3").
 import type { Mark, Node } from 'prosemirror-model';
+import { calloutKind } from '../blocks/callout.ts';
 import { ENTITY_START, parseBlocks, type Source } from './parse.ts';
 
 interface Ctx {
@@ -93,6 +94,8 @@ function block(node: Node, ctx: Ctx): string {
         .split('\n')
         .map((line) => (line ? `> ${line}` : '>'))
         .join('\n');
+    case 'callout':
+      return callout(node, ctx);
     case 'code_block':
       return codeBlock(node);
     case 'horizontal_rule':
@@ -115,6 +118,26 @@ function children(node: Node, ctx: Ctx, sep: string) {
     if (text !== '' || child.type.name !== 'paragraph') parts.push(text);
   });
   return parts.join(sep);
+}
+
+/** `> [!WARNING] Title`, then the content. A paragraph follows the marker line directly, anything else after a blank line. */
+function callout(node: Node, ctx: Ctx) {
+  const word = typeof node.attrs.word === 'string' && calloutKind(node.attrs.word) === node.attrs.kind ? node.attrs.word : String(node.attrs.kind).toUpperCase();
+  const title = node.child(0).textContent.replace(/\s+/g, ' ').trim();
+  const parts: string[] = [];
+  node.forEach((child, _offset, i) => {
+    if (i === 0) return;
+    const text = block(child, ctx);
+    if (text !== '' || child.type.name !== 'paragraph') parts.push(text);
+  });
+  const head = `[!${word}]${title ? ` ${title}` : ''}`;
+  const first = node.childCount > 1 ? node.child(1) : null;
+  const body = parts.join('\n\n');
+  const text = !body ? head : first?.type.name === 'paragraph' ? `${head}\n${body}` : `${head}\n\n${body}`;
+  return text
+    .split('\n')
+    .map((line) => (line ? `> ${line}` : '>'))
+    .join('\n');
 }
 
 function codeBlock(node: Node) {
@@ -338,7 +361,7 @@ export function sameContent(a: Node, b: Node): boolean {
   return true;
 }
 
-const STYLE_ATTRS = new Set(['tight', 'markup', 'auto']);
+const STYLE_ATTRS = new Set(['tight', 'markup', 'auto', 'word']);
 
 function sameAttrs(a: Record<string, unknown>, b: Record<string, unknown>) {
   for (const key of Object.keys(a)) {

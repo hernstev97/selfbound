@@ -4,6 +4,7 @@ import type { MarkType, Node, NodeType, ResolvedPos } from 'prosemirror-model';
 import { liftListItem, sinkListItem, splitListItem, wrapInList } from 'prosemirror-schema-list';
 import { Selection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state';
 import { findWrapping } from 'prosemirror-transform';
+import type { CalloutKind } from '../blocks/callout.ts';
 import { schema } from './schema.ts';
 
 const n = schema.nodes;
@@ -134,7 +135,71 @@ export const backspaceToParagraph: Command = (state, dispatch) => {
   const d = itemDepth($from);
   if (d >= 0 && $from.depth === d + 1 && $from.index(d) === 0) return liftListItem(n.list_item)(state, dispatch);
   if ($from.depth > 1 && $from.node($from.depth - 1).type === n.blockquote && $from.index($from.depth - 1) === 0) return lift(state, dispatch);
+  if (parent.type === n.callout_title) return unwrapCallout($from.before() - 1)(state, dispatch);
   return false;
+};
+
+// ---------------------------------------------------------------- Info panels
+
+/**
+ * Info panel from the current block(s): an empty line becomes an empty panel, text is wrapped into
+ * it as its content. The cursor lands in the title.
+ */
+export function insertCallout(kind: CalloutKind): Command {
+  return (state, dispatch) => {
+    const { $from, $to } = state.selection;
+    const range = $from.blockRange($to);
+    if (!range || !range.parent.canReplaceWith(range.startIndex, range.endIndex, n.callout)) return false;
+    if (!dispatch) return true;
+    const nodes: Node[] = [];
+    for (let i = range.startIndex; i < range.endIndex; i++) nodes.push(range.parent.child(i));
+    const empty = nodes.length === 1 && nodes[0]!.type === n.paragraph && nodes[0]!.content.size === 0;
+    const callout = n.callout.create({ kind }, [n.callout_title.create(), ...(empty ? [n.paragraph.create()] : nodes)]);
+    const tr = state.tr.replaceWith(range.start, range.end, callout);
+    tr.setSelection(TextSelection.create(tr.doc, range.start + 2));
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+}
+
+/** Change the kind of the panel at `pos` (the keyword as written no longer applies). */
+export function setCalloutKind(pos: number, kind: CalloutKind): Command {
+  return (state, dispatch) => {
+    const node = state.doc.nodeAt(pos);
+    if (node?.type !== n.callout) return false;
+    if (dispatch) dispatch(state.tr.setNodeMarkup(pos, null, { ...node.attrs, kind, word: null }));
+    return true;
+  };
+}
+
+/**
+ * Takes the panel at `pos` apart: the title becomes a paragraph (if it has text) in front of the
+ * content, or a quote with the same content (`toQuote`).
+ */
+export function unwrapCallout(pos: number, toQuote = false): Command {
+  return (state, dispatch) => {
+    const node = state.doc.nodeAt(pos);
+    if (node?.type !== n.callout) return false;
+    if (!dispatch) return true;
+    const title = node.child(0);
+    const body: Node[] = [];
+    node.forEach((child, _o, i) => {
+      if (i > 0) body.push(child);
+    });
+    const lead = title.content.size ? [n.paragraph.create(null, title.content)] : [];
+    const tr = state.tr.replaceWith(pos, pos + node.nodeSize, toQuote ? n.blockquote.create(null, [...lead, ...body]) : [...lead, ...body]);
+    tr.setSelection(TextSelection.near(tr.doc.resolve(pos + 1)));
+    dispatch(tr.scrollIntoView());
+    return true;
+  };
+}
+
+/** Enter in a panel's title: continue in the content. */
+export const enterFromCalloutTitle: Command = (state, dispatch) => {
+  const { $from, empty } = state.selection;
+  if (!empty || $from.parent.type !== n.callout_title) return false;
+  if (dispatch) dispatch(state.tr.setSelection(TextSelection.near(state.doc.resolve($from.after()), 1)).scrollIntoView());
+  return true;
 };
 
 export const quote: Command = (state, dispatch) => wrapIn(n.blockquote)(state, dispatch);

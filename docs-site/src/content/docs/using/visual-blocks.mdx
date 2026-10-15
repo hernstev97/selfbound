@@ -1,0 +1,81 @@
+---
+title: Visual blocks
+description: Info panels in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
+sidebar:
+  order: 7
+---
+import { Aside } from '@astrojs/starlight/components';
+
+Besides text, lists, tables and code, descriptions, comments and knowledge pages can show **info panels**:
+a tinted box with a symbol, a bold title and any content inside. They are plain Markdown, so what you
+build in the editor is what agents read and write through MCP, and a text that leaves Selfbound still reads
+as a quote.
+
+## Info panels
+
+A panel is a quote whose first line is a marker in square brackets with an exclamation mark, followed by an
+optional title. The content goes on the following quote lines.
+
+```md
+> [!WARNING] Post-conditions
+> - Record any post-conditions
+> - The second one
+```
+
+There are five kinds:
+
+| Marker | Look | Use for |
+|---|---|---|
+| `[!INFO]` | blue, "i" | background and neutral information |
+| `[!NOTE]` | purple, document | something to keep in mind, pre-conditions |
+| `[!SUCCESS]` | green, check mark | requirements met, a result that worked |
+| `[!WARNING]` | yellow, triangle | something to watch out for |
+| `[!ERROR]` | red, cross | what went wrong, a failing flow |
+
+Without a title the panel shows the name of its kind (Info, Note, Success, Warning, Error). The marker
+is not case sensitive.
+
+The panel can hold anything a text can: paragraphs, lists, checklists (you can tick them in the shown text),
+code blocks, tables, images and other panels.
+
+### GitHub alerts
+
+The five alert names of GitHub work as well and read as the nearest kind. The name stays in the text as you
+wrote it.
+
+| GitHub | Shown as |
+|---|---|
+| `[!NOTE]` | Note |
+| `[!WARNING]` | Warning |
+| `[!TIP]` | Success |
+| `[!IMPORTANT]` | Info |
+| `[!CAUTION]` | Error |
+
+A quote with another word in the brackets (`[!FOO]`) or a marker that is not on the first line stays an
+ordinary quote.
+
+<Aside type="note">
+The title after the marker is a convenience of Selfbound (Obsidian reads it the same way). GitHub does not
+know it and shows such a quote with the marker as text; the content stays readable.
+</Aside>
+
+## In the editor
+
+- **/ menu:** type <kbd>/</kbd> and "panel", "info", "warning" and so on, then pick **Panel: Warning**. On an empty
+  line you get an empty panel with the cursor in the title; on a line with text, the text becomes the content.
+- **While typing:** after a quote (`>` and a space), type `[!info]` and a space.
+- **Title and content:** type the title, press <kbd>Enter</kbd> to continue in the content. Without a title the
+  name of the kind is shown as a hint.
+- **Change the kind:** click the symbol and choose another kind. The same menu can turn the panel into a
+  quote or into plain text.
+- **Back to text:** <kbd>Backspace</kbd> at the start of the title takes the panel apart and keeps its content.
+
+## Agents
+
+Agents need no extra tool. They write the Markdown above in a description, a comment or a knowledge page,
+and the server instructions at connect time mention the syntax. See [Working with agents](/agents/overview/).
+
+## Colours and themes
+
+The panels use one hue per kind on top of the surface they sit on, so they follow the theme you picked,
+light or dark, and keep their text readable in every built-in theme.

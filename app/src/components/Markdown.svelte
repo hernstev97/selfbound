@@ -41,6 +41,21 @@
     return driveEmbeds(el);
   };
 
+  // Visual blocks (```mermaid …): drawn once visible; the module loads only if the text has one.
+  const blocks: Attachment<HTMLElement> = (el) => {
+    void html;
+    if (!el.querySelector('.vblock[data-block]')) return;
+    let stop: (() => void) | undefined;
+    let gone = false;
+    import('../lib/blocks/mount.ts').then(({ mountBlocks }) => {
+      if (!gone) stop = mountBlocks(el);
+    }, () => {}); // if loading fails, the source block stays
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  };
+
   // Buttons are added after sanitizing (DOMPurify deliberately drops <button>).
   // Language: selectable where editing is allowed, otherwise only its name (and only if set).
   $effect(() => {
@@ -139,7 +154,7 @@
 
 {#if html !== null}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds}>{@html html}</div>
+  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds} {@attach blocks}>{@html html}</div>
 {:else}
   <div class={['md', cls]} style="white-space: pre-wrap">{markdown}</div>
 {/if}
