@@ -1581,6 +1581,10 @@ button.crumb:hover {
   height: var(--row-h);
   padding-top: 8px;
 }
+.group-row.sub {
+  /* Second level: indented below its group */
+  left: 24px;
+}
 .group-box {
   height: 36px;
   display: flex;

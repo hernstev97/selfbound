@@ -5,7 +5,7 @@ import { t, translated } from './i18n.ts';
 import { inInbox } from './inbox.ts';
 import type { IconName } from './icons.ts';
 import type { StateType } from '@selfbound/backend/shared/workflow';
-import type { Display, DisplayProp, Grouping, Issue, IssueId, Meta, NewIssue, Ordering, RowStyle, ViewKind, ViewRoute } from './types.ts';
+import type { Display, DisplayProp, GroupOrder, Grouping, Issue, IssueId, Meta, NewIssue, Ordering, RowStyle, ViewKind, ViewRoute } from './types.ts';
 
 /** What a view needs for filtering (resolved up front so the loop stays cheap). */
 export interface ViewContext {
@@ -65,7 +65,7 @@ const OPEN = new Set(['triage', 'backlog', 'todo', 'in_progress', 'in_review']);
 const PLAN_PROPS: DisplayProp[] = ['team', 'priority', 'id', 'status', 'labels', 'estimate', 'due'];
 const inTeam = (i: Issue, ctx: ViewContext) => !ctx.teamId || i.teamId === ctx.teamId;
 
-const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'project', 'sprint', 'none'];
+const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'none'];
 const ALL_ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due'];
 const PLAN_ORDERINGS: Ordering[] = ['rank', 'priority', 'status', 'created', 'updated', 'due'];
 
@@ -332,9 +332,28 @@ export const GROUPING_LABEL: Record<Grouping, string> = translated({
   priority: 'Priority',
   project: 'Project',
   sprint: 'Sprint',
+  label: 'Label',
+  labelGroup: 'Label group',
+  creator: 'Creator',
+  estimate: 'Estimate',
+  due: 'Due date',
+  parent: 'Parent issue',
+  created: 'Created',
+  updated: 'Updated',
   scope: 'Planned / added later',
   none: 'None',
 });
+
+export const GROUP_ORDER_LABEL: Record<GroupOrder, string> = translated({
+  asc: 'Default',
+  desc: 'Reversed',
+  size: 'Biggest group first',
+});
+
+/** Groupings offered for the second level: everything the view groups by, except what is the first level. */
+export function subGroupings(def: Pick<ViewDef, 'groupings'>, grouping: Grouping): Grouping[] {
+  return def.groupings.filter((g) => g !== 'none' && g !== 'scope' && g !== grouping);
+}
 
 export const ORDERING_LABEL: Record<Ordering, string> = translated({
   priority: 'Priority',

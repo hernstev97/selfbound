@@ -270,6 +270,13 @@ describe('routing by path', () => {
     expect(back.group).toBe('priority');
   });
 
+  test('the second grouping level has its own parameter; unknown values are ignored', () => {
+    const url = writeLocation(new URL('http://x/'), { page: { name: 'view', view: { kind: 'all', team: null } }, filters: emptyFilters(), quick: '', group: 'label', sub: 'due', order: null });
+    expect(url.search).toBe('?group=label&sub=due');
+    expect(readLocation(url)).toMatchObject({ group: 'label', sub: 'due' });
+    expect(readLocation(new URL('http://x/all?sub=bogus')).sub).toBeNull();
+  });
+
   test('/new with prefilled values', () => {
     const loc = at('/new?title=Test&priority=high&team=ACME');
     expect(loc.page).toEqual({ name: 'new' });

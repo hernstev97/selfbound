@@ -2,18 +2,18 @@
 // Computes outside the components and passes unchanged results through (reuseList), so Svelte
 // only redraws changed rows.
 import { t, tn, translated } from '../i18n.ts';
-import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
+import { CLOSED, OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
-import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
-import { CARD_SLOT, computeBoard, reuseBoard } from '../board.ts';
+import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, multiGrouping, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
+import { CARD_SLOT, boardKeyOf, computeBoard, reuseBoard } from '../board.ts';
 import { stateGroupKey } from '../workflow.ts';
 
-import { VIEWS, planSprint, viewKey, viewTitle, type ViewContext } from '../views.ts';
+import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext } from '../views.ts';
 import { revealIndex } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
-import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
+import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
 
 export interface HeaderState {
@@ -68,6 +68,21 @@ function writeJson(key: string, value: unknown) {
   } catch {
     // ignore
   }
+}
+
+/** Rows below a group header up to the next header of the same or a higher level (issues and sub-group headers). */
+function groupSpan(rows: readonly ListRow[], key: string): number {
+  const index = rows.findIndex((row) => row.kind === 'group' && row.key === key);
+  const head = rows[index];
+  if (head?.kind !== 'group') return 0;
+  const depth = head.group.parent ? 1 : 0;
+  let n = 0;
+  for (let i = index + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.kind === 'group' && (row.group.parent ? 1 : 0) <= depth) break;
+    n++;
+  }
+  return n;
 }
 
 export class ListController {
@@ -263,8 +278,9 @@ export class ListController {
     if (this.idle || ids.size > 200 || this.#rowIndex.size === 0) return false;
     const view = this.view.get();
     const grouping = view.display.grouping;
-    // Groups that do not depend on the issue alone: budget (team) and sprint scope.
-    if (grouping === 'team' || grouping === 'scope') return false;
+    // Groups that do not depend on the issue alone: budget (team), sprint scope and the parent's title in its header; several groups per issue (labels); two levels.
+    if (grouping === 'team' || grouping === 'scope' || grouping === 'parent' || multiGrouping(grouping)) return false;
+    if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
     const store = this.app.store;
     const matches = visibleFilter(view, store.meta.get(), this.context());
     const compare = viewComparator(view);
@@ -327,6 +343,8 @@ export class ListController {
     const extras: ListExtras = {};
     if (view.display.grouping === 'scope') extras.kinds = this.app.store.sprintKinds.get();
     if (view.display.grouping === 'team') extras.budget = this.app.budgetLabels();
+    if (view.display.grouping === 'creator' || view.display.subGrouping === 'creator') extras.actors = this.app.store.agents.get();
+    if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent') extras.issueOf = (id) => this.app.store.get(id);
     const next = reuseList(this.list.get(), computeList(visible, view, meta, this.#collapsedFor(view.route), this.app.prefs.dark.get(), extras));
     if (next !== this.list.get()) {
       const keep = anchor ? this.#scrollAnchor() : null;
@@ -337,7 +355,8 @@ export class ListController {
       this.#groupStarts = [];
       next.rows.forEach((row, index) => {
         if (row.kind === 'group') this.#groupStarts.push(index);
-        if (row.kind === 'issue') {
+        // An issue listed under several groups (labels) counts once: first row wins.
+        if (row.kind === 'issue' && !this.#rowIndex.has(row.id)) {
           this.#order.push(row.id);
           this.#rowIndex.set(row.id, index);
         }
@@ -396,7 +415,6 @@ export class ListController {
     const meta = store.meta.get();
     const matches = visibleFilter(view, meta, this.context());
     const compare = viewComparator(view);
-    const workflows = workflowsOf(meta);
     for (const id of ids) {
       const next = store.get(id);
       const shown = next !== undefined && store.resolvedId(id) === id && matches(next);
@@ -407,7 +425,7 @@ export class ListController {
       }
       if (!next || !shown) return false;
       const column = board.columns[pos.col];
-      if (stateGroupKey(workflows.of(next)) !== column.key) return false;
+      if (boardKeyOf(next, view, meta) !== column.key) return false;
       const before = column.ids[pos.index - 1];
       const after = column.ids[pos.index + 1];
       const b = before ? store.get(before) : undefined;
@@ -470,6 +488,14 @@ export class ListController {
   dropProblem(ids: readonly IssueId[], key: string): string | null {
     const column = this.board.get()?.columns.find((c) => c.key === key);
     if (!column) return t('Column does not exist');
+    if (column.priority !== undefined) {
+      // Done, canceled and duplicate issues carry no priority (backend).
+      for (const id of ids) {
+        const issue = this.app.store.get(id);
+        if (issue && column.priority !== 0 && CLOSED.has(issue.status)) return t('{key} is closed and carries no priority', { key: issue.key });
+      }
+      return null;
+    }
     const workflows = workflowsOf(this.app.store.meta.get());
     for (const id of ids) {
       const issue = this.app.store.get(id);
@@ -495,7 +521,8 @@ export class ListController {
       this.app.toasts.show(problem, undefined, 'error');
       return false;
     }
-    this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
+    if (column.priority !== undefined) this.app.edit.patch([...ids], { priority: column.priority });
+    else this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
     return true;
   }
 
@@ -533,22 +560,24 @@ export class ListController {
   }
 
   /** Topmost (fully or partly) visible issue and its distance from the top edge. */
-  #scrollAnchor(): { id: IssueId; offset: number } | null {
+  #scrollAnchor(): { key: string; offset: number } | null {
     const el = this.#scroller;
     if (!el || el.scrollTop <= 0) return null;
     const h = this.app.rowHeight();
     const rows = this.list.get().rows;
     for (let i = Math.floor(el.scrollTop / h); i < rows.length; i++) {
       const row = rows[i];
-      if (row.kind === 'issue') return { id: row.id, offset: i * h - el.scrollTop };
+      if (row.kind === 'issue') return { key: row.key, offset: i * h - el.scrollTop };
     }
     return null;
   }
 
-  #restoreAnchor(anchor: { id: IssueId; offset: number }) {
+  #restoreAnchor(anchor: { key: string; offset: number }) {
     const el = this.#scroller;
-    const index = this.#rowIndex.get(anchor.id);
-    if (!el || index === undefined) return;
+    if (!el) return;
+    // By row key: an issue listed under several groups (labels) must not jump to its first row.
+    const index = this.list.get().rows.findIndex((row) => row.key === anchor.key);
+    if (index < 0) return;
     const top = index * this.app.rowHeight() - anchor.offset;
     if (Math.abs(top - el.scrollTop) >= 1) {
       el.scrollTop = top;
@@ -661,7 +690,7 @@ export class ListController {
       tabs,
       chips: this.#chips(view.filters, meta),
       filterCount: filterCount(view.filters),
-      displayChanged: view.display.grouping !== defaults.grouping || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
+      displayChanged: view.display.grouping !== defaults.grouping || (view.display.subGrouping ?? 'none') !== (defaults.subGrouping ?? 'none') || (view.display.groupOrder ?? 'asc') !== (defaults.groupOrder ?? 'asc') || (view.display.emptyGroups ?? false) !== (defaults.emptyGroups ?? false) || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
       quick: view.quick,
       quickOpen: view.quickOpen,
     };
@@ -693,8 +722,13 @@ export class ListController {
     const base = def.display(route);
     const saved = readJson<Partial<Display>>(`selfbound:display:${viewKey(route)}`);
     if (!saved) return base;
+    const grouping = saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping;
     return {
-      grouping: saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping,
+      grouping,
+      ...(saved.subGrouping && grouping !== 'none' && subGroupings(def, grouping).includes(saved.subGrouping) ? { subGrouping: saved.subGrouping } : {}),
+      ...(saved.groupOrder === 'desc' || saved.groupOrder === 'size' ? { groupOrder: saved.groupOrder } : {}),
+      ...(saved.emptyGroups === true ? { emptyGroups: true } : {}),
+      ...(saved.boardColumns === 'priority' && def.boardTypes ? { boardColumns: 'priority' as const } : {}),
       ordering: saved.ordering && def.orderings.includes(saved.ordering) ? saved.ordering : base.ordering,
       props: Array.isArray(saved.props) ? saved.props : base.props,
       showClosed: typeof saved.showClosed === 'boolean' ? saved.showClosed : base.showClosed,
@@ -706,7 +740,7 @@ export class ListController {
    * Switch to a view. Without given values, the filters last set there apply; with given values
    * (URL), those.
    */
-  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
+  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; sub?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
     const prev = this.view.get();
     const prevKey = viewKey(prev.route);
     const key = viewKey(route);
@@ -715,6 +749,7 @@ export class ListController {
     const remembered = this.#memory.get(key);
     const display = { ...this.displayFor(route) };
     if (given?.group && VIEWS[route.kind].groupings.includes(given.group)) display.grouping = given.group;
+    if (given?.sub && display.grouping !== 'none' && subGroupings(VIEWS[route.kind], display.grouping).includes(given.sub)) display.subGrouping = given.sub;
     if (given?.order && VIEWS[route.kind].orderings.includes(given.order)) display.ordering = given.order;
     if (given?.layout === 'board' && VIEWS[route.kind].boardTypes) display.layout = 'board';
     const filters = given?.filters && filterCount(given.filters) > 0 ? given.filters : (remembered?.filters ?? emptyFilters());
@@ -740,6 +775,11 @@ export class ListController {
   setDisplay(patch: Partial<Display>) {
     const view = this.view.get();
     const display = { ...view.display, ...patch };
+    // Grouping options that go back to their default are not stored; a second level needs a first one it differs from.
+    if (!display.subGrouping || display.grouping === 'none' || !subGroupings(VIEWS[view.route.kind], display.grouping).includes(display.subGrouping)) delete display.subGrouping;
+    if (display.groupOrder === 'asc' || display.grouping === 'none') delete display.groupOrder;
+    if (!display.emptyGroups || display.grouping === 'none') delete display.emptyGroups;
+    if (display.boardColumns !== 'priority') delete display.boardColumns;
     this.view.set({ ...view, display });
     writeJson(`selfbound:display:${viewKey(view.route)}`, display);
     this.recompute();
@@ -829,6 +869,8 @@ export class ListController {
     const route = this.view.get().route;
     const set = this.#collapsedFor(route);
     const open = set.has(groupKey);
+    // Closing: the rows that disappear are the old ones. They include sub-group headers.
+    const before = open ? 0 : groupSpan(this.list.get().rows, groupKey);
     if (open) set.delete(groupKey);
     else set.add(groupKey);
     writeJson(`selfbound:collapsed:${viewKey(route)}`, [...set]);
@@ -836,7 +878,8 @@ export class ListController {
     const rows = this.list.get().rows;
     const index = rows.findIndex((row) => row.kind === 'group' && row.key === groupKey);
     const head = rows[index];
-    if (head?.kind === 'group' && head.count > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: head.count, open });
+    const span = open ? groupSpan(rows, groupKey) : before;
+    if (head?.kind === 'group' && span > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: span, open });
   }
 
   /** T: collapse/expand the focused issue's group. A second T right after expands it again. */

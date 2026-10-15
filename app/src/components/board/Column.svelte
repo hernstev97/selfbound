@@ -55,7 +55,7 @@
 
   function add(e: MouseEvent) {
     e.stopPropagation();
-    app.create.open({ status: column.status, stateName: column.label });
+    app.create.open(column.priority !== undefined ? { priority: column.priority } : { status: column.status, stateName: column.label });
   }
 </script>
 
@@ -64,7 +64,8 @@
   class={['board-column', column.collapsed && 'collapsed', drag.ids && (problem ? 'blocked' : 'allowed'), over.on && 'over']}
   data-testid="board-column"
   data-key={column.key}
-  data-status={column.status}
+  data-status={column.priority === undefined ? column.status : undefined}
+  data-priority={column.priority}
   data-collapsed={column.collapsed ? 'true' : undefined}
   title={drag.ids && problem ? problem : undefined}
   style:--tint={column.color ?? undefined}
@@ -76,7 +77,11 @@
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <header class="column-head" onclick={() => app.main.toggleColumn(column.key)} title={column.collapsed ? t('Expand') : t('Collapse')}>
-    <span class="icon">{@html statusIcon(column.status, column.color)}</span>
+    {#if column.priority !== undefined}
+      <span class="icon mi p-priority p-{column.priority}"></span>
+    {:else}
+      <span class="icon">{@html statusIcon(column.status, column.color)}</span>
+    {/if}
     <span class="column-name" data-testid="column-name">{column.label}</span>
     <span class="group-count" data-testid="column-count">{column.ids.length}</span>
     {#if !column.collapsed}

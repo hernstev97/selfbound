@@ -176,14 +176,24 @@ export interface NewIssue {
  */
 export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
-/** scope = planned / added later (active sprint) */
-export type Grouping = 'status' | 'team' | 'priority' | 'project' | 'sprint' | 'scope' | 'none';
+/** scope = planned / added later (active sprint); due, created, updated = date buckets */
+export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
+/** Order of the groups: the natural order, reversed, or the biggest group first */
+export type GroupOrder = 'asc' | 'desc' | 'size';
 export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status' | 'snoozed';
 export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'estimate' | 'due' | 'snoozed' | 'created' | 'updated' | 'team';
 export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'estimate', 'due', 'snoozed', 'created', 'updated'];
 
 export interface Display {
   grouping: Grouping;
+  /** Second level inside each group; missing = none */
+  subGrouping?: Grouping;
+  /** Missing = natural order */
+  groupOrder?: GroupOrder;
+  /** Also show groups without issues; missing = hide them */
+  emptyGroups?: boolean;
+  /** Board only: one column per priority instead of per status; missing = status */
+  boardColumns?: 'priority';
   ordering: Ordering;
   props: DisplayProp[];
   /** Show done, canceled and duplicate issues */
@@ -196,12 +206,14 @@ export type Layout = 'list' | 'board';
 
 /** Board column: one status (same type and name across teams). */
 export interface BoardColumn {
-  /** Group key `<type>:<name>` */
+  /** Group key `<type>:<name>`, or `p:<priority>` in a priority column */
   key: string;
   label: string;
   status: Status;
   type: import('@selfbound/backend/shared/workflow').StateType;
   color: string | null;
+  /** Priority board: the column's priority (`status` and `type` are then placeholders) */
+  priority?: Priority;
   /** The column's issues in the view's order (even when collapsed) */
   ids: IssueId[];
   /** Collapsed: header with count only (done and canceled by default) */
@@ -301,6 +313,8 @@ export type ListRow =
 
 export interface GroupInfo {
   by: Grouping;
+  /** Sub-group: the group it sits in */
+  parent?: GroupInfo;
   /** The group's value (status, team id, priority …) as text */
   value: string;
   label: string;
@@ -309,6 +323,7 @@ export interface GroupInfo {
   color?: string | null;
   priority?: Priority;
   team?: TeamBadge;
+  /** Label groups: the label's color */
   hue?: number;
   /** Team groups: priority budget "Urgent 1/1 · High 3/3" */
   budget?: string;
