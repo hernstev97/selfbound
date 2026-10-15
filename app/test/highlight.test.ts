@@ -193,7 +193,8 @@ describe('code block HTML', () => {
     const code = 'const a = 1;\nlet b = "x";\n';
     const plain = codeBlockHtml(code, 'ts', null);
     const colored = codeBlockHtml(code, 'ts', highlight.highlightCode(code, 'ts'));
-    const text = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"');
+    // Only the token wrappers are removed (text stays escaped); the result is compared, never inserted.
+    const text = (html: string) => html.replace(/<\/?span[^>]*>/g, '').replace(' class="hl"', '');
     expect(text(colored)).toBe(text(plain));
   });
   it('an unsafe info string is not used', () => {
