@@ -311,7 +311,7 @@
   color: var(--syn-del);
   background: var(--syn-del-bg);
 }
-/* Info panels (`> [!WARNING] Title`): tinted surface, symbol, bold title, content. Colors come from
+/* Info panels (`> [!WARNING] Title`): solid tinted surface without a border, symbol, bold title, content. Colors come from
    one hue per kind, mixed over whatever the panel sits on, so every theme works; light and dark
    differ only in the lightness of the symbol. Same markup in the editor (editor/views.ts). */
 .callout {
@@ -320,12 +320,12 @@
   margin: 0 0 0.75em;
   padding: 10px 14px 10px 12px;
   border-radius: var(--radius);
-  background: color-mix(in oklch, var(--co) 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--co) 22%, transparent);
+  /* Solid tint, no border */
+  background: color-mix(in oklch, var(--co) 16%, transparent);
 }
 [data-theme='dark'] .callout {
   --co: oklch(0.72 0.13 255);
-  background: color-mix(in oklch, var(--co) 14%, transparent);
+  background: color-mix(in oklch, var(--co) 20%, transparent);
 }
 .callout-note {
   --co: oklch(0.5 0.17 295);
