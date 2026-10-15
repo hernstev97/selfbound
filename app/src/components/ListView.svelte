@@ -145,8 +145,12 @@
   // The first press toggles the row (its state decides select or deselect for the drag), moving over
   // other rows selects the range from there. Touch has no checkbox (hidden on phones): not covered.
   function rangeSelect(el: HTMLElement) {
-    const rowAt = (x: number, y: number) =>
-      document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+    // Above or below the list the pointer counts as on the first or last visible row.
+    const rowAt = (x: number, y: number) => {
+      const box = el.getBoundingClientRect();
+      const at = document.elementFromPoint(x, Math.max(box.top + 1, Math.min(box.bottom - 1, y)));
+      return at?.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+    };
     let dragging = false;
     let swallowClick = false;
     let last: IssueId | undefined;
@@ -188,6 +192,7 @@
     const down = (e: PointerEvent) => {
       if (e.pointerType === 'touch' || e.button !== 0 || e.ctrlKey || e.metaKey) return;
       const target = e.target as HTMLElement;
+      swallowClick = false;
       if (target.dataset.cell !== 'check') return;
       const id = target.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
       if (!id) return;
@@ -210,10 +215,16 @@
       e.stopPropagation();
       e.preventDefault();
     };
+    // Sprint planning rows are draggable: no native drag from the checkbox.
+    const nativeDrag = (e: DragEvent) => {
+      if (dragging) e.preventDefault();
+    };
     el.addEventListener('pointerdown', down);
+    el.addEventListener('dragstart', nativeDrag);
     el.addEventListener('click', click, true);
     return () => {
       stop();
+      el.removeEventListener('dragstart', nativeDrag);
       el.removeEventListener('pointerdown', down);
       el.removeEventListener('click', click, true);
     };
