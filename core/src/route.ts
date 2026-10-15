@@ -81,7 +81,10 @@ export const CONSENT_PATH = '/oauth/consent';
 /** Older address of the consent page, still accepted */
 const CONSENT_PATH_OLD = '/oauth/freigabe';
 export const isConsentPath = (pathname: string) => {
-  const path = pathname.replace(/\/+$/, '');
+  // No /\/+$/ here: on a long run of slashes that regex backtracks quadratically.
+  let end = pathname.length;
+  while (end > 0 && pathname.charCodeAt(end - 1) === 47) end--;
+  const path = pathname.slice(0, end);
   return path === CONSENT_PATH || path === CONSENT_PATH_OLD;
 };
 
@@ -151,6 +154,8 @@ export function pagePath(page: Page): string {
   }
 }
 
+const NEW_PARAMS = ['title', 'description', 'status', 'priority', 'team', 'label', 'project', 'estimate', 'due'];
+
 export function readLocation(url: URL): Location {
   const p = url.searchParams;
   const page = parsePath(url.pathname);
@@ -170,8 +175,9 @@ export function readLocation(url: URL): Location {
   };
   const group = p.get('group') as Grouping | null;
   const order = p.get('order') as Ordering | null;
-  const params: Record<string, string> = {};
-  if (page.name === 'new') for (const [k, v] of p) params[k] = v;
+  // Only the keys `openFromParams` (core/src/app/create.ts) reads, so a name from the URL never becomes a property name.
+  const params: Record<string, string> =
+    page.name === 'new' ? Object.fromEntries([...p].filter(([k]) => NEW_PARAMS.includes(k))) : {};
   return {
     page,
     filters: page.name === 'new' ? emptyFilters() : filters,

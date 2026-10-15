@@ -121,7 +121,7 @@ function bootstrapDiff(a: number[][], b: number[][], iterations = 2000) {
 }
 
 const unitOf = (metric: string) =>
-  metric.endsWith('Pct') ? '%' : metric.includes('heapMB') ? 'MB' : metric.includes('bytes') ? 'kB' : /domNodes|loafCount|fromCache|\.failed$/.test(metric) ? '' : 'ms';
+  metric.endsWith('Pct') ? '%' : metric.includes('heapMB') ? 'MB' : metric.includes('bytes') ? 'kB' : /domNodes|loafCount|fromCache/.test(metric) || metric.endsWith('.failed') ? '' : 'ms';
 
 export function compare(dir: string) {
   const meta = JSON.parse(readFileSync(join(dir, 'ab.json'), 'utf8')) as { a: Omit<Side, 'dir' | 'built'>; b: Omit<Side, 'dir' | 'built'>; runs: { side: 'A' | 'B'; out: string; code: number; load: number[] }[]; args: string[] };

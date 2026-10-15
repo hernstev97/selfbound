@@ -38,7 +38,7 @@ A performance run is only meaningful on an idle machine, and an idle machine is 
 
 ### Keeping load in check
 
-- Only one performance run at a time (machine-wide lock in `$XDG_RUNTIME_DIR/selfbound-perf.lock`); a second one exits immediately with a hint.
+- Only one performance run at a time (lock per user in `$XDG_RUNTIME_DIR/selfbound-perf.lock`, else `~/.cache/selfbound-perf.lock`); a second one exits immediately with a hint.
 - On machines with at least 16 threads, the browser runs on cores 0–7, backend and preview on 8–15 (`taskset`; `--no-pin` turns this off).
 - Builds and tests outside of performance runs: `tooling/quiet.sh <command>` (see the script for the CPU set and limits).
 
@@ -181,7 +181,7 @@ No budget, no exit code for limits: this measurement belongs to tier 4.
 
 ## Walkthrough video
 
-`node perf/record.ts` seeds `small` into a fresh backend, records P1 at 1440×900 (list, J/K, peek, status, filter, command menu, create, detail with comment, triage, sprint, briefly the phone view), adds a caption per step (ffmpeg `drawtext`, font via `fc-match`) and writes `/tmp/selfbound-media/walkthrough.mp4`; `--out=<file.mp4>` copies it elsewhere. `--encode-only` only redoes captions and encoding.
+`node perf/record.ts` seeds `small` into a fresh backend, records P1 at 1440×900 (list, J/K, peek, status, filter, command menu, create, detail with comment, triage, sprint, briefly the phone view), adds a caption per step (ffmpeg `drawtext`, font via `fc-match`) and writes `perf/.media/walkthrough.mp4`; `--out=<file.mp4>` copies it elsewhere. `--encode-only` only redoes captions and encoding.
 
 ## Limits
 

@@ -11,7 +11,7 @@
 // without the local variables from backend/.env.local.
 
 import { spawn } from 'node:child_process';
-import { mkdirSync, readFileSync, statSync } from 'node:fs';
+import { closeSync, fstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requireInstance } from './instance.mjs';
@@ -30,12 +30,19 @@ export function prodDeployment() {
 function deployKey() {
   const expected = prodDeployment();
   const keyFile = deployKeyFile();
-  const mode = statSync(keyFile).mode & 0o777;
-  if (mode & 0o077) {
-    console.error(`Aborted: ${keyFile} is readable by others (mode ${mode.toString(8)}). Run: chmod 600 ${keyFile}`);
-    process.exit(2);
+  // One handle for check and read: the file cannot be swapped in between.
+  const fd = openSync(keyFile, 'r');
+  let key;
+  try {
+    const mode = fstatSync(fd).mode & 0o777;
+    if (mode & 0o077) {
+      console.error(`Aborted: ${keyFile} is readable by others (mode ${mode.toString(8)}). Run: chmod 600 ${keyFile}`);
+      process.exit(2);
+    }
+    key = readFileSync(fd, 'utf8').trim();
+  } finally {
+    closeSync(fd);
   }
-  const key = readFileSync(keyFile, 'utf8').trim();
   const name = /^prod:([a-z0-9-]+)\|/.exec(key)?.[1];
   if (name !== expected) {
     console.error(`Aborted: the key does not belong to the production deployment ${expected}.`);

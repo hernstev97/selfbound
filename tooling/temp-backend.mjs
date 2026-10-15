@@ -18,6 +18,16 @@ import { DEV_OWNER_ID, devJwksDataUri, devToken } from './dev-auth.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const convexWrapper = join(root, 'tooling', 'convex.mjs');
 
+/** Log content, empty if there is none yet. No existsSync before the read: the file may appear or vanish in between. */
+function readLog(file) {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return '';
+    throw error;
+  }
+}
+
 async function reachable(url) {
   try {
     return (await fetch(url)).ok;
@@ -142,10 +152,10 @@ export async function startTempBackend({ port, env = {}, log = () => {} }) {
       logFile,
       convex: (args, options) => convexCli(dir, args, options),
       stop,
-      log: () => (existsSync(logFile) ? readFileSync(logFile, 'utf8') : ''),
+      log: () => readLog(logFile),
     };
   } catch (error) {
-    const tail = existsSync(logFile) ? readFileSync(logFile, 'utf8').split('\n').slice(-30).join('\n') : '';
+    const tail = readLog(logFile).split('\n').slice(-30).join('\n');
     await stop();
     throw new Error(`${error instanceof Error ? error.message : error}\n--- convex dev ---\n${tail}`);
   }

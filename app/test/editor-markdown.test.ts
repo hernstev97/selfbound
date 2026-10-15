@@ -146,6 +146,34 @@ describe('writing single elements', () => {
     expect(p('<div>')).toBe('\\<div>');
     expect(p('C:\\Path\\*')).toBe('C:\\Path\\\\*');
   });
+  it('backslashes: at the end of text and in titles they cannot swallow the markup that follows', () => {
+    const mark = (name: string) => schema.marks[name]!.create();
+    const para = (...content: Node[]) => schema.nodes.doc.create(null, schema.nodes.paragraph.create(null, content));
+    const roundTrip = (d: Node) => parseMarkdown(serializeMarkdown(d)).doc.eq(d);
+    const strongEnd = para(schema.text('a\\', [mark('strong')]), schema.text(' c'));
+    expect(serializeMarkdown(strongEnd)).toBe('**a\\\\** c');
+    expect(roundTrip(strongEnd)).toBe(true);
+    const emStart = para(schema.text('a\\'), schema.text('b', [mark('em')]));
+    expect(roundTrip(emStart)).toBe(true);
+    const lineBreak = para(schema.text('a\\'), schema.nodes.hard_break.create(), schema.text('b'));
+    expect(roundTrip(lineBreak)).toBe(true);
+    const link = para(schema.text('x', [schema.marks.link.create({ href: 'https://a.example', title: 'T\\' })]));
+    expect(serializeMarkdown(link)).toBe('[x](https://a.example "T\\\\")');
+    expect(roundTrip(link)).toBe(true);
+    const image = para(schema.nodes.image.create({ src: 'https://a.example/b.png', alt: 'a', title: 'say "hi"\\' }));
+    expect(serializeMarkdown(image)).toBe('![a](https://a.example/b.png "say \\"hi\\"\\\\")');
+    expect(roundTrip(image)).toBe(true);
+  });
+  it('a backslash before | in a table cell survives', () => {
+    const cell = (text: string) => schema.nodes.doc.create(null, schema.nodes.table.create(null, [
+      schema.nodes.table_row.create(null, schema.nodes.table_header.create(null, schema.text('h'))),
+      schema.nodes.table_row.create(null, schema.nodes.table_cell.create(null, schema.text(text))),
+    ]));
+    for (const text of ['a|b', 'a\\|b', 'a\\\\|b', 'end\\']) {
+      const doc = cell(text);
+      expect(parseMarkdown(serializeMarkdown(doc)).doc.eq(doc), text).toBe(true);
+    }
+  });
   it('code with backticks and fences inside a code block', () => {
     const code = schema.nodes.code_block.create({ lang: 'md' }, schema.text('```\nx\n```'));
     expect(serializeMarkdown(schema.nodes.doc.create(null, code))).toBe('````md\n```\nx\n```\n````');

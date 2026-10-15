@@ -80,10 +80,10 @@ export function installProbe() {
 
   (window as any).__bench = {
     state,
-    arm(predSources: Record<string, string>, ctxSource: string | null, manual: boolean) {
+    arm(predSources: Record<string, string>, context: { src: string } | { value: unknown } | null, manual: boolean) {
       const preds: Record<string, (ctx: unknown) => boolean> = {};
       for (const [name, src] of Object.entries(predSources)) preds[name] = new Function('ctx', `return (${src})(ctx);`) as any;
-      const ctx = ctxSource ? new Function(`return (${ctxSource})();`)() : null;
+      const ctx = !context ? null : 'src' in context ? new Function(`return (${context.src})();`)() : context.value;
       let resolve!: () => void;
       const done = new Promise<void>((r) => (resolve = r));
       state.pending = { preds, ctx, start: null, manual, matched: {}, painted: {}, resolve, done };

@@ -249,6 +249,14 @@ describe('routing by path', () => {
     expect(isConsentPath('/oauth/freigabe')).toBe(true);
     expect(isConsentPath('/oauth')).toBe(false);
     expect(isConsentPath('/oauth/consent/x')).toBe(false);
+    expect(isConsentPath('/oauth/consent///')).toBe(true);
+    expect(isConsentPath('///')).toBe(false);
+  });
+
+  test('a long run of slashes does not stall the consent check', () => {
+    const start = performance.now();
+    expect(isConsentPath(`${'/'.repeat(200_000)}x`)).toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 
   test('filters and display survive the trip through the URL, other parameters stay', () => {
@@ -266,6 +274,13 @@ describe('routing by path', () => {
     const loc = at('/new?title=Test&priority=high&team=ACME');
     expect(loc.page).toEqual({ name: 'new' });
     expect(loc.params).toEqual({ title: 'Test', priority: 'high', team: 'ACME' });
+  });
+
+  test('/new keeps only the known parameters, names from the URL never become properties', () => {
+    const loc = at('/new?title=Test&__proto__=x&constructor=y&toString=z&other=1');
+    expect(loc.params).toEqual({ title: 'Test' });
+    expect(Object.getPrototypeOf(loc.params)).toBe(Object.prototype);
+    expect(at('/issue/ACME-1?title=Test').params).toEqual({});
   });
 });
 
