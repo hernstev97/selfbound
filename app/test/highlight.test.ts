@@ -146,6 +146,13 @@ describe('highlighting', () => {
     expect(highlight.codeRanges(code, 'klingon')).toBeNull();
   });
 
+  it('very long code stays neutral; the editor limit is lower than the display limit', () => {
+    const long = 'const a = 1;\n'.repeat(1000); // 13,000 characters
+    expect(highlight.highlightCode(long, 'ts')).toMatch(/<span class="tk/);
+    expect(highlight.codeRanges(long, 'ts')).toBeNull();
+    expect(highlight.highlightCode('const a = 1;\n'.repeat(2000), 'ts')).toBeNull();
+  });
+
   it('colors every language of the picker', async () => {
     look.syntax.set(syntaxSet(5, null, null));
     const samples: Record<string, string> = {

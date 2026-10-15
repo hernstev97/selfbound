@@ -409,8 +409,6 @@ export function mapTheme(theme: VsTheme, overrides: Record<string, string> = {})
 
   const vars: Record<string, string> = {};
   for (const [name, c] of Object.entries(out)) vars[name] = toHex(c);
-  vars['syn-add-bg'] = `${toHex(out['syn-add'])}1f`;
-  vars['syn-del-bg'] = `${toHex(out['syn-del'])}1f`;
   Object.assign(vars, FIXED[type]);
   return { type, vars, fixes, bar: toHex(app) };
 }

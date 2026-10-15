@@ -194,6 +194,30 @@ describe('syntax themes for code blocks', () => {
     const last = syntax.theme.tokenColors.filter((r) => Array.isArray(r.scope) && r.scope.includes('keyword.control'));
     expect(last.at(-1)?.settings?.foreground).toBe('#ffee00');
   });
+  it('a changed color replaces the colors inside its category, deeper rules included, and nothing else', () => {
+    const t: VsTheme = {
+      name: 'Deep',
+      type: 'dark',
+      colors: { 'editor.background': '#202020', 'editor.foreground': '#d0d0d0' },
+      tokenColors: [
+        { scope: 'keyword.operator.new', settings: { foreground: '#aa1111' } },
+        { scope: ['keyword.operator', 'storage.type.function'], settings: { foreground: '#22aa22' } },
+        { scope: 'string', settings: { foreground: '#4444ff' } },
+        { scope: 'comment', settings: { fontStyle: 'italic' } },
+      ],
+    };
+    const mapped = mapTheme(t);
+    const colorOf = (syntax: ReturnType<typeof syntaxTheme>, scope: string) => syntax.theme.tokenColors.find((r) => (Array.isArray(r.scope) ? r.scope : [r.scope]).includes(scope) && !(Array.isArray(r.scope) && r.scope.length > 2))?.settings?.foreground;
+    const plain = syntaxTheme(t, mapped);
+    const changed = syntaxTheme(t, mapped, { 'syn-keyword': '#ffee00' });
+    expect(colorOf(changed, 'keyword.operator.new')).toBe('#ffee00');
+    expect(colorOf(changed, 'storage.type.function')).toBe('#ffee00');
+    // Operators and strings stay as the theme has them.
+    expect(colorOf(changed, 'keyword.operator')).toBe(colorOf(plain, 'keyword.operator'));
+    expect(colorOf(changed, 'string')).toBe(colorOf(plain, 'string'));
+    // Font-style-only rules stay without a color.
+    expect(changed.theme.tokenColors.find((r) => r.scope === 'comment')?.settings?.foreground).toBeUndefined();
+  });
   it('the Selfbound colors are placeholders for CSS variables', () => {
     const s = selfboundSyntax('dark');
     expect(Object.values(s.palette!).every((v) => /^var\(--sx-[a-z]+\)$/.test(v))).toBe(true);

@@ -252,46 +252,54 @@ function loadHighlighter() {
 /** Ranges cached per code block node: typing only recolors the changed block. */
 const rangeCache = new WeakMap<Node, { version: number; ranges: CodeRange[] }>();
 
-/** `missing`: grammars of code blocks that cannot be colored yet. */
-function codeDecorations(doc: Node): { set: DecorationSet; missing: Set<string> } {
+function codeDecorations(doc: Node): DecorationSet {
   const decos: Decoration[] = [];
-  const missing = new Set<string>();
   doc.descendants((node, pos) => {
     if (node.type !== n.code_block) return node.isBlock && !node.isTextblock;
-    const grammar = languageFor(String(node.attrs.lang ?? ''))?.grammar;
-    if (!grammar) return false;
-    if (!highlighter || !highlighter.isReady(grammar)) {
-      missing.add(grammar);
-      return false;
-    }
+    const lang = String(node.attrs.lang ?? '');
+    const grammar = languageFor(lang)?.grammar;
+    if (!grammar || !highlighter?.isReady(grammar)) return false;
     let cached = rangeCache.get(node);
     if (!cached || cached.version !== colorVersion) {
-      cached = { version: colorVersion, ranges: highlighter.codeRanges(node.textContent, String(node.attrs.lang)) ?? [] };
+      cached = { version: colorVersion, ranges: highlighter.codeRanges(node.textContent, lang) ?? [] };
       rangeCache.set(node, cached);
     }
     for (const r of cached.ranges) decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: r.cls, style: r.style }));
     return false;
   });
-  return { set: DecorationSet.create(doc, decos), missing };
+  return DecorationSet.create(doc, decos);
+}
+
+/** Grammars of code blocks that cannot be colored yet. */
+function missingGrammars(doc: Node): Set<string> {
+  const missing = new Set<string>();
+  doc.descendants((node) => {
+    if (node.type !== n.code_block) return node.isBlock && !node.isTextblock;
+    const grammar = languageFor(String(node.attrs.lang ?? ''))?.grammar;
+    if (grammar && !highlighter?.isReady(grammar)) missing.add(grammar);
+    return false;
+  });
+  return missing;
 }
 
 function highlight() {
   return new Plugin<DecorationSet>({
     key: highlightKey,
     state: {
-      init: (_config, state) => codeDecorations(state.doc).set,
-      apply: (tr, set, _old, state) => (tr.docChanged || tr.getMeta(highlightKey) ? codeDecorations(state.doc).set : set),
+      init: (_config, state) => codeDecorations(state.doc),
+      apply: (tr, set, _old, state) => (tr.docChanged || tr.getMeta(highlightKey) ? codeDecorations(state.doc) : set),
     },
     props: {
       decorations: (state) => highlightKey.getState(state),
     },
     view(view) {
       let asked = '';
+      let retryAfter = 0;
       let stop: (() => void) | undefined;
       const check = () => {
-        const { missing } = codeDecorations(view.state.doc);
+        const missing = missingGrammars(view.state.doc);
         const key = [...missing].sort().join();
-        if (!missing.size || key === asked) return;
+        if (!missing.size || key === asked || Date.now() < retryAfter) return;
         asked = key; // one request per set of grammars, not per keystroke
         void loadHighlighter()
           .then(async (mod) => {
@@ -303,11 +311,15 @@ function highlight() {
             () => {
               if (!view.isDestroyed) view.dispatch(view.state.tr.setMeta(highlightKey, true));
             },
-            () => (asked = ''),
+            () => {
+              // Offline or a file missing: ask again after a pause, with the next edit.
+              asked = '';
+              retryAfter = Date.now() + 10_000;
+            },
           );
       };
       check();
-      return { update: check, destroy: () => stop?.() };
+      return { update: (v, prev) => v.state.doc !== prev.doc && check(), destroy: () => stop?.() };
     },
   });
 }

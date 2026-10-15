@@ -22,6 +22,24 @@ export interface SyntaxSet {
   light: SyntaxTheme;
 }
 
+/**
+ * The syntax color a scope selector belongs to: the category with the longest matching scope
+ * (`constant.numeric` → number, not literal). Operators keep their own color: most themes set one
+ * on purpose; only the word operators (`new`, `typeof`, `in`) count as keywords.
+ */
+function categoryOf(selector: string): string | undefined {
+  if (/\s/.test(selector)) return undefined; // with context: cannot be assigned
+  if (/^keyword\.operator(\.|$)/.test(selector) && !/^keyword\.operator\.(new|expression|word)(\.|$)/.test(selector)) return undefined;
+  let best: { name: string; length: number } | undefined;
+  for (const [name, scopes] of Object.entries(SYNTAX_SCOPES)) {
+    for (const scope of scopes) {
+      const length = scope.split('.').length;
+      if ((selector === scope || selector.startsWith(`${scope}.`)) && (!best || length > best.length)) best = { name, length };
+    }
+  }
+  return best?.name;
+}
+
 /** A VS Code theme (or its overrides) as a syntax theme; `mapped` provides the code block surface. */
 export function syntaxTheme(theme: VsTheme, mapped: MappedTheme, overrides: Record<string, string> = {}): SyntaxTheme {
   const bg = parseHex(mapped.vars['code-bg'])!;
@@ -36,18 +54,35 @@ export function syntaxTheme(theme: VsTheme, mapped: MappedTheme, overrides: Reco
     }
     return out ?? undefined;
   };
-  // Rules without a scope set the default colors in VS Code; the code block brings its own.
+  // Colors changed in the settings replace the colors of the rules inside their category (the same
+  // rules the theme's color for it comes from), so deeper theme rules (`keyword.operator.new`) follow
+  // too; a rule behind them covers what the theme does not set. Rules of other categories and
+  // deliberate extras (operators) stay. Rules without a scope set the default colors in VS Code;
+  // the code block brings its own.
+  const changed = new Map<string, string>();
+  for (const name of Object.keys(SYNTAX_SCOPES)) {
+    const color = lift(overrides[name]);
+    if (color) changed.set(name, color);
+  }
   const tokenColors: TokenRule[] = [];
   for (const rule of theme.tokenColors) {
     if (!rule.scope || !rule.settings) continue;
     const { foreground, fontStyle } = rule.settings;
-    tokenColors.push({ scope: rule.scope, settings: { foreground: lift(foreground), fontStyle } });
+    if (!foreground || !changed.size) {
+      tokenColors.push({ scope: rule.scope, settings: { foreground: lift(foreground), fontStyle } });
+      continue;
+    }
+    const rest: string[] = [];
+    const own = new Map<string, string[]>();
+    for (const sel of (Array.isArray(rule.scope) ? rule.scope : rule.scope.split(',')).map((s) => String(s).trim()).filter(Boolean)) {
+      const color = changed.get(categoryOf(sel) ?? '');
+      if (color) own.set(color, [...(own.get(color) ?? []), sel]);
+      else rest.push(sel);
+    }
+    if (rest.length) tokenColors.push({ scope: rest, settings: { foreground: lift(foreground), fontStyle } });
+    for (const [color, scope] of own) tokenColors.push({ scope, settings: { foreground: color, fontStyle } });
   }
-  // Colors changed in the settings: behind the theme's rules, so its more specific rules still win.
-  for (const [name, scope] of Object.entries(SYNTAX_SCOPES)) {
-    const foreground = lift(overrides[name]);
-    if (foreground) tokenColors.push({ scope, settings: { foreground } });
-  }
+  for (const [name, color] of changed) tokenColors.push({ scope: SYNTAX_SCOPES[name]!, settings: { foreground: color } });
   const fg = mapped.vars.text;
   return {
     theme: { name: theme.name, type: mapped.type, colors: { 'editor.foreground': fg, 'editor.background': mapped.vars['code-bg'] }, tokenColors },
@@ -107,3 +142,6 @@ export function selfboundSyntax(type: ThemeType): SyntaxTheme {
 export function syntaxSet(rev: number, dark: SyntaxTheme | null, light: SyntaxTheme | null): SyntaxSet {
   return { rev, dark: dark ?? selfboundSyntax('dark'), light: light ?? selfboundSyntax('light') };
 }
+
+/** Do two sets color the same? (rev apart) */
+export const sameSyntax = (a: SyntaxSet, b: SyntaxSet) => JSON.stringify([a.dark, a.light]) === JSON.stringify([b.dark, b.light]);

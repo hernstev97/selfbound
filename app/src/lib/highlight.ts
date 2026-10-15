@@ -30,8 +30,9 @@ const GRAMMARS: Record<string, () => Promise<unknown>> = {
   yaml: () => import('shiki/langs/yaml.mjs'),
 };
 
-/** Longer code stays neutral (tokenizing runs on the main thread). */
-const MAX_CODE = 60_000;
+/** Longer code stays neutral: tokenizing runs on the main thread, once per mode. The editor does it on every keystroke, so its limit is lower. */
+const MAX_CODE = 20_000;
+const MAX_EDITOR_CODE = 10_000;
 
 /** Code block info string ("ts", "Svelte" …) to a grammar, otherwise null. */
 export function languageOf(info: string | undefined): string | null {
@@ -137,9 +138,9 @@ function styleOf(token: ThemedTokenWithVariants): { cls: string; style: string }
   return { cls: `tk${d.classes}${l.classes}`, style };
 }
 
-function tokenize(code: string, info: string | undefined): ThemedTokenWithVariants[][] | null {
+function tokenize(code: string, info: string | undefined, max: number): ThemedTokenWithVariants[][] | null {
   const name = languageOf(info);
-  if (!name || !highlighter || !current || !loaded.has(name) || code.length > MAX_CODE) return null;
+  if (!name || !highlighter || !current || !loaded.has(name) || code.length > max) return null;
   try {
     return highlighter.codeToTokensWithThemes(code, { lang: name, themes: { dark: current.dark, light: current.light } });
   } catch {
@@ -149,7 +150,7 @@ function tokenize(code: string, info: string | undefined): ThemedTokenWithVarian
 
 /** Highlighted HTML (spans with `tk` classes and color variables, text escaped), or null while not ready or without a known language. */
 export function highlightCode(code: string, info: string | undefined): string | null {
-  const lines = tokenize(code.replace(/\n$/, ''), info);
+  const lines = tokenize(code.replace(/\n$/, ''), info, MAX_CODE);
   if (!lines) return null;
   return lines
     .map((line) =>
@@ -173,7 +174,7 @@ export interface CodeRange {
 
 /** Color ranges for the editor (offsets in the code, same classes and variables as in the rendered HTML), or null while not ready or without a known language. */
 export function codeRanges(code: string, info: string | undefined): CodeRange[] | null {
-  const lines = tokenize(code, info);
+  const lines = tokenize(code, info, MAX_EDITOR_CODE);
   if (!lines) return null;
   const ranges: CodeRange[] = [];
   for (const line of lines) {

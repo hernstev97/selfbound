@@ -24,7 +24,10 @@
   let ready = $state(false);
   let colors = $state(highlightVersion());
   onMarkdownReady(() => (ready = true));
-  $effect(() => onHighlightChange(() => (colors = highlightVersion())));
+  $effect(() => {
+    colors = highlightVersion(); // a change between init and now
+    return onHighlightChange(() => (colors = highlightVersion()));
+  });
   const html = $derived.by(() => {
     void colors; // render again once highlighting is loaded or the theme changed
     return ready ? renderMarkdown(markdown) : null;

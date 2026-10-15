@@ -207,8 +207,6 @@
   --syn-tag: oklch(0.76 0.12 20);
   --syn-add: oklch(0.8 0.11 150);
   --syn-del: oklch(0.76 0.12 20);
-  --syn-add-bg: oklch(0.8 0.11 150 / 0.12);
-  --syn-del-bg: oklch(0.76 0.12 20 / 0.12);
 }
 [data-theme='light'] {
   --syn-keyword: oklch(0.48 0.16 300);
@@ -219,8 +217,6 @@
   --syn-tag: oklch(0.5 0.16 20);
   --syn-add: oklch(0.47 0.11 150);
   --syn-del: oklch(0.5 0.16 20);
-  --syn-add-bg: oklch(0.47 0.11 150 / 0.1);
-  --syn-del-bg: oklch(0.5 0.16 20 / 0.1);
 }
 /* Syntax colors of code blocks and the editor (highlight.ts): a token carries its dark and its light
    color as --d and --l, the mode picks one. The Selfbound palette (no VS Code theme) arrives as the

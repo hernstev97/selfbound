@@ -10,7 +10,7 @@ import { Slice } from '@selfbound/core';
 import { builtin, loadBuiltin } from './builtin.ts';
 import { fontCss } from './fonts.ts';
 import { mapTheme, themeCss, type ContrastFix, type MappedTheme } from './map.ts';
-import { syntaxSet, syntaxTheme, type SyntaxSet, type SyntaxTheme } from './syntax.ts';
+import { sameSyntax, syntaxSet, syntaxTheme, type SyntaxSet, type SyntaxTheme } from './syntax.ts';
 import { readTheme, type ThemeType, type VsTheme } from './vscode.ts';
 
 export interface Override {
@@ -295,8 +295,17 @@ export class Look {
     if (!this.#app && [settings.dark, settings.light].some((ref) => ref.startsWith('custom:'))) await this.#started;
     const [dark, light] = await Promise.all([this.#resolve(settings.dark, settings), this.#resolve(settings.light, settings)]);
     // A render() may have been faster with newer settings.
-    if (!this.syntax.get()) this.syntax.set(syntaxSet(++this.#syntaxRev, this.#syntaxFor('dark', settings.dark, settings, dark), this.#syntaxFor('light', settings.light, settings, light)));
+    if (!this.syntax.get()) this.#setSyntax(settings, dark, light);
     return this.syntax.get()!;
+  }
+
+  /** Publish the syntax themes, unless they color exactly as before (a slider tick that changes only the UI colors, a font): then nothing needs to be colored again. */
+  #setSyntax(settings: LookSettings, dark: Resolved, light: Resolved) {
+    const next = syntaxSet(this.#syntaxRev + 1, this.#syntaxFor('dark', settings.dark, settings, dark), this.#syntaxFor('light', settings.light, settings, light));
+    const prev = this.syntax.get();
+    if (prev && sameSyntax(prev, next)) return;
+    this.#syntaxRev++;
+    this.syntax.set(next);
   }
 
   /** Build the CSS, apply it and store it for the next startup. If loading fails, the previous CSS stays. */
@@ -328,7 +337,7 @@ export class Look {
     apply(css);
     this.#app?.prefs.setBarColors(bar);
     this.fixes.set({ dark: dark?.fixes ?? [], light: light?.fixes ?? [] });
-    this.syntax.set(syntaxSet(++this.#syntaxRev, this.#syntaxFor('dark', settings.dark, settings, resolved[0]), this.#syntaxFor('light', settings.light, settings, resolved[1])));
+    this.#setSyntax(settings, resolved[0], resolved[1]);
     const preload = [sans.preload, mono.preload].filter((p): p is string => !!p);
     // Versions of the custom themes the CSS was built from (if another device changes one, #onServer rebuilds).
     const custom: Record<string, number> = {};

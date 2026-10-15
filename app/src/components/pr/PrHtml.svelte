@@ -20,7 +20,10 @@
   // styled here); color it like our own code blocks, with the chosen theme.
   let root = $state<HTMLElement>();
   let colors = $state(highlightVersion());
-  $effect(() => onHighlightChange(() => (colors = highlightVersion())));
+  $effect(() => {
+    colors = highlightVersion(); // a change between init and now
+    return onHighlightChange(() => (colors = highlightVersion()));
+  });
   $effect(() => {
     void clean;
     void colors;

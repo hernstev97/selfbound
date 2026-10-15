@@ -49,6 +49,9 @@ export async function loadGrammars(names: readonly string[]): Promise<void> {
     },
   );
   const module = await loading;
-  await module.prepare(names);
-  highlightChanged();
+  try {
+    await module.prepare(names);
+  } finally {
+    highlightChanged(); // also if one grammar failed: the others are ready now
+  }
 }
