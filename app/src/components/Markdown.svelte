@@ -1,6 +1,6 @@
 <script lang="ts">
   // Rendered Markdown (marked + DOMPurify, loaded on demand). Plain text until the library is loaded.
-  // Code blocks with a language get highlighted a moment later (own chunk); every block gets a
+  // Code blocks with a language get highlighted a moment later (own chunks); every block gets a
   // "Copy" button and the language at the top right. With `ontoggle` tasks can be clicked, with
   // `onlang` the language chosen (description, your own comments); the change happens in the source
   // text (lib/tasks.ts, lib/codeLang.ts), not here.
@@ -8,7 +8,8 @@
   import { parsePath } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { languageLabel } from '../lib/languages.ts';
-  import { cardEmbeds, driveEmbeds, highlightReady, loadHighlight, needsHighlight, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
+  import { highlightReady, loadHighlight, needsHighlight } from '../lib/highlightLoad.ts';
+  import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';
   import { app } from '../app-instance.ts';
 
@@ -21,15 +22,19 @@
 
   let { markdown, class: cls = '', ontoggle, onlang }: Props = $props();
   let ready = $state(false);
-  let highlighted = $state(highlightReady());
+  let colors = $state(highlightVersion());
   onMarkdownReady(() => (ready = true));
+  $effect(() => {
+    colors = highlightVersion(); // a change between init and now
+    return onHighlightChange(() => (colors = highlightVersion()));
+  });
   const html = $derived.by(() => {
-    void highlighted; // render again once highlighting is loaded
+    void colors; // render again once highlighting is loaded or the theme changed
     return ready ? renderMarkdown(markdown) : null;
   });
 
   $effect(() => {
-    if (ready && !highlighted && needsHighlight(markdown)) loadHighlight().then(() => (highlighted = true), () => {}); // if loading fails, the block stays plain
+    if (ready && needsHighlight(markdown) && !highlightReady(markdown)) loadHighlight(markdown).catch(() => {}); // if loading fails, the block stays plain
   });
 
   let root = $state<HTMLElement>();
@@ -43,6 +48,21 @@
     return () => {
       stopDrive?.();
       stopCards?.();
+    };
+  };
+
+  // Visual blocks (```mermaid …): drawn once visible; the module loads only if the text has one.
+  const blocks: Attachment<HTMLElement> = (el) => {
+    void html;
+    if (!el.querySelector('.vblock[data-block]')) return;
+    let stop: (() => void) | undefined;
+    let gone = false;
+    import('../lib/blocks/mount.ts').then(({ mountBlocks }) => {
+      if (!gone) stop = mountBlocks(el);
+    }, () => {}); // if loading fails, the source block stays
+    return () => {
+      gone = true;
+      stop?.();
     };
   };
 
@@ -102,6 +122,11 @@
   });
 
   async function onclick(event: MouseEvent) {
+    // Using a chart (table toggle, hovering and clicking in the plot) does not start editing the text.
+    if ((event.target as Element).closest('.vchart-toggle, .vchart-svg, .vchart-table')) {
+      event.stopPropagation();
+      return;
+    }
     const box = (event.target as Element).closest<HTMLInputElement>('input[data-task]');
     if (box && ontoggle) {
       // The check mark comes with the saved text (optimistically), not from the browser.
@@ -144,7 +169,7 @@
 
 {#if html !== null}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds}>{@html html}</div>
+  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds} {@attach blocks}>{@html html}</div>
 {:else}
   <div class={['md', cls]} style="white-space: pre-wrap">{markdown}</div>
 {/if}

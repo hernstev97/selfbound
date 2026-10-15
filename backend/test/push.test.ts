@@ -261,6 +261,7 @@ describe('bundling', () => {
 
   test('preview from Markdown', () => {
     expect(plainPreview('# Title\n\n- Point *one*\n```js\nx\n```\n![Picture](a.png)')).toBe('Title Point one [Code] [Image]');
+    expect(plainPreview('> [!WARNING] Careful\n> Check twice')).toBe('Careful Check twice');
   });
 });
 

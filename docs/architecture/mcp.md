@@ -38,7 +38,7 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 **Archived labels:** Agents cannot assign them (`list_labels` doesn't show them). If an archived label is already on the issue, `update_issue` may keep listing it in `labels`.
 
-**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner): true unless an unread inbox entry is waiting; a new change by an agent makes it false again.
+**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. The owner appears under their profile name (Settings → Profile), else `XLR8_OWNER_NAME`, else "Owner"; agents appear as `<name> (agent)`. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner): true unless an unread inbox entry is waiting; a new change by an agent makes it false again.
 
 ## Tools
 
@@ -65,6 +65,8 @@ Responses are lean: identifier, title, status (name within the team) and `status
 | `get_article` | read | One page: Markdown with `version`, sources, topics, project, path, child pages, who changed it when | `id` |
 | `create_article` | write | Create a page, optionally as a child page, with project, topics (unknown ones are created) and sources | `requestId`, `team`, `title`, `markdown?`, `parent?`, `project?`, `topics?[]`, `sources?[]` |
 | `update_article` | write | Title, parent page, project, topics; replace the text (`markdown` + `expectedVersion`) or append to it (`append`); add sources | `requestId`, `id`, … |
+
+**Visual blocks** are plain Markdown, so agents need no extra tool: an info panel is a quote that starts with `> [!WARNING] Optional title` (kinds `INFO`, `NOTE`, `SUCCESS`, `WARNING`, `ERROR`; GitHub's `TIP`, `IMPORTANT`, `CAUTION` work too) followed by the content on `> ` lines; a ` ```chart ` code block with JSON (`type`: `line`, `area`, `bar`, `heatmap`, `stat`; see the docs-site page “Visual blocks”) is drawn as a chart. The server instructions say so once at connect. Syntax and rendering: [frontend.md](frontend.md#visual-blocks-appsrclibblocks).
 
 **Images** appear in descriptions and comments as Markdown `![name](<site>/img/<token>)`. Agents can fetch the URL (no key needed) and reuse images from other texts by copying the line. There is no upload over MCP. Drive videos are plain links (`https://drive.google.com/file/d/<ID>/view`); the app shows them as a player when they stand alone on a line.
 

@@ -78,6 +78,11 @@ export const LIMITS = {
   bulkUpdateMax: 500,
   logoMaxBytes: 256 * 1024,
   imageMaxBytes: 5 * 1024 * 1024,
+  /** Profile picture after the browser has cropped it (256 × 256 WebP is about 10–30 KB). */
+  avatarMaxBytes: 256 * 1024,
+  /** Edge length of the cropped profile picture the UI produces. */
+  avatarPx: 256,
+  profileNameMax: 60,
 } as const;
 
 /** Knowledge base: limits for pages, sources, topics and revisions. */
@@ -103,6 +108,9 @@ export const PARTIAL_DATE_RE = /^\d{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12]\d|3[01]))?
 /** Allowed image types (the server checks the content, not just the declared type). */
 export const IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
+
+/** Types allowed for the profile picture: no GIF (animation), no SVG. */
+export const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as const;
 
 /**
  * Images appear as `![name](<site>/img/<token>)` in Markdown. The token (32 random bytes,

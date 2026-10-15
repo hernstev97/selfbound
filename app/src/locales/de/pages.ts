@@ -2,6 +2,19 @@
 import { ctx, type Dictionary } from '@selfbound/core/i18n';
 
 export default {
+  // settings/Profile.svelte, settings/AvatarCrop.svelte
+  Profile: 'Profil',
+  'Your name and picture appear in the activity of issues, in comments, in the inbox and in what agents read through MCP. Agents keep their own names.':
+    'Dein Name und dein Bild erscheinen im Verlauf von Issues, in Kommentaren, im Eingang und in dem, was Agenten über MCP lesen. Agenten behalten ihre eigenen Namen.',
+  Picture: 'Bild',
+  'PNG, JPEG or WebP. You choose the part that shows inside the circle.': 'PNG, JPEG oder WebP. Du wählst den Ausschnitt, der im Kreis erscheint.',
+  'Shown instead of “You”. Without a name, initials and “You” are used.': 'Erscheint statt „Du“. Ohne Namen gibt es Initialen und „Du“.',
+  'Pictures only: PNG, JPEG or WebP.': 'Nur Bilder: PNG, JPEG oder WebP.',
+  'The picture is too large (at most {mb} MB).': 'Das Bild ist zu groß (höchstens {mb} MB).',
+  'Crop profile picture': 'Profilbild zuschneiden',
+  'Drag the picture to move it and zoom to choose the part inside the circle.': 'Verschiebe das Bild und zoome, um den Ausschnitt im Kreis zu wählen.',
+  'Picture area. Arrow keys move the picture, plus and minus zoom.': 'Bildbereich. Pfeiltasten verschieben das Bild, Plus und Minus zoomen.',
+  Zoom: 'Zoom',
   // settings/Agents.svelte
   'Revoked by you': 'von dir gesperrt',
   'Code used twice': 'Code doppelt benutzt',

@@ -799,6 +799,14 @@ export default defineSchema({
     updatedAt: v.number(),
   }),
 
+  // The owner's profile (one row; missing = defaults). `avatarToken` is an image token from `files`
+  // (registered through files.register, referenced from the owner 'profile' in fileRefs).
+  profile: defineTable({
+    name: v.optional(v.string()),
+    avatarToken: v.optional(v.string()),
+    updatedAt: v.number(),
+  }),
+
   // Custom themes (only name and type; every device loads the list at startup).
   customThemes: defineTable({
     name: v.string(),

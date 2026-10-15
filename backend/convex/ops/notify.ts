@@ -517,6 +517,7 @@ export function plainPreview(markdown: string, max = 160) {
     .replace(/```[\s\S]*?```/g, ' [Code] ')
     .replace(/!\[[^\]]*\]\([^)]*\)/g, ` ${pushText('[Image]')} `)
     .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}>\s*\[![A-Za-z]+\][ \t]*/gm, '') // info panel marker, the title stays
     .replace(/^\s{0,3}(#{1,6}|>|[-*+]|\d+\.)\s+/gm, '')
     .replace(/[*_`~]+/g, '')
     .replace(/\s+/g, ' ')

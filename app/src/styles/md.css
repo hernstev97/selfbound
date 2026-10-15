@@ -197,7 +197,7 @@
   }
 }
 
-/* Syntax colors (highlight.js classes). Dark and light defined separately, hues around the accent (hue 276). */
+/* Selfbound syntax colors. Dark and light defined separately, hues around the accent (hue 276). */
 [data-theme='dark'] {
   --syn-keyword: oklch(0.76 0.12 300);
   --syn-string: oklch(0.8 0.11 150);
@@ -207,8 +207,6 @@
   --syn-tag: oklch(0.76 0.12 20);
   --syn-add: oklch(0.8 0.11 150);
   --syn-del: oklch(0.76 0.12 20);
-  --syn-add-bg: oklch(0.8 0.11 150 / 0.12);
-  --syn-del-bg: oklch(0.76 0.12 20 / 0.12);
 }
 [data-theme='light'] {
   --syn-keyword: oklch(0.48 0.16 300);
@@ -219,98 +217,442 @@
   --syn-tag: oklch(0.5 0.16 20);
   --syn-add: oklch(0.47 0.11 150);
   --syn-del: oklch(0.5 0.16 20);
-  --syn-add-bg: oklch(0.47 0.11 150 / 0.1);
-  --syn-del-bg: oklch(0.5 0.16 20 / 0.1);
 }
-.md .hljs {
+/* Syntax colors of code blocks and the editor (highlight.ts): a token carries its dark and its light
+   color as --d and --l, the mode picks one. The Selfbound palette (no VS Code theme) arrives as the
+   --sx-* variables, chained like the old highlight.js rules: custom colors only with a VS Code theme. */
+:root {
+  --sx-keyword: var(--syn-keyword);
+  --sx-string: var(--syn-string);
+  --sx-number: var(--syn-number);
+  --sx-literal: var(--syn-literal, var(--syn-keyword));
+  --sx-func: var(--syn-func);
+  --sx-type: var(--syn-type);
+  --sx-tag: var(--syn-tag);
+  --sx-attr: var(--syn-attr, var(--syn-type));
+  --sx-comment: var(--syn-comment, var(--text-muted));
+  --sx-regexp: var(--syn-regexp, var(--syn-string));
+  --sx-builtin: var(--syn-builtin, var(--syn-func));
+  --sx-property: var(--syn-property, var(--syn-attr, var(--syn-type)));
+  --sx-add: var(--syn-add);
+  --sx-del: var(--syn-del);
+}
+.md code.hl {
   color: var(--text);
 }
-.md .hljs-keyword,
-.md .hljs-selector-tag,
-.md .hljs-meta .hljs-keyword,
-.md .hljs-doctag {
-  color: var(--syn-keyword);
+[data-theme='dark'] .md .tk {
+  color: var(--d);
 }
-.md .hljs-string,
-.md .hljs-template-variable,
-.md .hljs-meta .hljs-string,
-.md .hljs-bullet {
-  color: var(--syn-string);
+[data-theme='light'] .md .tk {
+  color: var(--l);
 }
-.md .hljs-number,
-.md .hljs-symbol,
-.md .hljs-link {
-  color: var(--syn-number);
-}
-.md .hljs-title,
-.md .hljs-title.function_,
-.md .hljs-section,
-.md .hljs-selector-id,
-.md .hljs-selector-class {
-  color: var(--syn-func);
-}
-.md .hljs-type,
-.md .hljs-class .hljs-title,
-.md .hljs-title.class_ {
-  color: var(--syn-type);
-}
-/* Custom colors only with a VS Code theme, otherwise the defaults above apply. */
-.md .hljs-literal {
-  color: var(--syn-literal, var(--syn-keyword));
-}
-.md .hljs-regexp {
-  color: var(--syn-regexp, var(--syn-string));
-}
-.md .hljs-built_in {
-  color: var(--syn-builtin, var(--syn-func));
-}
-.md .hljs-attr,
-.md .hljs-attribute,
-.md .hljs-property {
-  color: var(--syn-property, var(--syn-attr, var(--syn-type)));
-}
-.md .hljs-variable,
-.md .hljs-params {
-  color: var(--syn-variable, var(--syn-type));
-}
-.md .hljs-tag,
-.md .hljs-name,
-.md .hljs-selector-attr {
-  color: var(--syn-tag);
-}
-.md .hljs-tag .hljs-attr,
-.md .hljs-tag .hljs-string {
-  color: inherit;
-}
-.md .hljs-tag .hljs-attr {
-  color: var(--syn-attr, var(--syn-type));
-}
-.md .hljs-tag .hljs-string {
-  color: var(--syn-string);
-}
-.md .hljs-comment,
-.md .hljs-quote,
-.md .hljs-meta {
-  color: var(--syn-comment, var(--text-muted));
-}
-.md .hljs-comment,
-.md .hljs-quote {
+[data-theme='dark'] .md .tk-di,
+[data-theme='light'] .md .tk-li {
   font-style: italic;
 }
-.md .hljs-emphasis {
-  font-style: italic;
-}
-.md .hljs-strong {
+[data-theme='dark'] .md .tk-db,
+[data-theme='light'] .md .tk-lb {
   font-weight: 600;
 }
-.md .hljs-addition {
-  color: var(--syn-add);
-  background: var(--syn-add-bg);
+[data-theme='dark'] .md .tk-du,
+[data-theme='light'] .md .tk-lu {
+  text-decoration: underline;
 }
-.md .hljs-deletion {
-  color: var(--syn-del);
-  background: var(--syn-del-bg);
+/* Info panels (`> [!WARNING] Title`): solid tinted surface without a border, symbol, bold title, content. Colors come from
+   one hue per kind, mixed over whatever the panel sits on, so every theme works; light and dark
+   differ only in the lightness of the symbol. Same markup in the editor (editor/views.ts). */
+.callout {
+  --co: oklch(0.52 0.17 255);
+  --co-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17ZM9 5.5a1 1 0 1 1 2 0 1 1 0 0 1-2 0ZM9.1 8.6h1.8v6H9.1v-6Z'/%3E%3C/svg%3E");
+  margin: 0 0 0.75em;
+  padding: 10px 14px 10px 12px;
+  border-radius: var(--radius);
+  /* Solid tint, no border */
+  background: color-mix(in oklch, var(--co) 16%, transparent);
 }
+[data-theme='dark'] .callout {
+  --co: oklch(0.72 0.13 255);
+  background: color-mix(in oklch, var(--co) 20%, transparent);
+}
+.callout-note {
+  --co: oklch(0.5 0.17 295);
+  --co-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M5 2h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Zm1.5 4.2v1.6h7V6.2h-7Zm0 3.2V11h4.6V9.4H6.5Z'/%3E%3C/svg%3E");
+}
+.callout-success {
+  --co: oklch(0.52 0.14 155);
+  --co-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm3.9 5.6-4.7 5.4-2.9-2.6 1.1-1.2 1.6 1.4 3.6-4.1 1.3 1.1Z'/%3E%3C/svg%3E");
+}
+.callout-warning {
+  --co: oklch(0.6 0.15 75);
+  --co-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M8.6 2.9a1.6 1.6 0 0 1 2.8 0l6.5 11.6a1.6 1.6 0 0 1-1.4 2.4H3.5a1.6 1.6 0 0 1-1.4-2.4L8.6 2.9ZM9.1 7.2h1.8v4.4H9.1V7.2Zm0 5.6h1.8v1.8H9.1v-1.8Z'/%3E%3C/svg%3E");
+}
+.callout-error {
+  --co: oklch(0.54 0.2 27);
+  --co-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill-rule='evenodd' d='M10 1.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17Zm3.2 10.4-1.3 1.3L10 11.3l-1.9 1.9-1.3-1.3L8.7 10 6.8 8.1l1.3-1.3L10 8.7l1.9-1.9 1.3 1.3L11.3 10l1.9 1.9Z'/%3E%3C/svg%3E");
+}
+[data-theme='dark'] .callout-note {
+  --co: oklch(0.74 0.12 295);
+}
+[data-theme='dark'] .callout-success {
+  --co: oklch(0.74 0.14 155);
+}
+[data-theme='dark'] .callout-warning {
+  --co: oklch(0.82 0.14 85);
+}
+[data-theme='dark'] .callout-error {
+  --co: oklch(0.72 0.16 27);
+}
+.callout-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  color: var(--text-strong);
+  font-weight: 590;
+  line-height: 1.4;
+}
+.callout-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  background: var(--co);
+  mask: var(--co-icon) center / contain no-repeat;
+}
+.callout-body {
+  padding-left: 26px;
+}
+.callout-title + .callout-body {
+  margin-top: 2px;
+}
+.callout-body > :first-child {
+  margin-top: 0;
+}
+.callout-body > :last-child {
+  margin-bottom: 0;
+}
+.callout-body:empty {
+  display: none;
+}
+
+/* Visual blocks (```mermaid …): the source stays as a code block until the drawing is ready, and
+   when drawing fails; then a note says why. mount.ts sets data-state. */
+.md .vblock[data-state='ready'] > pre {
+  display: none;
+}
+.md .vblock[data-state='loading'] > pre {
+  opacity: 0.6;
+}
+.vblock-view {
+  position: relative;
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.vblock-view svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+.vblock-error {
+  margin: 6px 0 0;
+  color: var(--danger-text);
+  font-size: 0.9em;
+}
+
+/* Charts (```chart, lib/blocks/chart/): one palette for light and dark, validated for adjacent
+   series (colour-vision-safe order, see the dataviz palette). Marks carry the series colour; text
+   never does. `--chart-on-N` is the text colour on a filled mark of slot N. The first series is
+   also the single hue of heatmaps. */
+.vchart {
+  --vchart-surface: var(--bg-raised);
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #6250d6;
+  --chart-8: #e34948;
+  --chart-on-1: #000;
+  --chart-on-2: #000;
+  --chart-on-3: #000;
+  --chart-on-4: #000;
+  --chart-on-5: #000;
+  --chart-on-6: #fff;
+  --chart-on-7: #fff;
+  --chart-on-8: #000;
+  color: var(--text);
+  font-size: 12px;
+}
+[data-theme='dark'] .vchart {
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-on-7: #000;
+}
+.vchart-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.vchart-titles {
+  flex: 1;
+  min-width: 0;
+  /* Room for the block's language label and copy button */
+  padding-right: 64px;
+}
+.vchart-foot {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+.vchart-foot .vchart-note {
+  margin-top: 0;
+  flex: 1;
+}
+.vchart-title {
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 590;
+  line-height: 1.35;
+}
+.vchart-sub,
+.vchart-note {
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.vchart-note {
+  margin-top: 8px;
+}
+.vchart-toggle {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.vchart:hover .vchart-toggle,
+.vchart-toggle:focus-visible,
+.vchart-toggle[aria-pressed='true'] {
+  opacity: 1;
+}
+@media (hover: none) {
+  .vchart-toggle {
+    opacity: 1;
+  }
+}
+.vchart-toggle:hover {
+  color: var(--text-strong);
+  background: var(--bg-control);
+}
+.vchart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.vchart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+.vchart-key {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.vchart-body {
+  margin-top: 10px;
+}
+.vchart-plot {
+  position: relative;
+}
+.vchart-svg {
+  display: block;
+  overflow: visible;
+  font-family: var(--font);
+}
+.vchart-svg:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 4px;
+  border-radius: 2px;
+}
+.vc-grid,
+.vc-axis {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.vc-axis {
+  stroke: var(--border-strong);
+}
+.vc-ref {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+.vc-rule,
+.vc-cross {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+}
+.vc-cross {
+  stroke: var(--text-faint);
+}
+.vc-tick,
+.vc-cat {
+  fill: var(--text-muted);
+  font-size: 11.5px;
+}
+.vc-cat {
+  fill: var(--text);
+  font-size: 12px;
+}
+.vc-rule-label,
+.vc-mark-label,
+.vc-end-label,
+.vc-value {
+  fill: var(--text-strong);
+  font-size: 12px;
+  font-weight: 590;
+}
+.vc-end-label,
+.vc-value {
+  font-weight: 510;
+  fill: var(--text);
+}
+.vc-in-label {
+  font-size: 11.5px;
+  font-weight: 590;
+  pointer-events: none;
+}
+.vc-cell:hover {
+  stroke: var(--text-strong);
+  stroke-width: 1.5;
+}
+.vc-spark {
+  fill: none;
+  stroke: var(--text-faint);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.vc-spark-dot {
+  fill: var(--chart-1);
+}
+.vchart-ramp {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 6px;
+  color: var(--text-muted);
+}
+.vchart-ramp i {
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+}
+.vchart-ramp span:first-child {
+  margin-right: 4px;
+}
+.vchart-ramp span:last-child {
+  margin-left: 4px;
+}
+.vchart-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px 24px;
+}
+.vchart-stat-value {
+  color: var(--text-strong);
+  font-size: 28px;
+  font-weight: 590;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.vchart-stat-label {
+  color: var(--text-muted);
+}
+.vchart-stat-delta {
+  margin-top: 2px;
+  color: var(--text);
+  font-weight: 510;
+}
+.vchart-spark {
+  display: block;
+  margin-top: 6px;
+}
+.vchart-tip {
+  position: absolute;
+  z-index: 2;
+  min-width: 96px;
+  max-width: 260px;
+  padding: 6px 9px;
+  border-radius: var(--radius);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  pointer-events: none;
+  font-size: 12px;
+}
+.vchart-tip[hidden] {
+  display: none;
+}
+.vchart-tip-title {
+  margin-bottom: 3px;
+  color: var(--text-muted);
+}
+.vchart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
+}
+.vchart-tip-row strong {
+  color: var(--text-strong);
+  font-weight: 590;
+}
+.vchart-tip-key {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+}
+.vchart-tip-label {
+  color: var(--text-muted);
+}
+.vchart-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.vchart-table th {
+  color: var(--text-muted);
+  font-weight: 510;
+  text-align: left;
+}
+.vchart-table th,
+.vchart-table td {
+  padding: 3px 10px 3px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+}
+
 .md blockquote {
   margin: 0 0 0.75em;
   padding-left: 12px;

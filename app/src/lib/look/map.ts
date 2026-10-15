@@ -137,7 +137,7 @@ export const VARS: ThemeVar[] = VAR_LIST.map((v) => ({
   },
 }));
 
-/** TextMate scopes per syntax color, most important first (matching highlight.js classes in md.css). */
+/** TextMate scopes per syntax color, most important first (approximation for previews and swatches; code blocks read the theme itself, see syntax.ts). */
 export const SYNTAX_SCOPES: Record<string, string[]> = {
   'syn-keyword': ['keyword.control', 'keyword', 'storage.type', 'storage'],
   'syn-string': ['string.quoted', 'string'],
@@ -409,8 +409,6 @@ export function mapTheme(theme: VsTheme, overrides: Record<string, string> = {})
 
   const vars: Record<string, string> = {};
   for (const [name, c] of Object.entries(out)) vars[name] = toHex(c);
-  vars['syn-add-bg'] = `${toHex(out['syn-add'])}1f`;
-  vars['syn-del-bg'] = `${toHex(out['syn-del'])}1f`;
   Object.assign(vars, FIXED[type]);
   return { type, vars, fixes, bar: toHex(app) };
 }

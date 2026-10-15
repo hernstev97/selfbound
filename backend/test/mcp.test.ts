@@ -414,10 +414,20 @@ describe('MCP over HTTP', () => {
       createdBy: 'Owner',
     });
     expect(issue.comments).toEqual([expect.objectContaining({ author: 'Owner', body: 'First comment' })]);
-    // The owner's display name comes from XLR8_OWNER_NAME.
+    // The fallback for the owner's display name is XLR8_OWNER_NAME.
     process.env.XLR8_OWNER_NAME = 'Sam';
     try {
       expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Sam', comments: [{ author: 'Sam' }] });
+    } finally {
+      delete process.env.XLR8_OWNER_NAME;
+    }
+    // A name in the profile wins over the environment; clearing it brings the fallback back.
+    process.env.XLR8_OWNER_NAME = 'Sam';
+    try {
+      await owner.mutation(api.profile.setName, { name: 'Jane Doe' });
+      expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Jane Doe', comments: [{ author: 'Jane Doe' }] });
+      await owner.mutation(api.profile.setName, { name: null });
+      expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Sam' });
     } finally {
       delete process.env.XLR8_OWNER_NAME;
     }

@@ -1,5 +1,5 @@
 // Markdown renderer setup: loaded together with `marked` and `DOMPurify` (markdown.ts), so none of
-// it is in the start bundle. Code blocks: codeblock.ts.
+// it is in the start bundle. Code blocks: codeblock.ts. Info panels and visual blocks: blocks/.
 // Images load lazily and open full size on click; upload placeholders (`#upload-…`) show as a note.
 // A Google Drive link alone on a line becomes a player (`driveEmbeds`); YouTube and X links alone on a
 // line get a card (embedBlock.ts, embedCards.ts).
@@ -7,7 +7,10 @@ import { t } from '@selfbound/core/i18n';
 import type { Marked as MarkedClass } from 'marked';
 import type DOMPurifyType from 'dompurify';
 import { BARE_IDENTIFIER_RE } from '@selfbound/backend/shared/links';
-import { codeBlockHtml, escapeHtml } from './codeblock.ts';
+import { calloutHtml, calloutOf } from './blocks/callout.ts';
+import { blockFenceHtml } from './blocks/fence.ts';
+import { blockFor } from './blocks/registry.ts';
+import { codeBlockHtml, escapeHtml, fenceClaim, TOKEN_STYLE } from './codeblock.ts';
 import { embedExtension } from './embedBlock.ts';
 import { uploadNote } from './uploadNote.ts';
 
@@ -100,7 +103,19 @@ export function createRender(
       },
     ],
     renderer: {
-      code: ({ text, lang }) => codeBlockHtml(text, lang, highlight(text, lang)),
+      // A language a visual-block renderer claims (```mermaid) becomes a placeholder that mount.ts draws;
+      // one claimed with `claimFence` returns its finished HTML. Both skip the highlighter.
+      code({ text, lang }) {
+        const block = blockFor(lang);
+        if (block) return blockFenceHtml(block, text, lang);
+        const claim = fenceClaim(lang);
+        return claim?.(text, lang!) ?? codeBlockHtml(text, lang, claim ? null : highlight(text, lang));
+      },
+      // `> [!WARNING] Title` is an info panel; any other quote stays a quote.
+      blockquote(token) {
+        const callout = calloutOf(token);
+        return callout ? calloutHtml(callout, this.parser.parse(callout.body)) : false;
+      },
       // Images open full size on click (new tab).
       image({ href, title, text }) {
         const alt = escapeHtml(text);
@@ -108,6 +123,10 @@ export function createRender(
         return href.startsWith('#upload-') ? img : `<a class="md-img" href="${escapeHtml(href)}">${img}</a>`;
       },
     },
+  });
+  // Colors of highlighted code: tokens carry them as custom properties (style is forbidden otherwise).
+  DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
+    if (data.attrName === 'style' && node.tagName === 'SPAN' && node.classList.contains('tk') && TOKEN_STYLE.test(data.attrValue)) data.forceKeepAttr = true;
   });
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A') {

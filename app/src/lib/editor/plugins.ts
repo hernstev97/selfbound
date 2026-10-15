@@ -9,10 +9,14 @@ import type { MarkType, Node } from 'prosemirror-model';
 import { Plugin, PluginKey, TextSelection, type Command, type EditorState } from 'prosemirror-state';
 import { goToNextCell, tableEditing } from 'prosemirror-tables';
 import { Decoration, DecorationSet, type EditorView } from 'prosemirror-view';
+import { calloutKind } from '../blocks/callout.ts';
 import type { CodeRange } from '../highlight.ts';
+import { languageFor } from '../languages.ts';
 import {
   backspaceToParagraph,
   codeToText,
+  cycleCalloutKind,
+  enterFromCalloutTitle,
   exitCodeOnEmptyLine,
   fenceToCode,
   hardBreak,
@@ -75,11 +79,30 @@ const autolinkRule = new InputRule(/(?:^|\s)((?:https?:\/\/|www\.)[^\s<]+?)([.,;
   return tr.insertText(' ', end).removeStoredMark(m.link);
 });
 
+/** In a quote's first line: `[!warning] ` (after `> `) turns the quote into an info panel. */
+const calloutRule = new InputRule(/^\[!([A-Za-z]+)\]\s$/, (state, match, start) => {
+  const kind = calloutKind(match[1]!);
+  const $start = state.doc.resolve(start);
+  // Only when the line holds nothing else (the rule replaces the whole quote's first paragraph).
+  if (!kind || $start.parent.type !== n.paragraph || $start.depth < 2 || $start.parent.textContent !== match[0].trimEnd()) return null;
+  const quote = $start.node($start.depth - 1);
+  if (quote.type !== n.blockquote || $start.index($start.depth - 1) !== 0) return null;
+  const pos = $start.before($start.depth - 1);
+  // The typed paragraph is dropped; the rest of the quote becomes the content.
+  const rest: Node[] = [];
+  quote.forEach((child, _o, i) => {
+    if (i > 0) rest.push(child);
+  });
+  const tr = state.tr.replaceWith(pos, pos + quote.nodeSize, n.callout.create({ kind, word: match[1]! }, [n.callout_title.create(), ...(rest.length ? rest : [n.paragraph.create()])]));
+  return tr.setSelection(TextSelection.create(tr.doc, pos + 2));
+});
+
 function rules() {
   return inputRules({
     rules: [
       textblockTypeInputRule(/^(#{1,6})\s$/, n.heading, (match) => ({ level: match[1]!.length })),
       wrappingInputRule(/^\s*>\s$/, n.blockquote),
+      calloutRule,
       wrappingInputRule(/^\s*([-+*])\s$/, n.bullet_list, (match) => ({ bullet: match[1] })),
       wrappingInputRule(
         /^(\d+)([.)])\s$/,
@@ -188,6 +211,7 @@ function keys(hooks: KeyHooks) {
       'Mod-Alt-1': setBlock(n.heading, { level: 1 }),
       'Mod-Alt-2': setBlock(n.heading, { level: 2 }),
       'Mod-Alt-3': setBlock(n.heading, { level: 3 }),
+      'Mod-Alt-p': cycleCalloutKind,
       'Mod-Shift-\\': toggleCode,
       'Mod-Shift-|': toggleCode,
       // Tables: insert and delete rows/columns (also in the table menu)
@@ -197,7 +221,7 @@ function keys(hooks: KeyHooks) {
       'Mod-Alt-ArrowRight': inTableOnly(tableCommands.columnAfter),
       'Mod-Alt-Backspace': inTableOnly(tableCommands.deleteRow),
       'Mod-Alt-Shift-Backspace': inTableOnly(tableCommands.deleteColumn),
-      Enter: chainCommands(fenceToCode, exitCodeOnEmptyLine, splitItem),
+      Enter: chainCommands(enterFromCalloutTitle, fenceToCode, exitCodeOnEmptyLine, splitItem),
       'Shift-Enter': hardBreak,
       Backspace: backspaceToParagraph,
       Tab: tab,
@@ -226,67 +250,99 @@ function placeholder(text: () => string) {
 
 // ---------------------------------------------------------------- Syntax colors
 
-type Highlighter = { codeRanges: (code: string, lang: string) => CodeRange[] | null };
+type Highlighter = typeof import('../highlight.ts');
 let highlighter: Highlighter | null = null;
-let highlighterLoading: Promise<void> | null = null;
+let highlighterLoading: Promise<Highlighter> | null = null;
 const highlightKey = new PluginKey<DecorationSet>('highlight');
+/** Counts theme changes: ranges from before are stale. */
+let colorVersion = 0;
 
 function loadHighlighter() {
   highlighterLoading ??= import('../highlight.ts').then(
     (mod) => {
       highlighter = mod;
+      mod.onChange(() => colorVersion++);
+      return mod;
     },
-    () => {
+    (error) => {
       highlighterLoading = null;
+      throw error;
     },
   );
   return highlighterLoading;
 }
 
 /** Ranges cached per code block node: typing only recolors the changed block. */
-const rangeCache = new WeakMap<Node, CodeRange[]>();
+const rangeCache = new WeakMap<Node, { version: number; ranges: CodeRange[] }>();
 
-function codeDecorations(doc: Node): { set: DecorationSet; missing: boolean } {
+function codeDecorations(doc: Node): DecorationSet {
   const decos: Decoration[] = [];
-  let missing = false;
   doc.descendants((node, pos) => {
     if (node.type !== n.code_block) return node.isBlock && !node.isTextblock;
     const lang = String(node.attrs.lang ?? '');
-    if (!lang) return false;
-    if (!highlighter) {
-      missing = true;
-      return false;
+    const grammar = languageFor(lang)?.grammar;
+    if (!grammar || !highlighter?.isReady(grammar)) return false;
+    let cached = rangeCache.get(node);
+    if (!cached || cached.version !== colorVersion) {
+      cached = { version: colorVersion, ranges: highlighter.codeRanges(node.textContent, lang) ?? [] };
+      rangeCache.set(node, cached);
     }
-    let ranges = rangeCache.get(node);
-    if (!ranges) {
-      ranges = highlighter.codeRanges(node.textContent, lang) ?? [];
-      rangeCache.set(node, ranges);
-    }
-    for (const r of ranges) decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: r.cls }));
+    for (const r of cached.ranges) decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: r.cls, style: r.style }));
     return false;
   });
-  return { set: DecorationSet.create(doc, decos), missing };
+  return DecorationSet.create(doc, decos);
+}
+
+/** Grammars of code blocks that cannot be colored yet. */
+function missingGrammars(doc: Node): Set<string> {
+  const missing = new Set<string>();
+  doc.descendants((node) => {
+    if (node.type !== n.code_block) return node.isBlock && !node.isTextblock;
+    const grammar = languageFor(String(node.attrs.lang ?? ''))?.grammar;
+    if (grammar && !highlighter?.isReady(grammar)) missing.add(grammar);
+    return false;
+  });
+  return missing;
 }
 
 function highlight() {
   return new Plugin<DecorationSet>({
     key: highlightKey,
     state: {
-      init: (_config, state) => codeDecorations(state.doc).set,
-      apply: (tr, set, _old, state) => (tr.docChanged || tr.getMeta(highlightKey) ? codeDecorations(state.doc).set : set),
+      init: (_config, state) => codeDecorations(state.doc),
+      apply: (tr, set, _old, state) => (tr.docChanged || tr.getMeta(highlightKey) ? codeDecorations(state.doc) : set),
     },
     props: {
       decorations: (state) => highlightKey.getState(state),
     },
     view(view) {
+      let asked = '';
+      let retryAfter = 0;
+      let stop: (() => void) | undefined;
       const check = () => {
-        if (highlighter || !codeDecorations(view.state.doc).missing) return;
-        void loadHighlighter().then(() => {
-          if (highlighter && !view.isDestroyed) view.dispatch(view.state.tr.setMeta(highlightKey, true));
-        });
+        const missing = missingGrammars(view.state.doc);
+        const key = [...missing].sort().join();
+        if (!missing.size || key === asked || Date.now() < retryAfter) return;
+        asked = key; // one request per set of grammars, not per keystroke
+        void loadHighlighter()
+          .then(async (mod) => {
+            await mod.prepare(missing);
+            // Another theme chosen later: color again.
+            if (!view.isDestroyed) stop ??= mod.onChange(() => !view.isDestroyed && view.dispatch(view.state.tr.setMeta(highlightKey, true)));
+          })
+          .then(
+            () => {
+              if (!view.isDestroyed) view.dispatch(view.state.tr.setMeta(highlightKey, true));
+            },
+            () => {
+              // Offline or a file missing: ask again after a pause, with the next edit.
+              asked = '';
+              retryAfter = Date.now() + 10_000;
+            },
+          );
       };
       check();
-      return { update: check };
+      return { update: (v, prev) => v.state.doc !== prev.doc && check(), destroy: () => stop?.() };
     },
   });
 }

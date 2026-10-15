@@ -1,0 +1,124 @@
+---
+title: Visual blocks
+description: Info panels and data charts in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
+sidebar:
+  order: 7
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+
+Besides text, lists, tables and code, descriptions, comments and knowledge pages can show **info panels**:
+a tinted box with a symbol, a bold title and any content inside and **charts** drawn from data. They are plain Markdown, so what you
+build in the editor is what agents read and write through MCP, and a text that leaves Selfbound still reads
+as a quote.
+
+## Info panels
+
+A panel is a quote whose first line is a marker in square brackets with an exclamation mark, followed by an
+optional title. The content goes on the following quote lines.
+
+```md
+> [!WARNING] Post-conditions
+> - Record any post-conditions
+> - The second one
+```
+
+There are five kinds:
+
+| Marker | Look | Use for |
+|---|---|---|
+| `[!INFO]` | blue, "i" | background and neutral information |
+| `[!NOTE]` | purple, document | something to keep in mind, pre-conditions |
+| `[!SUCCESS]` | green, check mark | requirements met, a result that worked |
+| `[!WARNING]` | yellow, triangle | something to watch out for |
+| `[!ERROR]` | red, cross | what went wrong, a failing flow |
+
+Without a title the panel shows the name of its kind (Info, Note, Success, Warning, Error). The marker
+is not case sensitive.
+
+The panel can hold anything a text can: paragraphs, lists, checklists (you can tick them in the shown text),
+code blocks, tables, images and other panels.
+
+### GitHub alerts
+
+The five alert names of GitHub work as well and read as the nearest kind. The name stays in the text as you
+wrote it.
+
+| GitHub | Shown as |
+|---|---|
+| `[!NOTE]` | Note |
+| `[!WARNING]` | Warning |
+| `[!TIP]` | Success |
+| `[!IMPORTANT]` | Info |
+| `[!CAUTION]` | Error |
+
+A quote with another word in the brackets (`[!FOO]`) or a marker that is not on the first line stays an
+ordinary quote.
+
+<Aside type="note">
+The title after the marker is a convenience of Selfbound (Obsidian reads it the same way). GitHub does not
+know it and shows such a quote with the marker as text; the content stays readable.
+</Aside>
+
+## In the editor
+
+- **/ menu:** type <Kbd keys="/" /> and "panel", "info", "warning" and so on, then pick **Panel: Warning**. On an empty
+  line you get an empty panel with the cursor in the title; on a line with text, the text becomes the content.
+- **While typing:** after a quote (`>` and a space), type `[!info]` and a space.
+- **Title and content:** type the title, press <Kbd keys="enter" /> (or <Kbd keys="shift+enter" />) to continue in the content. Without a title the
+  name of the kind is shown as a hint.
+- **Change the kind:** click the symbol and choose another kind, or press <Kbd keys="mod+alt+p" /> to step
+  through the kinds. The symbol's menu can also turn the panel into a quote or into plain text.
+- **Back to text:** <Kbd keys="backspace" /> at the start of the title takes the panel apart and keeps its content.
+
+## Charts
+
+A fenced code block with the language `chart` holds a JSON description of the data and is drawn as a chart
+in the colours of the theme (light and dark, with the same eight series colours in both). Use it for numbers:
+trends, shares, comparisons, distributions, a few headline figures.
+
+````md
+```chart
+{
+  "type": "bar",
+  "title": "Issues done per week",
+  "categories": ["W1", "W2", "W3", "W4"],
+  "series": [{ "name": "Done", "values": [3, 5, 8, 6] }]
+}
+```
+````
+
+Every chart can have `title`, `subtitle` (the sentence that says what you should see), `note` (a footnote)
+and `unit` (appended to values, like `"%"`). The types:
+
+| `type` | Shows | Data |
+|---|---|---|
+| `line` | trend, curve | `x` (labels, or numbers in increasing order), `series: [{ "name", "values" }]` |
+| `area` | trend with a wash, or parts of a whole | like `line`, plus `"stack": "stacked"` or `"percent"` (shares, each x adds up to 100 %) |
+| `bar` | comparison, parts of a whole | `categories`, `series`; `"orientation": "horizontal"`, `"stack": "stacked"` or `"percent"` |
+| `heatmap` | intensity on a grid | `rows`, `columns`, `values` (a list of rows of numbers), optional `legend: { "low", "high" }` |
+| `stat` | a few headline numbers | `items: [{ "label", "value", "delta"?, "trend"? }]` (`trend` is a list of numbers for a tiny line) |
+
+Extras for `line` and `area`: `"reference": "diagonal"` (equal use) or a number draws a hairline,
+`"rules": [{ "x", "label" }]` marks an x position (a release date), `"markers": [{ "x", "label", "series"? }]`
+puts a labelled dot on a series, `xUnit`, `yMin` and `yMax` set the axes. Every `x` in a rule or marker must
+be one of the chart's `x` values.
+
+- Series get the palette in order (blue, orange, green, yellow, pink, …). A series can pin its colour with
+  `"color": 1` to `8`, so the colours stay put when you add or remove series. At most eight series: fold the rest into "Other".
+- With two or more series there is a legend; stacked areas and short line charts label the right end of each series.
+  Hover for the exact values (line and area charts also by keyboard: focus the chart and use the arrow keys, <Kbd keys="home" /> and <Kbd keys="end" />); the **Table** button shows all numbers, which is also the way on a touch screen or with a screen reader.
+- Charts load only when they come into view. If the JSON is wrong, you see the text and what is wrong
+  ("series[0].values has 3 values, categories has 4"). Titles and labels are shown as text, never as markup.
+- In the editor, <Kbd keys="/" /> and "chart" insert a starter chart; the drawing appears under the JSON and
+  follows what you type.
+
+## Agents
+
+Agents need no extra tool. They write the Markdown above (a `[!INFO]` quote or a `chart` code block with JSON) in a description, a comment or a knowledge page,
+and the server instructions at connect time mention the syntax. See [Working with agents](/agents/overview/).
+
+## Colours and themes
+
+The panels use one hue per kind on top of the surface they sit on, so they follow the theme you picked,
+light or dark, and keep their text readable in every built-in theme.

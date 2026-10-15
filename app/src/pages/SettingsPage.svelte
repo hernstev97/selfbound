@@ -7,6 +7,7 @@
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { SECTION_LABEL } from './settings/sections.ts';
+  import Profile from './settings/Profile.svelte';
   import General from './settings/General.svelte';
   import Appearance from './settings/Appearance.svelte';
   import Teams from './settings/Teams.svelte';
@@ -45,7 +46,9 @@
 </header>
 <div class="page" data-testid="settings-page" data-section={section}>
   <div class="page-content">
-    {#if section === 'general'}
+    {#if section === 'profile'}
+      <Profile />
+    {:else if section === 'general'}
       <General />
     {:else if section === 'appearance'}
       <Appearance />

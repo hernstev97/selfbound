@@ -1,35 +1,35 @@
 // Markdown rendering: `marked` + `DOMPurify`, loaded on demand (not in the start bundle).
 // Output is always sanitized; links open in a new tab; task lists render as checkboxes.
-// Code blocks with a language get colored once `highlight.ts` (its own chunk) is loaded.
+// Code blocks with a language get colored once the highlighter (`highlight.ts`, loaded by
+// highlightLoad.ts) is there; until then they are neutral text in the same place.
 // The setup (rules, code blocks, images, Drive videos) lives in markdownRender.ts and loads with it.
 
-type Highlighter = typeof import('./highlight.ts');
-let highlighter: Highlighter | null = null;
-let highlighterLoading: Promise<void> | null = null;
+let highlighter: typeof import('./highlight.ts') | null = null;
+const highlightListeners = new Set<() => void>();
+let version = 0;
 
-/** Does the text contain a fenced code block with a language (```ts)? Only then is loading worth it. */
-export function needsHighlight(markdown: string) {
-  // Also fences in quotes and lists (> ```ts, - ```ts).
-  return /^(?:[ \t]*(?:>|[-*+]|\d+[.)]))*[ \t]*(?:`{3,}|~{3,})[ \t]*[^\s`]/m.test(markdown);
+/** Highlighted HTML for code in a known language, or null while it is not ready. */
+export const highlightedCode = (code: string, info: string) => highlighter?.highlightCode(code, info) ?? null;
+
+/** Changes when colors can come out differently (loaded, other theme); rendered HTML from before is stale then. */
+export const highlightVersion = () => version;
+
+/** Called after highlighting became available or changed (a new version). Returns the unsubscribe function. */
+export function onHighlightChange(listener: () => void) {
+  highlightListeners.add(listener);
+  return () => void highlightListeners.delete(listener);
 }
 
-export function highlightReady() {
-  return highlighter !== null;
+/** For highlightLoad.ts: the loaded highlighter. */
+export function setHighlighter(module: typeof import('./highlight.ts')) {
+  highlighter = module;
 }
 
-/** Loads the highlighter; afterwards `renderMarkdown` colors code blocks (cache cleared). */
-export function loadHighlight(): Promise<void> {
-  highlighterLoading ??= import('./highlight.ts').then(
-    (module) => {
-      highlighter = module;
-      cache.clear();
-    },
-    (error) => {
-      highlighterLoading = null; // retry with the next text
-      throw error;
-    },
-  );
-  return highlighterLoading;
+/** For highlightLoad.ts: grammars or theme changed. Rendered HTML is stale, everyone renders again. */
+export function highlightChanged() {
+  version++;
+  cache.clear();
+  for (const listener of [...highlightListeners]) listener();
 }
 
 let render: ((markdown: string, teamKeys: ReadonlySet<string>) => string) | null = null;
@@ -115,6 +115,7 @@ export function plainText(markdown: string, max = 600) {
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_`>~]/g, '')
+    .replace(/^\s*\[![A-Za-z]+\]\s*/gm, '') // info panel marker (the title stays)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/^\s*[-+]\s+/gm, '• ')
     .replace(/\n{3,}/g, '\n\n')

@@ -164,7 +164,7 @@ production value in a password manager.**
 | `XLR8_DEV_JWKS` | public key of the local test sign-in. Must be set (the CLI requires it); `none` disables it | **`none`** |
 | `XLR8_APP_URL` | address of the app (hosts the OAuth consent page); turns on connectors (OAuth). Unset: no connectors | `https://selfbound.example.com` |
 | `XLR8_PUBLIC_SITE_URL` | optional custom address for MCP and OAuth instead of `…convex.site` (issuer and `resource` for connectors). One address | `https://mcp.selfbound.example.com` |
-| `XLR8_OWNER_NAME` | the owner's display name in MCP output (e.g. who wrote a comment). Default `Owner` | e.g. `Jane` |
+| `XLR8_OWNER_NAME` | fallback for the owner's display name in MCP output (e.g. who wrote a comment), used until a name is set in Settings → Profile. Default `Owner` | e.g. `Jane` |
 | `XLR8_LOCALE` | `de`: push notification texts in German, and new teams get German default status names. Default English | unset or `de` |
 | `GITHUB_WEBHOOK_SECRET` | verifies that webhook deliveries come from GitHub | long random value |
 | `GITHUB_WEBHOOK_SECRET_PREVIOUS` | only while rotating the secret (below) | usually unset |

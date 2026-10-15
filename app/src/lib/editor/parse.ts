@@ -3,6 +3,7 @@
 // unchanged blocks back byte for byte and only regenerates changed ones.
 import { Lexer, type Token, type Tokens } from 'marked';
 import { Fragment, type Mark, type Node } from 'prosemirror-model';
+import { calloutOf } from '../blocks/callout.ts';
 import { schema } from './schema.ts';
 
 export interface SourceBlock {
@@ -97,6 +98,12 @@ function block(token: Token): Node {
     }
     case 'blockquote': {
       const t = token as Tokens.Blockquote;
+      const callout = calloutOf(t);
+      if (callout) {
+        const body = blocks(callout.body);
+        const title = callout.title ? schema.text(callout.title) : null;
+        return n.callout.createChecked({ kind: callout.kind, word: callout.word }, [n.callout_title.createChecked(null, title), ...(body.length ? body : [n.paragraph.create()])]);
+      }
       const inner = blocks(t.tokens);
       return n.blockquote.createChecked(null, inner.length ? inner : [n.paragraph.create()]);
     }
