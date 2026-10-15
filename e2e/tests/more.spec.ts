@@ -90,7 +90,7 @@ test('Offline: changes visible at once, indicator "Offline · n pending", saved 
   offline = false;
   await expect(page.getByTestId('sync-state')).toHaveCount(0, { timeout: 20000 });
   await settled(page);
-  const docs = (await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map((bucket) => backend().query(api.issues.bucket, { bucket })))).flat();
+  const docs = (await Promise.all(Array.from({ length: 32 }, (_, bucket) => bucket).map((bucket) => backend().query(api.issues.bucket, { bucket })))).flat();
   for (const [id, target] of ids) expect(docs.find((d) => d._id === id)?.priority).toBe(target);
 });
 
