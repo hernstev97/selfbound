@@ -429,6 +429,14 @@ export class PaletteController {
       return undefined;
     }
     const step = (this.#modelStep ??= this.#modelStart());
+    // One issue without a model of its own: the first step says what it inherits.
+    const inherits = () => {
+      const issue = target.kind === 'issues' && target.ids.length === 1 ? this.app.store.get(target.ids[0]) : undefined;
+      const inherited = issue && !issue.model ? issueModel(meta, issue, issue.parentId ? this.app.store.get(issue.parentId) : undefined) : null;
+      if (!inherited) return undefined;
+      const model = modelLabel(meta, inherited.choice);
+      return inherited.source === 'parent' ? t('Inherits {model} from the parent issue', { model }) : t('Inherits {model} from the team default', { model });
+    };
     if (step.step === 'provider') {
       none();
       const counts = new Map<string, { name: string; count: number }>();
@@ -440,17 +448,11 @@ export class PaletteController {
         add({ id: 'm:settings', label: t('Choose models in the settings …'), icon: ICON.settings }, () => this.app.nav.go({ name: 'settings', section: 'models' }));
         return t('No models enabled yet');
       }
-      // One issue without a model of its own: say what it inherits.
-      const issue = target.kind === 'issues' && target.ids.length === 1 ? this.app.store.get(target.ids[0]) : undefined;
-      const inherited = issue && !issue.model ? issueModel(meta, issue, issue.parentId ? this.app.store.get(issue.parentId) : undefined) : null;
-      if (inherited) {
-        const model = modelLabel(meta, inherited.choice);
-        return inherited.source === 'parent' ? t('Inherits {model} from the parent issue', { model }) : t('Inherits {model} from the team default', { model });
-      }
-      return undefined;
+      return inherits();
     }
     if (step.step === 'model') {
-      if (this.#modelStart().step !== 'provider') none();
+      const first = this.#modelStart().step !== 'provider';
+      if (first) none();
       for (const m of models.filter((x) => x.provider === step.provider)) {
         const next = m.efforts.length ? 'effort' : m.modes.length ? 'speed' : null;
         const choice = { provider: m.provider, modelId: m.modelId };
@@ -459,7 +461,7 @@ export class PaletteController {
           next ? () => this.#modelGo({ step: next, provider: m.provider, modelId: m.modelId }) : () => this.apply({ model: choice }, target),
         );
       }
-      return undefined;
+      return first ? inherits() : undefined;
     }
     const m = models.find((x) => x.provider === step.provider && x.modelId === step.modelId);
     if (!m) return undefined;
@@ -873,6 +875,7 @@ export class PaletteController {
         ['project', t('Project')],
         ['sprint', t('Sprint')],
         ['estimate', t('Estimate')],
+        ['model', t('Model')],
         ['due', t('Due date')],
         ['snooze', t('Snooze')],
       ];

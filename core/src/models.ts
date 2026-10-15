@@ -9,7 +9,7 @@ import {
   type ModelInfo,
   type ModelSource,
 } from '@selfbound/backend/shared/models';
-import { t } from './i18n.ts';
+import { intlLocale, t } from './i18n.ts';
 import type { Issue, Meta } from './types.ts';
 
 export type { EffectiveModel, ModelChoice, ModelInfo, ModelSource };
@@ -41,7 +41,9 @@ export function modelLabel(meta: Meta | null | undefined, choice: ModelChoice): 
 
 /** "1M context" (info only, not a choice). */
 export function contextLabel(info: Pick<ModelInfo, 'context'> | undefined): string | null {
-  return info?.context ? t('{size} context', { size: compactTokens(info.context) }) : null;
+  if (!info?.context) return null;
+  const format = new Intl.NumberFormat(intlLocale(), { maximumFractionDigits: 2 });
+  return t('{size} context', { size: compactTokens(info.context, (v) => format.format(v)) });
 }
 
 /** Own model, else the parent's, else the team default; `parent` from the store. */

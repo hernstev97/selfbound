@@ -21,6 +21,7 @@ import {
   type Priority,
   type Status,
 } from '../shared/constants';
+import type { ModelChoice } from '../shared/models';
 import { defaultState, statusOfState } from '../shared/workflow';
 import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
@@ -351,7 +352,8 @@ export async function applyPatch(
     set('parentId', patch.parentId === null ? undefined : (await checkParent(ctx, issue._id, patch.parentId))._id);
   }
   if (patch.model !== undefined) {
-    set('model', patch.model === null ? undefined : await checkModel(ctx, patch.model, { keep: issue.model, undo: opts.undo }));
+    const undo = opts.undo ? await lastReplacedModel(ctx, issue._id) : null;
+    set('model', patch.model === null ? undefined : await checkModel(ctx, patch.model, { keep: issue.model, undo }));
   }
 
   if (changes.status !== undefined) Object.assign(changes, statusTimestamps(issue, changes.status, now));
@@ -368,6 +370,17 @@ export async function applyPatch(
 }
 
 /** Labels the issue had before its last label change (for undo). */
+/** The model the issue had before its last model change (for undo and redo). */
+async function lastReplacedModel(ctx: QueryCtx, issueId: Id<'issues'>): Promise<ModelChoice | null> {
+  const rows = await ctx.db
+    .query('history')
+    .withIndex('by_issue', (q) => q.eq('issueId', issueId))
+    .order('desc')
+    .take(50);
+  const from = rows.find((r) => r.field === 'model')?.from as ModelChoice | undefined;
+  return from && typeof from === 'object' ? from : null;
+}
+
 async function lastRemovedLabels(ctx: QueryCtx, issueId: Id<'issues'>): Promise<Id<'labels'>[]> {
   const rows = await ctx.db
     .query('history')

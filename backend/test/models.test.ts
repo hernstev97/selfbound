@@ -121,10 +121,29 @@ describe('sync', () => {
     expect((await status(t)).error).toBeUndefined();
   });
 
-  test('"Update now" schedules a sync at most once a minute', async () => {
+  test('"Update now" schedules a sync at most once a minute, also while one is running', async () => {
     const { owner } = setup();
     modelsDev({ catalog: clone(), etag: '"v1"' });
     expect(await owner.mutation(api.models.refresh, {})).toEqual({ scheduled: true });
+    expect(await owner.mutation(api.models.refresh, {})).toEqual({ scheduled: false });
+  });
+
+  test('more providers vanish than remain: nothing is written, the next run reads everything again', async () => {
+    const { t } = setup();
+    const many: Catalog = clone();
+    for (let i = 0; i < 12; i++) many[`extra-${i}`] = { name: `Extra ${i}`, models: { m: { name: `M ${i}` } } };
+    const state: { catalog: Catalog; etag: string } = { catalog: many, etag: '"v1"' };
+    const calls = modelsDev(state);
+    await t.action(internal.models.sync, {});
+    const before = JSON.stringify(await models(t));
+    state.catalog = { anthropic: clone().anthropic! };
+    state.etag = '"v2"';
+    expect((await t.action(internal.models.sync, {})).error).toMatch(/nothing changed/);
+    expect(JSON.stringify(await models(t))).toBe(before);
+    expect((await status(t)).etag).toBeUndefined();
+    state.catalog = many;
+    await t.action(internal.models.sync, {});
+    expect(calls.at(-1)).toEqual({ ifNoneMatch: null });
   });
 });
 
@@ -209,6 +228,12 @@ describe('issue model', () => {
     await owner.mutation(api.issues.revert, { items: [{ id, patch: { model: { ...OPUS, effort: 'max' } }, expect: { model: SONNET } }] });
     expect((await getIssue(t, id)).model).toEqual({ ...OPUS, effort: 'max' });
     await expectCode(owner.mutation(api.issues.revert, { items: [{ id, patch: { model: null }, expect: { model: SONNET } }] }), 'conflict');
+    // Undo only brings back the model the last change replaced, not any other one that is gone.
+    await owner.mutation(api.models.setEnabled, { provider: 'openai', modelId: 'gpt-6-sol', enabled: false });
+    await expectCode(
+      owner.mutation(api.issues.revert, { items: [{ id, patch: { model: { provider: 'openai', modelId: 'gpt-6-sol' } }, expect: { model: { ...OPUS, effort: 'max' } } }] }),
+      'invalid',
+    );
   });
 
   test('team default: validated like an issue model, cleared with null', async () => {

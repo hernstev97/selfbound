@@ -735,6 +735,7 @@ export default defineSchema({
   // `removedAt`, so issues that use it still show it.
   models: defineTable({
     provider: v.string(), // models.dev provider ID, e.g. "anthropic"
+    providerName: v.string(), // here too, so the enabled models are read without their providers
     modelId: v.string(), // e.g. "claude-opus-5-5"; may contain "/"
     name: v.string(),
     family: v.optional(v.string()),

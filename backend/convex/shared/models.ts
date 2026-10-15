@@ -145,10 +145,13 @@ export function modelFilterMatches(filter: string, effective: ModelChoice | null
   return f === provider || f === id || f === `${provider}/${id}`;
 }
 
-/** Compact token count: 1000000 → "1M", 1048576 → "1.05M", 262144 → "262K", 8192 → "8.2K". */
-export function compactTokens(n: number): string {
-  if (n >= 1_000_000) return `${Math.round(n / 10_000) / 100}M`;
-  if (n >= 10_000) return `${Math.round(n / 1000)}K`;
-  if (n >= 1000) return `${Math.round(n / 100) / 10}K`;
-  return String(n);
+/**
+ * Compact token count: 1000000 → "1M", 1048576 → "1.05M", 262144 → "262K", 8192 → "8.2K". `num` formats
+ * the number (the UI passes one for its language, "1,05M" in German).
+ */
+export function compactTokens(n: number, num: (value: number) => string = String): string {
+  if (n >= 1_000_000) return `${num(Math.round(n / 10_000) / 100)}M`;
+  if (n >= 10_000) return `${num(Math.round(n / 1000))}K`;
+  if (n >= 1000) return `${num(Math.round(n / 100) / 10)}K`;
+  return num(n);
 }

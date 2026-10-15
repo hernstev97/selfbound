@@ -52,6 +52,11 @@ describe('reduceCatalog', () => {
     expect(await providerHash(again)).toBe(await providerHash(catalog.find((p) => p.provider === 'anthropic')!));
   });
 
+  test('model IDs that only differ in whitespace count once', () => {
+    const [p] = reduceCatalog({ x: { name: 'X', models: { m: { name: 'First' }, 'm ': { name: 'Second' } } } });
+    expect(p!.models).toEqual([{ modelId: 'm', name: 'First' }]);
+  });
+
   test('a catalog without a usable provider is an error', () => {
     expect(() => reduceCatalog([])).toThrow();
     expect(() => reduceCatalog({ x: { models: {} } })).toThrow(/no usable provider/);
@@ -149,5 +154,6 @@ describe('model choice rules', () => {
     expect(compactTokens(200_000)).toBe('200K');
     expect(compactTokens(262_144)).toBe('262K');
     expect(compactTokens(8192)).toBe('8.2K');
+    expect(compactTokens(1_048_576, (v) => v.toLocaleString('de-DE'))).toBe('1,05M');
   });
 });

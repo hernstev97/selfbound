@@ -149,6 +149,22 @@ const modelChoice = (description: string) =>
     },
     { description },
   );
+/** A model as get_issue returns it (`name`, `inCatalog` are read-only and ignored), for `expected`. */
+const modelSeen = (description: string) =>
+  map(
+    object(
+      {
+        provider: string({ min: 1, max: MODEL_LIMITS.provider, transform: (s) => s.trim() }),
+        modelId: string({ min: 1, max: MODEL_LIMITS.modelId, transform: (s) => s.trim() }),
+        effort: optional(string({ min: 1, max: MODEL_LIMITS.value })),
+        speed: optional(string({ min: 1, max: MODEL_LIMITS.value })),
+        name: optional(string({ max: 200 })),
+        inCatalog: optional(boolean()),
+      },
+      { description },
+    ),
+    ({ provider, modelId, effort, speed }) => ({ provider, modelId, ...(effort ? { effort } : {}), ...(speed ? { speed } : {}) }),
+  );
 const MODEL_INPUT =
   'Desired model for the issue: provider and model ID of an enabled model (list_models), optionally effort and speed valid for that model. Invalid combinations are rejected. Without it the issue inherits its parent\'s model, else the team default, else none (whoever runs it decides).';
 const modelFilter = () =>
@@ -261,7 +277,7 @@ const expected = object(
     dueDate: optional(nullable(realDay('YYYY-MM-DD'))),
     snoozedUntil: optional(nullable(realDay('YYYY-MM-DD'))),
     parent: optional(nullable(identifier())),
-    model: optional(nullable(modelChoice('The issue\'s own model as you saw it (`model` in get_issue), or null for none.'))),
+    model: optional(nullable(modelSeen('The issue\'s own model as you saw it (`model` from get_issue, as is), or null for none.'))),
   },
   {
     description:

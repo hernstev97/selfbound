@@ -14,10 +14,10 @@
   const current = $derived(team.defaultModel ?? null);
   const info = $derived(current ? modelInfo(meta, current) : undefined);
   const groups = $derived.by(() => {
-    const by = new Map<string, { name: string; models: { key: string; name: string }[] }>();
+    const by = new Map<string, { provider: string; name: string; models: { key: string; name: string }[] }>();
     for (const m of meta?.models ?? []) {
       if (m.removed) continue;
-      const g = by.get(m.provider) ?? { name: m.providerName, models: [] };
+      const g = by.get(m.provider) ?? { provider: m.provider, name: m.providerName, models: [] };
       g.models.push({ key: modelKey(m.provider, m.modelId), name: m.name });
       by.set(m.provider, g);
     }
@@ -43,7 +43,7 @@
     <select aria-label={t('Default model')} data-testid="team-model-model" value={current ? modelKey(current.provider, current.modelId) : ''} onchange={(e) => pickModel(e.currentTarget.value)}>
       <option value="">{t('None')}</option>
       {#if current && !info}<option value={modelKey(current.provider, current.modelId)}>{current.modelId}</option>{/if}
-      {#each groups as g (g.name)}
+      {#each groups as g (g.provider)}
         <optgroup label={g.name}>{#each g.models as m (m.key)}<option value={m.key}>{m.name}</option>{/each}</optgroup>
       {/each}
     </select>

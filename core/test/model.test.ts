@@ -109,6 +109,9 @@ describe('model picker', () => {
 
   test('one provider: the picker starts at its models; none enabled: a way to the settings', async () => {
     const one = await setup([OPUS, HAIKU]);
+    one.app.palette.open('model', { target: { kind: 'issues', ids: ['i4' as IssueId] } });
+    // The first step says what the issue inherits, whichever step that is.
+    expect(state(one.app).hint).toBe('Inherits Claude Opus 5.5 · high from the parent issue');
     one.app.palette.open('model', { target: { kind: 'issues', ids: ['i0' as IssueId] } });
     expect(ids(one.app)).toEqual(['m:none', 'mm:claude-opus-5-5', 'mm:claude-haiku-5-5']);
     pick(one.app, 'mm:claude-opus-5-5');
@@ -137,6 +140,11 @@ describe('model picker', () => {
     app.palette.pickerItems('model', target).run.get('m:anthropic/claude-haiku-5-5')!();
     expect(updates(client).at(-1)?.patch).toEqual({ model: { provider: 'anthropic', modelId: 'claude-haiku-5-5' } });
     expect(actionById('issue.model')).toMatchObject({ picker: 'model', keys: ['shift+m'] });
+    // The command menu offers the values too ("Model: GPT-6 Sol").
+    app.palette.close();
+    app.palette.open('command', { target });
+    app.palette.setQuery('model gpt');
+    expect(state(app).items.map((i) => i.label)).toContain('Model: GPT-6 Sol');
   });
 
   test('the first step says what an issue inherits', async () => {

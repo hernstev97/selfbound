@@ -59,7 +59,9 @@ export const refresh = ownerWriteMutation({
   args: {},
   handler: async (ctx) => {
     const status = await catalogStatus(ctx);
-    if (status && Date.now() - status.checkedAt < REFRESH_MIN_MS) return { scheduled: false };
+    const now = Date.now();
+    if (status && now - Math.max(status.checkedAt, status.requestedAt ?? 0) < REFRESH_MIN_MS) return { scheduled: false };
+    await writeCatalogStatus(ctx, { checkedAt: status?.checkedAt ?? 0, requestedAt: now });
     await ctx.scheduler.runAfter(0, internal.models.sync, {});
     return { scheduled: true };
   },
@@ -109,35 +111,43 @@ export const sync = internalAction({
       return { changed: 0, error: message };
     }
 
+    const present = new Set(providers.map((p) => p.provider));
+    const gone: string[] = Object.keys(state.hashes).filter((p) => !present.has(p));
+    if (gone.length > 10 && gone.length > present.size) {
+      // More providers vanished than are left: rather a broken answer than a real change. Write nothing,
+      // and drop the ETag, so the next run reads the catalog again.
+      const error = `models.dev lists ${present.size} providers, ${gone.length} known ones are missing; nothing changed.`;
+      await ctx.runMutation(internal.models.recordSync, { status: { ok: false, checkedAt, error, etag: '' } });
+      return { changed: 0, error };
+    }
+
     const changed: (SlimProvider & { hash: string })[] = [];
     for (const p of providers) {
       const hash = await providerHash(p);
       if (state.hashes[p.provider] !== hash) changed.push({ ...p, hash });
     }
-    let batch: typeof changed = [];
-    let size = 0;
-    for (const p of changed) {
-      if (size + p.models.length > MODELS_PER_BATCH && batch.length) {
-        await ctx.runMutation(internal.models.applyProviders, { providers: batch });
-        batch = [];
-        size = 0;
+    try {
+      let batch: typeof changed = [];
+      let size = 0;
+      for (const p of changed) {
+        if (size + p.models.length > MODELS_PER_BATCH && batch.length) {
+          await ctx.runMutation(internal.models.applyProviders, { providers: batch });
+          batch = [];
+          size = 0;
+        }
+        batch.push(p);
+        size += p.models.length;
       }
-      batch.push(p);
-      size += p.models.length;
-    }
-    if (batch.length) await ctx.runMutation(internal.models.applyProviders, { providers: batch });
-
-    const present = new Set(providers.map((p) => p.provider));
-    const gone: string[] = Object.keys(state.hashes).filter((p) => !present.has(p));
-    if (gone.length > 10 && gone.length > present.size) {
-      // More providers vanished than are left: rather a broken answer than a real change. Keep them,
-      // and keep no ETag, so the next run reads the catalog again.
-      const error = `models.dev lists ${present.size} providers, ${gone.length} known ones are missing; nothing removed.`;
-      await ctx.runMutation(internal.models.recordSync, { status: { ok: false, checkedAt, error } });
-      return { changed: changed.length, error };
-    }
-    for (let i = 0; i < gone.length; i += REMOVALS_PER_BATCH) {
-      await ctx.runMutation(internal.models.removeProviders, { providers: gone.slice(i, i + REMOVALS_PER_BATCH) });
+      if (batch.length) await ctx.runMutation(internal.models.applyProviders, { providers: batch });
+      for (let i = 0; i < gone.length; i += REMOVALS_PER_BATCH) {
+        await ctx.runMutation(internal.models.removeProviders, { providers: gone.slice(i, i + REMOVALS_PER_BATCH) });
+      }
+    } catch (error) {
+      // Partly written: drop the ETag, so the next run reads everything again (unchanged providers are skipped).
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('models.dev sync: storing failed:', message);
+      await ctx.runMutation(internal.models.recordSync, { status: { ok: false, checkedAt, error: `Storing failed: ${message}`.slice(0, 300), etag: '' } });
+      return { changed: 0, error: message };
     }
     const models = providers.reduce((n, p) => n + p.models.length, 0);
     // The ETag only after everything is stored: a failure halfway reads the whole catalog again next time.

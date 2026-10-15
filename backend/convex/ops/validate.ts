@@ -143,18 +143,19 @@ export async function modelRow(ctx: QueryCtx, provider: string, modelId: string)
 /**
  * A desired model (XLR8-93): enabled in the settings and still in the catalog, effort and speed among
  * the model's values. The model the issue (or team) already has (`keep`) stays allowed after it was
- * disabled or left the catalog, like an archived label; undo is exempt from both. Effort and speed are
- * always checked against the last known catalog values. Returns the stored form (`normalizeChoice`).
+ * disabled or left the catalog, like an archived label; so does, on undo, the model the last change
+ * replaced (`undo`). Effort and speed are always checked against the last known catalog values.
+ * Returns the stored form (`normalizeChoice`).
  */
 export async function checkModel(
   ctx: QueryCtx,
   choice: ModelChoice,
-  opts: { keep?: ModelChoice | null; undo?: boolean } = {},
+  opts: { keep?: ModelChoice | null; undo?: ModelChoice | null } = {},
 ): Promise<ModelChoice> {
   const model = normalizeChoice(choice);
   const row = await modelRow(ctx, model.provider, model.modelId);
   const hint = ' Call list_models for the enabled models and their values.';
-  if (row && !opts.undo && !sameModel(model, opts.keep)) {
+  if (row && !sameModel(model, opts.keep) && !sameModel(model, opts.undo)) {
     if (row.removedAt !== undefined) invalid(`${row.name} is no longer in the models.dev catalog.`, { model: model.modelId });
     if (!row.enabled) invalid(`${row.name} is not enabled. Enable it under Settings › Models.`, { model: model.modelId });
   }

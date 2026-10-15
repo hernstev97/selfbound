@@ -93,10 +93,13 @@ export function reduceCatalog(raw: unknown): SlimProvider[] {
     if (out.length >= CATALOG_LIMITS.providers) break;
     if (!PROVIDER_ID.test(id) || id.length > MODEL_LIMITS.provider || !isObject(entry) || !isObject(entry.models)) continue;
     const models: SlimModel[] = [];
+    const seen = new Set<string>();
     for (const [modelId, m] of Object.entries(entry.models)) {
       if (models.length >= CATALOG_LIMITS.modelsPerProvider || total >= CATALOG_LIMITS.models) break;
       const model = slimModel(modelId, m);
-      if (model) {
+      // Two keys that only differ in whitespace become one ID: keep the first.
+      if (model && !seen.has(model.modelId)) {
+        seen.add(model.modelId);
         models.push(model);
         total++;
       }

@@ -26,6 +26,8 @@ export type CatalogStatus = {
   /** Providers rewritten by the last full read. */
   changed?: number;
   error?: string;
+  /** "Update now" pressed (throttles it while a sync runs). */
+  requestedAt?: number;
 };
 
 export async function catalogStatus(ctx: QueryCtx): Promise<CatalogStatus | null> {
@@ -35,15 +37,17 @@ export async function catalogStatus(ctx: QueryCtx): Promise<CatalogStatus | null
 export async function writeCatalogStatus(ctx: MutationCtx, status: Partial<CatalogStatus> & { checkedAt: number }) {
   // A failed or unchanged check keeps the counts and the ETag of the last full read.
   const next: Record<string, unknown> = { ...((await catalogStatus(ctx)) ?? {}), ...status };
-  if (status.ok) delete next.error;
+  if (status.ok === true) delete next.error;
+  // An empty ETag drops the stored one: the next run reads the whole catalog.
+  if (next.etag === '') delete next.etag;
   for (const [k, value] of Object.entries(next)) if (value === undefined) delete next[k];
   await writeOpsStatus(ctx, CATALOG_STATUS, next, status.checkedAt);
 }
 
 const SLIM_FIELDS = ['name', 'family', 'efforts', 'modes', 'context', 'output', 'releaseDate'] as const;
 
-function sameSlim(row: Doc<'models'>, model: SlimModel): boolean {
-  return SLIM_FIELDS.every((f) => JSON.stringify(row[f] ?? null) === JSON.stringify(model[f] ?? null));
+function sameSlim(row: Doc<'models'>, model: SlimModel, providerName: string): boolean {
+  return row.providerName === providerName && SLIM_FIELDS.every((f) => JSON.stringify(row[f] ?? null) === JSON.stringify(model[f] ?? null));
 }
 
 /**
@@ -61,11 +65,11 @@ export async function applyProvider(ctx: MutationCtx, provider: SlimProvider & {
     const row = byId.get(model.modelId);
     byId.delete(model.modelId);
     if (!row) {
-      await ctx.db.insert('models', { provider: provider.provider, ...model, updatedAt: now });
+      await ctx.db.insert('models', { provider: provider.provider, providerName: provider.name, ...model, updatedAt: now });
       written++;
-    } else if (!sameSlim(row, model) || row.removedAt !== undefined) {
+    } else if (!sameSlim(row, model, provider.name) || row.removedAt !== undefined) {
       const fields = Object.fromEntries(SLIM_FIELDS.map((f) => [f, model[f]]));
-      await ctx.db.patch('models', row._id, { ...fields, removedAt: undefined, updatedAt: now });
+      await ctx.db.patch('models', row._id, { ...fields, providerName: provider.name, removedAt: undefined, updatedAt: now });
       written++;
     }
   }
@@ -107,10 +111,10 @@ export async function providerHashes(ctx: QueryCtx): Promise<Record<string, stri
   return Object.fromEntries(rows.filter((r) => r.removedAt === undefined).map((r) => [r.provider, r.hash]));
 }
 
-export function modelInfo(row: Doc<'models'>, providerName: string): ModelInfo {
+export function modelInfo(row: Doc<'models'>): ModelInfo {
   return {
     provider: row.provider,
-    providerName,
+    providerName: row.providerName,
     modelId: row.modelId,
     name: row.name,
     ...(row.family ? { family: row.family } : {}),
@@ -132,28 +136,17 @@ export function byRelease(a: { releaseDate?: string; name: string }, b: { releas
   return a.name.localeCompare(b.name);
 }
 
-async function providerNames(ctx: QueryCtx, providers: Iterable<string>) {
-  const names = new Map<string, string>();
-  for (const p of new Set(providers)) names.set(p, (await providerRow(ctx, p))?.name ?? p);
-  return names;
-}
-
 /**
  * The enabled models for `meta.get` and MCP `list_models`, by provider name, then newest first.
  * Small (the owner enables a handful), so every client can hold it.
  */
 export async function enabledModels(ctx: QueryCtx): Promise<ModelInfo[]> {
+  // Only model rows: a sync that rewrites other models or a provider's counts does not touch this read.
   const rows = await ctx.db
     .query('models')
     .withIndex('by_enabled', (q) => q.eq('enabled', true))
     .take(MODEL_LIMITS.enabled);
-  const names = await providerNames(
-    ctx,
-    rows.map((r) => r.provider),
-  );
-  return rows
-    .map((r) => modelInfo(r, names.get(r.provider) ?? r.provider))
-    .sort((a, b) => a.providerName.localeCompare(b.providerName) || byRelease(a, b));
+  return rows.map(modelInfo).sort((a, b) => a.providerName.localeCompare(b.providerName) || byRelease(a, b));
 }
 
 /** The catalog's providers for the settings, by name, with the number of models. */
@@ -167,14 +160,13 @@ export async function listProviders(ctx: QueryCtx) {
 
 /** The models of one provider for the settings, newest first. Models that left the catalog only while enabled. */
 export async function listProviderModels(ctx: QueryCtx, provider: string): Promise<ModelInfo[]> {
-  const row = await providerRow(ctx, provider);
   const rows = await ctx.db
     .query('models')
     .withIndex('by_provider_model', (q) => q.eq('provider', provider))
     .take(3000);
   return rows
     .filter((r) => r.removedAt === undefined || r.enabled)
-    .map((r) => modelInfo(r, row?.name ?? provider))
+    .map(modelInfo)
     .sort(byRelease);
 }
 
@@ -186,14 +178,10 @@ export async function searchModels(ctx: QueryCtx, q: string, provider: string | 
     .query('models')
     .withSearchIndex('search_name', (s) => (provider ? s.search('name', text).eq('provider', provider) : s.search('name', text)))
     .take(limit * 2);
-  const names = await providerNames(
-    ctx,
-    rows.map((r) => r.provider),
-  );
   return rows
     .filter((r) => r.removedAt === undefined || r.enabled)
     .slice(0, limit)
-    .map((r) => modelInfo(r, names.get(r.provider) ?? r.provider));
+    .map(modelInfo);
 }
 
 /** Owner only: offer a model in the chip (and allow it for new choices), or stop offering it. */

@@ -780,6 +780,11 @@ describe('desired model (XLR8-93)', () => {
     expect(conflict.value.conflicts).toEqual([expect.objectContaining({ field: 'model', expected: null })]);
     const issue = (await mcp.call('get_issue', { identifier: none.identifier })).value;
     expect(issue.model).toEqual({ provider: 'openai', modelId: 'gpt-6-sol', name: 'GPT-6 Sol', speed: 'pro' });
+    // `expected` takes the model as get_issue returned it.
+    const asSeen = await mcp.call('update_issue', { identifier: none.identifier, model: { ...OPUS, effort: 'low' }, expected: { model: issue.model } });
+    expect(asSeen.ok, asSeen.error).toBe(true);
+    expect(asSeen.value.changed).toEqual(['model']);
+    await mcp.call('update_issue', { identifier: none.identifier, model: { provider: 'openai', modelId: 'gpt-6-sol', speed: 'pro' } });
     expect(issue.recentHistory[0]).toMatchObject({ field: 'model', to: 'openai/gpt-6-sol?speed=pro' });
     // null removes the own model; the issue then inherits again (here: nothing).
     expect((await mcp.call('update_issue', { identifier: none.identifier, model: null })).value.changed).toEqual(['model']);
