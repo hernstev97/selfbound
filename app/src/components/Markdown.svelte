@@ -51,6 +51,21 @@
     };
   };
 
+  // Issue mentions get their live status icon and title.
+  const mentions: Attachment<HTMLElement> = (el) => {
+    void html;
+    if (!el.querySelector('a.xlink-issue')) return;
+    let stop: (() => void) | undefined;
+    let gone = false;
+    import('../lib/mentions.ts').then(({ decorateMentions }) => {
+      if (!gone) stop = decorateMentions(el, app.store);
+    }, () => {}); // if loading fails, the links stay plain
+    return () => {
+      gone = true;
+      stop?.();
+    };
+  };
+
   // Visual blocks (```mermaid …): drawn once visible; the module loads only if the text has one.
   const blocks: Attachment<HTMLElement> = (el) => {
     void html;
@@ -169,7 +184,7 @@
 
 {#if html !== null}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds} {@attach blocks}>{@html html}</div>
+  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds} {@attach blocks} {@attach mentions}>{@html html}</div>
 {:else}
   <div class={['md', cls]} style="white-space: pre-wrap">{markdown}</div>
 {/if}

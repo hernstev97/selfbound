@@ -54,6 +54,7 @@ function linkIdentifiers(root: DocumentFragment, teamKeys: ReadonlySet<string>) 
       a.textContent = m[0];
       a.className = 'xlink xlink-issue';
       a.dataset.nav = 'issue';
+      a.dataset.bare = ''; // typed identifier, not a link: plain text if no issue has it (mentions.ts)
       parts.push(text.slice(last, m.index), a);
       last = m.index! + m[0].length;
     }
