@@ -72,6 +72,7 @@
       {/if}
       <button class="icon-btn plain" title={tip(t('Open as a page'), 'issue.open')} aria-label={t('Open as a page')} data-testid="split-open" onclick={() => app.openIssue(d!.id)}><span class="icon">{@html ICON.open}</span></button>
     {/if}
+    <button class="icon-btn plain" title={tip(t('Copy ID'), 'issue.copyKey')} aria-label={t('Copy ID')} data-testid="copy-key" onclick={() => app.edit.copyKeys([d!.id])}><span class="icon">{@html ICON.copy}</span></button>
     <button class="icon-btn plain" title={tip(t('Copy link'), 'issue.copyLink')} aria-label={t('Copy link')} data-testid="copy-link" onclick={() => app.edit.copyLink(d!.id)}><span class="icon">{@html ICON.link}</span></button>
     <button class="icon-btn plain" title={tip(t('Copy branch name'), 'issue.copyBranch')} aria-label={t('Copy branch name')} data-testid="copy-branch" onclick={() => app.edit.copyBranch(d!.id)}><span class="icon">{@html ICON.branch}</span></button>
     <button

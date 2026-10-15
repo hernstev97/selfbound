@@ -51,6 +51,8 @@ export interface Action {
 const hasTarget = (a: App) => a.targets().length > 0;
 const realTarget = (a: App) => a.targets().length > 0 && a.targets().every((id) => !a.store.isPending(id));
 const single = (a: App) => a.targets().length === 1 && !a.store.isPending(a.targets()[0]);
+// Ctrl+C keeps copying selected text; it copies the identifier only when nothing is selected.
+const textSelected = () => (globalThis.getSelection?.()?.toString() ?? '') !== '';
 const listPage = (a: App) => a.nav.page.get().name === 'view';
 const issuePage = (a: App) => a.nav.page.get().name === 'issue';
 const listFocus = (a: App) => listPage(a) && a.list.focusId() !== null;
@@ -134,14 +136,15 @@ export const ACTIONS: Action[] = [
   { id: 'issue.blockedBy', label: msg('Blocked by …'), section: 'Issue', icon: 'blocked', keywords: 'relation blocked by blockiert von', context: [2, 3], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('blocks', true) },
   { id: 'issue.related', label: msg('Related to …'), section: 'Issue', icon: 'relation', keywords: 'relation related verwandt', context: [2, 4], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('related') },
   { id: 'issue.duplicate', label: msg('Mark as duplicate …'), section: 'Issue', icon: 'duplicate', keywords: 'duplicate duplikat doppelt', context: [2, 5], when: (a) => realTarget(a) && notDeleted(a), run: (a) => a.palette.openRelation('duplicate') },
-  { id: 'issue.copyLink', label: msg('Copy link'), section: 'Issue', keys: ['mod+shift+,'], icon: 'link', keywords: 'url copy kopieren', context: [3, 3], when: single, run: (a) => a.edit.copyLink(a.targets()[0]) },
-  { id: 'issue.copyBranch', label: msg('Copy branch name'), section: 'Issue', keys: ['mod+shift+.'], icon: 'branch', keywords: 'git branch copy kopieren', context: [3, 4], when: (a) => single(a) && notDeleted(a), run: (a) => a.edit.copyBranch(a.targets()[0]) },
-  { id: 'issue.copyKey', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', when: single, run: (a) => a.edit.copyKey(a.targets()[0]) },
+  { id: 'issue.copyLink', label: msg('Copy link'), section: 'Issue', keys: ['mod+shift+,'], icon: 'link', keywords: 'url copy kopieren', context: [3, 4], when: single, run: (a) => a.edit.copyLink(a.targets()[0]) },
+  { id: 'issue.copyBranch', label: msg('Copy branch name'), section: 'Issue', keys: ['mod+shift+.'], icon: 'branch', keywords: 'git branch copy kopieren', context: [3, 5], when: (a) => single(a) && notDeleted(a), run: (a) => a.edit.copyBranch(a.targets()[0]) },
+  { id: 'issue.copyKey', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', context: [3, 3], when: realTarget, run: (a) => a.edit.copyKeys(a.targets()) },
+  { id: 'issue.copyKeyPlain', label: msg('Copy ID'), section: 'Issue', keys: ['mod+c'], hidden: true, when: (a) => realTarget(a) && !textSelected(), run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.moveUp', label: msg('Move issue up'), section: 'Issue', keys: ['alt+arrowup'], icon: 'arrowUp', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, -1) },
   { id: 'issue.moveDown', label: msg('Move issue down'), section: 'Issue', keys: ['alt+arrowdown'], icon: 'arrowDown', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, 1) },
   // E for "edit". In the inbox, E stays "remove": this action applies only on the issue page.
   { id: 'issue.editDescription', label: msg('Edit description'), section: 'Issue', keys: ['e'], icon: 'edit', keywords: 'edit description text write bearbeiten ändern schreiben beschreibung', when: editableIssue, run: (a) => a.detail.startEdit() },
-  { id: 'issue.repeat', label: msg('Repeat …'), section: 'Issue', icon: 'restore', keywords: 'wiederkehrend recurring repeat weekly monthly template wöchentlich monatlich vorlage', picker: 'repeat', context: [3, 5], when: (a) => single(a) && notDeleted(a), run: picker('repeat') },
+  { id: 'issue.repeat', label: msg('Repeat …'), section: 'Issue', icon: 'restore', keywords: 'wiederkehrend recurring repeat weekly monthly template wöchentlich monatlich vorlage', picker: 'repeat', context: [3, 6], when: (a) => single(a) && notDeleted(a), run: picker('repeat') },
   { id: 'issue.restore', label: msg('Restore'), section: 'Issue', icon: 'restore', keywords: 'restore trash wiederherstellen papierkorb', context: [4, 2], when: deleted, run: (a) => a.edit.restore(a.targets()) },
   { id: 'issue.delete', label: msg('Delete'), section: 'Issue', keys: ['mod+backspace', 'mod+delete'], icon: 'trash', keywords: 'delete remove trash löschen papierkorb entfernen', danger: true, context: [5, 2], when: (a) => notDeleted(a), run: (a) => a.edit.remove(a.targets()) },
 

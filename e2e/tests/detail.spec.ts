@@ -138,6 +138,27 @@ test('Copy branch name (Ctrl Shift .) and copy link', async ({ page, context }) 
   expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(new RegExp(`/issue/${key}$`));
 });
 
+test('Copy the identifier: icon, Ctrl+C without a text selection, several rows', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page, '/team/PX');
+  const key = (await focusedRow(page).getAttribute('data-key'))!;
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('detail-key')).toHaveText(key);
+  await page.getByTestId('copy-key').click();
+  await expect(page.getByTestId('toast').filter({ hasText: 'ID copied' })).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(key);
+  await page.evaluate(() => navigator.clipboard.writeText('x'));
+  await page.keyboard.press('Control+c');
+  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(key);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('x');
+  await page.keyboard.press('j');
+  await page.keyboard.press('x');
+  await page.keyboard.press('Control+c');
+  await expect(page.getByTestId('toast').filter({ hasText: '2 IDs copied' })).toBeVisible();
+  expect((await page.evaluate(() => navigator.clipboard.readText())).split('\n')).toHaveLength(2);
+});
+
 test('Create a sub-issue from the detail view', async ({ page }) => {
   await open(page, '/team/KITE');
   await page.keyboard.press('Enter');
