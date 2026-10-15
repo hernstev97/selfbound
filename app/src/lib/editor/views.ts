@@ -118,6 +118,7 @@ class CodeView implements NodeView {
   // Live preview under the source for languages a visual-block renderer claims (```mermaid).
   private preview: HTMLElement | null = null;
   private drawn = '';
+  private renderer: BlockRenderer | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private abort: AbortController | null = null;
   private unTheme: (() => void) | null = null;
@@ -134,14 +135,16 @@ class CodeView implements NodeView {
       this.dom.append(this.preview);
     }
     const source = this.node.textContent;
-    if (source === this.drawn && this.preview.firstChild) return;
-    this.drawn = source;
+    const key = `${renderer.id}\u0000${source}`;
+    this.renderer = renderer;
+    if (key === this.drawn && this.preview.firstChild) return;
+    this.drawn = key;
     if (this.timer) clearTimeout(this.timer);
     // Debounced: the drawing must not slow typing down.
     this.timer = setTimeout(() => void this.draw(renderer, source), 250);
     if (renderer.themed && !this.unTheme) {
       void import('../blocks/theme.ts').then(({ onThemeChange }) => {
-        if (this.preview && !this.unTheme) this.unTheme = onThemeChange(() => void this.draw(renderer, this.node.textContent));
+        if (this.preview && !this.unTheme) this.unTheme = onThemeChange(() => this.renderer && void this.draw(this.renderer, this.node.textContent));
       });
     }
   }
@@ -158,13 +161,18 @@ class CodeView implements NodeView {
     host.className = 'vblock-view';
     host.setAttribute('role', 'img');
     host.setAttribute('aria-label', renderer.label());
+    // Laid out but invisible until it is drawn, so the last good drawing does not jump.
+    host.style.cssText = 'position: absolute; inset-inline: 0; visibility: hidden';
     preview.prepend(host);
     const error = await drawBlock(renderer, source, host, abort.signal);
     if (abort.signal.aborted) return host.remove();
-    for (const old of preview.querySelectorAll(':scope > .vblock-view')) if (old !== host) old.remove();
     preview.querySelector(':scope > .vblock-error')?.remove();
-    if (error === null) return;
-    if (!host.firstChild) host.remove();
+    if (error === null) {
+      for (const old of preview.querySelectorAll(':scope > .vblock-view')) if (old !== host) old.remove();
+      host.style.cssText = '';
+      return;
+    }
+    host.remove(); // the last good drawing stays
     const note = document.createElement('p');
     note.className = 'vblock-error';
     note.setAttribute('role', 'status');
@@ -179,6 +187,7 @@ class CodeView implements NodeView {
     this.unTheme = null;
     this.timer = null;
     this.drawn = '';
+    this.renderer = null;
     this.preview?.remove();
     this.preview = null;
   }

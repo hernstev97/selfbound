@@ -5,6 +5,7 @@ sidebar:
   order: 7
 ---
 import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
 
 Besides text, lists, tables and code, descriptions, comments and knowledge pages can show **info panels**:
 a tinted box with a symbol, a bold title and any content inside. They are plain Markdown, so what you
@@ -61,14 +62,14 @@ know it and shows such a quote with the marker as text; the content stays readab
 
 ## In the editor
 
-- **/ menu:** type <kbd>/</kbd> and "panel", "info", "warning" and so on, then pick **Panel: Warning**. On an empty
+- **/ menu:** type <Kbd keys="/" /> and "panel", "info", "warning" and so on, then pick **Panel: Warning**. On an empty
   line you get an empty panel with the cursor in the title; on a line with text, the text becomes the content.
 - **While typing:** after a quote (`>` and a space), type `[!info]` and a space.
-- **Title and content:** type the title, press <kbd>Enter</kbd> to continue in the content. Without a title the
+- **Title and content:** type the title, press <Kbd keys="enter" /> (or <Kbd keys="shift+enter" />) to continue in the content. Without a title the
   name of the kind is shown as a hint.
-- **Change the kind:** click the symbol and choose another kind. The same menu can turn the panel into a
-  quote or into plain text.
-- **Back to text:** <kbd>Backspace</kbd> at the start of the title takes the panel apart and keeps its content.
+- **Change the kind:** click the symbol and choose another kind, or press <Kbd keys="mod+alt+p" /> to step
+  through the kinds. The symbol's menu can also turn the panel into a quote or into plain text.
+- **Back to text:** <Kbd keys="backspace" /> at the start of the title takes the panel apart and keeps its content.
 
 ## Agents
 

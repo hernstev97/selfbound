@@ -4,7 +4,7 @@ import type { MarkType, Node, NodeType, ResolvedPos } from 'prosemirror-model';
 import { liftListItem, sinkListItem, splitListItem, wrapInList } from 'prosemirror-schema-list';
 import { Selection, TextSelection, type Command, type EditorState, type Transaction } from 'prosemirror-state';
 import { findWrapping } from 'prosemirror-transform';
-import type { CalloutKind } from '../blocks/callout.ts';
+import { CALLOUT_KINDS, type CalloutKind } from '../blocks/callout.ts';
 import { schema } from './schema.ts';
 
 const n = schema.nodes;
@@ -194,6 +194,18 @@ export function unwrapCallout(pos: number, toQuote = false): Command {
   };
 }
 
+/** Ctrl Alt P: the panel around the cursor takes the next kind (info → note → success → warning → error). */
+export const cycleCalloutKind: Command = (state, dispatch) => {
+  const { $from } = state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    const node = $from.node(d);
+    if (node.type !== n.callout) continue;
+    const next = CALLOUT_KINDS[(CALLOUT_KINDS.indexOf(node.attrs.kind as CalloutKind) + 1) % CALLOUT_KINDS.length]!;
+    return setCalloutKind($from.before(d), next)(state, dispatch);
+  }
+  return false;
+};
+
 /** Enter in a panel's title: continue in the content. */
 export const enterFromCalloutTitle: Command = (state, dispatch) => {
   const { $from, empty } = state.selection;
@@ -208,9 +220,16 @@ export const quote: Command = (state, dispatch) => wrapIn(n.blockquote)(state, d
 function insertBlock(node: Node, cursorInside: boolean): Command {
   return (state, dispatch) => {
     const { $from } = state.selection;
-    // At the top level, or in the nearest wrapper that holds blocks.
+    // At the top level, or in the nearest wrapper that can hold the block at that place
+    // (not a table cell, not an info panel's title).
     let depth = $from.depth;
-    while (depth > 0 && !$from.node(depth - 1).type.contentMatch.matchType(n.paragraph)) depth--;
+    const fits = (d: number) => {
+      const parent = $from.node(d);
+      const at = $from.index(d - 1);
+      const empty = parent.type === n.paragraph && parent.content.size === 0;
+      return $from.node(d - 1).canReplaceWith(empty ? at : at + 1, at + 1, node.type);
+    };
+    while (depth > 0 && !fits(depth)) depth--;
     if (depth === 0) return false;
     if (!dispatch) return true;
     const parent = $from.node(depth);
@@ -295,6 +314,8 @@ export const hardBreak: Command = (state, dispatch) => {
     return true;
   }
   if ($from.parent.type === n.table_cell || $from.parent.type === n.table_header) return false;
+  // A panel's title is one line: Shift Enter continues in the content like Enter.
+  if ($from.parent.type === n.callout_title) return enterFromCalloutTitle(state, dispatch);
   if (dispatch) dispatch(state.tr.replaceSelectionWith(n.hard_break.create()).scrollIntoView());
   return true;
 };

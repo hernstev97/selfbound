@@ -128,7 +128,9 @@
   let slashIndex = $state(0);
   const items = $derived.by(() => {
     if (!slash) return [];
-    const all = [...ITEMS, ...(upload ? [IMAGE_ITEM] : []), ...(wikiOn() ? [PAGE_ITEM] : [])];
+    // A panel does not fit everywhere (list items, table cells): then the entries are not offered.
+    const panels = view ? insertCallout('info')(view.state) : true;
+    const all = [...ITEMS.filter((i) => panels || !i.id.startsWith('callout-')), ...(upload ? [IMAGE_ITEM] : []), ...(wikiOn() ? [PAGE_ITEM] : [])];
     const q = slash.query.toLowerCase();
     return q ? all.filter((i) => i.label.toLowerCase().includes(q) || i.words.includes(q)) : all;
   });

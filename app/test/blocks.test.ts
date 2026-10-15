@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { calloutHtml, calloutKind, calloutOf, parseCalloutLine } from '../src/lib/blocks/callout.ts';
 import { blockFenceHtml } from '../src/lib/blocks/fence.ts';
 import { blockFor, loadBlock, type BlockRenderer } from '../src/lib/blocks/registry.ts';
-import { insertCallout, setCalloutKind, unwrapCallout } from '../src/lib/editor/commands.ts';
+import { cycleCalloutKind, hardBreak, insertCallout, insertRule, setCalloutKind, unwrapCallout } from '../src/lib/editor/commands.ts';
 import { parseMarkdown } from '../src/lib/editor/parse.ts';
 import { schema } from '../src/lib/editor/schema.ts';
 import { serializeMarkdown } from '../src/lib/editor/serialize.ts';
@@ -21,6 +21,9 @@ describe('keywords', () => {
     expect(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].map(calloutKind)).toEqual(['note', 'success', 'info', 'warning', 'error']);
     expect(calloutKind('Warning')).toBe('warning');
     expect(calloutKind('foo')).toBeNull();
+    // Names of Object.prototype are not keywords
+    expect(['constructor', 'toString', '__proto__', 'hasOwnProperty'].map(calloutKind)).toEqual([null, null, null, null]);
+    expect(calloutOf(quote('> [!constructor] x\n> y'))).toBeNull();
   });
   it('marker line with and without a title', () => {
     expect(parseCalloutLine('[!WARNING] Post-conditions\nbody')).toMatchObject({ kind: 'warning', word: 'WARNING', title: 'Post-conditions' });
@@ -97,6 +100,19 @@ describe('editor: reading and writing', () => {
     expect(fresh('> [!INFO]')).toBe('> [!INFO]');
     expect(fresh('> [!NOTE] x\n> ```ts\n> a\n> ```')).toBe('> [!NOTE] x\n>\n> ```ts\n> a\n> ```');
   });
+  it('a panel whose first content block is not written (empty paragraph) keeps its structure', () => {
+    const { doc } = read('> [!INFO] T\n>\n> - a');
+    const callout = doc.child(0);
+    const withEmpty = callout.copy(callout.content.replaceChild(1, schema.nodes.paragraph.create()).addToEnd(schema.nodes.horizontal_rule.create()));
+    const out = serializeMarkdown(doc.copy(doc.content.replaceChild(0, withEmpty)));
+    expect(out).toBe('> [!INFO] T\n>\n> ---');
+    expect(read(out).doc.child(0).childCount).toBe(2);
+    const list = schema.nodes.ordered_list.create({ order: 3 }, schema.nodes.list_item.create(null, schema.nodes.paragraph.create(null, schema.text('x'))));
+    const swallow = callout.copy(callout.content.replaceChild(1, schema.nodes.paragraph.create()).addToEnd(list));
+    const out2 = serializeMarkdown(doc.copy(doc.content.replaceChild(0, swallow)));
+    expect(out2).toBe('> [!INFO] T\n>\n> 3. x');
+    expect(read(out2).doc.child(0).child(1).type.name).toBe('ordered_list');
+  });
   it('nested panels and panels in lists read back the same', () => {
     const md = '> [!SUCCESS] Outer\n> > [!INFO] Inner\n> > Nested';
     const out = fresh(md);
@@ -140,6 +156,25 @@ describe('editor: commands', () => {
     const state = stateOf('> [!INFO] Title\n> body', 3);
     expect(serializeMarkdown(run(state, unwrapCallout(0)).doc)).toBe('Title\n\nbody');
     expect(serializeMarkdown(run(state, unwrapCallout(0, true)).doc)).toBe('> Title\n>\n> body');
+  });
+  it('a divider from the title goes in front of the content, from the content after it; never into the title', () => {
+    const state = stateOf('> [!INFO] Title\n> body', 3); // cursor in the title
+    const next = run(state, insertRule);
+    expect(serializeMarkdown(next.doc)).toBe('> [!INFO] Title\n>\n> ---\n>\n> body');
+    expect(() => next.doc.check()).not.toThrow();
+    const inBody = run(stateOf('> [!INFO] Title\n> body', 11), insertRule);
+    expect(serializeMarkdown(inBody.doc)).toBe('> [!INFO] Title\n> body\n>\n> ---');
+  });
+  it('Shift Enter in the title continues in the content; Ctrl Alt P cycles the kind', () => {
+    const state = stateOf('> [!INFO] Title\n> body', 3);
+    const moved = run(state, hardBreak);
+    expect(moved.selection.$from.parent.type.name).toBe('paragraph');
+    let next = state;
+    for (const kind of ['NOTE', 'SUCCESS', 'WARNING', 'ERROR', 'INFO']) {
+      next = run(next, cycleCalloutKind);
+      expect(serializeMarkdown(next.doc)).toBe(`> [!${kind}] Title\n> body`);
+    }
+    expect(cycleCalloutKind(stateOf('plain'))).toBe(false);
   });
   it('the result is a valid document', () => {
     const next = run(stateOf('x'), insertCallout('note'));

@@ -125,15 +125,17 @@ function callout(node: Node, ctx: Ctx) {
   const word = typeof node.attrs.word === 'string' && calloutKind(node.attrs.word) === node.attrs.kind ? node.attrs.word : String(node.attrs.kind).toUpperCase();
   const title = node.child(0).textContent.replace(/\s+/g, ' ').trim();
   const parts: string[] = [];
+  let firstIsParagraph = false;
   node.forEach((child, _offset, i) => {
     if (i === 0) return;
     const text = block(child, ctx);
-    if (text !== '' || child.type.name !== 'paragraph') parts.push(text);
+    if (text === '' && child.type.name === 'paragraph') return; // empty paragraphs are not written
+    if (!parts.length) firstIsParagraph = child.type.name === 'paragraph';
+    parts.push(text);
   });
   const head = `[!${word}]${title ? ` ${title}` : ''}`;
-  const first = node.childCount > 1 ? node.child(1) : null;
   const body = parts.join('\n\n');
-  const text = !body ? head : first?.type.name === 'paragraph' ? `${head}\n${body}` : `${head}\n\n${body}`;
+  const text = !body ? head : firstIsParagraph ? `${head}\n${body}` : `${head}\n\n${body}`;
   return text
     .split('\n')
     .map((line) => (line ? `> ${line}` : '>'))

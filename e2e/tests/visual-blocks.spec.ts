@@ -90,6 +90,42 @@ test('Panels render in the description: kinds, titles, content, plain quotes sta
   await page.emulateMedia({ colorScheme: 'dark' });
 });
 
+test('Pasted Markdown with a panel becomes a panel; a divider from the "/" menu lands inside, a table cell has no panel entry', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await freshIssue(page, 'Start');
+  await page.getByTestId('detail-description').locator('p').first().click();
+  const editor = page.getByTestId('desc-editor');
+  await expect(editor).toBeFocused();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Enter');
+  await page.evaluate(() => navigator.clipboard.writeText('> [!NOTE] Pasted\n> - one\n> - two'));
+  await page.keyboard.press('Control+v');
+  await expect(editor.locator('.callout-note')).toHaveCount(1);
+  await expect(editor.locator('.callout-note .callout-title')).toHaveText('Pasted');
+  await expect(editor.locator('.callout-note li')).toHaveCount(2);
+  await expectMarkdown(editor, 'Start\n\n> [!NOTE] Pasted\n>\n> - one\n> - two');
+  // Divider from the "/" menu while the cursor is in the title: goes in front of the content, inside the panel
+  await editor.locator('.callout-note .callout-title').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('/div');
+  await page.keyboard.press('Enter');
+  await expect(editor.locator('.callout-note hr')).toHaveCount(1);
+  // No panel entry in a table cell
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.type('/tab');
+  await page.keyboard.press('Enter');
+  await expect(editor.locator('table')).toHaveCount(1);
+  await page.keyboard.type('/panel');
+  await expect(page.getByTestId('slash-menu')).toHaveCount(0);
+});
+
 test('Panels in the editor: "/" menu, title, content, kind menu, back to text; untouched text stays as written', async ({ page }, testInfo) => {
   const issue = await freshIssue(page, '> [!TIP] Hint\n> Written as a tip.\n\nAfter');
   await page.getByTestId('detail-description').locator('p').last().click();
@@ -117,14 +153,23 @@ test('Panels in the editor: "/" menu, title, content, kind menu, back to text; u
   const image = await page.getByTestId('desc-editor-wrap').screenshot({ path: testInfo.outputPath('panels-editor.png') });
   await testInfo.attach('panels-editor', { body: image, contentType: 'image/png' });
 
-  // Change the kind with the symbol
-  await editor.locator('.callout-warning > button.callout-icon').click();
-  const kinds = page.getByTestId('callout-menu');
-  await expect(kinds).toBeVisible();
-  await kinds.locator('[data-id="error"]').click();
-  await expect(kinds).toHaveCount(0);
+  // Ctrl Alt P: next kind (warning → error)
+  await page.keyboard.press('Control+Alt+p');
   await expect(editor.locator('.callout-error')).toHaveCount(1);
   await expectMarkdown(editor, '> [!TIP] Hint\n> Written as a tip.\n\nAfter\n\n> [!ERROR] Careful\n> Check twice');
+
+  // Change the kind with the symbol
+  await editor.locator('.callout-error > button.callout-icon').click();
+  const kinds = page.getByTestId('callout-menu');
+  await expect(kinds).toBeVisible();
+  await expect(kinds.locator('[data-id="error"]')).toHaveAttribute('aria-checked', 'true');
+  await kinds.locator('[data-id="success"]').click();
+  await expect(kinds).toHaveCount(0);
+  await expect(editor.locator('.callout-success')).toHaveCount(2);
+  await expectMarkdown(editor, '> [!TIP] Hint\n> Written as a tip.\n\nAfter\n\n> [!SUCCESS] Careful\n> Check twice');
+  await page.keyboard.press('Control+Alt+p'); // success → warning → error
+  await page.keyboard.press('Control+Alt+p');
+  await expect(editor.locator('.callout-error')).toHaveCount(1);
 
   // Backspace at the start of the title takes the panel apart
   await page.waitForTimeout(700); // separate step in the undo history

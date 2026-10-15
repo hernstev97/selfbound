@@ -9,20 +9,20 @@ export const CALLOUT_KINDS = ['info', 'note', 'success', 'warning', 'error'] as 
 export type CalloutKind = (typeof CALLOUT_KINDS)[number];
 
 // GitHub's five alert names read as the nearest panel; the word stays in the text as written.
-const KEYWORDS: Record<string, CalloutKind> = {
-  info: 'info',
-  note: 'note',
-  success: 'success',
-  warning: 'warning',
-  error: 'error',
-  tip: 'success',
-  important: 'info',
-  caution: 'error',
-};
+const KEYWORDS = new Map<string, CalloutKind>([
+  ['info', 'info'],
+  ['note', 'note'],
+  ['success', 'success'],
+  ['warning', 'warning'],
+  ['error', 'error'],
+  ['tip', 'success'],
+  ['important', 'info'],
+  ['caution', 'error'],
+]);
 
 /** Panel kind for a keyword (`WARNING`, `tip` …), or null if it is not one. */
 export function calloutKind(word: string): CalloutKind | null {
-  return KEYWORDS[word.toLowerCase()] ?? null;
+  return KEYWORDS.get(word.toLowerCase()) ?? null;
 }
 
 /** The first line of a panel: `[!WARNING] Title` (title optional). */

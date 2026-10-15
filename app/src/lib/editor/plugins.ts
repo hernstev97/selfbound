@@ -14,6 +14,7 @@ import type { CodeRange } from '../highlight.ts';
 import {
   backspaceToParagraph,
   codeToText,
+  cycleCalloutKind,
   enterFromCalloutTitle,
   exitCodeOnEmptyLine,
   fenceToCode,
@@ -81,7 +82,8 @@ const autolinkRule = new InputRule(/(?:^|\s)((?:https?:\/\/|www\.)[^\s<]+?)([.,;
 const calloutRule = new InputRule(/^\[!([A-Za-z]+)\]\s$/, (state, match, start) => {
   const kind = calloutKind(match[1]!);
   const $start = state.doc.resolve(start);
-  if (!kind || $start.parent.type !== n.paragraph || $start.depth < 2) return null;
+  // Only when the line holds nothing else (the rule replaces the whole quote's first paragraph).
+  if (!kind || $start.parent.type !== n.paragraph || $start.depth < 2 || $start.parent.textContent !== match[0].trimEnd()) return null;
   const quote = $start.node($start.depth - 1);
   if (quote.type !== n.blockquote || $start.index($start.depth - 1) !== 0) return null;
   const pos = $start.before($start.depth - 1);
@@ -208,6 +210,7 @@ function keys(hooks: KeyHooks) {
       'Mod-Alt-1': setBlock(n.heading, { level: 1 }),
       'Mod-Alt-2': setBlock(n.heading, { level: 2 }),
       'Mod-Alt-3': setBlock(n.heading, { level: 3 }),
+      'Mod-Alt-p': cycleCalloutKind,
       'Mod-Shift-\\': toggleCode,
       'Mod-Shift-|': toggleCode,
       // Tables: insert and delete rows/columns (also in the table menu)
