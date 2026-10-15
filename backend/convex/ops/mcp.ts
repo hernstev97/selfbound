@@ -25,6 +25,7 @@ import { listOpen } from './inbox';
 import { openEntry } from './inboxChanges';
 import { issueArticles } from './links';
 import { moveIssuesToTeamCore } from './move';
+import { profileRow } from './profile';
 import {
   addSourcesCore,
   appendArticleBodyCore,
@@ -62,7 +63,7 @@ export const SCAN_MAX = 1000;
 
 const iso = (ms: number | undefined) => (ms === undefined ? undefined : new Date(ms).toISOString());
 
-/** Display name of the instance owner in MCP output (history `by`, comment authors). */
+/** Fallback for the owner's display name in MCP output when the profile has none: XLR8_OWNER_NAME, else "Owner". */
 export const ownerName = (env: Record<string, string | undefined> = process.env) => env.XLR8_OWNER_NAME?.trim() || 'Owner';
 
 // ---------------------------------------------------------------- Lookup
@@ -76,6 +77,7 @@ class Lookup {
   private sprintCache = new Map<Id<'sprints'>, Doc<'sprints'> | null>();
   private agentCache = new Map<string, string>();
   private parentCache = new Map<Id<'issues'>, string | null>();
+  private ownerCache?: string;
 
   private readonly ctx: QueryCtx;
   constructor(ctx: QueryCtx) {
@@ -216,7 +218,9 @@ class Lookup {
     if (authorName) return authorName;
     switch (actor.kind) {
       case OWNER_KIND:
-        return ownerName();
+        // Name from the owner's profile (Settings → Profile), else the environment fallback.
+        this.ownerCache ??= (await profileRow(this.ctx))?.name ?? ownerName();
+        return this.ownerCache;
       case 'github':
         return 'GitHub';
       case 'import':

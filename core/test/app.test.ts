@@ -6,6 +6,25 @@ import { Auth } from '../src/auth.ts';
 import { OWNER_KIND, type IssueId } from '../src/types.ts';
 import { callName, doc, entry, fakeClient, flush, meta } from './helpers.ts';
 
+describe('owner profile', () => {
+  test('the profile name replaces "You" in the actor names, and goes away again', async () => {
+    const { client, app } = await setup();
+    expect(app.store.agents.get().get(OWNER_KIND)).toBeUndefined();
+    client.push('meta:get', {}, { ...meta, owner: { name: 'Jane Doe', avatarUrl: null } });
+    await flush();
+    expect(app.store.agents.get().get(OWNER_KIND)).toBe('Jane Doe');
+    expect(app.store.agents.get().get('a1')).toBe('Claude Code');
+    // A later agent list keeps the owner's name
+    client.push('agents:list', {}, [{ _id: 'a2', name: 'Codex' }]);
+    await flush();
+    expect(app.store.agents.get().get(OWNER_KIND)).toBe('Jane Doe');
+    expect(app.store.agents.get().get('a2')).toBe('Codex');
+    client.push('meta:get', {}, { ...meta, owner: { name: null, avatarUrl: null } });
+    await flush();
+    expect(app.store.agents.get().has(OWNER_KIND)).toBe(false);
+  });
+});
+
 let n = 0;
 async function setup(maxSeq = 127) {
   const client = fakeClient();

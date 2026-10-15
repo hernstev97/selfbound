@@ -13,7 +13,7 @@ export { Slice, SliceFamily } from './observable.ts';
 export { STATUS_ICON, PRIORITY_ICON, CHECK_ICON, ICON, rowIconCss, statusIcon, type IconName } from './icons.ts';
 export { movePlan, moveLines, hasLoss, type MovePlan } from './move.ts';
 export { workflowsOf, type StateView, type StateGroup } from './workflow.ts';
-export { STATUS_LABEL, PRIORITY_LABEL, STATUS_ORDER, actorName, dayLabel, monthLabel, weekdaysShort, today, berlinToday, addDays, parseDay, dayOf, fullDate, relativeTime } from './format.ts';
+export { STATUS_LABEL, PRIORITY_LABEL, STATUS_ORDER, actorName, initials, nameHue, dayLabel, monthLabel, weekdaysShort, today, berlinToday, addDays, parseDay, dayOf, fullDate, relativeTime } from './format.ts';
 export { formatShortcut, shortcutKeys } from './keyboard.ts';
 export { computeWindow, sameRange, revealIndex, ROW_HEIGHT, ROW_HEIGHT_MOBILE, INBOX_ROW_HEIGHT, OVERSCAN, type Range } from './window.ts';
 export { inInbox, unread } from './inbox.ts';
@@ -22,3 +22,4 @@ export { CONSENT_PATH, DEFAULT_SETTINGS_SECTION, isConsentPath, pagePath, parseP
 /** Actor kind of the instance owner: legacy stored value for the instance owner. */
 export { DISPLAY_PROPS, OWNER_KIND, PATCH_FIELDS } from './types.ts';
 export type * from './types.ts';
+export { AVATAR_ZOOM_MAX, clampCrop, cropRect, cropScale, zoomCrop, type CropState } from './avatar.ts';
