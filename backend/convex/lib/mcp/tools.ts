@@ -126,6 +126,9 @@ const requestId = (description = REQUEST_ID_DESCRIPTION) =>
     patternHint: 'a key of letters, digits and . _ : -',
   });
 
+/** Said once in the instructions (protocol.ts), repeated where agents write Markdown. */
+const VISUAL_BLOCKS = 'Info panel: "> [!INFO] Title" quote; chart: ```chart code block with JSON (examples in the server instructions).';
+
 const title = () => string({ description: 'Issue title.', min: 1, max: LIMITS.titleMax, transform: (s) => s.trim() });
 const labelNames = () =>
   array(string({ min: 1, max: 100, transform: (s) => s.trim() }), {
@@ -203,7 +206,7 @@ const getIssue = object(
 const newIssue = object({
   team: teamKey(),
   title: title(),
-  description: optional(string({ description: 'Markdown description.', max: LIMITS.descriptionMax })),
+  description: optional(string({ description: `Markdown description. ${VISUAL_BLOCKS}`, max: LIMITS.descriptionMax })),
   status: optional(status('Initial status. Default: triage for agents.')),
   priority: optional(priority()),
   labels: optional(labelNames()),
@@ -273,7 +276,7 @@ const updateIssue = object(
     parent: optional(nullable(identifier('Parent identifier, or null to remove.'))),
     description: optional(
       string({
-        description: 'New Markdown description (replaces the old one). Requires expectedDescriptionVersion.',
+        description: `New Markdown description (replaces the old one). Requires expectedDescriptionVersion. ${VISUAL_BLOCKS}`,
         max: LIMITS.descriptionMax,
       }),
     ),
@@ -311,7 +314,7 @@ const moveIssues = object({
 const addComment = object({
   requestId: requestId(),
   identifier: identifier(),
-  body: string({ description: 'Comment in Markdown.', min: 1, max: LIMITS.commentMax }),
+  body: string({ description: `Comment in Markdown. ${VISUAL_BLOCKS}`, min: 1, max: LIMITS.commentMax }),
 });
 
 const getCurrentSprint = object({});
@@ -381,7 +384,7 @@ const createArticle = object({
   requestId: requestId(),
   team: teamKey('Team of the page. The team needs a knowledge area (list_teams: `wiki`).'),
   title: string({ description: 'Page title.', min: 1, max: LIMITS.titleMax, transform: (s) => s.trim() }),
-  markdown: optional(string({ description: 'Markdown text of the page.', max: WIKI.articleMax })),
+  markdown: optional(string({ description: `Markdown text of the page. ${VISUAL_BLOCKS}`, max: WIKI.articleMax })),
   parent: optional(articleId('Parent page id: the new page becomes a sub-page.')),
   project: optional(string({ description: 'Project name (case-insensitive) of the same team, for project documentation.', min: 1, max: 200 })),
   topics: optional(topicNames()),
@@ -398,9 +401,9 @@ const updateArticle = object(
     parent: optional(nullable(articleId('New parent page id, or null for the top level.'))),
     project: optional(nullable(string({ description: 'Project name, or null to remove.', min: 1, max: 200 }))),
     topics: optional(topicNames()),
-    markdown: optional(string({ description: 'New Markdown text (replaces the old one). Requires expectedVersion.', max: WIKI.articleMax })),
+    markdown: optional(string({ description: `New Markdown text (replaces the old one). Requires expectedVersion. ${VISUAL_BLOCKS}`, max: WIKI.articleMax })),
     expectedVersion: optional(integer({ description: 'Version of the text you based your edit on (from get_article). If the text changed since, nothing is overwritten and the call fails with conflict.', min: 0 })),
-    append: optional(string({ description: 'Markdown to add at the end of the text (no version needed), e.g. new findings.', min: 1, max: WIKI.articleMax })),
+    append: optional(string({ description: `Markdown to add at the end of the text (no version needed), e.g. new findings. ${VISUAL_BLOCKS}`, min: 1, max: WIKI.articleMax })),
     addSources: optional(sources('Sources to add at the end of the list.')),
   },
   {

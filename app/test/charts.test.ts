@@ -2,6 +2,7 @@
 // The ```chart block: the JSON spec is checked with messages a reader can act on, and every type is
 // drawn from it (structure, numbers, no markup from data, table view, redraw on resize).
 import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { CHART_EXAMPLES, INSTRUCTIONS } from '../../backend/convex/lib/mcp/protocol.ts';
 import { BLOCKS, blockFor } from '../src/lib/blocks/registry.ts';
 import { render } from '../src/lib/blocks/chart/index.ts';
 import { compact, exact, niceTicks } from '../src/lib/blocks/chart/dom.ts';
@@ -206,5 +207,18 @@ describe('drawing', () => {
     vi.unstubAllGlobals();
     abort.abort();
     expect(disconnected).toBe(before + 1);
+  });
+});
+
+describe('examples in the MCP server instructions', () => {
+  it('cover every chart type, each parses and draws', () => {
+    const specs = CHART_EXAMPLES.map((json) => parseChart(json));
+    expect(specs.map((s) => s.type).sort()).toEqual(['area', 'bar', 'heatmap', 'line', 'stat']);
+    for (const json of CHART_EXAMPLES) {
+      expect(INSTRUCTIONS).toContain(json);
+      const host = document.createElement('div');
+      document.body.append(host);
+      expect(() => render(json, host, ctx())).not.toThrow();
+    }
   });
 });
