@@ -5,7 +5,7 @@ import { actionById } from '../src/app/actions.ts';
 import { Auth } from '../src/auth.ts';
 import { labelIdsFrom, labelParam, writeLocation } from '../src/route.ts';
 import { revealIndex } from '../src/window.ts';
-import { OWNER_KIND, type IssueId } from '../src/types.ts';
+import { LEGACY_OWNER_KIND, OWNER_KIND, type IssueId } from '../src/types.ts';
 import { callName, doc, entry, fakeClient, flush, inboxOf, meta } from './helpers.ts';
 
 let n = 0;
@@ -231,6 +231,21 @@ describe('description and activity', () => {
     expect(app.detail.desc.get().dirty).toBe(false);
   });
 
+  test('activity of the legacy owner kind is shown as the owner, and its events are not revertable', async () => {
+    const { client, app } = await setup([doc(0)]);
+    app.nav.go({ name: 'issue', key: 'ACME-1' });
+    // legacy-xlr8: history and comments written before the rename carry "steven"
+    const legacy = { kind: LEGACY_OWNER_KIND };
+    client.push('issues:detail', { id: 'i0' }, {
+      ...detail(1, 'x', [{ _id: 'h1', issueId: 'i0', field: 'priority', from: 1, to: 2, actor: legacy, at: 1 }]),
+      comments: [{ _id: 'c1', issueId: 'i0', body: 'hi', author: legacy, createdAt: 2 }],
+    });
+    const activity = app.detail.state.get()!.activity!;
+    expect(activity.map((a) => a.actor)).toEqual(['owner', 'owner']);
+    expect(activity.find((a) => a.kind === 'event')!.revert).toBeUndefined();
+    expect(activity.find((a) => a.kind === 'comment')).toMatchObject({ mine: true });
+  });
+
   test('consecutive description changes by the same actor: one line', async () => {
     const { client, app } = await setup([doc(0)]);
     app.nav.go({ name: 'issue', key: 'ACME-1' });
@@ -328,7 +343,7 @@ describe('inbox and comments', () => {
     globalThis.localStorage = { getItem: (k: string) => memory.get(k) ?? null, setItem: (k: string, v: string) => void memory.set(k, v), removeItem: (k: string) => void memory.delete(k) } as unknown as Storage;
     const { app } = await setup([doc(0)]);
     app.detail.setCommentDraft('i0', 'Half a thought');
-    expect(memory.get('xlr8:comment:i0')).toBe('Half a thought');
+    expect(memory.get('selfbound:comment:i0')).toBe('Half a thought');
     expect(app.detail.commentDraft('i0')).toBe('Half a thought');
     expect(app.detail.commentDraft('i1')).toBe('');
     app.nav.go({ name: 'issue', key: 'ACME-1' });

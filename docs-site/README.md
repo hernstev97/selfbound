@@ -19,7 +19,7 @@ node docs-site/scripts/deploy.mjs   # build + Vercel preview deploy (--prod for 
 
 `src/pages/impressum.astro` and `datenschutz.astro` are the imprint and privacy policy of this host (German,
 binding). The operator's name and address are not in the repository: they are read at build time from
-`~/.config/xlr8/site-legal.json`, see [site/README.md](../site/README.md#imprint-privacy-policy-and-visitor-statistics).
+`~/.config/selfbound/site-legal.json`, see [site/README.md](../site/README.md#imprint-privacy-policy-and-visitor-statistics).
 A `--prod` deploy fails without that file. The docs run no visitor statistics and set no cookies; the privacy
 text says so and names the two entries Starlight keeps in the browser (colour theme, chosen tab). Change the
 text together with any code that changes this.

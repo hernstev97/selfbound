@@ -25,7 +25,7 @@ export default async function globalSetup() {
   const token = devToken();
   // Fixed build settings regardless of the caller's environment: a sample public URL (absolute
   // og:* tags) and no branch prefix (suggested branch names like `orb-12-title`).
-  const env = { ...process.env, VITE_CONVEX_URL: `http://127.0.0.1:${BACKEND_PORT}`, VITE_DEV_TOKEN: token, VITE_XLR8_TEST: '1', XLR8_PUBLIC_URL: PUBLIC_URL, VITE_XLR8_BRANCH_PREFIX: '' };
+  const env = { ...process.env, VITE_CONVEX_URL: `http://127.0.0.1:${BACKEND_PORT}`, VITE_DEV_TOKEN: token, VITE_SELFBOUND_TEST: '1', SELFBOUND_PUBLIC_URL: PUBLIC_URL, VITE_SELFBOUND_BRANCH_PREFIX: '' };
   writeFileSync(state('token'), token);
 
   if (process.env.E2E_SKIP_BUILD !== '1' || !existsSync(join(root, 'e2e/.dist/index.html'))) {

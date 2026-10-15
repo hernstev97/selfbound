@@ -13,7 +13,7 @@
 //   --max-load=N   before each run, wait until the load (1 min) is below N (at most 15 min)
 //   after "--"     switches for run.ts (default --full). ab.ts sets --no-budget and --out itself.
 //
-// Worktrees of other revisions live under ~/.cache/xlr8-perf/refs/<commit> (XLR8_PERF_REFS), not
+// Worktrees of other revisions live under ~/.cache/selfbound-perf/refs/<commit> (SELFBOUND_PERF_REFS), not
 // under /tmp: tmpfs makes the measurement backend's writes faster (about 10 ms).
 // Metric names must match on both sides: revisions from before the metrics were renamed to English
 // cannot be compared with newer ones.
@@ -23,6 +23,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { join, resolve } from 'node:path';
+import { cacheDir, envVar } from '../tooling/lib/env.mjs';
 import { fmt } from './report.ts';
 import { here, root } from './stack.ts';
 
@@ -58,7 +59,7 @@ interface Side {
 function prepare(label: 'A' | 'B', ref: string): Side {
   if (ref === '.') return { label, ref, commit: `${git(['rev-parse', '--short=10', 'HEAD'])}${git(['status', '--porcelain', '--', 'app', 'core', 'backend']) ? '+local' : ''}`, dir: root, built: false };
   const commit = git(['rev-parse', '--short=10', `${ref}^{commit}`]);
-  const base = process.env.XLR8_PERF_REFS ?? join(os.homedir(), '.cache', 'xlr8-perf', 'refs');
+  const base = envVar('PERF_REFS') ?? join(cacheDir({ suffix: '-perf' }), 'refs');
   const dir = join(base, commit);
   if (!existsSync(join(dir, '.git'))) {
     mkdirSync(base, { recursive: true });

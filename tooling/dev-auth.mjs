@@ -2,7 +2,7 @@
 //
 // Creates an RSA key pair once in backend/.dev-auth/ (gitignored), provides the public key as a
 // JWKS data: URI for Convex and issues tokens for the owner. The backend accepts this issuer only
-// when XLR8_DEV_JWKS is set, which happens only in local backends.
+// when SELFBOUND_DEV_JWKS is set, which happens only in local backends.
 
 import { createPrivateKey, createPublicKey, createSign, generateKeyPairSync } from 'node:crypto';
 import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -13,11 +13,11 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'backend', '.dev-auth');
 const keyFile = join(dir, 'private.pem');
 
-export const DEV_ISSUER = 'https://dev.xlr8.local';
-export const DEV_AUDIENCE = 'xlr8-dev';
+export const DEV_ISSUER = 'https://dev.selfbound.local';
+export const DEV_AUDIENCE = 'selfbound-dev';
 export const DEV_SUBJECT = 'owner';
 export const DEV_OWNER_ID = `${DEV_ISSUER}|${DEV_SUBJECT}`;
-const KID = 'xlr8-dev-1';
+const KID = 'selfbound-dev-1';
 
 function privateKey() {
   // No existsSync between check and use: read first, create on ENOENT with "wx" (a parallel start never overwrites a key).
@@ -41,7 +41,7 @@ function privateKey() {
   return createPrivateKey(readFileSync(keyFile));
 }
 
-/** JWKS with the public key as a data: URI (for XLR8_DEV_JWKS). */
+/** JWKS with the public key as a data: URI (for SELFBOUND_DEV_JWKS). */
 export function devJwksDataUri() {
   const jwk = createPublicKey(privateKey()).export({ format: 'jwk' });
   const jwks = JSON.stringify({ keys: [{ ...jwk, kid: KID, alg: 'RS256', use: 'sig' }] });

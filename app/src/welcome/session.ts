@@ -4,11 +4,14 @@
 // (SIGNED_IN_COOKIE), a test keeps both in sync. Deliberately no shared import: the start page must
 // not pull in anything from the app's start bundle.
 
-export const SIGNED_IN_COOKIE = 'xlr8_signed_in';
+export const SIGNED_IN_COOKIE = 'selfbound_signed_in';
+// legacy-xlr8: the name before the rename; cleared on every write so the two never disagree.
+export const LEGACY_SIGNED_IN_COOKIE = 'xlr8_signed_in';
 
 export function markSignedIn(on: boolean) {
   const secure = location.protocol === 'https:' ? '; secure' : '';
   document.cookie = on ? `${SIGNED_IN_COOKIE}=1; path=/; max-age=31536000; samesite=lax${secure}` : `${SIGNED_IN_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`;
+  document.cookie = `${LEGACY_SIGNED_IN_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`;
 }
 
 /**

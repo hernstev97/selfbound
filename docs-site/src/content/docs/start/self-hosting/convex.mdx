@@ -26,15 +26,15 @@ You need the **Frontend API URL** and your **user id** from [Clerk](/start/self-
    `convexDeployment` to `happy-otter-123`.
 
 3. **Create a production deploy key** in the project settings under **Deploy keys**, and store it in
-   `~/.config/xlr8/convex-deploy-key`, readable only by you:
+   `~/.config/selfbound/convex-deploy-key`, readable only by you:
 
    ```sh
-   mkdir -p ~/.config/xlr8 && (umask 077; cat > ~/.config/xlr8/convex-deploy-key)
+   mkdir -p ~/.config/selfbound && (umask 077; cat > ~/.config/selfbound/convex-deploy-key)
    ```
 
    Paste the key, press Enter, then Ctrl+D. `tooling/cloud.mjs` (below) refuses a key file that other
    users can read, and a key that belongs to a different deployment than `convexDeployment`. To keep the key somewhere
-   else, point the environment variable `XLR8_CONVEX_DEPLOY_KEY_FILE` at the file.
+   else, point the environment variable `SELFBOUND_CONVEX_DEPLOY_KEY_FILE` at the file.
 
 </Steps>
 
@@ -44,17 +44,17 @@ deployment with this key, for example `node tooling/cloud.mjs env list`. It neve
 ## Set the required environment variables
 
 Set these **before the first deploy**. The backend's sign-in configuration reads
-`CLERK_JWT_ISSUER_DOMAIN` and `XLR8_DEV_JWKS`, and the deploy fails if either is missing.
+`CLERK_JWT_ISSUER_DOMAIN` and `SELFBOUND_DEV_JWKS`, and the deploy fails if either is missing.
 
 ```sh
 node tooling/cloud.mjs env set CLERK_JWT_ISSUER_DOMAIN https://clerk.selfbound.example.com
-node tooling/cloud.mjs env set XLR8_DEV_JWKS none
-node tooling/cloud.mjs env set XLR8_OWNER_IDS 'https://clerk.selfbound.example.com|user_2abc…'
+node tooling/cloud.mjs env set SELFBOUND_DEV_JWKS none
+node tooling/cloud.mjs env set SELFBOUND_OWNER_IDS 'https://clerk.selfbound.example.com|user_2abc…'
 ```
 
 You can also set them in the Convex dashboard under **Settings → Environment Variables**.
 
-`XLR8_OWNER_IDS` lists who may use the instance. Each entry is the token issuer (your Frontend API URL),
+`SELFBOUND_OWNER_IDS` lists who may use the instance. Each entry is the token issuer (your Frontend API URL),
 a `|`, and a Clerk user id. The issuer must match exactly what Clerk puts into its tokens: the same
 spelling as `CLERK_JWT_ISSUER_DOMAIN`, without a trailing slash. Quote the value in the shell because of
 the `|`.
@@ -90,9 +90,9 @@ of your data:
 | `ok` | `true` | the backend answers |
 | `clerk` | `true` | `CLERK_JWT_ISSUER_DOMAIN` is set |
 | `devAuth` | `false` | the local test sign-in is active |
-| `devAuthConfigured` | `false` | `XLR8_DEV_JWKS` holds a key instead of `none`; set it to `none` |
+| `devAuthConfigured` | `false` | `SELFBOUND_DEV_JWKS` holds a key instead of `none`; set it to `none` |
 | `local` | `false` | the backend runs on your own machine |
-| `oauth` | `true` if you use connectors | `XLR8_APP_URL` is set |
+| `oauth` | `true` if you use connectors | `SELFBOUND_APP_URL` is set |
 | `push` | `true` if you use push | both VAPID keys are set |
 | `testSwitches` | `false` | test switches for local development are on |
 
@@ -104,24 +104,27 @@ anyway, because the backend rejects its tokens on any deployment that is not on 
 
 All variables the backend reads. Set them with `node tooling/cloud.mjs env set NAME value` or in the
 Convex dashboard. Changes take effect right away, except for `CLERK_JWT_ISSUER_DOMAIN` and
-`XLR8_DEV_JWKS`: Convex reads these two only when the functions are pushed, so redeploy the backend after
+`SELFBOUND_DEV_JWKS`: Convex reads these two only when the functions are pushed, so redeploy the backend after
 changing them.
+
+Before 2026-10-15 these names started with `XLR8_`. The old names still work for now; see
+[Move from the XLR8 names](/start/self-hosting/upgrade-from-xlr8/).
 
 ### Sign-in and access
 
 | Variable | Required | Value |
 |---|---|---|
 | `CLERK_JWT_ISSUER_DOMAIN` | yes | Clerk Frontend API URL, for example `https://clerk.selfbound.example.com`, no trailing slash. Several URLs separated by commas, only while you move Clerk to another domain. **Redeploy the backend after changing it**: Convex reads it when the functions are pushed, not on every request. |
-| `XLR8_OWNER_IDS` | yes | who gets in: comma-separated entries `<issuer>\|<Clerk user id>`. Empty means nobody gets in. |
-| `XLR8_DEV_JWKS` | yes | `none` in production. Locally it holds the public key of the test sign-in. |
+| `SELFBOUND_OWNER_IDS` | yes | who gets in: comma-separated entries `<issuer>\|<Clerk user id>`. Empty means nobody gets in. |
+| `SELFBOUND_DEV_JWKS` | yes | `none` in production. Locally it holds the public key of the test sign-in. |
 
 ### Agents and connectors
 
 | Variable | Required | Value |
 |---|---|---|
-| `XLR8_APP_URL` | no | address of your app, `https://selfbound.example.com`. Turns on OAuth, so claude.ai and ChatGPT can connect as connectors. Also the default contact for push services. |
-| `XLR8_PUBLIC_SITE_URL` | no | a custom address for MCP and OAuth instead of `…convex.site`, for example `https://mcp.selfbound.example.com`. Changing it later means reconnecting all connectors. |
-| `XLR8_OWNER_NAME` | no | fallback for your display name in what agents read, for example who wrote a comment, until you set a name in **Settings → Profile**. Default `Owner`. |
+| `SELFBOUND_APP_URL` | no | address of your app, `https://selfbound.example.com`. Turns on OAuth, so claude.ai and ChatGPT can connect as connectors. Also the default contact for push services. |
+| `SELFBOUND_PUBLIC_SITE_URL` | no | a custom address for MCP and OAuth instead of `…convex.site`, for example `https://mcp.selfbound.example.com`. Changing it later means reconnecting all connectors. |
+| `SELFBOUND_OWNER_NAME` | no | fallback for your display name in what agents read, for example who wrote a comment, until you set a name in **Settings → Profile**. Default `Owner`. |
 
 Details: [Connect an agent](/agents/connect/).
 
@@ -129,14 +132,14 @@ Details: [Connect an agent](/agents/connect/).
 
 | Variable | Required | Value |
 |---|---|---|
-| `XLR8_LOCALE` | no | `de` for German push notification texts and German default status names in new teams. Default English. The UI language is separate: it follows the browser and can be changed in the settings. |
+| `SELFBOUND_LOCALE` | no | `de` for German push notification texts and German default status names in new teams. Default English. The UI language is separate: it follows the browser and can be changed in the settings. |
 
 ### Push notifications
 
 | Variable | Required | Value |
 |---|---|---|
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | no | key pair for Web Push. Without them, no push notifications. Generate and set them with `node tooling/vapid.mjs`; never by hand. |
-| `VAPID_SUBJECT` | no | contact for push services (`https:` or `mailto:`). Set by `tooling/vapid.mjs`; if unset, `XLR8_APP_URL` is used. |
+| `VAPID_SUBJECT` | no | contact for push services (`https:` or `mailto:`). Set by `tooling/vapid.mjs`; if unset, `SELFBOUND_APP_URL` is used. |
 
 Details: [Notifications](/using/notifications/).
 
@@ -156,8 +159,8 @@ Details: [GitHub](/integrations/github/).
 
 | Variable | Meaning |
 |---|---|
-| `XLR8_ALLOW_SEED` | allows loading sample data, which deletes everything else |
-| `XLR8_TEST_SWITCHES` | test switches for local development |
+| `SELFBOUND_ALLOW_SEED` | allows loading sample data, which deletes everything else |
+| `SELFBOUND_TEST_SWITCHES` | test switches for local development |
 
 Convex itself sets `CONVEX_CLOUD_URL` and `CONVEX_SITE_URL`; you do not set them.
 

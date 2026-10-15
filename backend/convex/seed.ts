@@ -22,16 +22,17 @@ import schema, {
   sprintStateValidator,
   statusValidator,
 } from './schema';
-import { bucketOf } from './shared/constants';
+import { bucketOf, SPRINT_SOURCE } from './shared/constants';
 import { stateForStatus } from './shared/workflow';
+import { envVar } from './lib/legacyEnv';
 
 // Load synthetic test data (called by backend/scripts/seed.ts).
 // Guarded twice: only for the owner (ownerMutation) AND only if the deployment
-// has XLR8_ALLOW_SEED=1 set (local only).
+// has SELFBOUND_ALLOW_SEED=1 set (local only).
 
 function assertSeedAllowed() {
-  if (process.env.XLR8_ALLOW_SEED !== '1') {
-    fail('access_denied', 'Test data is not allowed on this backend (XLR8_ALLOW_SEED is not set).');
+  if (envVar('ALLOW_SEED') !== '1') {
+    fail('access_denied', 'Test data is not allowed on this backend (SELFBOUND_ALLOW_SEED is not set).');
   }
 }
 
@@ -144,7 +145,7 @@ export const insertBase = ownerMutation({
     for (const sprint of args.sprints) {
       sprints.push({
         number: sprint.number,
-        id: await ctx.db.insert('sprints', { ...sprint, source: 'xlr8', updatedAt: sprint.closedAt ?? sprint.startedAt ?? args.now }),
+        id: await ctx.db.insert('sprints', { ...sprint, source: SPRINT_SOURCE, updatedAt: sprint.closedAt ?? sprint.startedAt ?? args.now }),
       });
     }
     for (const { teamKey, labels: names, ...r } of args.recurrences) {

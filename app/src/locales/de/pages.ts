@@ -28,7 +28,7 @@ export default {
   'Claude and ChatGPT connect as a connector by signing in. Changes appear in the history with the agent name.': 'Claude und ChatGPT verbinden sich als Connector per Anmeldung. Änderungen erscheinen im Verlauf mit dem Namen.',
   'Connector for claude.ai or ChatGPT': 'Connector für claude.ai oder ChatGPT',
   'Loading …': 'Lädt …',
-  'Not enabled on this backend (XLR8_APP_URL is missing, see docs/operations.md).': 'Auf diesem Backend nicht eingeschaltet (XLR8_APP_URL fehlt, siehe docs/operations.md).',
+  'Not enabled on this backend (SELFBOUND_APP_URL is missing, see docs/operations.md).': 'Auf diesem Backend nicht eingeschaltet (SELFBOUND_APP_URL fehlt, siehe docs/operations.md).',
   'Press "Connect connector". Selfbound then accepts new connections for 15 minutes.': '„Connector verbinden“ drücken. Selfbound nimmt dann 15 Minuten lang neue Verbindungen an.',
   'claude.ai: Settings → Connectors → Add custom connector. ChatGPT: Settings → Apps → add your own MCP server. Enter this URL as the address:': 'claude.ai: Einstellungen → Connectors → Custom Connector hinzufügen. ChatGPT: Einstellungen → Apps → eigenen MCP-Server hinzufügen. Als Adresse diese URL eintragen:',
   Address: 'Adresse',

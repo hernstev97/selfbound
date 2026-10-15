@@ -48,7 +48,7 @@ test.describe('English browser', () => {
     await expect(page.getByTestId('settings-locale')).toHaveValue('de');
     await expect(page.locator('html')).toHaveAttribute('lang', 'de');
     await expect(page.getByTestId('settings-page')).toContainText('Sprache');
-    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('xlr8:prefs') ?? '{}').locale)).toBe('de');
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('selfbound:prefs') ?? '{}').locale)).toBe('de');
     await open(page, '/inbox');
     await expectLanguage(page, 'de');
     await expect(page.getByTestId('view-title')).toHaveText('Eingang');

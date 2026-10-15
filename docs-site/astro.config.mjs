@@ -97,6 +97,7 @@ export default defineConfig({
                 { slug: 'start/self-hosting/convex' },
                 { slug: 'start/self-hosting/web-app' },
                 { slug: 'start/self-hosting/updating' },
+                { slug: 'start/self-hosting/upgrade-from-xlr8' },
               ],
             },
             { slug: 'start/first-steps' },

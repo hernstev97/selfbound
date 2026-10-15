@@ -113,7 +113,7 @@ jobs:
       - name: Artifact (30 days)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: xlr8-backup-${{ steps.encrypt.outputs.date }}
+          name: selfbound-backup-${{ steps.encrypt.outputs.date }}
           path: |
             ${{ steps.encrypt.outputs.file }}
             ${{ steps.export.outputs.manifest }}
@@ -124,7 +124,7 @@ jobs:
         if: steps.encrypt.outputs.weekday == '7'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: xlr8-backup-weekly-${{ steps.encrypt.outputs.date }}
+          name: selfbound-backup-weekly-${{ steps.encrypt.outputs.date }}
           path: |
             ${{ steps.encrypt.outputs.file }}
             ${{ steps.export.outputs.manifest }}

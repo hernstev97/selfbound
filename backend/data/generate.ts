@@ -198,10 +198,10 @@ const LABELS: GenLabel[] = [
 const TYPE_LABELS = ['Bug', 'Feature', 'Improvement', 'Research'];
 const OTHER_LABELS = ['Design', 'Docs', 'Performance', 'Security', 'Data', 'Mobile', 'Agent', 'Tech debt'];
 
-// Keys have the length of real agent keys (48 characters) and work only against a local backend.
+// Keys have the length of real agent keys (53 characters) and work only against a local backend.
 const AGENTS: GenAgent[] = [
-  { name: 'Codex', key: 'xlr8_seed_codex_local_only_000000000000000000000' },
-  { name: 'Claude Code', key: 'xlr8_seed_claudecode_local_only_0000000000000000' },
+  { name: 'Codex', key: 'selfbound_seed_codex_local_only_000000000000000000000' },
+  { name: 'Claude Code', key: 'selfbound_seed_claudecode_local_only_0000000000000000' },
 ];
 
 const PROJECT_WORDS = [

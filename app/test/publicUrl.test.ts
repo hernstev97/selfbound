@@ -1,7 +1,7 @@
-// Absolute URLs in index.html and welcome.html come from XLR8_PUBLIC_URL at build time.
+// Absolute URLs in index.html and welcome.html come from SELFBOUND_PUBLIC_URL at build time.
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { publicUrl, publicUrlHtml } from '../vite.plugins.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { aliasViteVar, buildVar, publicUrl, publicUrlHtml } from '../vite.plugins.ts';
 
 const page = `<head>
     <link rel="canonical" href="/" />
@@ -36,8 +36,8 @@ describe('publicUrlHtml', () => {
   });
 
   it('rejects a public URL that is not an origin', () => {
-    expect(() => publicUrl('selfbound.example.com')).toThrow('XLR8_PUBLIC_URL');
-    expect(() => publicUrl('https://selfbound.example.com/app')).toThrow('XLR8_PUBLIC_URL');
+    expect(() => publicUrl('selfbound.example.com')).toThrow('SELFBOUND_PUBLIC_URL');
+    expect(() => publicUrl('https://selfbound.example.com/app')).toThrow('SELFBOUND_PUBLIC_URL');
     expect(() => publicUrl('https://selfbound.example.com')).not.toThrow();
   });
 
@@ -47,5 +47,38 @@ describe('publicUrlHtml', () => {
       expect(html, file).not.toMatch(/(content|href)="https?:\/\//);
       expect(publicUrlHtml(html, undefined), file).not.toMatch(/<(meta|link)[^>]*(og:image|twitter:image|og:url|"canonical")/);
     }
+  });
+});
+
+// legacy-xlr8: the old build variable names keep working, with a warning
+describe('build variables', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('the new name wins and warns about nothing', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(buildVar('PUBLIC_URL', { SELFBOUND_PUBLIC_URL: 'https://a.example', XLR8_PUBLIC_URL: 'https://b.example' })).toBe('https://a.example'); // legacy-xlr8
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('the old name still works and warns once, without the value', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(buildVar('BUILD_ID', { XLR8_BUILD_ID: 'secret-id' })).toBe('secret-id'); // legacy-xlr8
+    expect(buildVar('BUILD_ID', { XLR8_BUILD_ID: 'secret-id' })).toBe('secret-id'); // legacy-xlr8
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(String(warn.mock.calls[0][0])).toContain('SELFBOUND_BUILD_ID');
+    expect(String(warn.mock.calls[0][0])).not.toContain('secret-id');
+    expect(buildVar('NOTHING', {})).toBeUndefined();
+  });
+
+  it('the old client variables are copied under the new name for Vite', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const target: NodeJS.ProcessEnv = {};
+    aliasViteVar('TEST', { VITE_XLR8_TEST: '1' }, target); // legacy-xlr8
+    expect(target.VITE_SELFBOUND_TEST).toBe('1');
+    expect(warn).toHaveBeenCalledTimes(1);
+    // Both set: the new one stays.
+    const both: NodeJS.ProcessEnv = {};
+    aliasViteVar('BRANCH_PREFIX', { VITE_SELFBOUND_BRANCH_PREFIX: 'a', VITE_XLR8_BRANCH_PREFIX: 'b' }, both); // legacy-xlr8
+    expect(both.VITE_SELFBOUND_BRANCH_PREFIX).toBeUndefined();
   });
 });

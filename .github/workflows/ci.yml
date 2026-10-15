@@ -51,6 +51,7 @@ jobs:
         run: |
           pnpm test
           pnpm --filter @selfbound/backend test:lib
+          pnpm test:tooling
 
       # Fresh local backend in the runner (port 13490): import twice, MCP SDK client,
       # concurrency with 20 clients, 5 agents and parallel webhooks.

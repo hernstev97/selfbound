@@ -10,7 +10,7 @@ import { stateForStatus } from '../convex/shared/workflow';
 
 export const modules = import.meta.glob('../convex/**/*.*s');
 
-const ISSUER = 'https://dev.xlr8.local';
+const ISSUER = 'https://dev.selfbound.local';
 export const OWNER = { issuer: ISSUER, subject: 'owner', tokenIdentifier: `${ISSUER}|owner` };
 export const STRANGER = { issuer: ISSUER, subject: 'mallory', tokenIdentifier: `${ISSUER}|mallory` };
 
@@ -18,17 +18,17 @@ export const STRANGER = { issuer: ISSUER, subject: 'mallory', tokenIdentifier: `
 export const APP_URL = 'http://127.0.0.1:5412';
 
 export function setup(env: { testSwitches?: boolean; allowSeed?: boolean; cloudUrl?: string; oauth?: boolean } = {}) {
-  process.env.XLR8_OWNER_IDS = OWNER.tokenIdentifier;
-  process.env.XLR8_TEST_SWITCHES = env.testSwitches === false ? '0' : '1';
-  process.env.XLR8_ALLOW_SEED = env.allowSeed === false ? '0' : '1';
+  process.env.SELFBOUND_OWNER_IDS = OWNER.tokenIdentifier;
+  process.env.SELFBOUND_TEST_SWITCHES = env.testSwitches === false ? '0' : '1';
+  process.env.SELFBOUND_ALLOW_SEED = env.allowSeed === false ? '0' : '1';
   // As in a local deployment (Convex sets both variables itself). The local test
-  // sign-in (issuer dev.xlr8.local) only works when CONVEX_CLOUD_URL is local.
+  // sign-in (issuer dev.selfbound.local) only works when CONVEX_CLOUD_URL is local.
   process.env.CONVEX_CLOUD_URL = env.cloudUrl ?? 'http://127.0.0.1:3210';
   process.env.CONVEX_SITE_URL = 'http://127.0.0.1:3211';
   // OAuth for connectors only on request (otherwise the behaviour without OAuth applies).
-  if (env.oauth) process.env.XLR8_APP_URL = APP_URL;
-  else delete process.env.XLR8_APP_URL;
-  delete process.env.XLR8_PUBLIC_SITE_URL;
+  if (env.oauth) process.env.SELFBOUND_APP_URL = APP_URL;
+  else delete process.env.SELFBOUND_APP_URL;
+  delete process.env.SELFBOUND_PUBLIC_SITE_URL;
   // transactionLimits: enforce the real Convex limits per function (reads, writes, documents).
   const t = convexTest({ schema, modules, transactionLimits: true });
   const owner = t.withIdentity(OWNER);

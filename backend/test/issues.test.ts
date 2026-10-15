@@ -10,7 +10,7 @@ import { createOne, expectCode, fixture, getIssue, historyOf, setup, stateId, ty
 
 async function makeAgent(t: T, name = 'Agent'): Promise<Actor> {
   const agentId = await t.run(
-    async (ctx) => await ctx.db.insert('agents', { name, keyHash: 'a'.repeat(64), keyPrefix: 'xlr8_aaaaa', createdAt: Date.now() }),
+    async (ctx) => await ctx.db.insert('agents', { name, keyHash: 'a'.repeat(64), keyPrefix: 'selfbound_aaaaa', createdAt: Date.now() }),
   );
   return { kind: 'agent', agentId };
 }
@@ -504,7 +504,7 @@ describe('Read', () => {
 });
 
 describe('Test switch rejectWrites', () => {
-  test('only works with XLR8_TEST_SWITCHES=1 and then rejects all UI writes', async () => {
+  test('only works with SELFBOUND_TEST_SWITCHES=1 and then rejects all UI writes', async () => {
     const { owner } = setup();
     const f = await fixture(owner);
     await owner.mutation(api.admin.setRejectWrites, { value: true });
@@ -518,7 +518,7 @@ describe('Test switch rejectWrites', () => {
 
     // Switch off: neither settable nor effective.
     await owner.mutation(api.admin.setRejectWrites, { value: true });
-    process.env.XLR8_TEST_SWITCHES = '0';
+    process.env.SELFBOUND_TEST_SWITCHES = '0';
     await createOne(owner, f.orb);
     expect((await owner.query(api.meta.get, {})).rejectWrites).toBe(false);
     await expectCode(owner.mutation(api.admin.setRejectWrites, { value: false }), 'access_denied');

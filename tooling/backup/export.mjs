@@ -10,19 +10,19 @@
 //   deploy-key        the deployment behind CONVEX_DEPLOY_KEY. Only in GitHub Actions
 //                     (CI=true), where the daily backup workflow runs.
 //
-// Output in <folder> (default ~/.local/share/xlr8/backups):
-//   xlr8-<source>-<time>.zip            export (tables as JSONL, files in _storage)
-//   xlr8-<source>-<time>.manifest.json  rows per table, files, SHA-256 of the ZIP
-//   xlr8-<source>-<time>.zip.age        with --encrypt: encrypted for the recipients
+// Output in <folder> (default ~/.local/share/selfbound/backups):
+//   selfbound-<source>-<time>.zip       export (tables as JSONL, files in _storage)
+//   selfbound-<source>-<time>.manifest.json  rows per table, files, SHA-256 of the ZIP
+//   selfbound-<source>-<time>.zip.age   with --encrypt: encrypted for the recipients
 // Recipients: --recipient (repeatable), --recipients-file <file> or AGE_RECIPIENTS
 // (separated by commas or newlines). Public keys only, never the private one.
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { appendFileSync, chmodSync, closeSync, fchmodSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dataDir } from '../lib/env.mjs';
 import { summarizeSnapshot } from './snapshot.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -36,7 +36,7 @@ const flag = (name) => argv.includes(`--${name}`);
 const log = (msg) => console.log(`\x1b[36m▸\x1b[0m ${msg}`);
 
 const sourceKind = opt('source', 'local');
-const outDir = resolve(opt('out', join(homedir(), '.local', 'share', 'xlr8', 'backups')));
+const outDir = resolve(opt('out', join(dataDir(), 'backups')));
 
 function stamp(date = new Date()) {
   return date.toISOString().replace(/\.\d{3}Z$/, 'Z').replaceAll(':', '-');
@@ -65,7 +65,7 @@ function exec(command, args, options) {
 async function exportTo(zip) {
   const args = ['export', '--include-file-storage', '--path', zip];
   if (sourceKind === 'local') {
-    process.env.XLR8_BACKEND_DIR = 'backend';
+    process.env.SELFBOUND_BACKEND_DIR = 'backend';
     const { runConvex } = await import('../convex.mjs');
     await new Promise((resolvePromise, reject) => {
       const child = runConvex(args, { stdio: ['ignore', 'inherit', 'inherit'] });
@@ -92,7 +92,7 @@ async function main() {
   }
 
   mkdirSync(outDir, { recursive: true, mode: 0o700 });
-  const base = join(outDir, `xlr8-${sourceKind}-${stamp()}`);
+  const base = join(outDir, `selfbound-${sourceKind}-${stamp()}`);
   const zip = `${base}.zip`;
   log(`Exporting (${sourceKind}) to ${zip} …`);
   await exportTo(zip);

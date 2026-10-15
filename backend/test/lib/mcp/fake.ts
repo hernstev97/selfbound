@@ -12,7 +12,7 @@ import {
 } from '../../../convex/lib/mcp/protocol';
 
 export const AGENT = { id: 'agent_1', name: 'Test agent' };
-export const KEY = 'xlr8_synthetic_test_key';
+export const KEY = 'selfbound_synthetic_test_key';
 
 export interface FakeCall {
   name: string;

@@ -3,7 +3,7 @@ import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { berlinDay } from '../lib/dates';
 import { fail, notFound } from '../lib/errors';
-import { OWNER_KIND } from '../shared/constants';
+import { isOwnerKind } from '../shared/constants';
 import { revokeConnector } from './oauth';
 import { checkName } from './validate';
 
@@ -17,7 +17,7 @@ const LAST_USED_EVERY_MS = 60_000;
 
 /** Only the owner may do `what` (e.g. "create agent keys"). */
 export function assertOwner(actor: Actor, what: string) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', `Only the owner may ${what}.`);
+  if (!isOwnerKind(actor.kind)) fail('access_denied', `Only the owner may ${what}.`);
 }
 
 export async function insertAgent(

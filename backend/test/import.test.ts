@@ -285,7 +285,7 @@ describe('Import from Linear', () => {
     expect(teamsAfter.map((x) => x.order)).toEqual(teams.map((x) => teams.length - 1 - x.order));
     // Selfbound sprint untouched, Linear sprints unchanged.
     const sprints = await t.run(async (ctx) => await ctx.db.query('sprints').collect());
-    expect(sprints.filter((s) => s.source === 'xlr8')).toEqual([expect.objectContaining({ _id: sprintId, state: 'planning' })]);
+    expect(sprints.filter((s) => s.source === 'selfbound')).toEqual([expect.objectContaining({ _id: sprintId, state: 'planning' })]);
     await expectSprintInvariant(t);
   });
 

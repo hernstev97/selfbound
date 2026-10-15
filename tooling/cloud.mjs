@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Convex CLI against your production deployment (convexDeployment, tooling/instance.mjs), with the
-// deploy key from ~/.config/xlr8/convex-deploy-key (override the path with
-// XLR8_CONVEX_DEPLOY_KEY_FILE). The key is never printed. A key for any other deployment is refused.
+// deploy key from ~/.config/selfbound/convex-deploy-key (override the path with
+// SELFBOUND_CONVEX_DEPLOY_KEY_FILE). The key is never printed. A key for any other deployment is refused.
 //
 // Usage:  node tooling/cloud.mjs <convex arguments…>
 //   e.g.  node tooling/cloud.mjs env list
@@ -12,14 +12,15 @@
 
 import { spawn } from 'node:child_process';
 import { closeSync, fstatSync, mkdirSync, openSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requireInstance } from './instance.mjs';
+import { configFile, envVar } from './lib/env.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const backendDir = join(root, 'backend');
-const keyFile = process.env.XLR8_CONVEX_DEPLOY_KEY_FILE || join(homedir(), '.config', 'xlr8', 'convex-deploy-key');
+/** Path of the production deploy key file. */
+export const deployKeyFile = (env = process.env) => envVar('CONVEX_DEPLOY_KEY_FILE', env) || configFile('convex-deploy-key', { env });
 
 /** Name of the production deployment (exits with a hint if it is not configured). */
 export function prodDeployment() {
@@ -28,6 +29,7 @@ export function prodDeployment() {
 
 function deployKey() {
   const expected = prodDeployment();
+  const keyFile = deployKeyFile();
   // One handle for check and read: the file cannot be swapped in between.
   const fd = openSync(keyFile, 'r');
   let key;
