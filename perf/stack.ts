@@ -97,7 +97,7 @@ function alive(pid: number) {
 export function acquireLock() {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      writeFileSync(LOCK, JSON.stringify({ pid: process.pid, dir: root, cmd: process.argv.slice(1).join(' '), started: new Date().toISOString() }), { flag: 'wx' });
+      writeFileSync(LOCK, JSON.stringify({ pid: process.pid, dir: root, cmd: process.argv.slice(1).join(' '), started: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
       process.on('exit', releaseLock);
       return;
     } catch {
