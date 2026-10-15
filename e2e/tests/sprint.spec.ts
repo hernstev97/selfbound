@@ -4,7 +4,7 @@
 // build on each other.
 import { expect, test, type Page } from '@playwright/test';
 import { ConvexError } from 'convex/values';
-import { api, backend, open, settled } from '../support/helpers.ts';
+import { allIssues, api, backend, open, settled } from '../support/helpers.ts';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -202,7 +202,7 @@ test('Closing: impossible without all decisions, 1/2/3 and bulk decision, carrie
   expect(closed.retro).toBe('Good: planning across three teams. Fewer late additions.');
   const nextItems = await backend().query(api.sprints.items, { sprintId: next._id });
   for (const r of rows.slice(0, 2)) expect(nextItems.find((i) => i.issueId === r.id && i.removedAt === null)).toMatchObject({ kind: 'planned', carriedFrom: active._id });
-  const canceled = (await backend().query(api.issues.bucket, { bucket: 0 })).concat(...(await Promise.all([1, 2, 3, 4, 5, 6, 7].map((b) => backend().query(api.issues.bucket, { bucket: b })))));
+  const canceled = await allIssues();
   expect(canceled.find((i) => i._id === rows[2].id)?.status).toBe('canceled');
 
   // Overview: finished, with points and late share
@@ -235,7 +235,7 @@ test('Priority budget: notice with candidates and "Downgrade", overview per team
   await expect(other).toContainText('→ Medium');
   await other.click();
   await settled(page);
-  const docs = (await backend().query(api.issues.bucket, { bucket: 0 })).concat(...(await Promise.all([1, 2, 3, 4, 5, 6, 7].map((b) => backend().query(api.issues.bucket, { bucket: b })))));
+  const docs = await allIssues();
   expect(docs.find((d) => d._id === id)?.priority).toBe(2);
   expect(docs.find((d) => d._id === victim)?.priority).toBe(3);
 });

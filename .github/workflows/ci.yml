@@ -39,11 +39,10 @@ jobs:
       - name: Dependencies
         run: pnpm install --frozen-lockfile
 
+      # Includes the stricter test/lib and linear-import projects, so `pnpm typecheck` locally fails
+      # exactly where CI would.
       - name: Types
-        run: |
-          pnpm typecheck
-          pnpm --filter @selfbound/backend exec tsc --noEmit -p test/lib
-          pnpm --filter @selfbound/backend exec tsc --noEmit -p ../tooling/linear-import
+        run: pnpm typecheck
 
       - name: Translations
         run: node tooling/i18n-check.mjs
@@ -58,10 +57,6 @@ jobs:
       - name: Integration (local backend)
         run: pnpm --filter @selfbound/backend test:integration
 
-      # Performance regression, quick run (perf/README.md): own backend (13520), two builds, vite preview (5522),
-      # only P1 · 10,000 issues, few repetitions. Threshold 250 ms p95 instead of 100 ms because shared
-      # runners fluctuate. Initial bundle and DOM nodes are load-independent and may be at most 5 % above
-      # perf/baseline.json; other deviations from the baseline are only warnings.
       - name: Playwright browser
         run: pnpm --filter @selfbound/perf exec playwright install --with-deps chromium
 
@@ -78,6 +73,10 @@ jobs:
             e2e/test-results/
           if-no-files-found: ignore
 
+      # Performance regression, quick run (perf/README.md): own backend (13520), two builds, vite preview (5522),
+      # only P1 · 10,000 issues, few repetitions. Threshold 250 ms p95 instead of 100 ms because shared
+      # runners fluctuate. Initial bundle and DOM nodes are load-independent and may be at most 5 % above
+      # perf/baseline.json; other deviations from the baseline are only warnings.
       - name: Performance (quick run)
         run: node perf/run.ts --quick --no-pin
 
