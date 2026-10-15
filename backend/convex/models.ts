@@ -5,6 +5,7 @@ import { ownerQuery, ownerWriteMutation } from './lib/auth';
 import { fail } from './lib/errors';
 import { fetchCatalog, providerHash, reduceCatalog, type SlimProvider } from './lib/modelsCatalog';
 import { testSwitchesEnabled } from './lib/testSwitches';
+import { modelRefValidator, slimProviderValidator } from './lib/validators';
 import {
   applyProvider,
   catalogStatus,
@@ -21,17 +22,6 @@ import {
 // never contacts models.dev), and the owner's choice of models to offer. Rules: shared/models.ts,
 // storing: ops/models.ts, fetch and reduction: lib/modelsCatalog.ts.
 
-const slimModelValidator = v.object({
-  modelId: v.string(),
-  name: v.string(),
-  family: v.optional(v.string()),
-  efforts: v.optional(v.array(v.string())),
-  modes: v.optional(v.array(v.string())),
-  context: v.optional(v.number()),
-  output: v.optional(v.number()),
-  releaseDate: v.optional(v.string()),
-});
-const slimProviderValidator = v.object({ provider: v.string(), name: v.string(), hash: v.string(), models: v.array(slimModelValidator) });
 
 /** Models per mutation when writing a fresh catalog (Convex limits writes per transaction). */
 const MODELS_PER_BATCH = 1500;
@@ -80,7 +70,7 @@ export const refresh = ownerWriteMutation({
  * deployment never has): stores a catalog without contacting models.dev and enables some models.
  */
 export const seedForTest = ownerWriteMutation({
-  args: { providers: v.array(slimProviderValidator), enable: v.optional(v.array(v.object({ provider: v.string(), modelId: v.string() }))) },
+  args: { providers: v.array(slimProviderValidator), enable: v.optional(v.array(modelRefValidator)) },
   handler: async (ctx, args) => {
     if (!testSwitchesEnabled()) fail('access_denied', 'Test switches are disabled on this backend.');
     const now = Date.now();

@@ -19,7 +19,7 @@
   // shortcuts in the entries.
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
-  const PICKER_KEY: Partial<Record<PaletteKind, string>> = { status: 'S', priority: 'P', labels: 'L', estimate: '⇧E', sprint: '⇧C', project: '⇧P', due: '⇧D', filter: 'F' };
+  const PICKER_KEY: Partial<Record<PaletteKind, string>> = { status: 'S', priority: 'P', labels: 'L', estimate: '⇧E', model: '⇧M', sprint: '⇧C', project: '⇧P', due: '⇧D', filter: 'F' };
 
   // Reads only `active`: runs after each change of it, once the entries are in the DOM.
   function revealActive(list: HTMLElement) {
@@ -59,7 +59,7 @@
     }}
   >
     <div
-      class={['palette', p.anchor && 'anchored', p.anchor && (p.kind === 'labels' || p.kind === 'parent' || p.kind === 'relation' || p.kind === 'duplicate' || p.kind === 'due' || p.kind === 'snooze') && 'wide']}
+      class={['palette', p.anchor && 'anchored', p.anchor && (p.kind === 'labels' || p.kind === 'parent' || p.kind === 'relation' || p.kind === 'duplicate' || p.kind === 'due' || p.kind === 'snooze' || p.kind === 'model') && 'wide']}
       style:left={p.anchor ? `${p.anchor.x}px` : shellSlice.current.peek && (p.kind === 'search' || p.kind === 'command') ? 'calc(50% - 250px)' : undefined}
       style:top={p.anchor ? `${p.anchor.y}px` : undefined}
       data-testid="palette"

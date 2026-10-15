@@ -14,6 +14,7 @@ import type { Id } from '../convex/_generated/dataModel.d.ts';
 import { KEY_PREFIX_LENGTH } from '../convex/lib/keys.ts';
 import type { OWNER_KIND } from '../convex/shared/constants.ts';
 import { DATASETS, generateDataset, NOW, type DatasetName, type GenActor } from '../data/generate.ts';
+import { SAMPLE_ENABLED, SAMPLE_MODELS } from '../data/models.ts';
 import { samplePullRequests } from '../data/pullRequests.ts';
 
 const backendDir = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -97,6 +98,7 @@ export async function seedWith(
     recurrences: data.recurrences,
     now: NOW,
   });
+  await mutate(api.seed.insertModels, { providers: SAMPLE_MODELS, enable: SAMPLE_ENABLED });
   const teamId = new Map(base.teams.map((t) => [t.key, t.id]));
   const labelId = new Map(base.labels.map((l) => [l.name, l.id]));
   const projectId = new Map(base.projects.map((p) => [p.name, p.id]));

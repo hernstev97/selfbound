@@ -4,6 +4,7 @@ import { PRIORITY_KEYWORDS, PRIORITY_LABEL, STATUS_KEYWORDS, STATUS_LABEL, STATU
 import { t, tc } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import { VIEWS } from '../views.ts';
+import type { ModelChoice } from '../models.ts';
 import type { IssueId, IssuePatch, NewIssue, Priority, StateId, Status } from '../types.ts';
 import { defaultState, statusOfState } from '@selfbound/backend/shared/workflow';
 import { workflowsOf } from '../workflow.ts';
@@ -27,6 +28,8 @@ export interface Draft {
   dueDate: string | null;
   parentId: string | null;
   sprintId: string | null;
+  /** Desired model; missing in drafts saved before it existed */
+  model?: ModelChoice | null;
   updatedAt: number;
 }
 
@@ -339,6 +342,7 @@ export class CreateController {
       ...(d.dueDate ? { dueDate: d.dueDate } : {}),
       ...(d.parentId ? { parentId: d.parentId as NewIssue['parentId'] } : {}),
       ...(d.sprintId ? { sprintId: d.sprintId as NewIssue['sprintId'] } : {}),
+      ...(d.model ? { model: d.model } : {}),
     };
     write(LAST_TEAM, d.teamId);
     this.app.cues.emit('success');

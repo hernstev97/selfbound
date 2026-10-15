@@ -20,11 +20,13 @@ import { ICON, PRIORITY_ICON, statusIcon } from '../icons.ts';
 import { STATE_TYPE_LABEL } from '@selfbound/backend/shared/workflow';
 import { stateGroupKey, statusFilterValue, workflowsOf, type StateGroup } from '../workflow.ts';
 import { formatShortcut } from '../keyboard.ts';
+import { contextLabel, issueModel, modelKey, modelLabel, type ModelChoice, type ModelInfo } from '../models.ts';
 import { hasLoss, moveLines, movePlan } from '../move.ts';
 import { Slice } from '../observable.ts';
 import { IssueSearch, looksLikeIdentifier, scoreText } from '../search.ts';
 import type { Issue, IssueId, IssuePatch, MenuItem, PaletteKind, PaletteState, Priority, StateId, Status } from '../types.ts';
 import { api } from '@selfbound/backend/api';
+import { speedsOf, STANDARD_SPEED } from '@selfbound/backend/shared/models';
 import { ACTIONS, SECTION_LABEL, actionById, type Action } from './actions.ts';
 import type { App } from './index.ts';
 
@@ -33,6 +35,9 @@ export type PickerTarget = { kind: 'issues'; ids: IssueId[] } | { kind: 'draft' 
 
 /** 'stay' = the menu stays open (multi-select, submenu). */
 type Run = () => void | 'stay';
+
+/** Where the model picker is: provider → model → effort → speed, each showing what fits the one before. */
+type ModelStep = { step: 'provider' | 'model' | 'effort' | 'speed'; provider?: string; modelId?: string; effort?: string | null };
 
 export interface ItemSet {
   items: MenuItem[];
@@ -45,7 +50,7 @@ export interface ItemSet {
 const MAX_ITEMS = 50;
 const RECENT = 'selfbound:recent';
 
-export const PICKER_KINDS: PaletteKind[] = ['status', 'priority', 'labels', 'project', 'sprint', 'estimate', 'due', 'parent', 'team'];
+export const PICKER_KINDS: PaletteKind[] = ['status', 'priority', 'labels', 'project', 'sprint', 'estimate', 'model', 'due', 'parent', 'team'];
 
 /** Title and placeholder per palette kind (English; translated when the palette opens). */
 const TITLES: Record<PaletteKind, [string, string]> = {
@@ -59,6 +64,7 @@ const TITLES: Record<PaletteKind, [string, string]> = {
   project: [msg('Project'), msg('Project …')],
   sprint: [msg('Sprint'), msg('Sprint …')],
   estimate: [msg('Estimate'), msg('Estimate …')],
+  model: [msg('Model'), msg('Model …')],
   due: [msg('Due date'), msg('e.g. tomorrow, next week, 12.10. …')],
   snooze: [msg('Snooze until'), msg('e.g. tomorrow, next week, 12.10. …')],
   parent: [msg('Parent'), msg('Search parent issue …')],
@@ -107,6 +113,8 @@ export class PaletteController {
   #moveConfirm: { ids: IssueId[]; anchor: PaletteState['anchor'] } | null = null;
   /** Anchor of the picker whose item is running (only during `choose`) */
   #anchor: PaletteState['anchor'] = null;
+  /** Step of the model picker; null = it starts at the first step */
+  #modelStep: ModelStep | null = null;
 
   constructor(private app: App) {
     try {
@@ -129,6 +137,7 @@ export class PaletteController {
     this.#relation = null;
     this.#filterField = null;
     this.#calendarMonth = null;
+    this.#modelStep = null;
     const set = this.#items(kind, '');
     this.#base = set.items;
     this.#run = set.run;
@@ -337,6 +346,11 @@ export class PaletteController {
       this.open('team', { target: { kind: 'issues', ids }, anchor: anchor ?? undefined });
       return true;
     }
+    const up = s.kind === 'model' ? this.#modelUp() : null;
+    if (up) {
+      this.#modelGo(up);
+      return true;
+    }
     if (s.kind === 'filter' && this.#filterField) {
       this.#filterField = null;
       const set = this.#items('filter', '');
@@ -347,6 +361,125 @@ export class PaletteController {
     }
     this.close();
     return true;
+  }
+
+  // ---------------------------------------------------------------- Model picker
+
+  /** Enabled models that can be newly chosen (not gone from the catalog). */
+  #models(): ModelInfo[] {
+    return (this.app.store.meta.get()?.models ?? []).filter((m) => !m.removed);
+  }
+
+  /** First step: the providers, or directly the models when only one provider has enabled models. */
+  #modelStart(): ModelStep {
+    const providers = new Set(this.#models().map((m) => m.provider));
+    return providers.size === 1 ? { step: 'model', provider: [...providers][0] } : { step: 'provider' };
+  }
+
+  /** The step Esc and "‹" go back to; null = close. */
+  #modelUp(): ModelStep | null {
+    const step = this.#modelStep;
+    if (!step || step.step === 'provider') return null;
+    if (step.step === 'model') return this.#modelStart().step === 'provider' ? { step: 'provider' } : null;
+    const info = this.#models().find((m) => m.provider === step.provider && m.modelId === step.modelId);
+    if (step.step === 'speed' && info?.efforts.length) return { step: 'effort', provider: step.provider, modelId: step.modelId };
+    return { step: 'model', provider: step.provider };
+  }
+
+  /** Shows a step in the open picker (items, the "‹" label, the hint, the current value active). */
+  #modelGo(step: ModelStep) {
+    const s = this.state.get();
+    if (!s) return;
+    this.#modelStep = step;
+    const set = this.pickerItems('model', this.#target, '', true);
+    this.#base = set.items;
+    this.#run = set.run;
+    this.#baseHint = set.hint ?? null;
+    const info = this.#models().find((m) => m.provider === step.provider && m.modelId === step.modelId);
+    const parent =
+      step.step === 'provider'
+        ? null
+        : step.step === 'model'
+          ? this.#modelStart().step === 'provider'
+            ? (this.#models().find((m) => m.provider === step.provider)?.providerName ?? step.provider ?? null)
+            : null
+          : [info?.name ?? step.modelId, step.step === 'speed' ? step.effort : null].filter(Boolean).join(' · ');
+    const active = set.items.findIndex((i) => i.checked);
+    this.state.set({ ...s, query: '', items: set.items.slice(0, MAX_ITEMS), active: Math.max(0, active), parent, hint: this.#baseHint });
+  }
+
+  /** A model picked from the context menu or command menu: effort and speed follow in the picker. */
+  #pickModel(m: ModelInfo, target: PickerTarget) {
+    if (!m.efforts.length && !m.modes.length) return this.apply({ model: { provider: m.provider, modelId: m.modelId } }, target);
+    this.open('model', { target, anchor: this.#anchor ?? undefined });
+    this.#modelGo({ step: m.efforts.length ? 'effort' : 'speed', provider: m.provider, modelId: m.modelId });
+  }
+
+  #modelItems(target: PickerTarget, current: (ModelChoice | null)[], inPicker: boolean, add: (item: MenuItem, fn: Run) => void): string | undefined {
+    const meta = this.app.store.meta.get();
+    const models = this.#models();
+    const icon = ICON.model;
+    const every = (test: (c: ModelChoice) => boolean) => current.length > 0 && current.every((c) => c !== null && test(c));
+    const isModel = (c: ModelChoice, m: Pick<ModelInfo, 'provider' | 'modelId'>) => c.provider === m.provider && c.modelId === m.modelId;
+    const none = () => add({ id: 'm:none', label: t('No model'), detail: t('Agent decides'), icon: ICON.close, checked: current.length > 0 && current.every((c) => c === null) }, () => this.apply({ model: null }, target));
+    if (!inPicker) {
+      // Context submenu and command menu: the enabled models; effort and speed follow in the picker.
+      none();
+      for (const m of models) add({ id: `m:${modelKey(m.provider, m.modelId)}`, label: m.name, detail: m.providerName, icon, checked: every((c) => isModel(c, m)), keywords: `${m.provider} ${m.modelId} ${m.family ?? ''}` }, () => this.#pickModel(m, target));
+      return undefined;
+    }
+    const step = (this.#modelStep ??= this.#modelStart());
+    if (step.step === 'provider') {
+      none();
+      const counts = new Map<string, { name: string; count: number }>();
+      for (const m of models) counts.set(m.provider, { name: m.providerName, count: (counts.get(m.provider)?.count ?? 0) + 1 });
+      for (const [provider, { name, count }] of counts) {
+        add({ id: `mp:${provider}`, label: name, detail: tn(count, '{count} model', '{count} models'), icon, submenu: true, checked: every((c) => c.provider === provider), keywords: provider }, () => this.#modelGo({ step: 'model', provider }));
+      }
+      if (!models.length) {
+        add({ id: 'm:settings', label: t('Choose models in the settings …'), icon: ICON.settings }, () => this.app.nav.go({ name: 'settings', section: 'models' }));
+        return t('No models enabled yet');
+      }
+      // One issue without a model of its own: say what it inherits.
+      const issue = target.kind === 'issues' && target.ids.length === 1 ? this.app.store.get(target.ids[0]) : undefined;
+      const inherited = issue && !issue.model ? issueModel(meta, issue, issue.parentId ? this.app.store.get(issue.parentId) : undefined) : null;
+      if (inherited) {
+        const model = modelLabel(meta, inherited.choice);
+        return inherited.source === 'parent' ? t('Inherits {model} from the parent issue', { model }) : t('Inherits {model} from the team default', { model });
+      }
+      return undefined;
+    }
+    if (step.step === 'model') {
+      if (this.#modelStart().step !== 'provider') none();
+      for (const m of models.filter((x) => x.provider === step.provider)) {
+        const next = m.efforts.length ? 'effort' : m.modes.length ? 'speed' : null;
+        const choice = { provider: m.provider, modelId: m.modelId };
+        add(
+          { id: `mm:${m.modelId}`, label: m.name, detail: contextLabel(m) ?? undefined, icon, submenu: !!next, checked: every((c) => isModel(c, m)), keywords: `${m.modelId} ${m.family ?? ''}` },
+          next ? () => this.#modelGo({ step: next, provider: m.provider, modelId: m.modelId }) : () => this.apply({ model: choice }, target),
+        );
+      }
+      return undefined;
+    }
+    const m = models.find((x) => x.provider === step.provider && x.modelId === step.modelId);
+    if (!m) return undefined;
+    const base = { provider: m.provider, modelId: m.modelId };
+    const summary = [m.name, step.step === 'speed' ? step.effort : null, contextLabel(m)].filter(Boolean).join(' · ');
+    if (step.step === 'effort') {
+      const finish = (effort: string | null) =>
+        m.modes.length ? this.#modelGo({ step: 'speed', ...base, effort }) : this.apply({ model: { ...base, ...(effort ? { effort } : {}) } }, target);
+      add({ id: 'me:', label: t('Default effort'), detail: t('Agent decides'), icon: ICON.gauge, submenu: m.modes.length > 0, checked: every((c) => isModel(c, m) && !c.effort) }, () => finish(null));
+      for (const effort of m.efforts) add({ id: `me:${effort}`, label: effort, icon: ICON.gauge, submenu: m.modes.length > 0, checked: every((c) => isModel(c, m) && c.effort === effort) }, () => finish(effort));
+      return summary;
+    }
+    for (const speed of speedsOf(m)) {
+      const stored = speed === STANDARD_SPEED ? undefined : speed;
+      add(
+        { id: `ms:${speed}`, label: speed === STANDARD_SPEED ? t('Standard speed') : speed, icon: ICON.sprint, checked: every((c) => isModel(c, m) && (c.effort ?? null) === (step.effort ?? null) && c.speed === stored) },
+        () => this.apply({ model: { ...base, ...(step.effort ? { effort: step.effort } : {}), ...(stored ? { speed: stored } : {}) } }, target),
+      );
+    }
+    return summary;
   }
 
   /** After a multi-select toggle, recompute the checkmarks and keep the position. */
@@ -541,6 +674,10 @@ export class PaletteController {
         for (const sprint of (meta?.sprints ?? []).filter((s) => s.state !== 'closed').sort((a, b) => a.number - b.number)) {
           add({ id: `sp:${sprint._id}`, label: sprint.name, icon: ICON.sprint, checked: all(current, sprint._id as string | null), detail: sprintState(sprint.state) }, () => this.apply({ sprintId: sprint._id }, target));
         }
+        break;
+      }
+      case 'model': {
+        hint = this.#modelItems(target, values((i) => i.model ?? null, () => draft!.model ?? null), inPicker, add);
         break;
       }
       case 'estimate': {

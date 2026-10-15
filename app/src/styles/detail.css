@@ -408,6 +408,20 @@ textarea.drop-target {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Inherited from the parent or the team default */
+.prop-row .val.inherited {
+  color: var(--text-muted);
+  font-weight: 450;
+}
+.prop-note {
+  padding: 0 8px 4px 31px;
+  color: var(--text-muted);
+  font-size: var(--fs-micro);
+  line-height: 1.4;
+}
+.prop-note .warn {
+  color: var(--warning-text);
+}
 .prop-labels {
   display: flex;
   flex-wrap: wrap;

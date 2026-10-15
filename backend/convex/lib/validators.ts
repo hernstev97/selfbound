@@ -108,3 +108,19 @@ export const newArticleValidator = {
   topicIds: v.optional(v.array(v.id('wikiTopics'))),
   sources: v.optional(v.array(sourceInputValidator)),
 };
+
+// ---------------------------------------------------------------- Models catalog (XLR8-93)
+
+/** A model in the slim catalog form (lib/modelsCatalog.ts SlimModel). */
+export const slimModelValidator = v.object({
+  modelId: v.string(),
+  name: v.string(),
+  family: v.optional(v.string()),
+  efforts: v.optional(v.array(v.string())),
+  modes: v.optional(v.array(v.string())),
+  context: v.optional(v.number()),
+  output: v.optional(v.number()),
+  releaseDate: v.optional(v.string()),
+});
+export const slimProviderValidator = v.object({ provider: v.string(), name: v.string(), hash: v.string(), models: v.array(slimModelValidator) });
+export const modelRefValidator = v.object({ provider: v.string(), modelId: v.string() });

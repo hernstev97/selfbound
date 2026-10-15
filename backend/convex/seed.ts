@@ -4,11 +4,13 @@ import type { MutationCtx } from './_generated/server';
 import { ownerMutation, ownerQuery } from './lib/auth';
 import { setCounter, SEQ, SPRINT, teamCounter } from './lib/counters';
 import { fail } from './lib/errors';
+import { modelRefValidator, slimProviderValidator } from './lib/validators';
 import { ensureTeamStates, stateFields } from './lib/workflow';
 import { DAY_MS } from './lib/dates';
 import { BODY_SEARCH_CHARS } from './ops/bodies';
 import { openCreatedEntry } from './ops/inboxChanges';
 import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
+import { applyProvider, setModelEnabled } from './ops/models';
 import schema, {
   actorValidator,
   prDetailDataValidator,
@@ -324,6 +326,18 @@ export const insertPullRequests = ownerMutation({
       for (const item of items) await ctx.db.insert('pullRequestItems', { prId, ...item });
     }
     return { prs: args.prs.length };
+  },
+});
+
+/** A small models catalog (data/models.ts) with some models enabled, so local work needs no models.dev. */
+export const insertModels = ownerMutation({
+  args: { providers: v.array(slimProviderValidator), enable: v.array(modelRefValidator) },
+  handler: async (ctx, args) => {
+    assertSeedAllowed();
+    const now = Date.now();
+    for (const p of args.providers) await applyProvider(ctx, p, now);
+    for (const m of args.enable) await setModelEnabled(ctx, ctx.actor, { ...m, enabled: true });
+    return { providers: args.providers.length };
   },
 });
 

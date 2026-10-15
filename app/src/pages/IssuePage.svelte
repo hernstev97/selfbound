@@ -140,6 +140,7 @@
             <button class={['chip', !d.snoozed && 'unset']} data-testid="issue-snooze" onclick={(e) => open('snooze', e)}><span class="icon">{@html ICON.snooze}</span>{d.snoozed ? t('Snoozed until {date}', { date: d.snoozed.long }) : t('Snooze')}</button>
           {/if}
           <button class={['chip', d.estimate === null && 'unset']} onclick={(e) => open('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
+          <button class={['chip', (!d.model || d.model.source !== 'issue') && 'unset']} data-testid="issue-model" onclick={(e) => open('model', e)}><span class="icon">{@html ICON.model}</span>{d.model?.label ?? t('Model')}</button>
         </div>
 
         <Description detail={d} />

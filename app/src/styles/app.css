@@ -2015,6 +2015,10 @@ button.crumb:hover {
 .palette.anchored.wide {
   width: 320px;
 }
+/* Model names plus the context window ("Claude Sonnet 5.5 · 1M context") */
+.palette.anchored.wide[data-kind='model'] {
+  width: 380px;
+}
 .palette-target {
   display: inline-flex;
   align-items: center;

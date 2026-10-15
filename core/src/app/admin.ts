@@ -8,6 +8,7 @@ import { imageTokens, LIMITS } from '@selfbound/backend/constants';
 import type { Id } from '@selfbound/backend/dataModel';
 import type { LabelDoc, LabelGroupDoc, Meta, ProjectDoc, StateDoc, StateId, TeamDoc, TeamId } from '../types.ts';
 import type { StateType } from '@selfbound/backend/shared/workflow';
+import type { ModelChoice, ModelInfo } from '@selfbound/backend/shared/models';
 import type { App } from './index.ts';
 import { errorMessage } from './toasts.ts';
 import { t, tc } from '../i18n.ts';
@@ -150,6 +151,40 @@ export class Admin {
     } catch (error) {
       return errorMessage(error);
     }
+  }
+
+  // ---------------------------------------------------------------- Models (XLR8-93)
+
+  /** Offer a model in the chip, or stop offering it (issues that use it keep it). */
+  setModelEnabled(model: ModelInfo, enabled: boolean) {
+    const same = (m: ModelInfo) => m.provider === model.provider && m.modelId === model.modelId;
+    return this.#run(
+      enabled ? t('Model not enabled') : t('Model not removed'),
+      () =>
+        this.store.call(
+          api.models.setEnabled,
+          { provider: model.provider, modelId: model.modelId, enabled },
+          this.#meta((m) => ({ ...m, models: [...(m.models ?? []).filter((x) => !same(x)), ...(enabled ? [{ ...model, enabled: true }] : [])] })),
+        ),
+    );
+  }
+
+  /** "Update now": the server reads models.dev (at most once a minute). */
+  refreshModels() {
+    return this.#run(t('Catalog not updated'), () => this.store.call(api.models.refresh, {}));
+  }
+
+  /** Model for the team's issues that set none (and whose parent sets none); null = none. */
+  setTeamModel(teamId: TeamId, defaultModel: ModelChoice | null) {
+    return this.#run(
+      t('Default model not saved'),
+      () =>
+        this.store.call(
+          api.teams.update,
+          { teamId, defaultModel },
+          this.#meta((m) => ({ ...m, teams: m.teams.map((x) => (x._id === teamId ? ({ ...x, defaultModel: defaultModel ?? undefined } as TeamDoc) : x)) })),
+        ),
+    );
   }
 
   // ---------------------------------------------------------------- Time zone

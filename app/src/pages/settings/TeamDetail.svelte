@@ -10,6 +10,7 @@
   import InlineText from './InlineText.svelte';
   import HuePicker from './HuePicker.svelte';
   import Workflow from './Workflow.svelte';
+  import TeamModel from './TeamModel.svelte';
   import { admin } from './admin.ts';
   import type { LogoVariant } from '@selfbound/core/app/admin';
 
@@ -95,6 +96,7 @@
         {#each WIKI_MODES as [value, label] (label)}<button class={[(team.wiki ?? null) === value && 'on']} data-value={value ?? 'off'} onclick={() => admin.updateTeam(team!._id as TeamId, { wiki: value })}>{label}</button>{/each}
       </span>
     </div>
+    {#if team.wiki !== 'only'}<TeamModel {team} />{/if}
   </div>
 
   {#if team.wiki !== 'only'}<Workflow {team} />{/if}

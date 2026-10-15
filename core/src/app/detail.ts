@@ -7,6 +7,7 @@ import { workflowsOf } from '../workflow.ts';
 import { CLOSED, PRIORITY_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
 import { intlLocale, t } from '../i18n.ts';
 import { Slice } from '../observable.ts';
+import { contextLabel, issueModel, modelInfo, modelLabel, modelProblem, type ModelSource } from '../models.ts';
 import { isOwnerKind, LEGACY_OWNER_KIND, OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
 import type { App } from './index.ts';
 import { errorCode } from './toasts.ts';
@@ -69,6 +70,11 @@ export interface DetailState {
   project: { id: string; name: string } | null;
   sprint: { id: string; name: string; late: boolean; state: string } | null;
   estimate: number | null;
+  /**
+   * Desired model, own or inherited (`source` parent or team, shown dimmed with `from`): "Claude Opus 5.5 ·
+   * xhigh", the context window as info, and a hint if the model is no longer enabled or in the catalog.
+   */
+  model: { label: string; context: string | null; source: ModelSource; from: string | null; problem: string | null } | null;
   due: { day: string; label: string; long: string; overdue: boolean } | null;
   /** Snoozed until this day */
   snoozed: { day: string; long: string } | null;
@@ -330,6 +336,7 @@ export class DetailController {
     children.sort((a, b) => a.key.localeCompare(b.key, intlLocale(), { numeric: true }));
     const due = issue.dueDate ? dueLabel(issue.dueDate) : null;
     const state = workflowsOf(meta).of(issue);
+    const model = issueModel(meta, issue, parent);
     return {
       id: issue._id,
       key: issue.key,
@@ -344,6 +351,15 @@ export class DetailController {
       project: project ? { id: project._id, name: project.name } : null,
       sprint: sprint ? { id: sprint._id, name: sprint.name, late: store.sprintKinds.get().get(issue._id) === 'late', state: sprint.state } : null,
       estimate: issue.estimate ?? null,
+      model: model
+        ? {
+            label: modelLabel(meta, model.choice),
+            context: contextLabel(modelInfo(meta, model.choice)),
+            source: model.source,
+            from: model.source === 'parent' ? (parent?.key ?? null) : model.source === 'team' ? (meta?.teams.find((x) => x._id === issue.teamId)?.name ?? null) : null,
+            problem: modelProblem(meta, model.choice),
+          }
+        : null,
       due: issue.dueDate && due ? { day: issue.dueDate, label: due.label, long: dayLabel(issue.dueDate), overdue: due.overdue } : null,
       snoozed: issue.snoozedUntil ? { day: issue.snoozedUntil, long: dayLabel(issue.snoozedUntil) } : null,
       snoozable: !CLOSED.has(issue.status),

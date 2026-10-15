@@ -8,6 +8,14 @@
 
   let { detail: d }: { detail: DetailState } = $props();
 
+  // Inherited models are dimmed and name their source; the context window is info only.
+  const modelNote = $derived.by(() => {
+    const m = d.model;
+    if (!m) return [];
+    const source = m.source === 'parent' ? t('From parent {key}', { key: m.from ?? '' }) : m.source === 'team' ? t('Default of {team}', { team: m.from ?? '' }) : null;
+    return [source, m.context].filter((x): x is string => !!x);
+  });
+
   function open(kind: PaletteKind, e: MouseEvent & { currentTarget: HTMLElement }) {
     if (d.deleted) return;
     app.palette.open(kind, { anchor: anchorOf(e.currentTarget), target: { kind: 'issues', ids: [d.id] } });
@@ -51,6 +59,13 @@
   <button class="prop-row" data-testid="detail-sprint" title={tip(t('Sprint'), 'issue.sprint')} onclick={(e) => open('sprint', e)}
     ><span class="icon" style="color: var(--text-muted)">{@html ICON.sprint}</span>{#if d.sprint}<span class="val">{d.sprint.name}{d.sprint.state === 'active' ? ` · ${t('running')}` : d.sprint.state === 'planning' ? ` · ${t('planned')}` : ''}{d.sprint.late ? ` · ${t('added late')}` : ''}</span>{:else}<span class="empty-val">{t('Add to sprint')}</span>{/if}</button
   >
+  <div class="props-title">{t('Model')}</div>
+  <button class="prop-row" data-testid="detail-model" title={tip(t('Model'), 'issue.model')} onclick={(e) => open('model', e)}
+    ><span class="icon" style="color: var(--text-muted)">{@html ICON.model}</span>{#if d.model}<span class={['val', d.model.source !== 'issue' && 'inherited']}>{d.model.label}</span>{:else}<span class="empty-val">{t('Choose model')}</span>{/if}</button
+  >
+  {#if modelNote.length || d.model?.problem}
+    <div class="prop-note" data-testid="detail-model-note">{modelNote.join(' · ')}{#if d.model?.problem}<span class="warn">{modelNote.length ? ' · ' : ''}{d.model.problem}</span>{/if}</div>
+  {/if}
   <div class="props-title">{t('Parent')}</div>
   <button class="prop-row" data-testid="detail-parent" title={tip(t('Set parent'), 'issue.parent')} onclick={(e) => open('parent', e)}
     ><span class="icon" style="color: var(--text-muted)">{@html ICON.parent}</span>{#if d.parent}<span class="val">{d.parent.key} {d.parent.title}</span>{:else}<span class="empty-val">{t('Set parent')}</span>{/if}</button

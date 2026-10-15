@@ -51,6 +51,7 @@ const FIELD_LABEL: Record<PatchField, string> = translated({
   snoozedUntil: 'Snoozed until',
   parentId: 'Parent',
   sprintId: 'Sprint',
+  model: 'Model',
 });
 
 /** Current value of a field as a patch value (`null` = not set). */
