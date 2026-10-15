@@ -97,3 +97,24 @@ test('Settings › Models: enable a model by provider, then the team default inh
   await expect(page.getByTestId('detail-model')).toHaveText('Claude Sonnet 5.5 · high');
   await expect(page.getByTestId('detail-model-note')).toContainText('Default of Orbit');
 });
+
+test('Lists: group and filter by the effective model, the column shows inherited models dimmed', async ({ page }) => {
+  const parent = await fresh(`Model list parent ${Date.now()}`);
+  const child = await fresh(`Model list child ${Date.now()}`, parent.id);
+  await backend().mutation(api.issues.update, { ids: [parent.id as never], patch: { model: { provider: 'openai', modelId: 'gpt-6-sol', speed: 'pro' } } });
+  await open(page, '/team/ORB/all?group=model&model=openai');
+  const header = page.locator('[data-testid="group-header"][data-group="openai/gpt-6-sol"]');
+  await expect(header).toContainText('GPT-6 Sol');
+  await expect(page.locator(`[data-testid="issue-row"][data-id="${parent.id}"]`)).toBeVisible();
+  await expect(page.locator(`[data-testid="issue-row"][data-id="${child.id}"]`)).toBeVisible();
+  await expect(page.getByText('Model: OpenAI')).toBeVisible();
+
+  // The column: own value, inherited one dimmed.
+  await page.keyboard.press('Shift+V');
+  await page.locator('.dp-props').getByRole('button', { name: 'Model', exact: true }).click();
+  await page.keyboard.press('Escape');
+  const cell = (id: string) => page.locator(`[data-testid="issue-row"][data-id="${id}"] .c-model .pill`);
+  await expect(cell(parent.id)).toHaveText('GPT-6 Sol · pro');
+  await expect(cell(parent.id)).not.toHaveClass(/inherited/);
+  await expect(cell(child.id)).toHaveClass(/inherited/);
+});
