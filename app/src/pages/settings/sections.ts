@@ -6,6 +6,7 @@ const GROUP = translated({ account: 'Account', workspace: 'Workspace', agents: '
 
 /** Section labels, keyed by section id (the id is also the URL path: /settings/{id}). */
 export const SECTION_LABEL: Record<string, string> = translated({
+  profile: 'Profile',
   general: 'General',
   appearance: 'Appearance',
   notifications: 'Notifications',
@@ -34,6 +35,7 @@ const group = (key: keyof typeof GROUP, items: Item[]) => ({
 
 export const SECTIONS = [
   group('account', [
+    { id: 'profile', icon: 'user' },
     { id: 'general', icon: 'settings' },
     { id: 'appearance', icon: 'theme' },
     { id: 'notifications', icon: 'bell' },

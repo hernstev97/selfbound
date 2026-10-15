@@ -47,7 +47,7 @@ describe('languages', () => {
     expect(languageLabel('')).toBe('Plain text');
     expect(languageLabel('rust')).toBe('rust');
     expect(languageFor('YML')?.id).toBe('yaml');
-    expect(languageFor('svelte')?.grammar).toBe('xml');
+    expect(languageFor('svelte')?.grammar).toBe('svelte');
   });
 });
 

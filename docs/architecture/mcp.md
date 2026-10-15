@@ -38,7 +38,7 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 **Archived labels:** Agents cannot assign them (`list_labels` doesn't show them). If an archived label is already on the issue, `update_issue` may keep listing it in `labels`.
 
-**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner): true unless an unread inbox entry is waiting; a new change by an agent makes it false again.
+**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, and comment. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. The owner appears under their profile name (Settings → Profile), else `XLR8_OWNER_NAME`, else "Owner"; agents appear as `<name> (agent)`. `get_issue` reports `reviewedBySteven` (legacy field name; it refers to the owner): true unless an unread inbox entry is waiting; a new change by an agent makes it false again.
 
 ## Tools
 

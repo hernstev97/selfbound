@@ -5,6 +5,8 @@ import { contrast, ensureContrast, parseHex, toHex } from '../src/lib/look/color
 import { fontCss, FONTS } from '../src/lib/look/fonts.ts';
 import { mapTheme, MIN_SYNTAX, MIN_TEXT, MIN_UI, SYNTAX_SCOPES, tokenColor, VARS } from '../src/lib/look/map.ts';
 import { compactSource, parseJsonc, readTheme, stripJsonc, ThemeError, type VsTheme } from '../src/lib/look/vscode.ts';
+import { Look } from '../src/lib/look/index.ts';
+import { selfboundSyntax, syntaxTheme } from '../src/lib/look/syntax.ts';
 import { SWATCHES } from '../src/themes/swatches.ts';
 
 // Themes and fonts: read JSONC, map VS Code colors, guarantee contrast.
@@ -168,5 +170,66 @@ describe('fonts', () => {
     expect(fontCss('system', 'sans')).toEqual({ stack: expect.stringContaining('system-ui'), faces: '', preload: null });
     expect(fontCss('jetbrains-mono', 'sans').stack).toBeNull();
     expect(fontCss('inter', 'sans').stack).toBeNull();
+  });
+});
+
+describe('syntax themes for code blocks', () => {
+  const theme = (name: string) => readTheme(source(name), { typeHint: BUILTIN.find((t) => t.id === name)!.type });
+  it('keep the TextMate rules and lift only their colors to 3 : 1 on the code block', () => {
+    const t = theme('solarized-light');
+    const mapped = mapTheme(t);
+    const syntax = syntaxTheme(t, mapped);
+    const bg = hex(mapped.vars['code-bg']);
+    expect(syntax.theme.tokenColors.length).toBeGreaterThan(5);
+    for (const rule of syntax.theme.tokenColors) {
+      if (rule.settings?.foreground) expect(contrast(hex(rule.settings.foreground), bg), String(rule.scope)).toBeGreaterThanOrEqual(MIN_SYNTAX - 0.01);
+    }
+    expect(syntax.fg).toBe(mapped.vars.text);
+    expect(syntax.theme.type).toBe('light');
+  });
+  it('a color changed in the settings comes after the theme rules', () => {
+    const t = theme('dracula');
+    const mapped = mapTheme(t, { 'syn-keyword': '#123456' });
+    const syntax = syntaxTheme(t, mapped, { 'syn-keyword': '#ffee00' });
+    const last = syntax.theme.tokenColors.filter((r) => Array.isArray(r.scope) && r.scope.includes('keyword.control'));
+    expect(last.at(-1)?.settings?.foreground).toBe('#ffee00');
+  });
+  it('a changed color replaces the colors inside its category, deeper rules included, and nothing else', () => {
+    const t: VsTheme = {
+      name: 'Deep',
+      type: 'dark',
+      colors: { 'editor.background': '#202020', 'editor.foreground': '#d0d0d0' },
+      tokenColors: [
+        { scope: 'keyword.operator.new', settings: { foreground: '#aa1111' } },
+        { scope: ['keyword.operator', 'storage.type.function'], settings: { foreground: '#22aa22' } },
+        { scope: 'string', settings: { foreground: '#4444ff' } },
+        { scope: 'comment', settings: { fontStyle: 'italic' } },
+      ],
+    };
+    const mapped = mapTheme(t);
+    const colorOf = (syntax: ReturnType<typeof syntaxTheme>, scope: string) => syntax.theme.tokenColors.find((r) => (Array.isArray(r.scope) ? r.scope : [r.scope]).includes(scope) && !(Array.isArray(r.scope) && r.scope.length > 2))?.settings?.foreground;
+    const plain = syntaxTheme(t, mapped);
+    const changed = syntaxTheme(t, mapped, { 'syn-keyword': '#ffee00' });
+    expect(colorOf(changed, 'keyword.operator.new')).toBe('#ffee00');
+    expect(colorOf(changed, 'storage.type.function')).toBe('#ffee00');
+    // Operators and strings stay as the theme has them.
+    expect(colorOf(changed, 'keyword.operator')).toBe(colorOf(plain, 'keyword.operator'));
+    expect(colorOf(changed, 'string')).toBe(colorOf(plain, 'string'));
+    // Font-style-only rules stay without a color.
+    expect(changed.theme.tokenColors.find((r) => r.scope === 'comment')?.settings?.foreground).toBeUndefined();
+  });
+  it('the Selfbound colors are placeholders for CSS variables', () => {
+    const s = selfboundSyntax('dark');
+    expect(Object.values(s.palette!).every((v) => /^var\(--sx-[a-z]+\)$/.test(v))).toBe(true);
+    expect(s.theme.tokenColors.some((r) => r.settings?.foreground && s.palette![r.settings.foreground])).toBe(true);
+  });
+  it('are built on first use from the chosen themes, matching type only', async () => {
+    const look = new Look();
+    look.settings.set({ ...look.settings.get(), dark: 'dracula', light: 'catppuccin-mocha' });
+    const set = await look.syntaxThemes();
+    expect(set.dark.theme.name).toBe('Dracula');
+    // A dark theme in the light slot gives the Selfbound colors, like the CSS.
+    expect(set.light.theme.name).toBe('Selfbound Light');
+    expect(await look.syntaxThemes()).toBe(set);
   });
 });
