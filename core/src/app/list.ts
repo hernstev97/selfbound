@@ -84,6 +84,10 @@ export class ListController {
   #focus: IssueId | null = null;
   #selection = new Set<IssueId>();
   #anchor: IssueId | null = null;
+  /** Selection before the first range from the anchor, so Shift+click again can shrink the range. */
+  #rangeBase: Set<IssueId> | null = null;
+  /** Whether the anchor was selected by its toggle: a range then selects, otherwise deselects. */
+  #anchorOn = true;
   #order: IssueId[] = [];
   #rowIndex = new Map<IssueId, number>();
   /** Issues of the view (also in collapsed groups) */
@@ -208,6 +212,7 @@ export class ListController {
       if (real !== id && !store.isPending(id)) {
         this.#selection.delete(id);
         this.#selection.add(real);
+        this.#rangeBase = null;
         this.rows.refresh(real);
       }
     }
@@ -573,6 +578,7 @@ export class ListController {
     for (const id of this.#selection) {
       if (!this.#visibleSet.has(id)) {
         this.#selection.delete(id);
+        this.#rangeBase = null;
         this.rows.refresh(id);
         changed = true;
       }
@@ -929,7 +935,8 @@ export class ListController {
     if (this.#order.length) this.#setFocus(this.#order[end ? this.#order.length - 1 : 0]);
   }
 
-  #setSelection(next: Set<IssueId>) {
+  #setSelection(next: Set<IssueId>, keepRange = false) {
+    if (!keepRange) this.#rangeBase = null;
     const changed = new Set([...this.#selection, ...next].filter((id) => this.#selection.has(id) !== next.has(id)));
     this.#selection = next;
     for (const id of changed) this.#refreshFlags(id);
@@ -946,7 +953,29 @@ export class ListController {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     this.#anchor = id;
+    this.#anchorOn = next.has(id);
     this.#setSelection(next);
+  }
+
+  /**
+   * Checkbox Shift+click and drag: select (or deselect, like the anchor) every visible issue between
+   * the anchor and `id`; the selection before the first range stays, so the range can also shrink.
+   * Without a visible anchor it toggles `id` and makes it the anchor.
+   */
+  selectRange(id: IssueId) {
+    const anchor = this.#anchor;
+    const to = this.#order.indexOf(id);
+    const from = anchor ? this.#order.indexOf(anchor) : -1;
+    if (to < 0) return;
+    if (from < 0 || !anchor) return this.toggleSelect(id);
+    const base = (this.#rangeBase ??= new Set(this.#selection));
+    const on = this.#anchorOn;
+    const next = new Set(base);
+    for (const rangeId of this.#order.slice(Math.min(from, to), Math.max(from, to) + 1)) {
+      if (on) next.add(rangeId);
+      else next.delete(rangeId);
+    }
+    this.#setSelection(next, true);
   }
 
   extendSelection(delta: number) {
@@ -963,6 +992,7 @@ export class ListController {
   }
 
   clearSelection() {
+    this.#anchor = null;
     this.#setSelection(new Set());
   }
 
