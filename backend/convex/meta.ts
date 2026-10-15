@@ -3,6 +3,7 @@ import type { Id } from './_generated/dataModel';
 import { ownerQuery } from './lib/auth';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
+import { storedTimeZone } from './ops/instance';
 import { ownerProfile } from './ops/profile';
 import { recentClosedSprints } from './ops/sprints';
 import { compareStates } from './shared/workflow';
@@ -63,6 +64,8 @@ export const get = ownerQuery({
       rejectWrites: await rejectWritesActive(ctx),
       // The owner's profile (name and picture URL; null = not set)
       owner: await ownerProfile(ctx),
+      // Time zone for calendar days (IANA name); null = not set yet, the app then saves the browser's.
+      timeZone: await storedTimeZone(ctx),
     };
   },
 });

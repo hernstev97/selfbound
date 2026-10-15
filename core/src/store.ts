@@ -20,6 +20,7 @@ import { t, tc, tn } from './i18n.ts';
 import { Mirror } from './idb.ts';
 import { statusOfState, TYPE_OF_STATUS } from '@selfbound/backend/shared/workflow';
 import { workflowsOf, type Workflows } from './workflow.ts';
+import { DEFAULT_TIME_ZONE, setTimeZone } from './format.ts';
 import { haystackOf } from './haystack.ts';
 import { unread } from './inbox.ts';
 import { Slice } from './observable.ts';
@@ -200,6 +201,7 @@ export class IssueStore {
   #agentsSub: (() => void) | null = null;
   #agentNames: ReadonlyMap<string, string> = new Map();
   #ownerName: string | null = null;
+  #zoneOffered = false;
 
   /** Pending issues (tmp ID → issue) */
   readonly #pending = new Map<IssueId, Issue>();
@@ -396,6 +398,20 @@ export class IssueStore {
       this.#scheduleFlush();
     }
     this.meta.set(meta);
+    // Not saved yet (null): the server counts in its default zone. A cache from before the setting existed (missing): the device's.
+    const zoneChanged = setTimeZone(meta.timeZone === undefined ? null : (meta.timeZone ?? DEFAULT_TIME_ZONE));
+    if (zoneChanged && !teamsChanged && this.issues.size > 0) {
+      // Labels like "Today" and the overdue marker depend on the day: rebuild them.
+      for (const id of this.issues.keys()) this.#changed.add(id);
+      this.#scheduleFlush();
+    }
+    // First sign-in: the browser's zone becomes the instance's. `ifUnset` keeps a stale cache or a
+    // second device from overwriting a zone the owner has chosen. One attempt per session.
+    if (fromServer && meta.timeZone === null && !meta.rejectWrites && !this.#zoneOffered) {
+      this.#zoneOffered = true;
+      const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      if (browserZone) void this.client.mutation(api.instance.setTimeZone, { timeZone: browserZone, ifUnset: true }).catch(() => {});
+    }
     if ((meta.owner?.name ?? null) !== this.#ownerName) {
       this.#ownerName = meta.owner?.name ?? null;
       this.#publishNames();

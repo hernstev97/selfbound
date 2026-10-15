@@ -332,3 +332,90 @@ test('Filtered view + open issue, reload, Esc: back to the same view with the fi
   await expect(page).toHaveURL(/\/team\/ORB\/all\?prio=2/);
   await expect(page.getByTestId('filter-chip')).toContainText('Priority: High');
 });
+
+test('Grouping by label, estimate and due date; second level; order and empty groups survive a reload', async ({ page }) => {
+  await open(page, '/team/ORB/all');
+  await page.keyboard.press('Shift+V');
+  const headers = page.getByTestId('group-header');
+
+  await page.getByTestId('display-grouping').selectOption('label');
+  await expect(headers.first()).toBeVisible();
+  // An issue with several labels is listed under each; the header count is per group, the view count per issue.
+  const counted = await headers.evaluateAll((els) => els.map((el) => Number(el.querySelector('.group-count')?.textContent)));
+  expect(counted.length).toBeGreaterThan(1);
+
+  await page.getByTestId('display-grouping').selectOption('creator');
+  await expect(headers.first()).toBeVisible();
+  await page.getByTestId('display-grouping').selectOption('labelGroup');
+  await expect(headers.first()).toBeVisible();
+
+  await page.getByTestId('display-grouping').selectOption('estimate');
+  await expect(headers.last()).toContainText(/No estimate|point/);
+  await page.getByTestId('display-grouping').selectOption('due');
+  await expect(page.locator('[data-testid="group-header"]', { hasText: /Overdue|Today|This week|Next week|Later|No due date/ }).first()).toBeVisible();
+
+  // Second level: priority inside each due-date group; collapsing a sub-group keeps the group open.
+  await page.getByTestId('display-subgrouping').selectOption('priority');
+  await expect(page).toHaveURL(/group=due/);
+  await expect(page).toHaveURL(/sub=priority/);
+  await expect(page.locator('.group-row.sub').first()).toBeVisible();
+  await page.locator('.group-row.sub').first().click();
+  await expect(page.locator('.group-row.sub').first().locator('.group-chevron')).toHaveClass(/closed/);
+  await expect(page.locator('.group-row:not(.sub)').first().locator('.group-chevron')).not.toHaveClass(/closed/);
+
+  // Clicking the list closed the popover.
+  await page.keyboard.press('Shift+V');
+  await page.getByTestId('display-grouping').selectOption('priority');
+  await page.getByTestId('display-subgrouping').selectOption('none');
+  // The list is windowed (and scrolls to the focused issue), so read the group rows from the app state.
+  const names = () =>
+    page.evaluate(() => {
+      const app = (window as unknown as { __selfbound: { app: { main: { list: { get(): { rows: { kind: string; group?: { label: string } }[] } } } } } }).__selfbound.app;
+      return app.main.list.get().rows.filter((r) => r.kind === 'group').map((r) => r.group!.label);
+    });
+  await expect.poll(async () => (await names()).includes('Urgent') || (await names()).includes('High')).toBe(true);
+  const natural = await names();
+  await page.getByTestId('display-grouporder').selectOption('desc');
+  await expect.poll(names).toEqual([...natural].reverse());
+  await page.getByTestId('display-emptygroups').click();
+  await expect.poll(async () => (await names()).length).toBe(5);
+
+  await page.goto('/inbox');
+  await page.goto('/team/ORB/all');
+  await expect.poll(async () => (await names()).length).toBe(5);
+  const reversed = await names();
+  expect(reversed[reversed.length - 1]).toBe('Urgent');
+  await page.keyboard.press('Shift+V');
+  await page.getByText('Restore defaults').click();
+});
+
+test('Checkbox: Shift+click selects a range, click+drag selects and deselects', async ({ page }) => {
+  await open(page, '/all?group=none');
+  const checks = page.getByTestId('row-check');
+  const selected = page.locator('[data-testid="issue-row"].selected');
+  await page.getByTestId('issue-row').first().hover();
+  await checks.nth(0).click();
+  await expect(selected).toHaveCount(1);
+  await checks.nth(3).click({ modifiers: ['Shift'] });
+  await expect(selected).toHaveCount(4);
+  // Again from the same anchor: shrinks.
+  await checks.nth(1).click({ modifiers: ['Shift'] });
+  await expect(selected).toHaveCount(2);
+  // Drag from an unselected row selects everything it passes, dragging back releases rows again.
+  const box = async (i: number) => (await page.getByTestId('issue-row').nth(i).boundingBox())!;
+  const start = await box(6);
+  await page.mouse.move(start.x + 12, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 12, (await box(9)).y + 10, { steps: 6 });
+  await expect(selected).toHaveCount(2 + 4);
+  await page.mouse.move(start.x + 12, (await box(8)).y + 10, { steps: 3 });
+  await expect(selected).toHaveCount(2 + 3);
+  await page.mouse.up();
+  // Starting on a selected row deselects.
+  const first = await box(0);
+  await page.mouse.move(first.x + 12, first.y + first.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(first.x + 12, (await box(1)).y + 10, { steps: 3 });
+  await page.mouse.up();
+  await expect(selected).toHaveCount(3);
+});

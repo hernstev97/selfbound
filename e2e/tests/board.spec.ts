@@ -66,3 +66,24 @@ test('Dragging with the mouse into another column sets the status; undo', async 
   await page.keyboard.press('Control+z');
   await expect(column(page, 'Backlog').locator(`[data-testid="issue-card"][data-id="${id}"]`)).toBeVisible();
 });
+
+test('Board columns by priority: Shift → sets the priority, Ctrl Z undoes, the setting is remembered', async ({ page }) => {
+  await open(page, '/team/ORB/active?order=created&layout=board');
+  await expect(page.getByTestId('board')).toBeVisible();
+  await page.keyboard.press('Shift+V');
+  await page.getByTestId('display-boardcolumns').selectOption('priority');
+  await expect(page.getByTestId('column-name')).toHaveText(['Urgent', 'High', 'Medium', 'Low', 'No priority']);
+  // A card from the first column with cards that is not "No priority"; Shift → puts it one column to the right.
+  const first = page.locator('[data-testid="board-column"]:not([data-priority="0"])').filter({ has: page.getByTestId('issue-card') }).first();
+  await first.getByTestId('issue-card').first().hover();
+  const id = (await focusedCard(page).getAttribute('data-id'))!;
+  const target = { 1: 2, 2: 3, 3: 4, 4: 0 }[Number(await first.getAttribute('data-priority')) as 1 | 2 | 3 | 4];
+  await page.mouse.move(2, 890);
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(page.locator(`[data-testid="board-column"][data-priority="${target}"] [data-testid="issue-card"][data-id="${id}"]`)).toBeVisible();
+  await page.keyboard.press('Control+z');
+  await expect(first.locator(`[data-testid="issue-card"][data-id="${id}"]`)).toBeVisible();
+  // Remembered per view
+  await page.reload();
+  await expect(page.getByTestId('column-name').first()).toHaveText('Urgent');
+});

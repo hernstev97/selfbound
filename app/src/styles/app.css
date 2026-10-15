@@ -1474,13 +1474,6 @@ button.crumb:hover {
 .card-labels {
   flex: 0 1 auto;
   min-width: 0;
-  /* The card's bottom row is 18 px high and clips. */
-  height: 18px;
-}
-.card-bottom .card-labels .label,
-.card-bottom .card-labels .more {
-  height: 18px;
-  line-height: 18px;
 }
 .card-bottom .card-labels .label {
   flex: 0 1 auto;
@@ -1490,9 +1483,6 @@ button.crumb:hover {
 }
 .card-bottom .card-labels .label:last-child {
   text-overflow: ellipsis;
-}
-.card-labels .more::before {
-  top: 3px;
 }
 .row-cols .pill.late {
   color: var(--warning-text);
@@ -1580,6 +1570,10 @@ button.crumb:hover {
   right: 8px;
   height: var(--row-h);
   padding-top: 8px;
+}
+.group-row.sub {
+  /* Second level: indented below its group */
+  left: 24px;
 }
 .group-box {
   height: 36px;
@@ -2622,12 +2616,14 @@ button.crumb:hover {
     width: min(86vw, 320px);
     padding: 14px 14px 16px;
     background: var(--bg-app);
-    box-shadow: 0 0 0 0.5px var(--border), 0 10px 60px rgb(0 0 0 / 0.5);
+    /* No shadow while closed: it would bleed into the left screen edge. */
+    box-shadow: none;
     transform: translateX(-102%);
-    transition: transform 0.2s ease-out;
+    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
     display: flex !important;
   }
   .frame.drawer .sidebar {
+    box-shadow: 0 0 0 0.5px var(--border), 0 10px 60px rgb(0 0 0 / 0.5);
     transform: none;
   }
   .drawer-scrim {

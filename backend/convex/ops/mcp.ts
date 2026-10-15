@@ -1,7 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
-import { addDays, berlinDay, berlinDayStart } from '../lib/dates';
+import { addDays, dayStartInZone } from '../lib/dates';
 import { fail } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
 import { resolveIssue } from '../lib/identifiers';
@@ -22,6 +22,7 @@ import {
 import { addCommentCore } from './comments';
 import { applyDescription, applyPatch, budgetWarnings, createIssuesCore, updateIssuesCore, type BudgetWarning } from './issues';
 import { listOpen } from './inbox';
+import { timeZoneOf } from './instance';
 import { openEntry } from './inboxChanges';
 import { issueArticles } from './links';
 import { moveIssuesToTeamCore } from './move';
@@ -376,8 +377,9 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
       .first();
     if (!activeSprint) return { count: 0, issues: [], note: 'No sprint is active right now (see get_current_sprint).' };
   }
-  const dayStart = berlinDayStart(today);
-  const dayEnd = berlinDayStart(addDays(today, 1));
+  const zone = await timeZoneOf(ctx);
+  const dayStart = dayStartInZone(today, zone);
+  const dayEnd = dayStartInZone(addDays(today, 1), zone);
   const dueUntil = addDays(today, args.dueWithinDays ?? 7);
 
   const preset = (issue: Doc<'issues'>): boolean => {
@@ -1132,8 +1134,8 @@ async function updateArticleTool(ctx: MutationCtx, actor: Actor, args: ToolArgs[
 }
 
 /**
- * Runs a read tool (in a query, so Convex can cache the result). `today` (calendar day,
- * Europe/Berlin) is passed in rather than taken from Date.now(): this keeps the query
+ * Runs a read tool (in a query, so Convex can cache the result). `today` (calendar day
+ * in the instance time zone) is passed in rather than taken from Date.now(): this keeps the query
  * deterministic and the cache valid for exactly one day.
  */
 export async function runReadTool(ctx: QueryCtx, tool: ToolName, args: unknown, today: string): Promise<unknown> {

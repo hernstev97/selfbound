@@ -1,7 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { sameActor, type Actor } from '../lib/actor';
-import { berlinDay, DAY_MS } from '../lib/dates';
+import { dayInZone, DAY_MS } from '../lib/dates';
 import { hashText, sameValue, stable } from '../lib/equal';
 import { fail, invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
@@ -13,6 +13,7 @@ import { isOwnerKind, PARTIAL_DATE_RE, WIKI } from '../shared/constants';
 import { syncFileRefs } from './files';
 import { dropLinksTo, syncArticleLinks } from './links';
 import { TRASH_DAYS } from './issues';
+import { timeZoneOf } from './instance';
 import { checkDay, checkHue, checkName, checkTitle, getTeam } from './validate';
 
 // Knowledge base (wiki): pages per team as a tree, with text, earlier revisions, sources and topics.
@@ -103,7 +104,7 @@ function optionalText(value: string | null | undefined, what: string, max: numbe
 type SourceFields = Pick<Doc<'articleSources'>, 'url' | 'title' | 'author' | 'publishedAt' | 'accessedAt' | 'note'>;
 
 /** Validates a source: URL (http/https) or title, dates in the expected format. */
-function checkSource(input: SourceInput, now: number): SourceFields {
+function checkSource(input: SourceInput, today: string): SourceFields {
   const url = input.url?.trim() || undefined;
   if (url !== undefined) {
     if (url.length > 2000) invalid('The source URL is too long (at most 2000 characters).');
@@ -120,7 +121,7 @@ function checkSource(input: SourceInput, now: number): SourceFields {
     title,
     author: optionalText(input.author, 'The source author', 300),
     publishedAt,
-    accessedAt: input.accessedAt === undefined ? berlinDay(now) : checkDay(input.accessedAt.trim(), 'The access date'),
+    accessedAt: input.accessedAt === undefined ? today : checkDay(input.accessedAt.trim(), 'The access date'),
     note: input.note === undefined ? undefined : checkNote(input.note),
   };
 }
@@ -515,7 +516,8 @@ export async function createArticleCore(
   const topicIds = await checkTopics(ctx, team._id, args.topicIds ?? []);
   const sources = args.sources ?? [];
   if (sources.length > WIKI.sourcesMax) invalid(`At most ${WIKI.sourcesMax} sources per page.`);
-  const checked = sources.map((s) => checkSource(s, now));
+  const zone = await timeZoneOf(ctx);
+  const checked = sources.map((s) => checkSource(s, dayInZone(now, zone)));
   const rank = rankBetween(await lastChildRank(ctx, team._id, parentId), null);
   const articleId = await ctx.db.insert('articles', {
     teamId: team._id,
@@ -818,7 +820,8 @@ export async function addSourcesCore(ctx: MutationCtx, actor: Actor, args: { art
     .withIndex('by_article', (q) => q.eq('articleId', article._id))
     .take(WIKI.sourcesMax + 1);
   if (existing.length + args.sources.length > WIKI.sourcesMax) invalid(`At most ${WIKI.sourcesMax} sources per page.`);
-  const checked = args.sources.map((s) => checkSource(s, now));
+  const zone = await timeZoneOf(ctx);
+  const checked = args.sources.map((s) => checkSource(s, dayInZone(now, zone)));
   let order = existing.reduce((max, s) => Math.max(max, s.order), -1);
   const sourceIds = [];
   for (const source of checked) {
@@ -844,7 +847,8 @@ export async function updateSource(
       accessedAt: args.patch.accessedAt ?? source.accessedAt,
       note: args.patch.note === undefined ? source.note : (args.patch.note ?? undefined),
     };
-    const checked = checkSource(merged, now);
+    const zone = await timeZoneOf(ctx);
+    const checked = checkSource(merged, dayInZone(now, zone));
     const { _id, _creationTime, articleId, order, createdAt, createdBy, ...current } = source;
     if (sameValue(checked, current)) return { sourceId: source._id, changed: false };
     await ctx.db.replace('articleSources', source._id, { articleId, order, createdAt, createdBy, ...checked });

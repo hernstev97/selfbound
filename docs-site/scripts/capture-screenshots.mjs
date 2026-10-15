@@ -255,8 +255,6 @@ const shots = {
     },
     run: async (p) => {
       await ready(p, '/team/ORB');
-      // The closed drawer's shadow bleeds into the left edge of the screen; drawer stays closed here.
-      await p.addStyleTag({ content: 'aside.sidebar { box-shadow: none !important; }' });
       await idle(p, 1500);
     },
   },

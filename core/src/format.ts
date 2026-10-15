@@ -93,7 +93,7 @@ export function weekdaysShort(): string[] {
 /** Short date: "Oct 8" (German "8. Okt."), with the year if it is not the current one. */
 export function shortDate(ms: number, now = Date.now()) {
   const d = new Date(ms);
-  const sameYear = d.getFullYear() === new Date(now).getFullYear();
+  const sameYear = d.getFullYear() === Number(today(now).slice(0, 4));
   if (german()) {
     const base = `${d.getDate()}. ${MONTHS_DE[d.getMonth()]}`;
     return sameYear ? base : `${base} ${d.getFullYear()}`;
@@ -121,23 +121,54 @@ export function fullDate(ms: number) {
   return format(d, 'full', { dateStyle: 'long', timeStyle: 'short' });
 }
 
-// ---------------------------------------------------------------- Calendar days (local time)
+// ---------------------------------------------------------------- Calendar days
+
+// Calendar days are counted in the instance's time zone (meta.get → timeZone, set by the store), the
+// same one the server uses for the morning job, overdue and the check that a snooze day lies in the
+// future. Until it is known (first start, old cache) the device's zone applies.
+let zone: string | null = null;
+let zoneFormat: Intl.DateTimeFormat | null = null;
+// Rows ask for today one after the other: format once per second (days only change on whole seconds).
+let cachedSecond = NaN;
+let cachedDay = '';
+
+/** What the server counts in until a zone is saved (backend DEFAULT_TIME_ZONE). */
+export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+
+/** Returns whether the zone changed (rows that show relative days then need to be rebuilt). */
+export function setTimeZone(timeZone: string | null) {
+  if (timeZone === zone) return false;
+  try {
+    zoneFormat = timeZone ? new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }) : null;
+    zone = timeZone;
+    cachedSecond = NaN;
+  } catch {
+    // A name this browser does not know: stay on the device's zone.
+    zone = null;
+    zoneFormat = null;
+    cachedSecond = NaN;
+  }
+  return true;
+}
+
+/** Time zone of the instance, or null while unknown. */
+export function timeZone() {
+  return zone;
+}
 
 export function dayOf(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/** Today's calendar day in the instance's time zone. */
 export function today(now = Date.now()) {
-  return dayOf(new Date(now));
-}
-
-/**
- * Calendar day in Europe/Berlin, which is what the server uses (the morning job, the check that a
- * snooze day lies in the future). The picker for snoozing counts from this day, not from the day on
- * the device, so "tomorrow" is never rejected when the device is on another time zone.
- */
-export function berlinToday(now = Date.now()) {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+  if (!zoneFormat) return dayOf(new Date(now));
+  const second = Math.floor(now / 1000);
+  if (second !== cachedSecond) {
+    cachedDay = zoneFormat.format(now);
+    cachedSecond = second;
+  }
+  return cachedDay;
 }
 
 export function parseDay(day: string): Date {
@@ -252,7 +283,7 @@ export function parseDueInput(input: string, now = Date.now(), base = today(now)
 
 /** Day and month with an optional year; without a year and already past: next year. */
 function dayInYear(d: number, month: number, yearText: string | undefined, base: string, now: number) {
-  let year = yearText ? Number(yearText) : new Date(now).getFullYear();
+  let year = yearText ? Number(yearText) : Number(today(now).slice(0, 4));
   if (year < 100) year += 2000;
   const day = validDay(year, month, d);
   if (day && !yearText && day < base) return validDay(year + 1, month, d);

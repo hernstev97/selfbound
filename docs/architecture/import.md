@@ -125,7 +125,7 @@ Each line is a document of the `importStaging` table:
 | `link` | `ImportLink` (other attachments) | 2 |
 
 - References always use Linear IDs (`teamLinearId`, `parentLinearId` …), never Selfbound IDs.
-- Times are milliseconds (UTC); calendar days are `YYYY-MM-DD` in Europe/Berlin (hard-coded in `normalize.ts`). Fields without a value are omitted; there is no `null`. The file is sorted in processing order.
+- Times are milliseconds (UTC); calendar days are `YYYY-MM-DD` in the time zone given to `normalize` (`fetch --time-zone <IANA name>`, default Europe/Berlin; use the zone of the target instance). Fields without a value are omitted; there is no `null`. The file is sorted in processing order.
 - References to data that is not part of the import (for example a parent in Linear's trash) are already removed by the script and counted as a note.
 
 ## Step 3: Process
@@ -216,7 +216,7 @@ All queries in `queries.ts` validate against Linear's public schema (`packages/s
 Not derivable from the schema, so uncertain:
 
 1. **PR attachments:** the format of `Attachment.metadata` is undocumented (`JSONObject`). The script reads the state defensively from `status`/`state`, `merged`/`draft`, `mergedAt`/`closedAt`, and the branch from `branch`/`branchName`/`headRefName`. Without a recognizable state the PR counts as `open` (counted in the report). A PR is recognized by its URL `github.com/<owner>/<repo>/pull/<n>`, not by `sourceType`, whose values are undocumented too.
-2. **Cycle end:** `endsAt` is assumed to be the moment the cycle ends, so the last day is the calendar day just before it (Europe/Berlin).
+2. **Cycle end:** `endsAt` is assumed to be the moment the cycle ends, so the last day is the calendar day just before it (in the import's time zone).
 3. **Comments:** `Issue.comments` is assumed to include thread replies (with `parent`). If they are missing there, they are missing from the import.
 4. **`includeArchived: true`** is set for all lists. Archived issues come with `archivedAt` and are imported normally. Deleted issues (trash, `trashed`) are not imported.
 5. **Rate limit:** according to Linear's docs the limit is signaled with error code `RATELIMITED`; the HTTP status is not clearly documented (400 or 429). The script handles both.

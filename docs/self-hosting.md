@@ -179,8 +179,12 @@ The app is named `app.html` instead of `index.html` because many hosts (Vercel i
 
 The UI language follows the browser (English or German) and can be changed in Settings → General.
 
-Calendar days (due dates, sprints, recurrences, the 08:00 morning notifications) are computed in
-Europe/Berlin; there is no setting for the time zone yet.
+Calendar days (due dates, sprints, recurrences, the morning notifications, MCP's "today") are counted in
+the instance's time zone. The first sign-in saves the browser's; change it in Settings → General → Time zone.
+It is stored on the server (table `instanceSettings`), so the nightly jobs and MCP use it without a browser.
+Until a zone is saved, Europe/Berlin applies. For an existing instance, set it explicitly before the first
+sign-in after an update, so a different browser does not choose it:
+`node tooling/cloud.mjs run migrations:setInstanceTimeZone '{"timeZone":"Europe/Berlin"}'`.
 
 ## 6. Connect agents (MCP)
 

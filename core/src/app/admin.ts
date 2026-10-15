@@ -152,6 +152,13 @@ export class Admin {
     }
   }
 
+  // ---------------------------------------------------------------- Time zone
+
+  /** Instance time zone (IANA name); the server checks it and answers with the canonical spelling. */
+  setTimeZone(timeZone: string) {
+    return this.#run(t('Time zone not saved'), () => this.store.call(api.instance.setTimeZone, { timeZone }, this.#meta((m) => ({ ...m, timeZone }))));
+  }
+
   // ---------------------------------------------------------------- Profile
 
   /** Display name of the owner; empty or null clears it (the UI then says "You"). */
