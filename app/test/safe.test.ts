@@ -32,6 +32,10 @@ describe('sanitizeSvg', () => {
     const imported = html("<svg xmlns='http://www.w3.org/2000/svg'><style>@import url('https://fonts.googleapis.com/css2?family=Inter'); text { font-family: Inter; }</style><text>a</text></svg>");
     expect(imported).not.toContain('googleapis');
     expect(imported).toContain('font-family: Inter');
+    // A semicolon inside the font URL must not leave debris that swallows the next rule
+    const css = html("<svg xmlns='http://www.w3.org/2000/svg'><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');\n text { fill: red }</style><text>a</text></svg>");
+    expect(css).not.toMatch(/swap|500;600/);
+    expect(css).toContain('text { fill: red }');
     for (const css of ['rect { fill: url(https://evil.example/a.svg#x) }', 'rect { background: u\\72l(https://evil.example/a) }', 'rect { background: image-set("https://evil.example/a" 1x) }', 'rect { fill: expression(alert(1)) }']) {
       expect(html(`<svg xmlns="http://www.w3.org/2000/svg"><style>${css}</style><rect/></svg>`), css).not.toContain('<style');
     }
@@ -42,6 +46,11 @@ describe('sanitizeSvg', () => {
     const out = html('<svg xmlns="http://www.w3.org/2000/svg"><rect style="fill:url(https://evil.example/a)" width="1"/><rect style="--bg:#fff" width="2"/></svg>');
     expect(out).not.toContain('evil.example');
     expect(out).toContain('--bg:#fff');
+  });
+  it('presentation attributes with an external url() are dropped, a local one stays', () => {
+    const out = html('<svg xmlns="http://www.w3.org/2000/svg"><rect fill="url(https://evil.example/a.svg#x)" stroke="url(https://evil.example/b#y)" width="1"/><rect fill="url(#grad)" width="2"/><path stroke="u\\72l(https://evil.example)" d="M0 0"/></svg>');
+    expect(out).not.toContain('evil.example');
+    expect(out).toContain('fill="url(#grad)"');
   });
   it('a crafted label cannot cut a hole through the markup (no string surgery on the output)', () => {
     const out = html('<svg xmlns="http://www.w3.org/2000/svg"><text id="@import" x="1">&lt;text id="@import"&gt;;" onmouseover="alert(1)" x=&lt;/text&gt;</text></svg>');
