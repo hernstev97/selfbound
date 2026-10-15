@@ -15,7 +15,7 @@
   function open(row: { id: SprintId; number: number; state: string }) {
     if (row.state === 'active') app.nav.goView({ kind: 'sprint', team: null });
     else if (row.state === 'planning') app.nav.goView({ kind: 'plan', team: null, sprint: String(row.number) });
-    else app.nav.goView({ kind: 'all', team: null }, { filters: { status: [], priority: [], team: [], label: [], project: [], sprint: [row.id], unreviewed: false, snoozed: false }, group: 'status' });
+    else app.nav.goView({ kind: 'all', team: null }, { filters: { status: [], priority: [], team: [], label: [], project: [], sprint: [row.id], model: [], unreviewed: false, snoozed: false }, group: 'status' });
   }
 </script>
 

@@ -92,6 +92,7 @@ const FILTER_FIELDS = [
   { id: 'label', label: msg('Label'), icon: ICON.label },
   { id: 'project', label: msg('Project'), icon: ICON.projects },
   { id: 'sprint', label: msg('Sprint'), icon: ICON.sprint },
+  { id: 'model', label: msg('Model'), icon: ICON.model },
 ] as const;
 type FilterField = (typeof FILTER_FIELDS)[number]['id'];
 
@@ -981,6 +982,18 @@ export class PaletteController {
     if (flat || field === 'sprint') {
       add({ id: 'fsp:none', label: `${pre(msg('Sprint'))}${t('No sprint')}`, icon: ICON.sprint, checked: f.sprint.includes('none') }, () => list.toggleFilter('sprint', 'none'));
       for (const s of meta?.sprints ?? []) add({ id: `fsp:${s._id}`, label: `${pre(msg('Sprint'))}${s.name}`, icon: ICON.sprint, detail: sprintState(s.state), checked: f.sprint.includes(s._id) }, () => list.toggleFilter('sprint', s._id));
+    }
+    if (flat || field === 'model') {
+      // The effective model (own, parent's, team default): none, a whole provider, or one model.
+      const models = meta?.models ?? [];
+      add({ id: 'fm:none', label: `${pre(msg('Model'))}${t('No model')}`, icon: ICON.model, checked: f.model.includes('none') }, () => list.toggleFilter('model', 'none'));
+      for (const [provider, name] of new Map(models.map((m) => [m.provider, m.providerName]))) {
+        add({ id: `fm:p:${provider}`, label: `${pre(msg('Model'))}${name}`, detail: t('All models'), icon: ICON.model, checked: f.model.includes(provider), keywords: provider }, () => list.toggleFilter('model', provider));
+      }
+      for (const m of models) {
+        const key = modelKey(m.provider, m.modelId);
+        add({ id: `fm:${key}`, label: `${pre(msg('Model'))}${m.name}`, detail: m.providerName, icon: ICON.model, checked: f.model.includes(key), keywords: m.modelId }, () => list.toggleFilter('model', key));
+      }
     }
     return { items, run, multi: !flat };
   }

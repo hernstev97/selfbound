@@ -39,6 +39,10 @@
     if (g.by === 'parent' && !none) ctx.parentId = g.value;
     if (g.by === 'project' && !none) ctx.projectId = g.value;
     if (g.by === 'sprint' && !none) ctx.sprintId = g.value;
+    if (g.by === 'model' && !none) {
+      const at = g.value.indexOf('/');
+      ctx.model = { provider: g.value.slice(0, at), modelId: g.value.slice(at + 1) };
+    }
     if (g.by === 'scope') ctx.sprintId = app.store.meta.get()?.sprints.find((s) => s.state === 'active')?._id ?? null;
   }
   function add(e: MouseEvent) {
@@ -71,6 +75,8 @@
       <span class="icon mi ui-parent" style="color: var(--text-muted)"></span>
     {:else if row.group.by === 'project'}
       <span class="icon mi ui-projects" style="color: var(--text-muted)"></span>
+    {:else if row.group.by === 'model'}
+      <span class="icon mi ui-model" style="color: var(--text-muted)"></span>
     {:else if row.group.by === 'sprint' || row.group.by === 'scope'}
       <span class="icon mi ui-sprint" style:color={row.group.value === 'late' ? 'var(--status-progress)' : 'var(--text-muted)'}></span>
     {/if}

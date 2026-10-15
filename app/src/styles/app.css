@@ -1246,6 +1246,7 @@ button.crumb:hover {
   --cell-gap: 8px;
   --cw-project: 168px;
   --cw-sprint: 136px;
+  --cw-model: 152px;
   --cw-estimate: 40px;
   --cw-due: 84px;
 }
@@ -1310,6 +1311,9 @@ button.crumb:hover {
 }
 .c-sprint {
   width: var(--cw-sprint, auto);
+}
+.c-model {
+  width: var(--cw-model, auto);
 }
 .c-project {
   width: var(--cw-project, auto);
@@ -1490,6 +1494,11 @@ button.crumb:hover {
 }
 .row-cols .pill.late {
   color: var(--warning-text);
+}
+/* Model inherited from the parent issue or the team default */
+.row-cols .pill.inherited {
+  box-shadow: inset 0 0 0 1px var(--border);
+  font-weight: 450;
 }
 .row-cols .pill.overdue {
   color: var(--danger-text);

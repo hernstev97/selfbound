@@ -18,6 +18,8 @@ function fixedTexts() {
     due: esc(t('Due')),
     snoozed: esc(t('Snoozed until')),
     estimate: esc(t('Estimate')),
+    model: esc(t('Model')),
+    modelInherited: esc(t('Model, inherited from the parent issue or the team default')),
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
     plannedTip: esc(t('In the planned sprint')),
@@ -39,7 +41,7 @@ export function teamLogoHtml(team: TeamBadge, cls = '', size?: 14) {
 }
 
 /** Row columns: aligned under each other when wide, right after the title when narrow. */
-export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'estimate', 'due'] as const satisfies readonly DisplayProp[];
+export const ROW_COLUMNS = ['labels', 'project', 'sprint', 'model', 'estimate', 'due'] as const satisfies readonly DisplayProp[];
 /** At the far right, at any width: date columns. */
 export const ROW_END = ['snoozed', 'created', 'updated'] as const satisfies readonly DisplayProp[];
 
@@ -86,6 +88,11 @@ function colsHtml(r: RowState, props: ReadonlySet<DisplayProp>) {
   let html = '';
   if (props.has('due')) html += r.due ? `<span class="c c-due"><span class="pill p-due mi i-calendar${r.due.overdue ? ' overdue' : ''}${r.due.soon ? ' soon' : ''}" title="${tx.due}">${esc(r.due.label)}</span></span>` : '<span class="c c-due"></span>';
   if (props.has('estimate')) html += r.estimate !== null ? `<span class="c c-estimate row-est mi i-estimate" title="${tx.estimate}">${esc(r.estimate)}</span>` : '<span class="c c-estimate"></span>';
+  if (props.has('model')) {
+    html += r.model
+      ? `<span class="c c-model"><span class="pill mi ui-model${r.model.inherited ? ' inherited' : ''}" title="${r.model.inherited ? tx.modelInherited : tx.model}">${esc(r.model.label)}</span></span>`
+      : '<span class="c c-model"></span>';
+  }
   if (props.has('sprint')) {
     if (r.sprint) {
       const tipText = r.sprint.late ? tx.lateTip : r.sprint.active ? tx.activeTip : tx.plannedTip;

@@ -19,6 +19,7 @@ const row = (over: Partial<RowState> = {}): RowState => ({
   project: null,
   sprint: null,
   estimate: null,
+  model: null,
   due: null,
   snoozed: null,
   created: 'Oct 1',
@@ -59,6 +60,14 @@ describe('rowRestHtml: columns', () => {
     expect(html).toContain('&lt;b&gt;P&lt;/b&gt;');
     expect(html).toContain('A&amp;B');
     expect(html).not.toContain('<b>');
+  });
+
+  it('model: own and inherited (dimmed), escaped, empty cell without one', () => {
+    const own = rowRestHtml(row({ model: { label: 'Claude <Opus>', inherited: false } }), props('model'), false);
+    expect(own).toContain('<span class="c c-model"><span class="pill mi ui-model" title="Model">Claude &lt;Opus&gt;</span></span>');
+    const inherited = rowRestHtml(row({ model: { label: 'GPT-6 Sol', inherited: true } }), props('model'), false);
+    expect(inherited).toContain('class="pill mi ui-model inherited"');
+    expect(rowRestHtml(row(), props('model'), false)).toContain('<span class="c c-model"></span>');
   });
 
   it('trash: columns stay, "Restore" on the right', () => {

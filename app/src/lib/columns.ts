@@ -15,6 +15,7 @@ export const COLUMN_WIDTH: Record<(typeof ROW_COLUMNS)[number], number> = {
   labels: 184,
   project: 168,
   sprint: 136,
+  model: 152,
   estimate: 40,
   due: 84,
 };
@@ -64,6 +65,7 @@ const HEAD_ICON: Partial<Record<DisplayProp, string>> = {
   due: 'i-calendar',
   estimate: 'i-estimate',
   sprint: 'i-sprint',
+  model: 'ui-model',
   project: 'ui-projects',
   labels: 'ui-label',
   snoozed: 'ui-snooze',

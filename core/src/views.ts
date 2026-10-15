@@ -21,6 +21,8 @@ export interface ViewContext {
   planSprintId?: string | null;
   /** Sprint planning: only active (not dormant) teams */
   activeTeams?: ReadonlySet<string>;
+  /** Issues by id (the parent, for the inherited model) */
+  issueOf?: (id: IssueId) => Issue | undefined;
   /** The view is shown as a board (triage has no column there) */
   board?: boolean;
 }
@@ -65,7 +67,7 @@ const OPEN = new Set(['triage', 'backlog', 'todo', 'in_progress', 'in_review']);
 const PLAN_PROPS: DisplayProp[] = ['team', 'priority', 'id', 'status', 'labels', 'estimate', 'due'];
 const inTeam = (i: Issue, ctx: ViewContext) => !ctx.teamId || i.teamId === ctx.teamId;
 
-const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'none'];
+const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'model', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'none'];
 const ALL_ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due'];
 const PLAN_ORDERINGS: Ordering[] = ['rank', 'priority', 'status', 'created', 'updated', 'due'];
 
@@ -336,6 +338,7 @@ export const GROUPING_LABEL: Record<Grouping, string> = translated({
   labelGroup: 'Label group',
   creator: 'Creator',
   estimate: 'Estimate',
+  model: 'Model',
   due: 'Due date',
   parent: 'Parent issue',
   created: 'Created',
@@ -373,6 +376,7 @@ export const PROP_LABEL: Record<DisplayProp, string> = translated({
   labels: 'Labels',
   project: 'Project',
   sprint: 'Sprint',
+  model: 'Model',
   estimate: 'Estimate',
   due: 'Due date',
   snoozed: 'Snoozed until',
