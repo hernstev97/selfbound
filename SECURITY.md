@@ -23,6 +23,6 @@ Only the latest commit on `main` is supported. There are no releases yet.
 
 ## For self-hosters
 
-Each instance is single-owner: access is limited to the Clerk user ids in `XLR8_OWNER_IDS`. Keep
+Each instance is single-owner: access is limited to the Clerk user ids in `SELFBOUND_OWNER_IDS`. Keep
 deploy keys, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET` and VAPID private keys in your Convex environment
 or CI secrets, never in the repository. See [docs/operations.md](docs/operations.md).

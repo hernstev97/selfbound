@@ -10,13 +10,14 @@ type Theme = 'dark' | 'light';
 const root = document.documentElement;
 const clerkBox = document.querySelector<HTMLElement>('.clerk')!;
 
-// --- Color scheme: as in the app (setting in xlr8:prefs), otherwise system ---
+// --- Color scheme: as in the app (setting in selfbound:prefs), otherwise system ---
 
 const systemDark = matchMedia('(prefers-color-scheme: dark)');
 const theme = (): Theme => (root.dataset.theme === 'light' ? 'light' : 'dark');
 function prefTheme(): string {
   try {
-    return JSON.parse(localStorage.getItem('xlr8:prefs') ?? '{}').theme ?? 'system';
+    // legacy-xlr8: the old key is read until the app has moved it.
+    return JSON.parse(localStorage.getItem('selfbound:prefs') ?? localStorage.getItem('xlr8:prefs') ?? '{}').theme ?? 'system';
   } catch {
     return 'system';
   }

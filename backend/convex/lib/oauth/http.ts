@@ -21,6 +21,7 @@ import {
   CONSENT_PARAM,
   CONSENT_PATH,
   isVerifier,
+  issuedScope,
   messagePage,
   PAGE_CSP,
   parseForm,
@@ -136,7 +137,7 @@ export async function register(request: Request, backend: OAuthBackend) {
   const checked = checkRegistration(meta);
   if (!checked.ok) return oauthError(400, checked.error, checked.description);
   const { app, clientName, redirectUris, authMethod } = checked.value;
-  const clientId = `xlr8-${app}-${randomId()}`;
+  const clientId = `selfbound-${app}-${randomId()}`;
   const secret = authMethod === 'none' ? null : await generateSecret(SECRET_PREFIX);
   const { ok } = await backend.register({
     clientId,
@@ -259,7 +260,7 @@ export async function token(request: Request, cfg: OAuthConfig, backend: OAuthBa
       token_type: 'Bearer',
       expires_in: ACCESS_TTL_MS / 1000,
       refresh_token: refresh.value,
-      scope: SCOPE,
+      scope: issuedScope(form.scope, client.clientId),
     },
     { Pragma: 'no-cache' },
   );

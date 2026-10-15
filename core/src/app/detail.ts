@@ -7,7 +7,7 @@ import { workflowsOf } from '../workflow.ts';
 import { CLOSED, PRIORITY_LABEL, actorName, dayLabel, dueLabel, fullDate, relativeTime, shortDate } from '../format.ts';
 import { intlLocale, t } from '../i18n.ts';
 import { Slice } from '../observable.ts';
-import { OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
+import { isOwnerKind, LEGACY_OWNER_KIND, OWNER_KIND, PATCH_FIELDS, type Actor, type DetailDoc, type Issue, type IssueId, type PatchField, type Priority, type PullRequestInfo, type Status, type TeamBadge } from '../types.ts';
 import type { App } from './index.ts';
 import { errorCode } from './toasts.ts';
 import { inInbox, unread } from '../inbox.ts';
@@ -27,7 +27,8 @@ export interface ActivityItem {
   at: number;
   ago: string;
   full: string;
-  actor: Actor['kind'];
+  /** Actor kind with the legacy owner value already turned into `owner` */
+  actor: Exclude<Actor['kind'], typeof LEGACY_OWNER_KIND>;
   actorName: string;
   /** Event text without the name ("changed the status …") */
   text?: string;
@@ -98,6 +99,9 @@ export interface DetailState {
 /** Description editing (bodyEdit.ts). */
 export type DescEdit = BodyEdit;
 
+/** The actor kind for display: data written before the rename says `steven` for the owner. */
+const kindOf = (actor: Actor) => (actor.kind === LEGACY_OWNER_KIND ? OWNER_KIND : actor.kind);
+
 /** Consecutive description edits by the same actor within this time = one row. */
 const DESC_MERGE_MS = 10 * 60_000;
 
@@ -118,8 +122,8 @@ export function mergeDescriptionEdits(items: ActivityItem[], descIds: ReadonlySe
   return out;
 }
 
-const draftKey = (id: string) => `xlr8:desc:${id}`;
-const commentKey = (id: string) => `xlr8:comment:${id}`;
+const draftKey = (id: string) => `selfbound:desc:${id}`;
+const commentKey = (id: string) => `selfbound:comment:${id}`;
 
 export class DetailController {
   readonly state = new Slice<DetailState | null>(null);
@@ -398,8 +402,8 @@ export class DetailController {
       const text = historyText(h, this.app.store);
       if (!text) continue;
       const field = (h.field === 'sprint' ? 'sprintId' : h.field) as PatchField;
-      const revertable = h.actor.kind !== OWNER_KIND && PATCH_FIELDS.includes(field) && field !== 'title' && !(field === 'snoozedUntil' && h.actor.kind === 'system');
-      items.push({ id: h._id, kind: 'event', at: h.at, ago: relativeTime(h.at), full: fullDate(h.at), actor: h.actor.kind, actorName: actorName(h.actor, agents), text, ...(revertable ? { revert: { field, from: h.from ?? null, to: h.to ?? null } } : {}) });
+      const revertable = !isOwnerKind(h.actor.kind) && PATCH_FIELDS.includes(field) && field !== 'title' && !(field === 'snoozedUntil' && h.actor.kind === 'system');
+      items.push({ id: h._id, kind: 'event', at: h.at, ago: relativeTime(h.at), full: fullDate(h.at), actor: kindOf(h.actor), actorName: actorName(h.actor, agents), text, ...(revertable ? { revert: { field, from: h.from ?? null, to: h.to ?? null } } : {}) });
     }
     const older = this.#older.get(doc.id)?.comments ?? [];
     const seen = new Set(doc.comments.map((c) => String(c._id)));
@@ -410,12 +414,12 @@ export class DetailController {
         at: c.createdAt,
         ago: relativeTime(c.createdAt),
         full: fullDate(c.createdAt),
-        actor: c.author.kind,
+        actor: kindOf(c.author),
         actorName: actorName(c.author, agents, c.authorName),
         body: c.body,
         edited: c.editedAt !== undefined,
         pending: !!(c as { pending?: boolean }).pending,
-        mine: c.author.kind === OWNER_KIND,
+        mine: isOwnerKind(c.author.kind),
       });
     }
     // Chronological, oldest first; the comment input sits below.

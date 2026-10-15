@@ -2,6 +2,7 @@ import './styles/fonts.css';
 import './styles/app.css';
 import { mount } from 'svelte';
 import { isConsentPath, rowIconCss } from '@selfbound/core';
+import { dropLegacyDatabases } from '@selfbound/core/legacyStorage';
 import { loadFuzzy } from '@selfbound/core/search';
 import Root from './Root.svelte';
 import { app, auth, client, convexUrl } from './app-instance.ts';
@@ -28,8 +29,8 @@ addEventListener('vite:preloadError', (event) => {
   const sync = app.store.sync.get();
   if (!navigator.onLine || !sync.connected || sync.pending > 0) return;
   try {
-    if (Date.now() - Number(sessionStorage.getItem('xlr8:reloadedAt') ?? 0) < 30_000) return;
-    sessionStorage.setItem('xlr8:reloadedAt', String(Date.now()));
+    if (Date.now() - Number(sessionStorage.getItem('selfbound:reloadedAt') ?? 0) < 30_000) return;
+    sessionStorage.setItem('selfbound:reloadedAt', String(Date.now()));
   } catch {
     return;
   }
@@ -101,6 +102,7 @@ function boot() {
       loadSound();
       loadPwa();
       loadLook();
+      void dropLegacyDatabases();
     });
   }
   const onFirstInput = () => {

@@ -60,7 +60,7 @@ export interface PushOptions {
   backendDir?: string;
   /** Target is production (through tooling/cloud.mjs). Always requires the typed confirmation. */
   prod?: boolean;
-  /** Production target; defaults to loadInstance() (deploy/instance.json or XLR8_* env vars). */
+  /** Production target; defaults to loadInstance() (deploy/instance.json or SELFBOUND_* env vars). */
   instance?: { convexDeployment?: string; appUrl?: string };
   print?: (line: string) => void;
   ask?: (question: string) => Promise<string>;
@@ -87,7 +87,7 @@ export function convex(backendDir: string, args: string[], prod = false): Promis
   return new Promise((resolvePromise, reject) => {
     let out = '';
     const child = spawn(process.execPath, [prod ? CLOUD_WRAPPER : CONVEX_WRAPPER, ...args], {
-      env: { ...process.env, XLR8_BACKEND_DIR: backendDir },
+      env: { ...process.env, SELFBOUND_BACKEND_DIR: backendDir },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     child.stdout.on('data', (d: Buffer) => (out += d.toString()));
@@ -160,7 +160,7 @@ export async function runPush(options: PushOptions): Promise<PushResult> {
     const { convexDeployment, appUrl } = options.instance ?? loadInstance();
     if (!convexDeployment || !appUrl) {
       throw new Error(
-        'Aborted: production target unknown. Set convexDeployment and appUrl in deploy/instance.json (see deploy/instance.example.json) or XLR8_CONVEX_DEPLOYMENT and XLR8_APP_URL.',
+        'Aborted: production target unknown. Set convexDeployment and appUrl in deploy/instance.json (see deploy/instance.example.json) or SELFBOUND_CONVEX_DEPLOYMENT and SELFBOUND_APP_URL.',
       );
     }
     print(`Target: PRODUCTION ${convexDeployment} (https://${convexDeployment}.convex.cloud, app ${appUrl})`);

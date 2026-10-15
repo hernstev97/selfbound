@@ -1,8 +1,10 @@
 // Texts of push notifications. People read them outside the UI, so the backend translates them
 // itself (no import from core): English by default, German when the Convex env var
-// XLR8_LOCALE=de is set. Same scheme as the UI: the English text is the key, `{name}` are
+// SELFBOUND_LOCALE=de is set. Same scheme as the UI: the English text is the key, `{name}` are
 // placeholders. Placeholders without a value stay in the text, so bundle titles keep `{n}`
 // until bundleMessages fills in the count.
+
+import { envVar } from './legacyEnv';
 
 export type PushLocale = 'en' | 'de';
 
@@ -31,9 +33,9 @@ const DE: Record<string, string> = {
   'Test notification: notifications work on this device.': 'Testmeldung: Benachrichtigungen funktionieren auf diesem Gerät.',
 };
 
-/** Locale of push texts from XLR8_LOCALE (`de`, `de-DE` … → German; anything else → English). */
+/** Locale of push texts from SELFBOUND_LOCALE (`de`, `de-DE` … → German; anything else → English). */
 export function pushLocale(env: Record<string, string | undefined> = process.env): PushLocale {
-  return (env.XLR8_LOCALE ?? '').trim().toLowerCase().startsWith('de') ? 'de' : 'en';
+  return (envVar('LOCALE', env) ?? '').trim().toLowerCase().startsWith('de') ? 'de' : 'en';
 }
 
 /** Translates an English push text and fills in its placeholders (one pass: values are not re-scanned). */

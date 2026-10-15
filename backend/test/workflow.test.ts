@@ -33,8 +33,8 @@ describe('Workflow states per team', () => {
     expect(meta.workflowStates.filter((s) => s.teamId === f.nova)).toHaveLength(8);
   });
 
-  test('with XLR8_LOCALE=de a new team gets German default state names', async () => {
-    process.env.XLR8_LOCALE = 'de';
+  test('with SELFBOUND_LOCALE=de a new team gets German default state names', async () => {
+    process.env.SELFBOUND_LOCALE = 'de';
     try {
       const { t, owner } = setup();
       const { teamId } = await owner.mutation(api.teams.create, { key: 'DE', name: 'German' });
@@ -43,7 +43,7 @@ describe('Workflow states per team', () => {
       expect(names).toContain('Erledigt');
       expect(names).not.toContain('Done');
     } finally {
-      delete process.env.XLR8_LOCALE;
+      delete process.env.SELFBOUND_LOCALE;
     }
   });
 

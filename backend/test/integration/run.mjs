@@ -19,7 +19,8 @@ import { linearFilesSuite } from './linear-files.mjs';
 import { mcpSuite } from './mcp.mjs';
 import { oauthSuite } from './oauth.mjs';
 
-const port = Number(process.env.XLR8_INTEGRATION_PORT ?? 13490);
+// legacy-xlr8: the old variable name is still read
+const port = Number(process.env.SELFBOUND_INTEGRATION_PORT ?? process.env.XLR8_INTEGRATION_PORT ?? 13490);
 const log = (msg) => console.log(`\x1b[36m▸\x1b[0m ${msg}`);
 
 async function main() {

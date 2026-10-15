@@ -9,7 +9,7 @@
   import type { Id } from '@selfbound/backend/dataModel';
   import { app } from '../../app-instance.ts';
   import { FONTS, LOCAL_NAME, type FontKind } from '../../lib/look/fonts.ts';
-  import { look, type CustomThemeMeta } from '../../lib/look/index.ts';
+  import { look, SELFBOUND_THEME, type CustomThemeMeta } from '../../lib/look/index.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import InlineText from './InlineText.svelte';
   import ThemeEditor from './ThemeEditor.svelte';
@@ -63,8 +63,8 @@
       const now = look.settings.get();
       const own = before.overrides.find((o) => o.theme === ref);
       look.set({
-        dark: before.dark === ref && now.dark === 'xlr8' ? next : now.dark,
-        light: before.light === ref && now.light === 'xlr8' ? next : now.light,
+        dark: before.dark === ref && now.dark === SELFBOUND_THEME ? next : now.dark,
+        light: before.light === ref && now.light === SELFBOUND_THEME ? next : now.light,
         overrides: own ? [...now.overrides.filter((o) => o.theme !== next), { theme: next, colors: own.colors }] : now.overrides,
       });
     } catch (error) {

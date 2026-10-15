@@ -20,22 +20,22 @@
 //           (e.g. Google Drive for a video). Shows the counts first, then asks for confirmation
 //           ("rewrite", always typed in production), then verifies.
 //
-// Working directory (default ~/.local/share/xlr8/linear-files/<prod|local>/, outside the
+// Working directory (default ~/.local/share/selfbound/linear-files/<prod|local>/, outside the
 // repository, directories 700, files 600). The console shows only counts and ids, no content.
 
 import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { isAbsolute, join, relative, resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { LIMITS } from '../../backend/convex/shared/constants.ts';
 import { DEFAULT_KEY_FILE, readApiKey } from './client.ts';
 import { loadInstance } from '../instance.mjs';
+import { dataDir } from '../lib/env.mjs';
 import { convex, parseRunOutput, targetOf } from './push.ts';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const FILES_ROOT = join(homedir(), '.local', 'share', 'xlr8', 'linear-files');
+export const FILES_ROOT = join(dataDir(), 'linear-files');
 export const REWRITE_WORD = 'rewrite';
 const TEXT_TABLES = ['issueBodies', 'comments', 'bodyRevisions', 'recurrences'] as const;
 const UPLOAD_HOST = 'uploads.linear.app';

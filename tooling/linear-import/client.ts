@@ -1,6 +1,6 @@
 // Read-only GraphQL client for Linear.
 //
-// - API key from ~/.config/xlr8/linear-api-key (mode 600, otherwise abort).
+// - API key from ~/.config/selfbound/linear-api-key (mode 600, otherwise abort).
 // - Read-only guard: every document is parsed with `graphql.parse` before it is sent.
 //   Exactly one named OperationDefinition with `operation === 'query'` is allowed,
 //   nothing else (no mutation, no subscription, no fragments, no type definitions).
@@ -10,12 +10,12 @@
 // - Logs every operation name sent (proof of "read access only").
 
 import { lstatSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { configFile } from '../lib/env.mjs';
 import { graphql } from './graphql.ts';
 
 export const LINEAR_ENDPOINT = 'https://api.linear.app/graphql';
-export const DEFAULT_KEY_FILE = join(homedir(), '.config', 'xlr8', 'linear-api-key');
+export const DEFAULT_KEY_FILE = configFile('linear-api-key');
 
 export class ReadOnlyViolation extends Error {
   override name = 'ReadOnlyViolation';

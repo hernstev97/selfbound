@@ -15,7 +15,7 @@ import { createOne, fixture, getIssue, historyOf, setup, stateId, type T } from 
 
 async function makeAgent(t: T, name = 'Aleister'): Promise<Actor> {
   const agentId = await t.run(
-    async (ctx) => await ctx.db.insert('agents', { name, keyHash: name.padEnd(64, 'a'), keyPrefix: 'xlr8_aaaaa', createdAt: Date.now() }),
+    async (ctx) => await ctx.db.insert('agents', { name, keyHash: name.padEnd(64, 'a'), keyPrefix: 'selfbound_aaaaa', createdAt: Date.now() }),
   );
   return { kind: 'agent', agentId };
 }

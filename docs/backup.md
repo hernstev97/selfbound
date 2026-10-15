@@ -33,7 +33,7 @@ documents per table and the SHA-256 of the ZIP. It holds no content and is there
 
 1. **age key pair** (on the owner's machine):
    ```sh
-   mkdir -p ~/.config/xlr8 && age-keygen -o ~/.config/xlr8/backup-age.key
+   mkdir -p ~/.config/selfbound && age-keygen -o ~/.config/selfbound/backup-age.key
    ```
    The output shows a line `Public key: age1…`: that is the **public** key.
 2. Store the **private** key (the file) in two safe places, for example as a note in a password manager
@@ -57,11 +57,17 @@ of the last backup. If that report fails, the backup still counts.
 
 In the GitHub repository under **Actions → Backup → (a run) → Artifacts**:
 
-- `xlr8-backup-YYYY-MM-DD`: daily backup, 30 days
-- `xlr8-backup-weekly-YYYY-MM-DD`: Sunday backup, 90 days
+- `selfbound-backup-YYYY-MM-DD`: daily backup, 30 days
+- `selfbound-backup-weekly-YYYY-MM-DD`: Sunday backup, 90 days
 
 Each run shows a summary with the comparison table of the restore test. GitHub emails the repository
 owner when a run fails.
+
+Backups taken before 2026-10-15 carry the old names `xlr8-backup-…`, `xlr8-backup-weekly-…` and
+`xlr8-…zip.age` inside. They stay valid until GitHub deletes them (30 and 90 days). Everything below works
+for both: use the folder and file names you actually see (`xlr8-backup-*` instead of `selfbound-backup-*`),
+and `verify-restore.mjs` accepts both. The private age key moved from `~/.config/xlr8/backup-age.key` to
+`~/.config/selfbound/backup-age.key` (`node tooling/migrate-legacy-names.mjs` moves it). If it is still in the old directory, point `age -i` at that path.
 
 ## Restore, step by step
 
@@ -70,20 +76,20 @@ For the emergency: production data is broken or gone.
 1. **Stop changing things.** Ideally don't use the app for a moment.
 2. **Back up the current state anyway** (in case something useful is left): Actions → Backup → Run workflow.
 3. **Pick and download a backup:** Actions → Backup → run of the desired day → Artifacts →
-   `xlr8-backup-…`. Or in the terminal:
+   `selfbound-backup-…`. Or in the terminal:
    ```sh
    gh run list --workflow backup.yml
-   gh run download <run-id> --dir ~/xlr8-restore
+   gh run download <run-id> --dir ~/selfbound-restore
    ```
 4. **Decrypt:**
    ```sh
-   cd ~/xlr8-restore/xlr8-backup-*/
-   age -d -i ~/.config/xlr8/backup-age.key -o backup.zip xlr8-*.zip.age
+   cd ~/selfbound-restore/selfbound-backup-*/
+   age -d -i ~/.config/selfbound/backup-age.key -o backup.zip selfbound-*.zip.age
    ```
 5. **Check locally that the backup is complete** (starts an empty local backend, imports the backup and
    compares):
    ```sh
-   node tooling/backup/verify-restore.mjs ~/xlr8-restore/xlr8-backup-*/backup.zip
+   node tooling/backup/verify-restore.mjs ~/selfbound-restore/selfbound-backup-*/backup.zip
    ```
    It ends with a line saying that all tables and files are equal.
 6. **Import into production.** This replaces all production data with the backup. Everything written
@@ -91,7 +97,7 @@ For the emergency: production data is broken or gone.
    ```sh
    cd backend
    read -rs CONVEX_DEPLOY_KEY && export CONVEX_DEPLOY_KEY   # paste the production deploy key, Enter
-   pnpm exec convex import --replace-all ~/xlr8-restore/xlr8-backup-*/backup.zip
+   pnpm exec convex import --replace-all ~/selfbound-restore/selfbound-backup-*/backup.zip
    unset CONVEX_DEPLOY_KEY
    ```
    The Convex CLI shows how many documents will be replaced and asks for confirmation. Environment
@@ -99,7 +105,7 @@ For the emergency: production data is broken or gone.
    wrapper only allows local deployments.)
 7. **Check:** open the app and look at a few issues, comments and team logos. Identifiers and timestamps
    are the same as when the backup was taken.
-8. **Clean up:** delete `~/xlr8-restore` (it contains the decrypted data).
+8. **Clean up:** delete `~/selfbound-restore` (it contains the decrypted data).
 
 ## Quarterly decryption test
 
@@ -110,7 +116,7 @@ Purpose: make sure the private key still exists and works. About 10 minutes.
    replace `AGE_RECIPIENTS`. New backups are readable again from then on; old backups stay lost without
    the old key.
 3. Check it locally (step 5).
-4. Delete `~/xlr8-restore`.
+4. Delete `~/selfbound-restore`.
 
 ## Trying it locally
 
@@ -118,8 +124,8 @@ With the local backend (no real data):
 
 ```sh
 node tooling/local.mjs --port 13430 --no-wait                                # start a local backend
-node tooling/backup/export.mjs --out /tmp/xlr8-backups                       # backup as ZIP
-node tooling/backup/verify-restore.mjs /tmp/xlr8-backups/xlr8-local-*.zip    # restore test on port 13440
+node tooling/backup/export.mjs --out /tmp/selfbound-backups                 # backup as ZIP
+node tooling/backup/verify-restore.mjs /tmp/selfbound-backups/selfbound-local-*.zip   # restore test on port 13440
 ```
 
 `export.mjs` encrypts with `--encrypt --recipient age1…` if age is installed. Without age the ZIP stays

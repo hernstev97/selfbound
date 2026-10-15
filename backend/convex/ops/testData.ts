@@ -1,7 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
 import { SPRINT, setCounter, teamCounter } from '../lib/counters';
-import { identifierOf } from '../shared/constants';
+import { identifierOf, isSelfboundSource } from '../shared/constants';
 import { purgeIssue } from './issues';
 import { purgeArticle } from './wiki';
 
@@ -93,7 +93,7 @@ export async function removeTestTeam(ctx: MutationCtx, args: RemoveTestTeamArgs,
       .withIndex('by_number', (q) => q.eq('number', number))
       .unique();
     if (!sprint) throw new Error(`Sprint ${number} does not exist.`);
-    if (sprint.source !== 'xlr8') throw new Error(`Aborted: sprint ${number} comes from Linear.`);
+    if (!isSelfboundSource(sprint.source)) throw new Error(`Aborted: sprint ${number} comes from Linear.`);
     const items = await ctx.db
       .query('sprintItems')
       .withIndex('by_sprint', (q) => q.eq('sprintId', sprint._id))

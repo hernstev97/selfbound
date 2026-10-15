@@ -8,7 +8,7 @@
 //   node tooling/linear-import/index.ts document <copy.md> --team <KEY> [--project <name>] [--yes] [--prod]
 //                                             (one Linear document as a wiki page, document.ts)
 //
-// `fetch` writes to ~/.local/share/xlr8/import/<timestamp>/ (outside the repository):
+// `fetch` writes to ~/.local/share/selfbound/import/<timestamp>/ (outside the repository):
 //   snapshot.json     the normalized snapshot (backend/convex/shared/importTypes.ts)
 //   staging.jsonl     rows {run, kind, linearId, payload} for the importStaging table
 //   operations.jsonl  log of every GraphQL operation sent (proof: queries only)
@@ -22,9 +22,9 @@
 // Format and further steps: docs/architecture/import.md.
 
 import { chmodSync, mkdirSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join, relative, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dataDir } from '../lib/env.mjs';
 import { DEFAULT_KEY_FILE, LinearClient, readApiKey } from './client.ts';
 import { normalize, parseStatusOverrides, snapshotCounts, stagingRows } from './normalize.ts';
 import { runDocument } from './document.ts';
@@ -34,7 +34,7 @@ import { fetchLinearData } from './queries.ts';
 import type { ImportStatus } from '../../backend/convex/shared/importTypes.ts';
 
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const DEFAULT_OUT_ROOT = join(homedir(), '.local', 'share', 'xlr8', 'import');
+export const DEFAULT_OUT_ROOT = join(dataDir(), 'import');
 
 export interface FetchCommandOptions {
   dryRun?: boolean;

@@ -49,7 +49,7 @@ The Model Context Protocol, an open standard that lets AI tools call functions i
 
 ## Owner
 
-The one person who can sign in to an [instance](#instance). The backend only lets in the Clerk accounts listed in the `XLR8_OWNER_IDS` setting. There are no other user accounts; [agents](#agent) get access through keys or connectors that the owner creates.
+The one person who can sign in to an [instance](#instance). The backend only lets in the Clerk accounts listed in the `SELFBOUND_OWNER_IDS` setting. There are no other user accounts; [agents](#agent) get access through keys or connectors that the owner creates.
 
 ## Peek
 

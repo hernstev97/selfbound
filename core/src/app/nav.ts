@@ -6,15 +6,19 @@ import type { Filters, Grouping, Ordering, ViewRoute } from '../types.ts';
 import { VIEWS } from '../views.ts';
 import type { App } from './index.ts';
 
-const LAST_VIEW = 'xlr8:lastView';
+const LAST_VIEW = 'selfbound:lastView';
 /** URL of the last list including filters: Back after a reload lands there. */
-const LAST_VIEW_URL = 'xlr8:lastViewUrl';
+const LAST_VIEW_URL = 'selfbound:lastViewUrl';
 /** Marker in history.state: history entry of an open overlay. */
-const OVERLAY = 'xlr8Overlay';
+const OVERLAY = 'selfboundOverlay';
 const OVERLAY_STATE = { [OVERLAY]: true };
+// legacy-xlr8: history entries written by the old build survive a reload.
+const LEGACY_OVERLAY = 'xlr8Overlay';
 
 function isOverlayState(state: unknown) {
-  return typeof state === 'object' && state !== null && (state as Record<string, unknown>)[OVERLAY] === true;
+  if (typeof state !== 'object' || state === null) return false;
+  const s = state as Record<string, unknown>;
+  return s[OVERLAY] === true || s[LEGACY_OVERLAY] === true;
 }
 
 export interface GoOptions {

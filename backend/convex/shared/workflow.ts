@@ -94,7 +94,7 @@ export const DEFAULT_STATES: readonly { name: string; type: StateType; legacyKey
   { name: 'Duplicate', type: 'canceled', legacyKey: 'duplicate', isDuplicate: true },
 ];
 
-/** German names of the default states, for deployments with XLR8_LOCALE=de. */
+/** German names of the default states, for deployments with SELFBOUND_LOCALE=de. */
 const DEFAULT_STATE_NAMES_DE: Record<Status, string> = {
   triage: 'Triage',
   backlog: 'Backlog',

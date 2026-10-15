@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Builds the web app for production and uploads it to Vercel as a static site.
 // Instance values (Convex deployment, app URL, Clerk key, Vercel project, extra hosts) come from
-// deploy/instance.json, ~/.config/xlr8/instance.json or XLR8_* environment variables (tooling/instance.mjs).
+// deploy/instance.json, ~/.config/selfbound/instance.json or SELFBOUND_* environment variables (tooling/instance.mjs).
 //
 // Usage:  node tooling/deploy-web.mjs            build + production deploy
 //         node tooling/deploy-web.mjs --build    build only (into deploy/web/), upload nothing
@@ -25,6 +25,10 @@ const out = join(root, 'deploy', 'web');
 export const VERCEL_BASE_FILE = join(root, 'deploy', 'vercel.base.json');
 
 /** Build-time environment of the production app. */
+// Variables the build must not inherit from the shell: local test token and test mode, under both names.
+// legacy-xlr8: the old test variable is cleared too, so a stale one in the shell cannot switch test mode on
+export const BLANKED_ENV = { VITE_DEV_TOKEN: '', VITE_SELFBOUND_TEST: '', VITE_XLR8_TEST: '' };
+
 export function productionEnv(instance) {
   return {
     VITE_CONVEX_URL: `https://${instance.convexDeployment}.convex.cloud`,
@@ -33,9 +37,9 @@ export function productionEnv(instance) {
     // (app/src/publishableKey.ts).
     VITE_CLERK_PUBLISHABLE_KEY: instance.clerkPublishableKey,
     // Public address of the app, used by the build for absolute URLs (og tags).
-    XLR8_PUBLIC_URL: instance.appUrl,
+    SELFBOUND_PUBLIC_URL: instance.appUrl,
     // Optional prefix for suggested git branch names (instance field branchPrefix); empty = none.
-    VITE_XLR8_BRANCH_PREFIX: instance.branchPrefix ?? '',
+    VITE_SELFBOUND_BRANCH_PREFIX: instance.branchPrefix ?? '',
   };
 }
 
@@ -84,7 +88,7 @@ function main() {
 
   // 1. Build. Set VITE_DEV_TOKEN empty: the process environment wins over app/.env.local.
   const dist = join(root, 'app', 'dist');
-  run('pnpm', ['--filter', '@selfbound/app', 'build'], { env: { ...process.env, ...production, VITE_DEV_TOKEN: '', VITE_XLR8_TEST: '' } });
+  run('pnpm', ['--filter', '@selfbound/app', 'build'], { env: { ...process.env, ...production, ...BLANKED_ENV } });
 
   // 2. Guard: no local test token, no local address, the right production deployment.
   const bundle = filesIn(dist).filter((f) => f.endsWith('.js')).map((f) => readFileSync(f, 'utf8')).join('\n');
@@ -110,7 +114,7 @@ function main() {
   }
   cpSync(dist, out, { recursive: true });
   // The app is deployed as app.html: if an index.html existed at `/`, Vercel would always serve it,
-  // and the welcome/app switch (vercel.json, cookie xlr8_signed_in) would never apply.
+  // and the welcome/app switch (vercel.json, cookie selfbound_signed_in) would never apply.
   renameSync(join(out, 'index.html'), join(out, 'app.html'));
   const base = JSON.parse(readFileSync(VERCEL_BASE_FILE, 'utf8'));
   writeFileSync(join(out, 'vercel.json'), `${JSON.stringify(vercelConfig(base, instance), null, 2)}\n`);

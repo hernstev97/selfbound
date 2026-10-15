@@ -5,22 +5,23 @@
 // Usage:  node docs-site/scripts/deploy.mjs           build + preview deploy (prints the preview URL)
 //         node docs-site/scripts/deploy.mjs --prod    build + production deploy
 //         node docs-site/scripts/deploy.mjs --build   build only (into docs-site/.deploy/)
-// Settings: XLR8_DOCS_VERCEL_PROJECT (default selfbound-docs), XLR8_DOCS_VERCEL_SCOPE (default: vercelScope
+// Settings: SELFBOUND_DOCS_VERCEL_PROJECT (default selfbound-docs), SELFBOUND_DOCS_VERCEL_SCOPE (default: vercelScope
 // from the instance settings, tooling/instance.mjs).
 //
 // vercel.json is generated so that `noindex` follows the single switch in launch.mjs. The imprint details
-// come from ~/.config/xlr8/site-legal.json (tooling/site-legal.mjs); a --prod build fails without them.
+// come from ~/.config/selfbound/site-legal.json (tooling/site-legal.mjs); a --prod build fails without them.
 
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadInstance } from '../../tooling/instance.mjs';
+import { envVar } from '../../tooling/lib/env.mjs';
 import { INDEXABLE } from '../launch.mjs';
 
 const site = join(import.meta.dirname, '..');
 const out = join(site, '.deploy');
-const project = process.env.XLR8_DOCS_VERCEL_PROJECT || 'selfbound-docs';
-const scope = process.env.XLR8_DOCS_VERCEL_SCOPE || loadInstance().vercelScope;
+const project = envVar('DOCS_VERCEL_PROJECT') || 'selfbound-docs';
+const scope = envVar('DOCS_VERCEL_SCOPE') || loadInstance().vercelScope;
 
 function run(cmd, args, opts = {}) {
   const r = spawnSync(cmd, args, { cwd: site, stdio: 'inherit', ...opts });
@@ -52,7 +53,7 @@ const config = {
 
 function main() {
   const prod = process.argv.includes('--prod');
-  run('pnpm', ['--filter', '@selfbound/docs', 'build'], { env: { ...process.env, ...(prod ? { XLR8_SITE_REQUIRE_LEGAL: '1' } : {}) } });
+  run('pnpm', ['--filter', '@selfbound/docs', 'build'], { env: { ...process.env, ...(prod ? { SELFBOUND_SITE_REQUIRE_LEGAL: '1' } : {}) } });
 
   mkdirSync(out, { recursive: true });
   for (const entry of readdirSync(out)) if (entry !== '.vercel') rmSync(join(out, entry), { recursive: true, force: true });
@@ -62,7 +63,7 @@ function main() {
   if (process.argv.includes('--build')) return;
 
   if (!scope) {
-    console.error('Missing Vercel scope: set XLR8_DOCS_VERCEL_SCOPE or vercelScope in deploy/instance.json.');
+    console.error('Missing Vercel scope: set SELFBOUND_DOCS_VERCEL_SCOPE or vercelScope in deploy/instance.json.');
     process.exit(2);
   }
   if (!existsSync(join(out, '.vercel', 'project.json'))) {

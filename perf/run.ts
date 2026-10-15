@@ -961,7 +961,7 @@ function environment(browserVersion: string, pinned: boolean) {
     commit: sh('git rev-parse --short HEAD'),
     // `convex dev` rewrites backend/convex/_generated on start; that does not count as a change.
     dirty: sh("git status --porcelain -- app core backend ':!backend/convex/_generated'") !== '',
-    build: 'vite build with VITE_XLR8_TEST=1 (measurement hooks globalThis.__selfbound, otherwise like production), vite preview',
+    build: 'vite build with VITE_SELFBOUND_TEST=1 (measurement hooks globalThis.__selfbound, otherwise like production), vite preview',
     viewport: VIEWPORT,
     ports: PORTS,
     profiles: {

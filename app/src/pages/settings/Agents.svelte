@@ -67,7 +67,7 @@
     {#if connectors === undefined}
       <span class="sub">{t('Loading …')}</span>
     {:else if !connectors.enabled || !connectors.url}
-      <span class="sub" data-testid="connector-off">{t('Not enabled on this backend (XLR8_APP_URL is missing, see docs/operations.md).')}</span>
+      <span class="sub" data-testid="connector-off">{t('Not enabled on this backend (SELFBOUND_APP_URL is missing, see docs/operations.md).')}</span>
     {:else}
       <ol class="steps sub">
         <li>{t('Press "Connect connector". Selfbound then accepts new connections for 15 minutes.')}</li>

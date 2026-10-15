@@ -1,7 +1,7 @@
 // Types of the Linear snapshot (import, copy only).
 //
 // `tooling/linear-import` writes a snapshot in this format to
-// ~/.local/share/xlr8/import/<run>/snapshot.json and the same records as rows
+// ~/.local/share/selfbound/import/<run>/snapshot.json and the same records as rows
 // for the staging table `importStaging` (staging.jsonl). The processing in the
 // backend reads `importStaging` and relies on these types. Format and order:
 // docs/architecture/import.md.

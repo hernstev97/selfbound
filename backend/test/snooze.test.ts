@@ -35,7 +35,7 @@ describe('snoozing', () => {
     const snoozed = await getIssue(t, id);
     expect(snoozed.snoozedUntil).toBe('2026-10-12');
     expect(snoozed.updatedAt).toBeGreaterThan(before.updatedAt);
-    expect((await historyOf(t, id)).find((h) => h.field === 'snoozedUntil')).toMatchObject({ to: '2026-10-12', actor: { kind: 'steven' } });
+    expect((await historyOf(t, id)).find((h) => h.field === 'snoozedUntil')).toMatchObject({ to: '2026-10-12', actor: { kind: 'owner' } });
     // Same value: nothing happens.
     expect((await snooze(owner, [id], '2026-10-12')).changed).toBe(0);
     expect((await snooze(owner, [id], null)).changed).toBe(1);
@@ -174,7 +174,7 @@ describe('return in the morning', () => {
     vi.setSystemTime(at(9, 12));
     const { t, owner } = setup();
     const f = await fixture(owner);
-    const agentId = await t.run(async (ctx) => await ctx.db.insert('agents', { name: 'Aleister', keyHash: 'a'.repeat(64), keyPrefix: 'xlr8_aaaaa', createdAt: Date.now() }));
+    const agentId = await t.run(async (ctx) => await ctx.db.insert('agents', { name: 'Aleister', keyHash: 'a'.repeat(64), keyPrefix: 'selfbound_aaaaa', createdAt: Date.now() }));
     const created = await t.run(async (ctx) => await createIssues(ctx, { kind: 'agent', agentId }, { issues: [{ teamId: f.orb, title: 'Waiting', status: 'todo' }, { teamId: f.orb, title: 'Done with', status: 'todo' }] }));
     const [waiting, removed] = created.issues.map((i) => i.id);
     await owner.mutation(api.issues.markRead, { ids: [waiting], read: true });

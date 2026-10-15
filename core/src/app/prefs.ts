@@ -37,7 +37,7 @@ export const SOUND_VOLUME_DEFAULT = 0.5;
 /** Status bar color per color scheme, same as --bg-panel in app/src/styles/app.css (also in app/index.html). */
 export const THEME_COLOR = { dark: '#0f0f10', light: '#fcfcfd' } as const;
 
-const KEY = 'xlr8:prefs';
+const KEY = 'selfbound:prefs';
 const DEFAULTS: PrefsState = { theme: 'system', fontSize: 'normal', currentTeam: null, teamsCollapsed: false, dormantCollapsed: false, sidebarTeams: 'small', inboxSplit: INBOX_SPLIT_DEFAULT, sound: true, soundVolume: SOUND_VOLUME_DEFAULT, locale: 'auto' };
 /** Old sidebar keys, dropped on load */
 const OLD = ['teamOpen', 'showDormant'];
@@ -54,10 +54,10 @@ function load(): PrefsState {
   }
 }
 
-/** Status bar colors from the copy of the look (localStorage "xlr8:look", as in index.html). */
+/** Status bar colors from the copy of the look (localStorage "selfbound:look", as in index.html). */
 function readBar(): { dark?: string; light?: string } {
   try {
-    const bar = JSON.parse(globalThis.localStorage?.getItem('xlr8:look') ?? 'null')?.bar;
+    const bar = JSON.parse(globalThis.localStorage?.getItem('selfbound:look') ?? 'null')?.bar;
     return bar && typeof bar === 'object' ? bar : {};
   } catch {
     return {};

@@ -12,6 +12,7 @@
     "build": "pnpm --filter @selfbound/app build",
     "typecheck": "pnpm -r --filter ./backend --filter ./core --filter ./app --filter ./e2e --filter ./perf --filter ./site typecheck",
     "test": "pnpm -r --filter ./backend --filter ./core --filter ./app --filter ./site test",
+    "test:tooling": "node --test tooling/test/*.test.mjs",
     "e2e": "pnpm --filter @selfbound/e2e test",
     "perf": "node perf/run.ts --full",
     "perf:quick": "node perf/run.ts --quick",
