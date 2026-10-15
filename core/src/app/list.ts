@@ -6,15 +6,21 @@ import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortD
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
 import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
-import { CARD_SLOT, computeBoard, reuseBoard } from '../board.ts';
+import { computeBoard, reuseBoard } from '../board.ts';
 import { stateGroupKey } from '../workflow.ts';
 
 import { VIEWS, planSprint, viewKey, viewTitle, type ViewContext } from '../views.ts';
-import { revealIndex } from '../window.ts';
+import { revealIndex, revealSpan } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
 import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
+
+/** A board column's scroll container; `span` is the position of a card (estimated while it is not measured). */
+export interface ColumnScroller {
+  el: HTMLElement;
+  span(index: number): { top: number; bottom: number; measured: boolean };
+}
 
 export interface HeaderState {
   title: string;
@@ -104,7 +110,7 @@ export class ListController {
   #badges = new Map<string, TeamBadge>();
   /** Board: column and position per issue (also in collapsed columns) */
   #boardPos = new Map<IssueId, { col: number; index: number }>();
-  #columnScrollers = new Map<string, HTMLElement>();
+  #columnScrollers = new Map<string, ColumnScroller>();
 
   /**
    * Second list (right column of sprint planning): writes no URL and only computes while it is
@@ -427,8 +433,8 @@ export class ListController {
     this.recompute();
   }
 
-  registerColumnScroller(key: string, el: HTMLElement | null) {
-    if (el) this.#columnScrollers.set(key, el);
+  registerColumnScroller(key: string, scroller: ColumnScroller | null) {
+    if (scroller) this.#columnScrollers.set(key, scroller);
     else this.#columnScrollers.delete(key);
   }
 
@@ -896,10 +902,17 @@ export class ListController {
     if (board) {
       const pos = id ? this.#boardPos.get(id) : undefined;
       const column = pos ? board.columns[pos.col] : undefined;
-      const el = column ? this.#columnScrollers.get(column.key) : undefined;
-      if (pos && el) {
-        revealIndex(el, pos.index, CARD_SLOT);
+      const scroller = column ? this.#columnScrollers.get(column.key) : undefined;
+      if (pos && scroller) {
+        const { el } = scroller;
+        const reveal = () => {
+          const { top, bottom } = scroller.span(pos.index);
+          revealSpan(el, top, bottom);
+        };
+        reveal();
         el.parentElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        // A card that was not measured yet is taller or shorter than its estimate once it is drawn.
+        if (!scroller.span(pos.index).measured) requestAnimationFrame(() => requestAnimationFrame(() => this.#focus === id && reveal()));
       }
       return;
     }

@@ -1,19 +1,32 @@
 <script lang="ts">
   // One column: header (status, count, "+", collapse) and windowed cards. Dragging: allowed columns
   // accept, blocked ones (status missing in the team, fixed order) are dimmed.
-  import { CARD_SLOT } from '@selfbound/core/board';
+  // Cards grow with their title: heights are measured once a card is drawn (ResizeObserver) and
+  // estimated until then; cards above the viewport that change keep the scroll position steady.
+  import { onDestroy, tick } from 'svelte';
+  import { CARD_ESTIMATE, CARD_GAP } from '@selfbound/core/board';
   import { t } from '@selfbound/core/i18n';
-  import { computeWindow, statusIcon, type BoardColumn, type IssueId } from '@selfbound/core';
+  import { buildOffsets, computeVariableWindow, indexAt, statusIcon, type BoardColumn, type IssueId } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import Card from './Card.svelte';
   import { drag } from './drag.svelte.ts';
 
   let { column }: { column: BoardColumn } = $props();
 
-  // Windowing per column (fixed card height).
+  // Windowing per column. `measured` is a plain cache; `version` tells the offsets to rebuild.
   let scrollTop = $state(0);
   let height = $state(0);
-  const range = $derived(computeWindow(scrollTop, height, CARD_SLOT, column.ids.length));
+  let version = $state(0);
+  const measured = new Map<IssueId, number>();
+  const offsets = $derived.by(() => {
+    void version;
+    if (measured.size > column.ids.length + 100) {
+      const live = new Set<string>(column.ids);
+      for (const id of measured.keys()) if (!live.has(id)) measured.delete(id);
+    }
+    return buildOffsets(column.ids, measured, CARD_ESTIMATE, CARD_GAP);
+  });
+  const range = $derived(computeVariableWindow(offsets, scrollTop, height));
   const start = $derived(range.start);
   const end = $derived(range.end);
   const visible = $derived(column.ids.slice(start, end));
@@ -24,15 +37,68 @@
   // svelte-ignore state_referenced_locally
   const key = column.key;
   function scroller(el: HTMLDivElement) {
-    app.main.registerColumnScroller(key, el);
+    app.main.registerColumnScroller(key, {
+      el,
+      span(index) {
+        const id = column.ids[index];
+        const h = measured.get(id);
+        const top = offsets[index] ?? 0;
+        return { top, bottom: top + (h ?? CARD_ESTIMATE), measured: h !== undefined };
+      },
+    });
     scrollTop = el.scrollTop;
     height = el.clientHeight;
-    const observer = new ResizeObserver(() => (height = el.clientHeight));
-    observer.observe(el);
+    let width = el.clientWidth;
+    // A new column width wraps titles differently: read the cards that are drawn again, forget the rest.
+    const resize = new ResizeObserver(() => {
+      height = el.clientHeight;
+      if (el.clientWidth === width) return;
+      width = el.clientWidth;
+      // Keep the first visible card where it is: everything above it goes back to estimates.
+      const first = indexAt(offsets, el.scrollTop);
+      const inset = el.scrollTop - (offsets[first] ?? 0);
+      measured.clear();
+      for (const card of el.querySelectorAll<HTMLElement>('.card')) measured.set(card.dataset.id as IssueId, card.offsetHeight);
+      version++;
+      void tick().then(() => (el.scrollTop = (offsets[first] ?? 0) + inset));
+    });
+    resize.observe(el);
+    scrollEl = el;
     return () => {
-      observer.disconnect();
+      resize.disconnect();
+      scrollEl = null;
       app.main.registerColumnScroller(key, null);
     };
+  }
+
+  // Created with the component (not in `scroller`): the cards attach before their column's scroller does.
+  let scrollEl: HTMLElement | null = null;
+  let shift = 0;
+  const cards = new ResizeObserver((entries) => {
+    let changed = false;
+    for (const entry of entries) {
+      const card = entry.target as HTMLElement;
+      const id = card.dataset.id as IssueId;
+      const h = entry.borderBoxSize?.[0]?.blockSize ?? card.offsetHeight;
+      const old = measured.get(id);
+      if (old !== undefined && Math.abs(old - h) < 0.5) continue;
+      // A card entirely above the viewport pushes everything below it: take the difference off the scroll position.
+      if (scrollEl && parseFloat(card.style.top) + (old ?? CARD_ESTIMATE) <= scrollEl.scrollTop) shift += h - (old ?? CARD_ESTIMATE);
+      measured.set(id, h);
+      changed = true;
+    }
+    if (!changed) return;
+    version++;
+    if (shift)
+      void tick().then(() => {
+        if (scrollEl) scrollEl.scrollTop += shift;
+        shift = 0;
+      });
+  });
+  onDestroy(() => cards.disconnect());
+  function observeCard(card: HTMLElement) {
+    cards.observe(card);
+    return () => cards.unobserve(card);
   }
 
   function onDragOver(e: DragEvent) {
@@ -85,9 +151,9 @@
   </header>
   {#if !column.collapsed}
     <div class="column-scroll" data-testid="column-scroll" onscroll={(e) => (scrollTop = e.currentTarget.scrollTop)} {@attach scroller}>
-      <div class="column-inner" style:height="{column.ids.length * CARD_SLOT}px">
+      <div class="column-inner" style:height="{offsets[column.ids.length]}px">
         {#each visible as id, i (id)}
-          <Card {id} top={(start + i) * CARD_SLOT} />
+          <Card {id} top={offsets[start + i]} observe={observeCard} />
         {/each}
       </div>
     </div>

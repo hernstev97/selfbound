@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Card: identifier with team logo, title (two lines), priority, status, labels (stack as in the
+  // Card: identifier with team logo, title (whole, wraps), priority, status, labels (stack as in the
   // list, `labelStackHtml`), estimate, due date. Reads the same row state as the list (one slice per issue).
   import type { IssueId, PaletteKind } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
@@ -9,7 +9,7 @@
   import { labelStackHtml, teamLogoHtml } from '../../lib/rowHtml.ts';
   import { drag } from './drag.svelte.ts';
 
-  let { id, top }: { id: IssueId; top: number } = $props();
+  let { id, top, observe }: { id: IssueId; top: number; observe: (card: HTMLElement) => () => void } = $props();
   const list = app.main;
   const row = $derived(fromSlice(list.rows.get(id)));
   const r = $derived(row.current);
@@ -55,6 +55,7 @@
     data-status={r.status}
     style:top="{top}px"
     draggable="true"
+    {@attach observe}
     ondragstart={dragStart}
     onclick={click}
     onpointermove={(e) => {

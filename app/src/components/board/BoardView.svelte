@@ -9,17 +9,31 @@
   import Empty from '../Empty.svelte';
   import { drag } from './drag.svelte.ts';
   import { landed } from '../../lib/listMotion.ts';
+  import { reduced } from '../../lib/motion.ts';
 
   const boardSlice = fromSlice(app.main.board);
   const selectionSlice = fromSlice(app.main.selectionCount);
   const board = $derived(boardSlice.current);
 
-  /** A card in another column or position (Shift ←/→, drag, agent) lands visibly. */
+  /**
+   * A card in another column or position (Shift ←/→, drag, agent) lands visibly; the cards around it
+   * glide into their new places (`.settling` turns on the `top` transition, only for this moment).
+   */
   function motion(el: HTMLElement) {
-    return app.main.motion.subscribe(() => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const off = app.main.motion.subscribe(() => {
       const m = app.main.motion.get();
-      if (m?.kind === 'moved') landed(el, m.ids, '[data-testid="issue-card"]', true);
+      if (m?.kind !== 'moved') return;
+      landed(el, m.ids, '[data-testid="issue-card"]', true);
+      if (reduced()) return;
+      el.classList.add('settling');
+      clearTimeout(timer);
+      timer = setTimeout(() => el.classList.remove('settling'), 320);
     });
+    return () => {
+      off();
+      clearTimeout(timer);
+    };
   }
 
   /** Long press (phone) opens the context menu, as in the list. */

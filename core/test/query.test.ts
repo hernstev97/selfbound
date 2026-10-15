@@ -5,7 +5,7 @@ import { IssueSearch, identifierCandidates, loadFuzzy, scoreText } from '../src/
 
 // The app loads uFuzzy lazily; the tests load it up front.
 await loadFuzzy();
-import { computeWindow, revealIndex } from '../src/window.ts';
+import { buildOffsets, computeVariableWindow, computeWindow, indexAt, revealIndex, revealSpan } from '../src/window.ts';
 import { isConsentPath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import { VIEWS, type ViewContext } from '../src/views.ts';
 import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
@@ -154,6 +154,35 @@ describe('search (identifiers with 2–6 characters)', () => {
     expect(search.search('Issue number 7').some((i) => i._id === 'i7')).toBe(false);
     expect(scoreText('Status: In progress in arbeit', 'arbeit')).toBeGreaterThan(0);
     expect(scoreText('Priority: High', 'prog')).toBe(0);
+  });
+});
+
+describe('windowing with entries of different heights (board cards)', () => {
+  const ids = Array.from({ length: 1000 }, (_, i) => `c${i}`);
+  test('offsets use measured heights, the estimate for the rest, and the gap below each entry', () => {
+    const o = buildOffsets(['a', 'b', 'c'], new Map([['b', 200]]), 100, 8);
+    expect([...o]).toEqual([0, 108, 316, 424]);
+  });
+  test('indexAt finds the entry at a position, clamped', () => {
+    const o = buildOffsets(['a', 'b', 'c'], new Map([['b', 200]]), 100, 8);
+    expect([indexAt(o, -5), indexAt(o, 0), indexAt(o, 107), indexAt(o, 108), indexAt(o, 315), indexAt(o, 316), indexAt(o, 9999)]).toEqual([0, 0, 0, 1, 1, 2, 2]);
+    expect(indexAt(buildOffsets([], new Map(), 100, 8), 10)).toBe(0);
+  });
+  test('window around the scroll position with overscan, not the whole column', () => {
+    const o = buildOffsets(ids, new Map(), 100, 0);
+    expect(computeVariableWindow(o, 0, 450, 2)).toEqual({ start: 0, end: 7 });
+    expect(computeVariableWindow(o, 5000, 450, 2)).toEqual({ start: 48, end: 57 });
+    expect(computeVariableWindow(o, 1e9, 450, 2).end).toBe(1000);
+    expect(computeVariableWindow(buildOffsets([], new Map(), 100, 0), 0, 450)).toEqual({ start: 0, end: 0 });
+  });
+  test('revealSpan scrolls just enough, in both directions', () => {
+    const el = { scrollTop: 100, clientHeight: 300 };
+    revealSpan(el, 150, 250);
+    expect(el.scrollTop).toBe(100);
+    revealSpan(el, 350, 480);
+    expect(el.scrollTop).toBe(180);
+    revealSpan(el, 20, 90);
+    expect(el.scrollTop).toBe(20);
   });
 });
 
