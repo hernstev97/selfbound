@@ -4,7 +4,7 @@ import type { Actor } from '../lib/actor';
 import { fail, invalid, notFound } from '../lib/errors';
 import type { LogoVariant } from '../lib/validators';
 import { ensureTeamStates } from '../lib/workflow';
-import { OWNER_KIND, TEAM_KEY_RE, type ProjectState } from '../shared/constants';
+import { isOwnerKind, TEAM_KEY_RE, type ProjectState } from '../shared/constants';
 import { checkHue, checkName, getTeam } from './validate';
 
 // Teams, projects, labels and label groups.
@@ -12,13 +12,13 @@ import { checkHue, checkName, getTeam } from './validate';
 // change teams, but not logos. Agents, GitHub and system may do neither.
 
 export function assertCanManageTeams(actor: Actor) {
-  if (actor.kind !== OWNER_KIND && actor.kind !== 'import') {
+  if (!isOwnerKind(actor.kind) && actor.kind !== 'import') {
     fail('access_denied', 'Only the owner can change teams.');
   }
 }
 
 export function assertCanManageLogos(actor: Actor) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', 'Only the owner can change team logos.');
+  if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can change team logos.');
 }
 
 function normalizeKey(key: string) {

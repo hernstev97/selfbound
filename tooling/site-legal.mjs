@@ -2,16 +2,15 @@
 // (docs-site/). They name a person and a postal address, so they never live in this public repository:
 // they are read at build time from a file outside it.
 //
-//   ~/.config/xlr8/site-legal.json   (or $XDG_CONFIG_HOME/xlr8/site-legal.json, or XLR8_SITE_LEGAL_FILE)
+//   ~/.config/selfbound/site-legal.json   (or $XDG_CONFIG_HOME/selfbound/site-legal.json, or SELFBOUND_SITE_LEGAL_FILE)
 //   { "name": "…", "street": "…", "postalCode": "…", "city": "…", "country": "…", "email": "…", "phone": "…" }
 //
 // `phone` is optional. A build that goes live (production deploy, or a listed site) fails if the file is
 // missing or incomplete; any other build fills in visible placeholders.
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { configFile, envVar } from './lib/env.mjs';
 
-export const LEGAL_FILE = process.env.XLR8_SITE_LEGAL_FILE || join(process.env.XDG_CONFIG_HOME || join(homedir(), '.config'), 'xlr8', 'site-legal.json');
+export const LEGAL_FILE = envVar('SITE_LEGAL_FILE') || configFile('site-legal.json');
 
 const REQUIRED = ['name', 'street', 'postalCode', 'city', 'country', 'email'];
 
@@ -24,8 +23,8 @@ export const LEGAL_PLACEHOLDER = {
   email: 'provider@example.invalid',
 };
 
-/** Truthy for the builds that go live: the deploy tools set XLR8_SITE_REQUIRE_LEGAL=1 for production. */
-export const legalRequired = (env = process.env, listed = false) => listed || ['1', 'true', 'yes'].includes(String(env.XLR8_SITE_REQUIRE_LEGAL ?? '').toLowerCase());
+/** Truthy for the builds that go live: the deploy tools set SELFBOUND_SITE_REQUIRE_LEGAL=1 for production. */
+export const legalRequired = (env = process.env, listed = false) => listed || ['1', 'true', 'yes'].includes(String(envVar('SITE_REQUIRE_LEGAL', env) ?? '').toLowerCase());
 
 /**
  * @param {{ required?: boolean, file?: string }} [opts]

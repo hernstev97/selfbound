@@ -1,6 +1,6 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
-import { OWNER_KIND, type Status } from '../shared/constants';
+import { isOwnerKind, type Status } from '../shared/constants';
 import {
   activeStates,
   allowedTargets,
@@ -13,6 +13,7 @@ import {
 } from '../shared/workflow';
 import type { Actor } from './actor';
 import { fail, invalid } from './errors';
+import { envVar } from './legacyEnv';
 
 // Read, create and resolve a team's workflow states. Rules and order live in
 // shared/workflow.ts (also used in the browser); this file only does the database access.
@@ -49,12 +50,12 @@ export function forgetTeamStates(ctx: QueryCtx, teamId: Id<'teams'>) {
 
 /**
  * Creates the default states if the team has none yet (new team, migration). Their names follow
- * the deployment language (XLR8_LOCALE, English unless 'de').
+ * the deployment language (SELFBOUND_LOCALE, English unless 'de').
  */
 export async function ensureTeamStates(ctx: MutationCtx, teamId: Id<'teams'>, now = Date.now()): Promise<State[]> {
   const existing = await teamStates(ctx, teamId);
   if (existing.length > 0) return existing;
-  const locale = process.env.XLR8_LOCALE;
+  const locale = envVar('LOCALE');
   const positions = new Map<string, number>();
   for (const def of DEFAULT_STATES) {
     const position = positions.get(def.type) ?? 0;
@@ -108,7 +109,7 @@ export function resolveState(
  * moving teams and the move on archiving are exempt (handled by the callers).
  */
 export function ruleApplies(actor: Actor) {
-  return actor.kind === OWNER_KIND || actor.kind === 'agent';
+  return isOwnerKind(actor.kind) || actor.kind === 'agent';
 }
 
 /**

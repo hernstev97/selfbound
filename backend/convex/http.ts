@@ -21,7 +21,7 @@ import { plain } from './ops/mcp';
 //   POST /mcp          MCP for agents (bearer key) and connectors (OAuth access token)
 //   GET  /.well-known/oauth-protected-resource[/mcp], /.well-known/oauth-authorization-server
 //   POST /oauth/register, GET /oauth/authorize, POST /oauth/token, POST /oauth/revoke
-//                      OAuth for connectors (lib/oauth/http.ts); only with XLR8_APP_URL, else 404
+//                      OAuth for connectors (lib/oauth/http.ts); only with SELFBOUND_APP_URL, else 404
 //   POST /github       GitHub webhook (HMAC signature with GITHUB_WEBHOOK_SECRET)
 //   GET  /ghmedia/<key>/<i>  image or video from a PR (private repo): 302 to a fresh GitHub URL
 //   GET  /logo/<id>    team logo with a strict Content-Security-Policy
@@ -73,7 +73,7 @@ for (const method of ['GET', 'DELETE'] as const) {
 
 // ---------------------------------------------------------------- OAuth for connectors
 
-/** Endpoint only with OAuth enabled (XLR8_APP_URL set), else 404. */
+/** Endpoint only with OAuth enabled (SELFBOUND_APP_URL set), else 404. */
 const withOAuth = (handler: (ctx: ActionCtx, request: Request, cfg: OAuthConfig) => Promise<Response>) =>
   httpAction(async (ctx, request) => {
     const cfg = oauthConfig();

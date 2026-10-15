@@ -13,13 +13,14 @@
 // --dir: separate folder for a second, independent backend (e.g. e2e/.backend for the Playwright
 //        tests). It is created and symlinks backend/convex etc.; data and .env.local are separate.
 // --no-env: do not write app/.env.local (the tests pass URL and token via the environment).
-// --app-url: app address for the OAuth consent page (XLR8_APP_URL; enables connectors).
+// --app-url: app address for the OAuth consent page (SELFBOUND_APP_URL; enables connectors).
 //            Default: Vite dev server or preview, depending on --app (otherwise 5412).
 
 import { spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, openSync, readFileSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { envVar } from './lib/env.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -38,10 +39,10 @@ if (backendDir !== 'backend') {
     if (!existsSync(link)) symlinkSync(relative(target, join(root, 'backend', entry)), link);
   }
 }
-process.env.XLR8_BACKEND_DIR = backendDir;
+process.env.SELFBOUND_BACKEND_DIR = backendDir;
 const { runConvex } = await import('./convex.mjs');
 const { DEV_OWNER_ID, devJwksDataUri, devToken } = await import('./dev-auth.mjs');
-const port = Number(opt('port', process.env.XLR8_CONVEX_PORT ?? '13410'));
+const port = Number(opt('port', envVar('CONVEX_PORT') ?? '13410'));
 const sitePort = port + 1;
 const seedSet = opt('seed', 'none');
 const appMode = opt('app', 'none');
@@ -137,12 +138,12 @@ async function main() {
 
   // Environment variables for the local backend only.
   const wanted = {
-    XLR8_DEV_JWKS: devJwksDataUri(),
+    SELFBOUND_DEV_JWKS: devJwksDataUri(),
     CLERK_JWT_ISSUER_DOMAIN: 'none',
-    XLR8_OWNER_IDS: DEV_OWNER_ID,
-    XLR8_ALLOW_SEED: '1',
-    XLR8_TEST_SWITCHES: '1',
-    XLR8_APP_URL: appUrl,
+    SELFBOUND_OWNER_IDS: DEV_OWNER_ID,
+    SELFBOUND_ALLOW_SEED: '1',
+    SELFBOUND_TEST_SWITCHES: '1',
+    SELFBOUND_APP_URL: appUrl,
   };
   const current = await convexSync(['env', 'list']);
   let changed = false;

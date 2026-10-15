@@ -28,12 +28,12 @@ pnpm --filter @selfbound/site preview   # http://127.0.0.1:5403/
 details are **not in this repository**. They are filled in at build time from a file outside it:
 
 ```json
-// ~/.config/xlr8/site-legal.json  ($XDG_CONFIG_HOME/xlr8/, or the path in XLR8_SITE_LEGAL_FILE)
+// ~/.config/selfbound/site-legal.json  ($XDG_CONFIG_HOME/selfbound/, or the path in SELFBOUND_SITE_LEGAL_FILE)
 { "name": "…", "street": "…", "postalCode": "…", "city": "…", "country": "…", "email": "…", "phone": "optional" }
 ```
 
 The build **fails** if the file is missing or incomplete when the site is listed or for a production deploy
-(`node tooling/deploy-site.mjs --prod` sets `XLR8_SITE_REQUIRE_LEGAL=1`); other builds show visible
+(`node tooling/deploy-site.mjs --prod` sets `SELFBOUND_SITE_REQUIRE_LEGAL=1`); other builds show visible
 placeholders. Loader and tests: `tooling/site-legal.mjs`, `site/test/legal.test.ts`.
 
 When `listed` is true (and only then) the built `index.html` loads
@@ -52,8 +52,8 @@ pricing pages for [Web Analytics](https://vercel.com/docs/analytics/limits-and-p
 `"listed": false` in `site.config.json` keeps the page out of search engines three ways: a
 `<meta name="robots" content="noindex, nofollow">`, an `X-Robots-Tag` header (in the generated
 `vercel.json`) and a `robots.txt` that disallows everything. Nothing in the app or the repository links
-to the page. **To launch, set `"listed": true`**, deploy, and set `XLR8_SITE_URL` for the build so
-canonical, link-preview tags and the sitemap are written. `XLR8_SITE_LISTED=1` overrides the setting for a
+to the page. **To launch, set `"listed": true`**, deploy, and set `SELFBOUND_SITE_URL` for the build so
+canonical, link-preview tags and the sitemap are written. `SELFBOUND_SITE_LISTED=1` overrides the setting for a
 single build.
 
 ## Deploy

@@ -48,7 +48,7 @@ export async function oauthSuite(backend, log) {
   await admin.mutation(api.oauth.arm, { on: true });
   const transport = new StreamableHTTPClientTransport(url, { authProvider: p });
   await assert.rejects(new Client({ name: 'selfbound-oauth', version: '1' }).connect(transport), UnauthorizedError);
-  assert.match(p.store.client.client_id, /^xlr8-claude-/);
+  assert.match(p.store.client.client_id, /^selfbound-claude-/);
   const authorizationUrl = p.store.authorizationUrl;
   assert.equal(authorizationUrl.searchParams.get('resource'), url.href);
   assert.equal(authorizationUrl.searchParams.get('code_challenge_method'), 'S256');
@@ -64,7 +64,7 @@ export async function oauthSuite(backend, log) {
   const back = new URL(redirect);
   assert.equal(back.searchParams.get('iss'), backend.siteUrl);
   await transport.finishAuth(back.searchParams.get('code'));
-  assert.match(p.store.tokens.access_token, /^xlr8_at_/);
+  assert.match(p.store.tokens.access_token, /^selfbound_at_/);
   log('OAuth: registration, approval, tokens (PKCE, resource, iss)');
 
   // 4. Tools as a connector; the change records it as the source.

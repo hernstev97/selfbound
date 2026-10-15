@@ -1,6 +1,6 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
-import type { Actor } from '../lib/actor';
+import { sameActor, type Actor } from '../lib/actor';
 import { berlinDay, DAY_MS } from '../lib/dates';
 import { hashText, sameValue, stable } from '../lib/equal';
 import { fail, invalid, notFound } from '../lib/errors';
@@ -9,7 +9,7 @@ import { rankBetween } from '../lib/rank';
 import { hasAllTerms, searchTerms, snippet } from '../lib/search';
 import type { SourceInput, SourcePatch } from '../lib/validators';
 import { searchChunks } from '../lib/wikiText';
-import { OWNER_KIND, PARTIAL_DATE_RE, WIKI } from '../shared/constants';
+import { isOwnerKind, PARTIAL_DATE_RE, WIKI } from '../shared/constants';
 import { syncFileRefs } from './files';
 import { dropLinksTo, syncArticleLinks } from './links';
 import { TRASH_DAYS } from './issues';
@@ -49,7 +49,7 @@ export async function getArticle(ctx: QueryCtx, id: Id<'articles'>, opts: { allo
 }
 
 function assertCanDelete(actor: Actor) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', 'Only the owner may delete and restore pages.');
+  if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner may delete and restore pages.');
 }
 
 /**
@@ -240,7 +240,7 @@ async function saveRevision(
     force ||
     !last ||
     now - last.savedAt >= WIKI.revisionGapMs ||
-    !sameValue(body.updatedBy, actor) ||
+    !sameActor(body.updatedBy, actor) ||
     actor.kind === 'agent' ||
     actor.kind === 'import';
   if (!due || last?.version === body.version) return;
@@ -271,7 +271,7 @@ async function saveRevision(
 
 /** The page's `updatedAt`/`updatedBy`; for text edits at most once per WIKI.touchGapMs. */
 async function touch(ctx: MutationCtx, actor: Actor, article: Doc<'articles'>, now: number, throttle: boolean) {
-  if (throttle && now - article.updatedAt < WIKI.touchGapMs && sameValue(article.updatedBy, actor)) return;
+  if (throttle && now - article.updatedAt < WIKI.touchGapMs && sameActor(article.updatedBy, actor)) return;
   await ctx.db.patch('articles', article._id, { updatedAt: now, updatedBy: actor });
 }
 

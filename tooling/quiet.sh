@@ -6,8 +6,9 @@
 #
 # Usage:       tooling/quiet.sh pnpm test
 #              tooling/quiet.sh pnpm e2e
-# Environment: XLR8_QUIET_CPUS (default: the upper half of the cores), XLR8_QUIET_MINUTES (default 30),
-#              XLR8_QUIET_MEM (default 12G). The old names XLR8_LEISE_* still work.
+# Environment: SELFBOUND_QUIET_CPUS (default: the upper half of the cores), SELFBOUND_QUIET_MINUTES
+#              (default 30), SELFBOUND_QUIET_MEM (default 12G).
+# legacy-xlr8: the old names XLR8_QUIET_* and XLR8_LEISE_* still work.
 #
 # With systemd (user scope): AllowedCPUs, CPUWeight and IOWeight 10, MemoryHigh.
 # Without systemd: taskset, nice 19, ionice idle.
@@ -15,9 +16,10 @@ set -eu
 n=$(nproc 2>/dev/null || echo 2)
 half="$((n / 2))-$((n - 1))"
 [ "$n" -gt 1 ] || half=0
-cpus=${XLR8_QUIET_CPUS:-${XLR8_LEISE_CPUS:-$half}}
-minutes=${XLR8_QUIET_MINUTES:-${XLR8_LEISE_MINUTES:-30}}
-mem=${XLR8_QUIET_MEM:-${XLR8_LEISE_MEM:-12G}}
+# Old variable names work too, silently (this wrapper must not print).
+cpus=${SELFBOUND_QUIET_CPUS:-${XLR8_QUIET_CPUS:-${XLR8_LEISE_CPUS:-$half}}}  # legacy-xlr8
+minutes=${SELFBOUND_QUIET_MINUTES:-${XLR8_QUIET_MINUTES:-${XLR8_LEISE_MINUTES:-30}}}  # legacy-xlr8
+mem=${SELFBOUND_QUIET_MEM:-${XLR8_QUIET_MEM:-${XLR8_LEISE_MEM:-12G}}}  # legacy-xlr8
 [ "$#" -gt 0 ] || { echo "usage: tooling/quiet.sh <command> [arguments …]" >&2; exit 2; }
 if command -v systemd-run >/dev/null 2>&1 && systemctl --user is-system-running >/dev/null 2>&1 || [ "$(systemctl --user is-system-running 2>/dev/null)" = degraded ]; then
   exec systemd-run --user --scope --quiet --collect \

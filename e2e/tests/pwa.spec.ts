@@ -85,17 +85,18 @@ test('Sharing from another app creates exactly one issue in the inbox', async ({
   await expect(page.locator(`[data-testid="issue-row"][data-key="${key}"]`)).toHaveCount(0);
 });
 
-test('Tapping a notification opens the issue in the open window', async ({ page, context }) => {
+// legacy-xlr8: an old service worker may still be active after an update and sends the old message name.
+for (const type of ['selfbound-open', 'xlr8-open']) test(`Tapping a notification opens the issue in the open window (${type})`, async ({ page, context }) => {
   await open(page, '/inbox');
   await registered(page);
   const key = (await page.getByTestId('issue-row').first().getAttribute('data-key'))!;
   const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'));
   // This is how the service worker passes the tap to the window (notificationclick in app/sw/sw.js).
-  await worker.evaluate(async (url) => {
+  await worker.evaluate(async ({ url, type }) => {
     const sw = self as unknown as { clients: { matchAll(o: object): Promise<{ postMessage(m: unknown): void }[]> } };
     const clients = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of clients) c.postMessage({ type: 'xlr8-open', url });
-  }, `/issue/${key}`);
+    for (const c of clients) c.postMessage({ type, url });
+  }, { url: `/issue/${key}`, type });
   await expect(page).toHaveURL(new RegExp(`/issue/${key}$`));
   await expect(page.getByTestId('detail-key')).toHaveText(key);
   // Back leads to the previous page

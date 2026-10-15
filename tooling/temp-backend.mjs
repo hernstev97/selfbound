@@ -56,7 +56,7 @@ function convexCliOnce(dir, args, { input } = {}) {
   return new Promise((resolvePromise, reject) => {
     let out = '';
     const child = spawn(process.execPath, [convexWrapper, ...args], {
-      env: { ...process.env, XLR8_BACKEND_DIR: dir },
+      env: { ...process.env, SELFBOUND_BACKEND_DIR: dir },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     child.stdout.on('data', (d) => (out += d));
@@ -87,7 +87,7 @@ export async function startTempBackend({ port, env = {}, log = () => {} }) {
   const child = spawn(
     process.execPath,
     [convexWrapper, 'dev', '--local-cloud-port', String(port), '--local-site-port', String(port + 1), '--tail-logs', 'disable', '--typecheck', 'disable'],
-    { env: { ...process.env, XLR8_BACKEND_DIR: dir }, stdio: ['ignore', fd, fd], detached: true },
+    { env: { ...process.env, SELFBOUND_BACKEND_DIR: dir }, stdio: ['ignore', fd, fd], detached: true },
   );
   let stopped = false;
   const stop = async ({ keep = false } = {}) => {
@@ -106,13 +106,13 @@ export async function startTempBackend({ port, env = {}, log = () => {} }) {
     await waitFor(() => reachable(`${url}/version`), 'Backend');
     await waitFor(() => existsSync(join(dir, '.env.local')), '.env.local');
     const wanted = {
-      XLR8_DEV_JWKS: devJwksDataUri(),
+      SELFBOUND_DEV_JWKS: devJwksDataUri(),
       CLERK_JWT_ISSUER_DOMAIN: 'none',
-      XLR8_OWNER_IDS: DEV_OWNER_ID,
-      XLR8_ALLOW_SEED: '1',
-      XLR8_TEST_SWITCHES: '1',
+      SELFBOUND_OWNER_IDS: DEV_OWNER_ID,
+      SELFBOUND_ALLOW_SEED: '1',
+      SELFBOUND_TEST_SWITCHES: '1',
       // OAuth for connectors on; the tests never open the consent page.
-      XLR8_APP_URL: 'http://127.0.0.1:1',
+      SELFBOUND_APP_URL: 'http://127.0.0.1:1',
       ...env,
     };
     for (const [key, value] of Object.entries(wanted)) await convexCli(dir, ['env', 'set', key, value]);

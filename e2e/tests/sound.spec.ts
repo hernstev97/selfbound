@@ -181,7 +181,7 @@ test('Settings: sounds off → silent and no audio chunk on the next start; the 
   await page.keyboard.press('ArrowRight');
   await expect(page.getByTestId('sound-volume')).toHaveValue('0.55');
   expect((await h.cues()).includes('sliderTick')).toBe(true);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('xlr8:prefs')!).soundVolume)).toBe(0.55);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('selfbound:prefs')!).soundVolume)).toBe(0.55);
 
   // Off: nothing plays any more although cues keep coming
   await page.getByTestId('sound-switch').getByText('Off', { exact: true }).click();
@@ -205,5 +205,5 @@ test('Settings: sounds off → silent and no audio chunk on the next start; the 
   await page.waitForFunction(() => !!(window as unknown as { __selfbound: Hooks }).__selfbound.sound);
   await expect.poll(() => hooks(page).cues()).toContain('swoosh');
   await expect.poll(() => hooks(page).played()).toContain('swoosh');
-  await page.evaluate(() => localStorage.removeItem('xlr8:prefs'));
+  await page.evaluate(() => localStorage.removeItem('selfbound:prefs'));
 });

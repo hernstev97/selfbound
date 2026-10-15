@@ -23,7 +23,7 @@ An export of everything as JSON and as a ZIP of Markdown files, started from Set
 
 Convex can export a deployment as a ZIP file. This is the same export the nightly backup uses, and it contains everything: issues with descriptions, comments and history, teams, labels, projects, sprints, knowledge pages, and the uploaded images and team logos.
 
-You need a checkout of the Selfbound repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/xlr8/convex-deploy-key`), run:
+You need a checkout of the Selfbound repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/selfbound/convex-deploy-key`), run:
 
 ```sh
 node tooling/cloud.mjs export --include-file-storage --path ~/selfbound-export.zip

@@ -32,13 +32,13 @@ A performance run is only meaningful on an idle machine, and an idle machine is 
 
 ### Idle runs (`perf/idle.ts`, optional)
 
-`idle.ts` is a helper for maintainers who want regular full runs on their own Linux machine without babysitting them. A pass only starts when the machine looks free (`node perf/idle.ts check`): inside the time window (default 01:00–08:00), no game running (Steam/Proton, Gamescope, Lutris, Heroic), GPU utilization below 40 % (`nvidia-smi`, skipped without it), load below 4, no other performance run. A watchdog keeps checking every 30 seconds and aborts the run (values discarded) when the machine gets busy. Every run has a hard time limit (full 60, A/B 120 minutes), a pass at most 150 minutes. Thresholds come from `XLR8_PERF_WINDOW`, `XLR8_PERF_MAX_LOAD`, `XLR8_PERF_MAX_GPU`, `XLR8_PERF_MINUTES`; state and log live in `~/.local/state/xlr8-perf/` (`XLR8_PERF_STATE`).
+`idle.ts` is a helper for maintainers who want regular full runs on their own Linux machine without babysitting them. A pass only starts when the machine looks free (`node perf/idle.ts check`): inside the time window (default 01:00–08:00), no game running (Steam/Proton, Gamescope, Lutris, Heroic), GPU utilization below 40 % (`nvidia-smi`, skipped without it), load below 4, no other performance run. A watchdog keeps checking every 30 seconds and aborts the run (values discarded) when the machine gets busy. Every run has a hard time limit (full 60, A/B 120 minutes), a pass at most 150 minutes. Thresholds come from `SELFBOUND_PERF_WINDOW`, `SELFBOUND_PERF_MAX_LOAD`, `SELFBOUND_PERF_MAX_GPU`, `SELFBOUND_PERF_MINUTES`; state and log live in `~/.local/state/selfbound-perf/` (`SELFBOUND_PERF_STATE`).
 
-`perf/idle/install.sh` installs it as a systemd user timer (every 30 minutes) with a separate worktree of main under `~/.cache/xlr8-perf/main`; `perf/idle/install.sh --remove` removes it. Without the timer, `node perf/idle.ts run --now` runs one pass right away. PR comments and issues use the GitHub CLI (`gh`).
+`perf/idle/install.sh` installs it as a systemd user timer (every 30 minutes) with a separate worktree of main under `~/.cache/selfbound-perf/main`; `perf/idle/install.sh --remove` removes it. Without the timer, `node perf/idle.ts run --now` runs one pass right away. PR comments and issues use the GitHub CLI (`gh`).
 
 ### Keeping load in check
 
-- Only one performance run at a time (machine-wide lock in `$XDG_RUNTIME_DIR/xlr8-perf.lock`); a second one exits immediately with a hint.
+- Only one performance run at a time (machine-wide lock in `$XDG_RUNTIME_DIR/selfbound-perf.lock`); a second one exits immediately with a hint.
 - On machines with at least 16 threads, the browser runs on cores 0–7, backend and preview on 8–15 (`taskset`; `--no-pin` turns this off).
 - Builds and tests outside of performance runs: `tooling/quiet.sh <command>` (see the script for the CPU set and limits).
 
@@ -53,7 +53,7 @@ Everything starts and stops by itself: its own local Convex (anonymous, no accou
 | 13590 → 13520 | proxy for the Convex WebSocket in profile P2 |
 | 5592 → 5522 | proxy for the page in profile P2 |
 
-Other ports (e.g. for a second worktree) via the environment; the defaults stay as above: `XLR8_PERF_CONVEX_PORT` (HTTP actions one higher), `XLR8_PERF_PREVIEW_PORT`, `XLR8_PERF_PROXY_CONVEX_PORT`, `XLR8_PERF_PROXY_PAGE_PORT`, e.g. `XLR8_PERF_CONVEX_PORT=13550 XLR8_PERF_PREVIEW_PORT=5552 XLR8_PERF_PROXY_CONVEX_PORT=13595 XLR8_PERF_PROXY_PAGE_PORT=5595 node perf/run.ts --quick`.
+Other ports (e.g. for a second worktree) via the environment; the defaults stay as above: `SELFBOUND_PERF_CONVEX_PORT` (HTTP actions one higher), `SELFBOUND_PERF_PREVIEW_PORT`, `SELFBOUND_PERF_PROXY_CONVEX_PORT`, `SELFBOUND_PERF_PROXY_PAGE_PORT`, e.g. `SELFBOUND_PERF_CONVEX_PORT=13550 SELFBOUND_PERF_PREVIEW_PORT=5552 SELFBOUND_PERF_PROXY_CONVEX_PORT=13595 SELFBOUND_PERF_PROXY_PAGE_PORT=5595 node perf/run.ts --quick`.
 
 ## What is measured
 
@@ -146,7 +146,7 @@ node perf/ab.ts --a=58d7f07 --b=f6c765b --pairs=3 -- --full --cells=P1-large --o
 node perf/ab.ts --report=perf/results/ab-<timestamp>     # only recompute the evaluation
 ```
 
-- Every revision runs in its own worktree with its own `perf/run.ts` and backend. `ab.ts` creates worktrees of other revisions under `~/.cache/xlr8-perf/refs/<commit>` (`XLR8_PERF_REFS`). Not under `/tmp`: that is often tmpfs, where the measurement backend writes about 10 ms faster. `--b=.` is this worktree including local changes.
+- Every revision runs in its own worktree with its own `perf/run.ts` and backend. `ab.ts` creates worktrees of other revisions under `~/.cache/selfbound-perf/refs/<commit>` (`SELFBOUND_PERF_REFS`). Not under `/tmp`: that is often tmpfs, where the measurement backend writes about 10 ms faster. `--b=.` is this worktree including local changes.
 - Order A B B A A B …, so a disturbance hits both sides equally. After the first run per side, no new build.
 - If a run aborts (exit 2 or no `summary.md`), `ab.ts` repeats it once. The reason is in the run's `aborted.md` and `run.log`. If it aborts again, `ab.ts` ends with exit 2.
 - Result `perf/results/<name>/ab.md`: per metric the medians of A and B, the difference with a bootstrap 95 % interval (resampled within each run) and the medians of the individual runs. **slower** or **faster** only counts if the interval excludes 0, the gap is at least 1 ms and every run of one side lies above every run of the other. Without the last condition it says "likely slower": that is variation between runs, not a finding.
@@ -185,7 +185,7 @@ No budget, no exit code for limits: this measurement belongs to tier 4.
 
 ## Limits
 
-- **Measurement build:** what is measured is `vite build` with `VITE_XLR8_TEST=1`, otherwise like production. Only that build has the measurement hooks (`globalThis.__selfbound`: save confirmations, state for the search checks). Cost: one more entry in the command menu and one array per save, not measurable.
+- **Measurement build:** what is measured is `vite build` with `VITE_SELFBOUND_TEST=1`, otherwise like production. Only that build has the measurement hooks (`globalThis.__selfbound`: save confirmations, state for the search checks). Cost: one more entry in the command menu and one array per save, not measurable.
 - **A fast desktop PC, headless Chromium.** P2 imitates a weak laptop via CPU throttling. Absolute times in a regular desktop Chrome can differ by a few milliseconds.
 - **Convex runs locally**, not in the cloud. The proxy delay roughly matches a transatlantic connection. "Agent" mutations go from Node directly to the backend (without the proxy); only the path to the browser is delayed.
 - **Sprint:** `G S` on `/sprint` measures the current sprint as a list. If the sprint page changes, adjust the check in `viewShown`.

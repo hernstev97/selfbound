@@ -4,8 +4,8 @@
 // Prints only counts and names, no content from the data.
 //
 // Usage (Node 24, no build):
-//   XLR8_MCP_KEY=xlr8_… node backend/scripts/mcp-smoke.ts --url http://127.0.0.1:13411/mcp
-//   node backend/scripts/mcp-smoke.ts --url … --key-file ~/.config/xlr8/agent-key [--tool list_teams] [--args '{}']
+//   SELFBOUND_MCP_KEY=selfbound_… node backend/scripts/mcp-smoke.ts --url http://127.0.0.1:13411/mcp
+//   node backend/scripts/mcp-smoke.ts --url … --key-file ~/.config/selfbound/agent-key [--tool list_teams] [--args '{}']
 //
 // Never pass the key as an argument (it would show up in the process list).
 
@@ -13,6 +13,7 @@ import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { envVar } from '../convex/lib/legacyEnv.ts';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 
 export interface SmokeOptions {
@@ -71,10 +72,10 @@ function option(argv: string[], name: string) {
 async function main(argv: string[]) {
   const url = option(argv, 'url');
   const keyFile = option(argv, 'key-file')?.replace(/^~(?=\/)/, homedir());
-  const key = keyFile ? readFileSync(keyFile, 'utf8').trim() : process.env.XLR8_MCP_KEY;
+  const key = keyFile ? readFileSync(keyFile, 'utf8').trim() : envVar('MCP_KEY'); // the old XLR8_MCP_KEY still works (legacy-xlr8)
   if (!url || !key) {
-    console.error('Usage: XLR8_MCP_KEY=… node backend/scripts/mcp-smoke.ts --url <MCP URL> [--tool name] [--args JSON]');
-    console.error('       or --key-file <file> instead of XLR8_MCP_KEY');
+    console.error('Usage: SELFBOUND_MCP_KEY=… node backend/scripts/mcp-smoke.ts --url <MCP URL> [--tool name] [--args JSON]');
+    console.error('       or --key-file <file> instead of SELFBOUND_MCP_KEY');
     process.exit(2);
   }
   const rawArgs = option(argv, 'args');

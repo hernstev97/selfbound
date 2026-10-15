@@ -1,13 +1,12 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
-import type { Actor } from '../lib/actor';
-import { sameValue } from '../lib/equal';
+import { sameActor, type Actor } from '../lib/actor';
 import { fail, invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
 import { syncFileRefs } from './files';
 import { syncArticleLinks } from './links';
 import { record } from './history';
-import { OWNER_KIND } from '../shared/constants';
+import { isOwnerKind } from '../shared/constants';
 import { notifyAgentComment } from './notify';
 import { checkComment, getIssue } from './validate';
 
@@ -17,7 +16,7 @@ import { checkComment, getIssue } from './validate';
 async function editableComment(ctx: MutationCtx, actor: Actor, commentId: Id<'comments'>) {
   const comment = (await ctx.db.get('comments', commentId)) ?? notFound('The comment', { commentId });
   if (comment.deletedAt !== undefined) invalid('The comment was removed.', { commentId });
-  if (actor.kind !== OWNER_KIND && !sameValue(comment.author, actor)) {
+  if (!isOwnerKind(actor.kind) && !sameActor(comment.author, actor)) {
     fail('access_denied', 'Only the author or the owner can change this comment.', { commentId });
   }
   return comment;

@@ -13,7 +13,7 @@ async function items(owner: Client, sprintId: Id<'sprints'>) {
 
 async function agentActor(t: T): Promise<Actor> {
   const agentId = await t.run(
-    async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'b'.repeat(64), keyPrefix: 'xlr8_bbbbb', createdAt: 0 }),
+    async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'b'.repeat(64), keyPrefix: 'selfbound_bbbbb', createdAt: 0 }),
   );
   return { kind: 'agent', agentId };
 }
@@ -26,7 +26,7 @@ describe('Sprints', () => {
     expect([number, second.number]).toEqual([1, 2]);
     const sprints = await owner.query(api.sprints.list, {});
     const sprint = sprints.find((s) => s._id === id)!;
-    expect(sprint).toMatchObject({ name: 'Sprint 1', goal: 'Focus', state: 'planning', source: 'xlr8' });
+    expect(sprint).toMatchObject({ name: 'Sprint 1', goal: 'Focus', state: 'planning', source: 'selfbound' });
     expect(sprint.startDate).toBe(nextMonday(berlinDay(Date.now())));
     expect(weekdayOf(sprint.startDate)).toBe(1);
     expect(weekdayOf(sprint.endDate)).toBe(7);

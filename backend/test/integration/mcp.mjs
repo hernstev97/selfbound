@@ -47,13 +47,15 @@ export async function mcpSuite(backend, log) {
   );
   const detail = await client.callTool({ name: 'get_issue', arguments: { identifier: 'int-2' } });
   assert.match(detail.structuredContent.createdBy, /Integration test/);
+  assert.equal(detail.structuredContent.reviewedByOwner, false);
+  // legacy-xlr8: deprecated copy of reviewedByOwner
   assert.equal(detail.structuredContent.reviewedBySteven, false);
   await client.close();
   log('MCP: create_issues twice with the same requestId → one issue (INT-2)');
 
   // 3. Key clients never start OAuth: wrong key → 401 without WWW-Authenticate.
   //    Without a key (connectors), however, the challenge; OAuth is on in the test backend.
-  const wrong = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer xlr8_wrong', 'Content-Type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"ping"}' });
+  const wrong = await fetch(url, { method: 'POST', headers: { Authorization: 'Bearer selfbound_wrong', 'Content-Type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"ping"}' });
   assert.equal(wrong.status, 401);
   assert.equal(wrong.headers.get('www-authenticate'), null);
   const anonymous = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"jsonrpc":"2.0","id":1,"method":"ping"}' });

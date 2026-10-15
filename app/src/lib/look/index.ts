@@ -1,5 +1,5 @@
 // Appearance: chosen themes for light and dark, fonts and overridden colors. Stored in Convex
-// (appearance.ts, applies on all devices) and as finished CSS in localStorage ("xlr8:look"). The
+// (appearance.ts, applies on all devices) and as finished CSS in localStorage ("selfbound:look"). The
 // inline script in index.html applies that CSS before the first paint, so nothing flashes at
 // startup. This module loads idle after startup (main.ts) and then syncs with the server.
 import type { App } from '@selfbound/core';
@@ -19,7 +19,7 @@ export interface Override {
 }
 
 export interface LookSettings {
-  /** "xlr8" (built-in colors), id of a bundled theme, or "custom:<id>" */
+  /** "selfbound" (built-in colors), id of a bundled theme, or "custom:<id>" */
   dark: string;
   light: string;
   /** "inter", "system", a Fontsource id or "local:<name>" */
@@ -41,9 +41,17 @@ export interface CustomThemeMeta {
   updatedAt: number;
 }
 
-export const DEFAULT_LOOK: LookSettings = { dark: 'xlr8', light: 'xlr8', sans: 'inter', mono: 'system', overrides: [] };
+export const SELFBOUND_THEME = 'selfbound';
 
-/** Content of localStorage "xlr8:look"; index.html reads css, bar and preload. */
+/** Theme reference with the old name of the built-in colors turned into the current one. */
+// legacy-xlr8: 'xlr8' is still stored on servers and devices that have not saved since the rename.
+export const canonicalRef = (ref: string) => (ref === 'xlr8' ? SELFBOUND_THEME : ref);
+
+const canonical = (s: LookSettings): LookSettings => ({ ...s, dark: canonicalRef(s.dark), light: canonicalRef(s.light), overrides: s.overrides.map((o) => ({ ...o, theme: canonicalRef(o.theme) })) });
+
+export const DEFAULT_LOOK: LookSettings = { dark: SELFBOUND_THEME, light: SELFBOUND_THEME, sans: 'inter', mono: 'system', overrides: [] };
+
+/** Content of localStorage "selfbound:look"; index.html reads css, bar and preload. */
 export interface LookCache {
   v: 1;
   settings: LookSettings;
@@ -61,7 +69,7 @@ export interface LookCache {
   preload: string[];
 }
 
-export const LOOK_KEY = 'xlr8:look';
+export const LOOK_KEY = 'selfbound:look';
 const BUILD = typeof __SELFBOUND_BUILD__ === 'string' ? __SELFBOUND_BUILD__ : 'dev';
 
 function readCache(): LookCache | null {
@@ -76,6 +84,7 @@ function readCache(): LookCache | null {
 export const sameLook = (a: LookSettings, b: LookSettings) => JSON.stringify(normalize(a)) === JSON.stringify(normalize(b));
 
 function normalize(s: LookSettings): LookSettings {
+  s = canonical(s);
   const overrides = s.overrides
     .filter((o) => Object.keys(o.colors).length > 0)
     .map((o) => ({ theme: o.theme, colors: Object.fromEntries(Object.entries(o.colors).sort(([a], [b]) => a.localeCompare(b))) }))
@@ -113,7 +122,7 @@ export class Look {
 
   constructor() {
     const cache = readCache();
-    this.settings = new Slice<LookSettings>(cache ? { ...DEFAULT_LOOK, ...cache.settings } : { ...DEFAULT_LOOK });
+    this.settings = new Slice<LookSettings>(cache ? canonical({ ...DEFAULT_LOOK, ...cache.settings }) : { ...DEFAULT_LOOK });
     this.#at = cache?.at ?? 0;
     this.#dirty = cache?.dirty ?? false;
     this.#started = new Promise((resolve) => (this.#markStarted = resolve));
@@ -139,7 +148,7 @@ export class Look {
     this.themes.set(value.themes);
     this.loaded.set(true);
     const server = value.settings;
-    const remote: LookSettings | null = server && { dark: server.dark, light: server.light, sans: server.sans, mono: server.mono, overrides: server.overrides };
+    const remote: LookSettings | null = server && canonical({ dark: server.dark, light: server.light, sans: server.sans, mono: server.mono, overrides: server.overrides });
     if (this.#dirty) {
       // Echo of our own change: saved. Otherwise save, unless a save is already in flight.
       if (server && remote && sameLook(remote, this.settings.get())) {
@@ -204,7 +213,7 @@ export class Look {
     if (!this.loaded.get()) return settings;
     const known = new Set(this.themes.get().map((t) => `custom:${t.id}`));
     const ok = (ref: string) => !ref.startsWith('custom:') || known.has(ref);
-    return { ...settings, dark: ok(settings.dark) ? settings.dark : 'xlr8', light: ok(settings.light) ? settings.light : 'xlr8', overrides: settings.overrides.filter((o) => ok(o.theme)) };
+    return { ...settings, dark: ok(settings.dark) ? settings.dark : SELFBOUND_THEME, light: ok(settings.light) ? settings.light : SELFBOUND_THEME, overrides: settings.overrides.filter((o) => ok(o.theme)) };
   }
 
   async #save() {
@@ -249,7 +258,7 @@ export class Look {
 
   /** Load the theme for an id (null = Selfbound colors, or unknown/deleted). */
   async theme(ref: string): Promise<VsTheme | null> {
-    if (ref === 'xlr8') return null;
+    if (canonicalRef(ref) === SELFBOUND_THEME) return null;
     if (!ref.startsWith('custom:')) return builtin(ref) ? await loadBuiltin(ref) : null;
     const id = ref.slice('custom:'.length);
     const meta = this.themes.get().find((t) => t.id === id);

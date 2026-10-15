@@ -33,8 +33,8 @@ export const meta: Meta = {
     { _id: 'l3', _creationTime: 0, name: 'Mobile', hue: 160 },
   ] as unknown as Meta['labels'],
   sprints: [
-    { _id: 's4', _creationTime: 0, number: 4, name: 'Sprint 4', goal: '', startDate: '2026-10-05', endDate: '2026-10-18', state: 'active', source: 'xlr8', updatedAt: 0 },
-    { _id: 's5', _creationTime: 0, number: 5, name: 'Sprint 5', goal: '', startDate: '2026-10-19', endDate: '2026-11-01', state: 'planning', source: 'xlr8', updatedAt: 0 },
+    { _id: 's4', _creationTime: 0, number: 4, name: 'Sprint 4', goal: '', startDate: '2026-10-05', endDate: '2026-10-18', state: 'active', source: 'selfbound', updatedAt: 0 },
+    { _id: 's5', _creationTime: 0, number: 5, name: 'Sprint 5', goal: '', startDate: '2026-10-19', endDate: '2026-11-01', state: 'planning', source: 'selfbound', updatedAt: 0 },
   ] as unknown as Meta['sprints'],
   rejectWrites: false,
 };

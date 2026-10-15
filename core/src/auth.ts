@@ -1,7 +1,7 @@
 // Sign-in in the client. Two ways:
 //
 // 1. Local: `VITE_DEV_TOKEN` (written by tooling/local.mjs). Only when set; the backend accepts
-//    the issuer only locally (XLR8_DEV_JWKS).
+//    the issuer only locally (SELFBOUND_DEV_JWKS).
 // 2. Production: Clerk (`VITE_CLERK_PUBLISHABLE_KEY`), token template "convex". Clerk is loaded
 //    on demand and is not part of the start bundle.
 //
@@ -20,7 +20,7 @@ import type { ConvexClient } from 'convex/browser';
 import { Slice } from './observable.ts';
 
 /**
- * `denied`: signed in at Clerk, but the backend rejects the account (not in XLR8_OWNER_IDS).
+ * `denied`: signed in at Clerk, but the backend rejects the account (not in SELFBOUND_OWNER_IDS).
  * `cached`: signed in last time (marker), Clerk has not confirmed yet; the app shows the cache.
  * `offline`: not signed in and Clerk unreachable.
  */
@@ -51,7 +51,9 @@ interface ClerkLike {
 }
 
 /** "Signed in" marker for the switch under `/` (same name in app/src/welcome/session.ts). Not a secret. */
-export const SIGNED_IN_COOKIE = 'xlr8_signed_in';
+export const SIGNED_IN_COOKIE = 'selfbound_signed_in';
+/** Name before the rename: still accepted when reading, always cleared when writing (legacy-xlr8). */
+export const LEGACY_SIGNED_IN_COOKIE = 'xlr8_signed_in';
 
 /**
  * Does the Clerk server answer at all? `no-cors`: only whether an answer arrives counts, not which.
@@ -97,13 +99,16 @@ function onlineAgain() {
 }
 
 function signedInBefore() {
-  return typeof document !== 'undefined' && document.cookie.split('; ').includes(`${SIGNED_IN_COOKIE}=1`);
+  if (typeof document === 'undefined') return false;
+  const cookies = document.cookie.split('; ');
+  return cookies.includes(`${SIGNED_IN_COOKIE}=1`) || cookies.includes(`${LEGACY_SIGNED_IN_COOKIE}=1`);
 }
 
 function markSignedIn(on: boolean) {
   if (typeof document === 'undefined') return;
   const secure = location.protocol === 'https:' ? '; secure' : '';
   document.cookie = on ? `${SIGNED_IN_COOKIE}=1; path=/; max-age=31536000; samesite=lax${secure}` : `${SIGNED_IN_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`;
+  document.cookie = `${LEGACY_SIGNED_IN_COOKIE}=; path=/; max-age=0; samesite=lax${secure}`;
 }
 
 /** Sign-in address that leads back to `path` afterwards (`/` needs no way back). */

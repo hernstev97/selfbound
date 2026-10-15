@@ -16,7 +16,7 @@
   let view: Promise<typeof import('./PullRequestView.svelte')> | null = null;
   const loadView = () => (view ??= import('./PullRequestView.svelte'));
 
-  const WIDTH_KEY = 'xlr8:prSplit';
+  const WIDTH_KEY = 'selfbound:prSplit';
   const PR_MIN = 420;
   const ISSUE_MIN = 420;
   const STEP = 24;

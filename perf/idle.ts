@@ -16,17 +16,19 @@
 //   node perf/idle.ts run --dry-run    only show what would be measured
 //   node perf/idle.ts status           latest state
 // Environment:
-//   XLR8_PERF_STATE    state and results (default ~/.local/state/xlr8-perf)
-//   XLR8_PERF_WINDOW   time window, default 01:00-08:00
-//   XLR8_PERF_MAX_LOAD load (1 min) above which no run starts, default 4
-//   XLR8_PERF_MAX_GPU  GPU utilization in %, default 40 (desktop with screen recording and Chrome: about 18 %)
-//   XLR8_PERF_MINUTES  time per pass, default 150 (no new run if it no longer fits)
+//   SELFBOUND_PERF_STATE     state and results (default ~/.local/state/selfbound-perf)
+//   SELFBOUND_PERF_WINDOW    time window, default 01:00-08:00
+//   SELFBOUND_PERF_MAX_LOAD  load (1 min) above which no run starts, default 4
+//   SELFBOUND_PERF_MAX_GPU   GPU utilization in %, default 40 (desktop with screen recording and Chrome: about 18 %)
+//   SELFBOUND_PERF_MINUTES   time per pass, default 150 (no new run if it no longer fits)
+// legacy-xlr8: the old XLR8_PERF_* names and the xlr8-perf directories still work, with a warning.
 // Install as a systemd user timer (Linux): perf/idle/install.sh
 
 import { spawn, spawnSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
+import { cacheDir, envVar, stateDir } from '../tooling/lib/env.mjs';
 import { compare } from './ab.ts';
 import { root } from './stack.ts';
 
@@ -35,11 +37,11 @@ const command = argv[0] ?? 'status';
 const NOW = argv.includes('--now');
 const DRY = argv.includes('--dry-run');
 
-const STATE = process.env.XLR8_PERF_STATE ?? join(os.homedir(), '.local', 'state', 'xlr8-perf');
-const WINDOW = process.env.XLR8_PERF_WINDOW ?? '01:00-08:00';
-const MAX_LOAD = Number(process.env.XLR8_PERF_MAX_LOAD ?? 4);
-const MAX_GPU = Number(process.env.XLR8_PERF_MAX_GPU ?? 40);
-const BUDGET_MIN = Number(process.env.XLR8_PERF_MINUTES ?? 150);
+const STATE = envVar('PERF_STATE') ?? stateDir({ suffix: '-perf' });
+const WINDOW = envVar('PERF_WINDOW') ?? '01:00-08:00';
+const MAX_LOAD = Number(envVar('PERF_MAX_LOAD') ?? 4);
+const MAX_GPU = Number(envVar('PERF_MAX_GPU') ?? 40);
+const BUDGET_MIN = Number(envVar('PERF_MINUTES') ?? 150);
 const PORTS = [13520, 5522];
 // Estimated duration per run in minutes, to decide whether it still fits into the window.
 const EST = { full: 40, ab: 45, confirm: 30 };
@@ -169,7 +171,7 @@ function guarded(label: string, args: string[], cwd: string, minutes: number): P
 
 // ---------- Worktree of main ----------
 
-const mainDir = join(os.homedir(), '.cache', 'xlr8-perf', 'main');
+const mainDir = join(cacheDir({ suffix: '-perf' }), 'main');
 
 function prepareMain(): string {
   sh('git', ['fetch', '-q', 'origin', 'main']);

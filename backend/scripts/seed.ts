@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '../convex/_generated/api.js';
 import type { Id } from '../convex/_generated/dataModel.d.ts';
+import { KEY_PREFIX_LENGTH } from '../convex/lib/keys.ts';
 import type { OWNER_KIND } from '../convex/shared/constants.ts';
 import { DATASETS, generateDataset, NOW, type DatasetName, type GenActor } from '../data/generate.ts';
 import { samplePullRequests } from '../data/pullRequests.ts';
@@ -91,7 +92,7 @@ export async function seedWith(
     labelGroups: data.labelGroups,
     labels: data.labels,
     projects: data.projects,
-    agents: data.agents.map((a) => ({ name: a.name, keyHash: sha256(a.key), keyPrefix: a.key.slice(0, 10) })),
+    agents: data.agents.map((a) => ({ name: a.name, keyHash: sha256(a.key), keyPrefix: a.key.slice(0, KEY_PREFIX_LENGTH) })),
     sprints: data.sprints,
     recurrences: data.recurrences,
     now: NOW,

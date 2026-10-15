@@ -15,7 +15,7 @@ address), `clerk.selfbound.example.com` (Clerk) and `happy-otter-123` (Convex pr
 | Backend (database and functions) | Convex Cloud: `https://happy-otter-123.convex.cloud` | local Convex, `http://127.0.0.1:13410` |
 | HTTP endpoints (MCP, GitHub, health) | `https://happy-otter-123.convex.site`, optionally also a custom address such as `https://mcp.selfbound.example.com` | `http://127.0.0.1:13411` |
 | Sign-in page | `https://selfbound.example.com/` for visitors who are not signed in (`welcome.html`) | `http://127.0.0.1:5412/welcome` |
-| Sign-in | Clerk production instance, embedded form at `https://selfbound.example.com/sign-in`; only the user ids in `XLR8_OWNER_IDS` get in | local test sign-in (`tooling/dev-auth.mjs`), no account needed |
+| Sign-in | Clerk production instance, embedded form at `https://selfbound.example.com/sign-in`; only the user ids in `SELFBOUND_OWNER_IDS` get in | local test sign-in (`tooling/dev-auth.mjs`), no account needed |
 | Backup | nightly GitHub Actions workflow ([backup.md](backup.md)) | – |
 
 Start locally: `pnpm dev` (same as `node tooling/local.mjs --seed small --app dev`). Stop with Ctrl+C.
@@ -24,21 +24,21 @@ Start locally: `pnpm dev` (same as `node tooling/local.mjs --seed small --app de
 
 The deploy tools (`tooling/deploy-web.mjs`, `tooling/cloud.mjs`, `tooling/vapid.mjs`, the Linear import with
 `--prod`) read the non-secret settings of your instance from `deploy/instance.json` (gitignored; copy
-`deploy/instance.example.json`) or, if that file does not exist, from `~/.config/xlr8/instance.json` (handy
-with several worktrees). Every field can be overridden by an environment variable (`tooling/instance.mjs`):
+`deploy/instance.example.json`) or, if that file does not exist, from `~/.config/selfbound/instance.json` (handy
+with several worktrees; the old `~/.config/xlr8/` still works as a fallback). Every field can be overridden by an environment variable (`tooling/instance.mjs`):
 
 | Field | Env override | Example | Used for |
 |---|---|---|---|
-| `convexDeployment` | `XLR8_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex URLs baked into the build; deploy key check |
-| `appUrl` | `XLR8_APP_URL` | `https://selfbound.example.com` | absolute URLs in the build (`XLR8_PUBLIC_URL`, og tags), redirect target for `redirectHosts`, default VAPID subject |
-| `clerkPublishableKey` | `XLR8_CLERK_PUBLISHABLE_KEY` | `pk_live_…`, or `host=pk_live_…,host2=pk_live_…` | Clerk in the browser |
-| `vercelProject` | `XLR8_VERCEL_PROJECT` | `selfbound` | `vercel link` |
-| `vercelScope` | `XLR8_VERCEL_SCOPE` | your Vercel team slug | `vercel link` / `vercel deploy` |
-| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | hosts forwarded to Convex (custom MCP address) |
-| `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains redirected to `appUrl` |
-| `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
-| `siteUrl` | `XLR8_SITE_URL` | `https://example.com` | optional, only for the public landing page (`site/`, [site/README.md](../site/README.md)): canonical and link-preview URLs |
-| `siteVercelProject` | `XLR8_SITE_VERCEL_PROJECT` | `selfbound-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
+| `convexDeployment` | `SELFBOUND_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex URLs baked into the build; deploy key check |
+| `appUrl` | `SELFBOUND_APP_URL` | `https://selfbound.example.com` | absolute URLs in the build (`SELFBOUND_PUBLIC_URL`, og tags), redirect target for `redirectHosts`, default VAPID subject |
+| `clerkPublishableKey` | `SELFBOUND_CLERK_PUBLISHABLE_KEY` | `pk_live_…`, or `host=pk_live_…,host2=pk_live_…` | Clerk in the browser |
+| `vercelProject` | `SELFBOUND_VERCEL_PROJECT` | `selfbound` | `vercel link` |
+| `vercelScope` | `SELFBOUND_VERCEL_SCOPE` | your Vercel team slug | `vercel link` / `vercel deploy` |
+| `mcpHosts` | `SELFBOUND_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | hosts forwarded to Convex (custom MCP address) |
+| `redirectHosts` | `SELFBOUND_REDIRECT_HOSTS` | `["old.example.org"]` | old domains redirected to `appUrl` |
+| `branchPrefix` | `VITE_SELFBOUND_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
+| `siteUrl` | `SELFBOUND_SITE_URL` | `https://example.com` | optional, only for the public landing page (`site/`, [site/README.md](../site/README.md)): canonical and link-preview URLs |
+| `siteVercelProject` | `SELFBOUND_SITE_VERCEL_PROJECT` | `selfbound-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Secrets
 (deploy keys, tokens) never go into it.
@@ -46,8 +46,8 @@ Nothing in this file is secret: these values end up in the browser or in public 
 ## Deploying
 
 - **Backend:** `node tooling/cloud.mjs deploy`. `tooling/cloud.mjs` runs the Convex CLI against
-  production with the deploy key from `~/.config/xlr8/convex-deploy-key` (must be mode 600; another path via
-  `XLR8_CONVEX_DEPLOY_KEY_FILE`). It refuses a
+  production with the deploy key from `~/.config/selfbound/convex-deploy-key` (must be mode 600; another path via
+  `SELFBOUND_CONVEX_DEPLOY_KEY_FILE`). It refuses a
   key that belongs to a different deployment than `convexDeployment`, runs the CLI with its own `HOME`
   (so it never sees other Convex logins) and never prints the key. Any Convex CLI command works:
   `node tooling/cloud.mjs env list`, `node tooling/cloud.mjs run <function> '<json>'`.
@@ -69,11 +69,11 @@ not necessarily the other way round.
 | `VITE_CONVEX_URL` | `https://<deployment>.convex.cloud` |
 | `VITE_CONVEX_SITE_URL` | `https://<deployment>.convex.site`; the address shown for MCP in the settings (falls back to one derived from `VITE_CONVEX_URL`) |
 | `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key, or a list `host=key,host=key` (one key per app domain, see [Changing the domain](#changing-the-domain)) |
-| `VITE_XLR8_BRANCH_PREFIX` | optional prefix for suggested Git branch names (from `branchPrefix`): `jane` gives `jane/acme-106-title`; without it `acme-106-title` |
-| `XLR8_PUBLIC_URL` | public app URL for absolute URLs in `index.html` (og tags); read at build time only (from `appUrl`) |
-| `XLR8_BUILD_ID` | optional build id for `/version.json` (default: random) |
+| `VITE_SELFBOUND_BRANCH_PREFIX` | optional prefix for suggested Git branch names (from `branchPrefix`): `jane` gives `jane/acme-106-title`; without it `acme-106-title` |
+| `SELFBOUND_PUBLIC_URL` | public app URL for absolute URLs in `index.html` (og tags); read at build time only (from `appUrl`) |
+| `SELFBOUND_BUILD_ID` | optional build id for `/version.json` (default: random) |
 
-`VITE_DEV_TOKEN` and `VITE_XLR8_TEST` are for local development and tests only; `deploy-web.mjs` clears them.
+`VITE_DEV_TOKEN` and `VITE_SELFBOUND_TEST` are for local development and tests only; `deploy-web.mjs` clears them.
 
 ## HTTP endpoints
 
@@ -82,7 +82,7 @@ Served by Convex under `https://<deployment>.convex.site` (and any custom MCP ad
 | Path | Purpose |
 |---|---|
 | `/mcp` | agents with a key (Claude Code, Codex, …) and connectors (claude.ai, ChatGPT) |
-| `/oauth/…`, `/.well-known/oauth-…` | OAuth for connectors (only with `XLR8_APP_URL`) |
+| `/oauth/…`, `/.well-known/oauth-…` | OAuth for connectors (only with `SELFBOUND_APP_URL`) |
 | `/github` | GitHub webhook: pull requests, comments, reviews, checks |
 | `/ghmedia/<key>/<n>` | images and videos from PR descriptions of private repos (redirect to a fresh GitHub URL) |
 | `/health` | backend status without data, e.g. `{"ok":true,…}` |
@@ -96,7 +96,7 @@ Visitors who are not signed in see the sign-in page at `/`. Signed in, `/` opens
 links like `/issue/ACME-106` work either way: without a session they lead to sign-in and back. Sign-in
 happens at `/sign-in` with the embedded Clerk form, not on Clerk's hosted pages.
 
-How the static host knows "signed in": the cookie `xlr8_signed_in`. The app sets it after sign-in and
+How the static host knows "signed in": the cookie `selfbound_signed_in`. The app sets it after sign-in and
 deletes it on sign-out. It is not a secret and unlocks nothing; it only decides whether `/` serves the
 sign-in page or the app. If you see the sign-in page although you are signed in (for example on the
 first visit after a deploy), click "Sign in": Clerk recognizes the session and sends you to the app.
@@ -108,7 +108,7 @@ The resulting rules, in order:
 1. Hosts in `redirectHosts` redirect (307, temporary) to the same path on `appUrl`.
 2. Hosts in `mcpHosts` are proxied to `https://<deployment>.convex.site/<path>` (see
    [Custom MCP address](#custom-mcp-address)).
-3. `/` without the cookie `xlr8_signed_in` serves `/welcome.html`.
+3. `/` without the cookie `selfbound_signed_in` (and without the older `xlr8_signed_in`, accepted during the transition) serves `/welcome.html`.
 4. `/sign-in` serves `/welcome.html` (the same sign-in page).
 5. Every other path except `/assets/…` serves `/app.html` (SPA fallback).
 
@@ -128,7 +128,7 @@ and nobody can register:
    - **`<SignIn />`**: "Sign-in page on application domain" → `https://selfbound.example.com/sign-in`.
    - **Signing out**: "Page on application domain" → `https://selfbound.example.com/`.
    - Leave `<SignUp />` as is. Save.
-3. **Configure → Restrictions → Sign-up mode** → **Restricted**. Only the ids in `XLR8_OWNER_IDS` get
+3. **Configure → Restrictions → Sign-up mode** → **Restricted**. Only the ids in `SELFBOUND_OWNER_IDS` get
    into Selfbound anyway; this keeps strangers from creating Clerk accounts at all.
 4. Check in a private window: `https://selfbound.example.com/` shows the sign-in page. Sign in →
    you land in the app. Open `https://selfbound.example.com/` again: the app opens directly.
@@ -142,7 +142,7 @@ The app picks the Clerk publishable key by host (`VITE_CLERK_PUBLISHABLE_KEY` as
 lets old and new domains run side by side while Clerk moves:
 
 1. Deploy the app with keys for both hosts and the backend with both issuers (and both issuers' entries
-   in `XLR8_OWNER_IDS`). Redeploy the backend after changing `CLERK_JWT_ISSUER_DOMAIN`: `auth.config.ts` is
+   in `SELFBOUND_OWNER_IDS`). Redeploy the backend after changing `CLERK_JWT_ISSUER_DOMAIN`: `auth.config.ts` is
    evaluated when functions are pushed, not on every request.
 2. In the Clerk dashboard: Domains → Configure → Danger zone → "Change domain" (for a subdomain such as
    `selfbound.example.com` choose "Secondary application"; Clerk then lives at `clerk.<subdomain>`). Add the
@@ -157,30 +157,33 @@ Set in the Convex dashboard (Settings → Environment Variables) or with
 `node tooling/cloud.mjs env set NAME value`. They are neither in the code nor in the backup: **keep every
 production value in a password manager.**
 
+Variables starting with `SELFBOUND_` used to start with `XLR8_`. The old names still work as a fallback; see
+[Moving from the XLR8 names](#moving-from-the-xlr8-names).
+
 | Name | Meaning | Production value |
 |---|---|---|
 | `CLERK_JWT_ISSUER_DOMAIN` | Clerk issuer (Frontend API URL) whose tokens Convex accepts; several separated by commas (only while changing the domain). `none` disables Clerk. **Redeploy the backend after changing it** | `https://clerk.selfbound.example.com` |
-| `XLR8_OWNER_IDS` | who gets in: comma-separated `tokenIdentifier`s, each `<Clerk issuer>\|<Clerk user id>`. Empty: nobody | `https://clerk.selfbound.example.com\|user_…`. **When the Clerk domain changes, change the issuer here too**, otherwise the app stays empty after sign-in |
-| `XLR8_DEV_JWKS` | public key of the local test sign-in. Must be set (the CLI requires it); `none` disables it | **`none`** |
-| `XLR8_APP_URL` | address of the app (hosts the OAuth consent page); turns on connectors (OAuth). Unset: no connectors | `https://selfbound.example.com` |
-| `XLR8_PUBLIC_SITE_URL` | optional custom address for MCP and OAuth instead of `…convex.site` (issuer and `resource` for connectors). One address | `https://mcp.selfbound.example.com` |
-| `XLR8_OWNER_NAME` | fallback for the owner's display name in MCP output (e.g. who wrote a comment), used until a name is set in Settings → Profile. Default `Owner` | e.g. `Jane` |
-| `XLR8_LOCALE` | `de`: push notification texts in German, and new teams get German default status names. Default English | unset or `de` |
+| `SELFBOUND_OWNER_IDS` | who gets in: comma-separated `tokenIdentifier`s, each `<Clerk issuer>\|<Clerk user id>`. Empty: nobody | `https://clerk.selfbound.example.com\|user_…`. **When the Clerk domain changes, change the issuer here too**, otherwise the app stays empty after sign-in |
+| `SELFBOUND_DEV_JWKS` | public key of the local test sign-in. Must be set (the CLI requires it); `none` disables it | **`none`** |
+| `SELFBOUND_APP_URL` | address of the app (hosts the OAuth consent page); turns on connectors (OAuth). Unset: no connectors | `https://selfbound.example.com` |
+| `SELFBOUND_PUBLIC_SITE_URL` | optional custom address for MCP and OAuth instead of `…convex.site` (issuer and `resource` for connectors). One address | `https://mcp.selfbound.example.com` |
+| `SELFBOUND_OWNER_NAME` | fallback for the owner's display name in MCP output (e.g. who wrote a comment), used until a name is set in Settings → Profile. Default `Owner` | e.g. `Jane` |
+| `SELFBOUND_LOCALE` | `de`: push notification texts in German, and new teams get German default status names. Default English | unset or `de` |
 | `GITHUB_WEBHOOK_SECRET` | verifies that webhook deliveries come from GitHub | long random value |
 | `GITHUB_WEBHOOK_SECRET_PREVIOUS` | only while rotating the secret (below) | usually unset |
 | `GITHUB_TOKEN` | GitHub API access for the PR view (description, checks, comments, merging) and for managing webhooks. Unset: Selfbound shows only title and state from the webhook | fine-grained personal access token, see [GitHub](#github) |
 | `GITHUB_MANAGE_WEBHOOKS` | `1`: Selfbound creates missing webhooks in the token's repos and fixes their events (daily and via a button in Settings → GitHub). Unset: only checks and reports. Never acts on a local backend, and only with `GITHUB_WEBHOOK_SECRET` | `1` |
 | `GITHUB_REPOS` | optional: manage only these repos, `owner/name` or `owner/*`, comma-separated. Unset: all repos the token owns | usually unset |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | key pair for Web Push. Unset: no push notifications | set only with `node tooling/vapid.mjs`. No need to keep them: if lost, generate new ones |
-| `VAPID_SUBJECT` | contact for push services (`https:` or `mailto:`). Unset: `XLR8_APP_URL` is used; with keys but neither set, sending fails | set by `tooling/vapid.mjs` |
-| `XLR8_ALLOW_SEED`, `XLR8_TEST_SWITCHES` | sample data and test switches for local development | **never set in production** |
+| `VAPID_SUBJECT` | contact for push services (`https:` or `mailto:`). Unset: `SELFBOUND_APP_URL` is used; with keys but neither set, sending fails | set by `tooling/vapid.mjs` |
+| `SELFBOUND_ALLOW_SEED`, `SELFBOUND_TEST_SWITCHES` | sample data and test switches for local development | **never set in production** |
 
 ### Health check
 
 Before and after every production deploy, open `https://<deployment>.convex.site/health`. It must show
 `"devAuth": false` and `"local": false`. The local test sign-in only works on a local backend anyway
 (Convex reports its address in `CONVEX_CLOUD_URL`; if it does not point to `127.0.0.1` or `localhost`,
-the backend rejects such tokens). If `"devAuthConfigured": true` shows up, `XLR8_DEV_JWKS` is still set:
+the backend rejects such tokens). If `"devAuthConfigured": true` shows up, `SELFBOUND_DEV_JWKS` is still set:
 change it to `none`. Further fields: `clerk`, `oauth` (connectors on), `push` (VAPID keys set),
 `testSwitches`.
 
@@ -252,7 +255,7 @@ time. Protocol and tools: [architecture/mcp.md](architecture/mcp.md).
 ### Create a key
 
 1. In the app: **Settings → Agents**, create a key and give it a name (e.g. "Claude Code").
-2. The key (`xlr8_…`) is shown **exactly once**. Copy it into your password manager right away. Selfbound only
+2. The key (`selfbound_…`; keys created before 2026-10-15 start with `xlr8_` and keep working) is shown **exactly once**. Copy it into your password manager right away. Selfbound only
    stores a hash and cannot show it again.
 3. Lost it? Create a new one and revoke the old one.
 
@@ -273,16 +276,16 @@ In `~/.codex/config.toml`:
 ```toml
 [mcp_servers.selfbound]
 url = "<address>/mcp"
-bearer_token_env_var = "XLR8_MCP_KEY"
+bearer_token_env_var = "SELFBOUND_MCP_KEY"
 ```
 
-and provide the key as the environment variable `XLR8_MCP_KEY`. The exact syntax depends on the Codex
+and provide the key as the environment variable `SELFBOUND_MCP_KEY`. The exact syntax depends on the Codex
 version; `codex mcp --help` shows it.
 
 ### Test by hand
 
 ```sh
-XLR8_MCP_KEY=xlr8_… node backend/scripts/mcp-smoke.ts --url <address>/mcp
+SELFBOUND_MCP_KEY=selfbound_… node backend/scripts/mcp-smoke.ts --url <address>/mcp
 ```
 
 Prints server name, protocol, the tools and the result of one read call. Never pass the key as an
@@ -311,22 +314,22 @@ connection shows up under **Settings → Agents** as its own entry ("Connector �
 ### Turn on
 
 ```sh
-node tooling/cloud.mjs env set XLR8_APP_URL https://selfbound.example.com
-node tooling/cloud.mjs env set XLR8_PUBLIC_SITE_URL https://mcp.selfbound.example.com   # optional
+node tooling/cloud.mjs env set SELFBOUND_APP_URL https://selfbound.example.com
+node tooling/cloud.mjs env set SELFBOUND_PUBLIC_SITE_URL https://mcp.selfbound.example.com   # optional
 ```
 
-`/health` then shows `"oauth": true`. Without `XLR8_APP_URL` there are no connectors and the OAuth
+`/health` then shows `"oauth": true`. Without `SELFBOUND_APP_URL` there are no connectors and the OAuth
 endpoints return 404.
 
 ### Custom MCP address
 
 By default connectors use `https://<deployment>.convex.site/mcp`. A custom address such as
 `https://mcp.selfbound.example.com/mcp` is optional and works through the static host: add the host to
-`mcpHosts`, point its DNS (CNAME) at the static host, and set `XLR8_PUBLIC_SITE_URL` to that one
+`mcpHosts`, point its DNS (CNAME) at the static host, and set `SELFBOUND_PUBLIC_SITE_URL` to that one
 address. The host rewrite forwards every request to Convex. Only the consent page lives under
-`XLR8_APP_URL`.
+`SELFBOUND_APP_URL`.
 
-The address is a connector's identity: if you change `XLR8_PUBLIC_SITE_URL`, the issuer changes and
+The address is a connector's identity: if you change `SELFBOUND_PUBLIC_SITE_URL`, the issuer changes and
 existing connectors must be reconnected.
 
 Agents with a key can use either the Convex address or the custom one.
@@ -414,7 +417,7 @@ A fine-grained personal access token for all repos whose PRs Selfbound should sh
 
 Fine-grained tokens have no "Checks" permission; check runs of other apps arrive through the webhook.
 Set it without putting it on the command line, e.g.
-`node tooling/cloud.mjs env set GITHUB_TOKEN < ~/.config/xlr8/github-token`. Tokens expire (at most after a
+`node tooling/cloud.mjs env set GITHUB_TOKEN < ~/.config/selfbound/github-token`. Tokens expire (at most after a
 year); GitHub emails before that. Renew with the same permissions.
 
 ### Add the webhook by hand (per repo)
@@ -450,11 +453,11 @@ Without losing deliveries:
 The importer only reads from Linear: it technically allows only read queries and logs every request.
 Format, rules and what changes: [architecture/import.md](architecture/import.md).
 
-1. Once: create a Linear API key (read access is enough) and save it as `~/.config/xlr8/linear-api-key`
+1. Once: create a Linear API key (read access is enough) and save it as `~/.config/selfbound/linear-api-key`
    (mode 600).
 2. Fetch: `node tooling/linear-import/index.ts fetch`. The snapshot lands outside the repo in
-   `~/.local/share/xlr8/import/<timestamp>/`. The console shows only counts and identifiers.
-3. Import: `node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<timestamp>` (local
+   `~/.local/share/selfbound/import/<timestamp>/`. The console shows only counts and identifiers.
+3. Import: `node tooling/linear-import/index.ts push ~/.local/share/selfbound/import/<timestamp>` (local
    backend) or with `--prod` (production, through `tooling/cloud.mjs`). The script shows target and size
    and asks you to type a confirmation word; in production it always asks (`--yes` is not accepted).
    Then it uploads, processes and reports per kind: read, new, changed, unchanged, skipped, plus
@@ -546,6 +549,134 @@ calls, last GitHub delivery, the result of the nightly sprint audit and file sto
 out of 1 GB). The backup workflow reports itself there after each successful run. If the sprint audit
 itself fails, it shows `ok: false` with `error`.
 
+## Moving from the XLR8 names
+
+Selfbound was called XLR8 until 2026-10-14. On 2026-10-15 the remaining internal names moved over: environment
+variables, files and directories, browser storage, token prefixes, and a few stored values. The change is built so
+that **nothing stops working**: the old names are still read as a fallback (code marked `legacy-xlr8`), and a script
+moves the new names into place when you are ready. Fallbacks are temporary, see [When the fallbacks go away](#when-the-fallbacks-go-away).
+Public guide for self-hosters: [Move from the XLR8 names](https://docs.selfbound.kiumu.app/start/self-hosting/upgrade-from-xlr8/).
+
+**Who needs this.** Anyone who ran Selfbound (or XLR8) before 2026-10-15 and keeps the instance. A fresh install
+never sees an old name and can ignore this section.
+
+### What keeps working without any action
+
+- **Backend environment variables** `XLR8_*` in Convex. The backend reads `SELFBOUND_<NAME>` first and falls back to
+  `XLR8_<NAME>`. When only the old name is set, the Convex log shows `XLR8_<NAME> is deprecated, set SELFBOUND_<NAME> instead.`
+  once per variable and process (never the value).
+- **Deploy and tool environment** (`XLR8_*` in your shell, CI or direnv) and the Vite variables `VITE_XLR8_*`: same rule,
+  with a warning on the console.
+- **Files and directories**: if `~/.config/selfbound/` does not exist but `~/.config/xlr8/` does, the tools use the old
+  directory (per file) and print a warning. The same holds for the data, state and cache directories.
+- **Agent keys** `xlr8_…`, **OAuth access and refresh tokens** `xlr8_at_…`, `xlr8_rt_…`, **client ids** `xlr8-<app>-…` and the
+  scope `xlr8`. Connected agents and claude.ai / ChatGPT connectors keep working and do not have to reconnect. New keys,
+  tokens and clients use the `selfbound` spelling.
+- **Browsers**: stored settings (`xlr8:*` in local storage), drafts, the sign-in marker cookie, the service worker and an open
+  tab survive the update. The app moves `xlr8:*` to `selfbound:*` once at startup; the cache in IndexedDB is simply rebuilt.
+- **Stored values**: rows with the actor kind `steven` and sprints with the source `xlr8` are read like the new values
+  `owner` and `selfbound`. The MCP field `reviewedBySteven` is still returned next to `reviewedByOwner`.
+- **Old backups** `xlr8-backup-…` (GitHub artifacts) can still be verified and restored.
+
+### Order of events
+
+Do the steps in this order. Each one can be done on a different day; the instance works in between.
+
+1. **Deploy the new code**: pull, then deploy the backend and the web app as usual
+   ([self-hosting.md](self-hosting.md)). Everything keeps working with the old names.
+2. **Move the settings**: `node tooling/migrate-legacy-names.mjs` is a dry run. It lists what it would do and changes
+   nothing. Then `node tooling/migrate-legacy-names.mjs --apply`:
+   - copies each Convex environment variable `XLR8_<NAME>` to `SELFBOUND_<NAME>` (production, with the deploy key) and keeps
+     the old one; values are never printed
+   - copies the files of `~/.config/xlr8` to `~/.config/selfbound` (the old folder stays; delete it yourself when all is well)
+     and only reports the data, state and cache folders with a `mv` hint; it never overwrites an existing target
+   - prints the manual steps that remain outside the repository (below)
+3. **Redeploy the backend** so the new variables are picked up (Convex reads some of them only when the functions are pushed),
+   then migrate the data:
+   ```sh
+   node tooling/migrate-legacy-data.mjs --prod            # dry run: counts per table, writes nothing
+   node tooling/migrate-legacy-data.mjs --prod --apply    # rewrites the old values in small batches
+   node tooling/migrate-legacy-data.mjs --prod --verify   # must report 0 legacy rows
+   ```
+   Without `--prod` the same script works on a local backend (`pnpm dev`). It only touches the stored actor kind
+   `steven` → `owner`, the stored theme `xlr8` → `selfbound` and the sprint source `xlr8` → `selfbound`. It is idempotent: you can stop and start it again,
+   and a second `--apply` finds nothing to do. Keys, tokens and OAuth client ids are **not** rewritten: only their hash is
+   stored, and changing a prefix would lock agents out.
+
+   **There is no way back after `--apply`**: the data then holds `owner` and `selfbound`, which the code before this change
+   rejects. Take a backup first ([backup.md](backup.md)), and roll back only by restoring it together with the old code.
+4. **Remove the old Convex variables** once the log shows no deprecation warning for a few days (open the Convex dashboard
+   → Logs and search for `is deprecated`): `node tooling/migrate-legacy-names.mjs --remove-old` deletes the old `XLR8_*` variables
+   from Convex (the new ones stay). It does not touch anything else.
+5. **Do the manual steps** below.
+6. **Later**, a follow-up change removes the fallbacks.
+
+Run `node tooling/migrate-legacy-names.mjs` (dry run) again at any time: it reports what is still old.
+
+### Environment variables, old to new
+
+The rule: replace the prefix `XLR8_` by `SELFBOUND_`. In the Vite variables `VITE_XLR8_` becomes `VITE_SELFBOUND_`.
+
+| Where | Old | New |
+|---|---|---|
+| Convex (backend) | `XLR8_OWNER_IDS`, `XLR8_DEV_JWKS`, `XLR8_APP_URL`, `XLR8_PUBLIC_SITE_URL`, `XLR8_OWNER_NAME`, `XLR8_LOCALE`, `XLR8_ALLOW_SEED`, `XLR8_TEST_SWITCHES` | `SELFBOUND_OWNER_IDS`, `SELFBOUND_DEV_JWKS`, `SELFBOUND_APP_URL`, `SELFBOUND_PUBLIC_SITE_URL`, `SELFBOUND_OWNER_NAME`, `SELFBOUND_LOCALE`, `SELFBOUND_ALLOW_SEED`, `SELFBOUND_TEST_SWITCHES` |
+| Instance settings (override `deploy/instance.json`) | `XLR8_CONVEX_DEPLOYMENT`, `XLR8_APP_URL`, `XLR8_CLERK_PUBLISHABLE_KEY`, `XLR8_VERCEL_PROJECT`, `XLR8_VERCEL_SCOPE`, `XLR8_MCP_HOSTS`, `XLR8_REDIRECT_HOSTS`, `XLR8_SITE_URL`, `XLR8_SITE_VERCEL_PROJECT`, `XLR8_CONVEX_DEPLOY_KEY_FILE`, `VITE_XLR8_BRANCH_PREFIX` | the same with `SELFBOUND_` / `VITE_SELFBOUND_` |
+| Web build (also in Vercel project settings, if you set them there) | `XLR8_PUBLIC_URL`, `XLR8_BUILD_ID`, `VITE_XLR8_BRANCH_PREFIX`, `VITE_XLR8_TEST` | `SELFBOUND_PUBLIC_URL`, `SELFBOUND_BUILD_ID`, `VITE_SELFBOUND_BRANCH_PREFIX`, `VITE_SELFBOUND_TEST` |
+| Landing page and docs deploy | `XLR8_SITE_LEGAL_FILE`, `XLR8_SITE_REQUIRE_LEGAL`, `XLR8_SITE_LISTED`, `XLR8_DOCS_VERCEL_PROJECT`, `XLR8_DOCS_VERCEL_SCOPE` | the same with `SELFBOUND_` |
+| Agents | `XLR8_MCP_KEY` (a name you choose in the Codex config or the smoke test; any name works) | `SELFBOUND_MCP_KEY` |
+| Development, tests, performance | `XLR8_BACKEND_DIR`, `XLR8_CONVEX_PORT`, `XLR8_CONVEX_URL`, `XLR8_INTEGRATION_PORT`, `XLR8_TOKEN`, `XLR8_PERF_*`, `XLR8_QUIET_*`, `XLR8_LEISE_*` | the same with `SELFBOUND_` (`LEISE` becomes `QUIET`) |
+
+In the Convex dashboard (Settings → Environment Variables) you can check the result. Do not delete the old variables there
+by hand before step 4.
+
+### Files, directories and names
+
+| Old | New |
+|---|---|
+| `~/.config/xlr8/` (`instance.json`, `convex-deploy-key`, `linear-api-key`, `github-token`, `site-legal.json`, `backup-age.key`) | `~/.config/selfbound/` |
+| `~/.local/share/xlr8/` (Linear import snapshots and files) | `~/.local/share/selfbound/` |
+| `~/.local/state/xlr8-perf/`, `~/.cache/xlr8-perf/` (maintainers: performance runs) | `~/.local/state/selfbound-perf/`, `~/.cache/selfbound-perf/` |
+| `~/xlr8-restore/` (temporary, during a restore) | `~/selfbound-restore/` |
+| systemd user units `xlr8-perf-idle.service` / `.timer` (maintainers) | `selfbound-perf-idle.service` / `.timer`: run `perf/idle/install.sh --remove` before updating, then `perf/idle/install.sh` |
+| Backup artifacts `xlr8-backup-YYYY-MM-DD`, `xlr8-backup-weekly-…`, files `xlr8-<source>-<time>.zip[.age]` | `selfbound-…` (the restore and verify tools accept both) |
+| Agent keys `xlr8_…`, tokens `xlr8_at_…`, `xlr8_rt_…`, `xlr8_ac_…`, `xlr8_cs_…` | `selfbound_…` for everything created from now on; old ones stay valid |
+| OAuth client id `xlr8-<app>-…`, scope `xlr8` | `selfbound-<app>-…`, `selfbound`; old ones stay valid |
+| Browser: `xlr8:*` storage keys and IndexedDB, cookie `xlr8_signed_in`, `xlr8-push` / `xlr8-open` messages, `xlr8Overlay`, drag type `application/x-xlr8-issues`, theme `xlr8` | `selfbound:*`, `selfbound_signed_in`, `selfbound-push` / `selfbound-open`, `selfboundOverlay`, `application/x-selfbound-issues`, theme `selfbound` |
+| Stored: actor kind `steven`, sprint source `xlr8`, MCP field `reviewedBySteven` | `owner`, `selfbound`, `reviewedByOwner` |
+
+What does **not** change: Convex table and field names, function names, HTTP routes, MCP tool names and parameters, the
+team key `XLR8` of an existing team (issue identifiers like `XLR8-48` stay), and your own addresses.
+
+### Manual steps outside the repository
+
+The scripts cannot do these. None is urgent; each only changes what people see.
+
+1. **Clerk**: Dashboard → Customization → rename the application to Selfbound, upload the logo
+   `app/public/brand/clerk-logo.png`, and check the texts of the verification and sign-in e-mails
+   (Customization) for the old name. A changed name does not touch existing sessions.
+2. **Convex dashboard**: if the project or the deployment display name still says XLR8, rename it (Settings). Deployment
+   names (`happy-otter-123`) and URLs do not change.
+3. **GitHub Actions**: the secrets `CONVEX_DEPLOY_KEY` and `AGE_RECIPIENTS` keep their names. If you stored anything under a
+   `XLR8_…` name (your own workflow, repository variables, Dependabot or environment secrets), create it under the new name,
+   point the workflow at it and delete the old one.
+4. **Vercel**: project settings → Environment Variables: add the `SELFBOUND_*` / `VITE_SELFBOUND_*` twin of any `XLR8_*` or
+   `VITE_XLR8_*` variable that you set there, deploy once, then delete the old one. The Vercel project name itself does not
+   have to change.
+5. **Your shell and password manager**: rename `XLR8_*` entries in your shell profile, direnv or CI, and the label of the deploy
+   key and agent keys if they say XLR8. Keys keep working; create new ones when you like, they get the new prefix.
+6. **Agents and connectors**: nothing to do. If you prefer new-style keys, create a key under **Settings → Agents**, switch the agent over,
+   then revoke the old one.
+
+### When the fallbacks go away
+
+A follow-up change removes the fallbacks: the `XLR8_*` environment variables and `~/.config/xlr8` style directories, the
+`xlr8:` storage and cookie, the old message types, drag type and `history.state` key, the stored values `steven` and `xlr8`, and
+the field `reviewedBySteven`. It happens when all of these hold: `migrate-legacy-data.mjs --verify` reports zero legacy rows, the Convex
+log has shown no deprecation warning for at least two weeks, and `migrate-legacy-names.mjs --remove-old` has run. Old agent keys and
+connector tokens (`xlr8_…`) are removed last, and only after they have been replaced; announce that before it happens. Migrate before that
+change reaches you: after it, an old name is simply ignored. Decision record:
+[decisions.md](decisions.md#the-remaining-xlr8-names-move-to-selfbound-with-fallbacks).
+
 ## Troubleshooting
 
 | Symptom | Likely cause | What to do |
@@ -556,7 +687,7 @@ itself fails, it shows `ok: false` with `error`.
 | GitHub Recent Deliveries shows **401** | secret differs between GitHub and backend | set the secret in both again, then "Redeliver" |
 | GitHub shows **500** or a timeout | backend problem | Convex dashboard → Logs, then "Redeliver" in GitHub; duplicates have no effect |
 | A merged PR does not close the issue | identifier only in title/body without "Fixes", issue canceled/duplicate, or the PR was merged before (import or redelivery) | intended: only the first merge closes. Complete the issue by hand or add "Fixes ACME-…" to the PR body |
-| App stays empty or shows "No access" after sign-in | your `tokenIdentifier` is not in `XLR8_OWNER_IDS` (often the issuer part after a Clerk domain change) | fix `XLR8_OWNER_IDS` |
+| App stays empty or shows "No access" after sign-in | your `tokenIdentifier` is not in `SELFBOUND_OWNER_IDS` (often the issuer part after a Clerk domain change) | fix `SELFBOUND_OWNER_IDS` |
 | `/health` does not answer | backend not running (locally: not started) | locally `pnpm dev`; in the cloud check Convex status |
 | Import fails | see [Importing from Linear](#importing-from-linear) | run `push` again |
 | App says the server rejects changes | a test switch is on (local only) | turn the test switch off |
