@@ -64,7 +64,7 @@ test('Markdown shortcuts while typing: #, -, 1., [ ], >, ```, ---', async ({ pag
   await expect(editor.locator('blockquote')).toHaveText('Quote');
   await expect(editor.locator('pre[data-lang="ts"]')).toContainText('const a = 1;');
   // Syntax colors in the editor too
-  await expect(editor.locator('pre .hljs-keyword').first()).toHaveText('const');
+  await expect(editor.locator('pre .tk', { hasText: 'const' }).first()).toHaveText('const');
   await expect(editor.locator('hr')).toHaveCount(1);
   await expect(editor.locator('strong')).toHaveText('bold');
   const expected = '# Title\n\n- Item\n\n1. Number\n\n- [ ] Task\n\n> Quote\n\n```ts\nconst a = 1;\n```\n\n---\n\nEnd with **bold** and `code`.';

@@ -10,9 +10,8 @@ const UNSAFE_CSS = /@import|@namespace|@font-face|\\|expression\s*\(|behavior\s*
 
 // A separate instance: its hooks must not touch the one that sanitizes Markdown.
 const purify = DOMPurify(window);
-// Every attribute value, not only `style`: presentation attributes (fill, stroke, filter …) take url() too.
 purify.addHook('uponSanitizeAttribute', (_node, data) => {
-  if (UNSAFE_CSS.test(data.attrValue)) data.keepAttr = false;
+  if (data.attrName === 'style' && UNSAFE_CSS.test(data.attrValue)) data.keepAttr = false;
 });
 
 const CONFIG: Config = {
@@ -28,7 +27,7 @@ export function sanitizeSvg(svg: string): DocumentFragment {
   const fragment = purify.sanitize(svg, CONFIG) as unknown as DocumentFragment; // RETURN_DOM_FRAGMENT
   for (const style of fragment.querySelectorAll('style')) {
     // A font import is the one thing renderers add on their own; drop it, keep the rest.
-    const css = (style.textContent ?? '').replace(/@import\s*(?:url\([^)]*\)|"[^"]*"|'[^']*')[^;{}]*;?/gi, '');
+    const css = (style.textContent ?? '').replace(/@import[^;{}]*;?/gi, '');
     if (UNSAFE_CSS.test(css)) style.remove();
     else style.textContent = css;
   }

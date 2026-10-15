@@ -34,9 +34,9 @@ function setNote(block: HTMLElement, message: string | null) {
   block.append(note);
 }
 
-/** Visible failure text, e.g. "Diagram could not be drawn: Parse error on line 2". */
+/** Visible failure text, e.g. "Could not draw the diagram: Parse error on line 2". */
 export function failureText(renderer: BlockRenderer, reason: string) {
-  return t('{kind} could not be drawn: {reason}', { kind: renderer.label(), reason });
+  return t('Could not draw the {kind}: {reason}', { kind: renderer.label().toLowerCase(), reason });
 }
 
 /**

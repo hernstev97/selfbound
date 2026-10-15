@@ -11,6 +11,13 @@ Some settings apply only to the device you are on, others to every device you si
 
 ## Account
 
+### Profile
+
+- **Picture**: upload a PNG, JPEG or WebP and choose the part that shows inside the circle (drag to move, slider or mouse wheel to zoom; arrow keys and plus/minus work too). The picture is stored at 256 × 256 pixels, and camera metadata is dropped. **Remove** goes back to initials.
+- **Name**: shown in the activity of issues, in comments and in the inbox instead of "You", and to agents through MCP (for example as the author of a comment). Without a name, Selfbound shows initials and "You". Agents keep their own names.
+
+Name and picture are stored in Selfbound, not taken from your sign-in account, and apply on all devices.
+
 ### General
 
 Settings for this device:

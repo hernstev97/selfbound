@@ -267,11 +267,12 @@ function validDay(y: number, m: number, d: number) {
 
 // ---------------------------------------------------------------- Actors, branch
 
-/** Display name of an actor; the instance owner shows as "You". */
+/** Display name of an actor; the instance owner shows with the profile name, else as "You". */
 export function actorName(actor: Actor, agents: ReadonlyMap<string, string>, fallback?: string): string {
   switch (actor.kind) {
     case OWNER_KIND:
-      return fallback ?? t('You');
+      // `agents` also holds the owner's display name once the profile has one.
+      return fallback ?? agents.get(OWNER_KIND) ?? t('You');
     case 'agent':
       return (actor.agentId && agents.get(actor.agentId)) || t('Agent');
     case 'github':
@@ -281,6 +282,21 @@ export function actorName(actor: Actor, agents: ReadonlyMap<string, string>, fal
     case 'system':
       return 'Selfbound';
   }
+}
+
+/** Up to two initials of a name: first letter of the first and the last word ("Jane Q. Doe" → "JD"). */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  const first = (word: string) => Array.from(word)[0]!;
+  return (first(words[0]!) + (words.length > 1 ? first(words[words.length - 1]!) : '')).toLocaleUpperCase();
+}
+
+/** Stable hue (0–359) for an avatar without a picture, derived from the name. */
+export function nameHue(name: string): number {
+  let h = 0;
+  for (const ch of name) h = (h * 31 + (ch.codePointAt(0) ?? 0)) % 360;
+  return h;
 }
 
 /**

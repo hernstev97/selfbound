@@ -1,6 +1,6 @@
 ---
 title: Visual blocks
-description: Info panels, Mermaid diagrams and data charts in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
+description: Info panels and data charts in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
 sidebar:
   order: 7
 ---
@@ -8,7 +8,7 @@ import { Aside } from '@astrojs/starlight/components';
 import Kbd from '../../../components/Kbd.astro';
 
 Besides text, lists, tables and code, descriptions, comments and knowledge pages can show **info panels**:
-a tinted box with a symbol, a bold title and any content inside, **diagrams** written in Mermaid and **charts** drawn from data. They are plain Markdown, so what you
+a tinted box with a symbol, a bold title and any content inside and **charts** drawn from data. They are plain Markdown, so what you
 build in the editor is what agents read and write through MCP, and a text that leaves Selfbound still reads
 as a quote.
 
@@ -71,43 +71,11 @@ know it and shows such a quote with the marker as text; the content stays readab
   through the kinds. The symbol's menu can also turn the panel into a quote or into plain text.
 - **Back to text:** <Kbd keys="backspace" /> at the start of the title takes the panel apart and keeps its content.
 
-## Diagrams
-
-A fenced code block with the language `mermaid` is drawn as a diagram, in the colours of the theme you picked,
-light or dark.
-
-````md
-```mermaid
-flowchart TD
-  A[Create issue] --> B{Triage}
-  B -->|accept| C[Backlog]
-  B -->|decline| D[Canceled]
-```
-````
-
-These Mermaid diagram types are drawn: **flowchart** (`flowchart` or `graph`), **state** (`stateDiagram-v2`),
-**sequence** (`sequenceDiagram`), **class** (`classDiagram`), **entity-relationship** (`erDiagram`) and **XY
-chart** (`xychart-beta`). Other Mermaid types (pie, gantt, journey, mindmap, timeline, git graph …) are not drawn
-yet: the text stays visible as code with a short note.
-
-- The diagram loads only when it comes into view, so texts without diagrams are as fast as before.
-- If the text is not a valid diagram, you see the source and the reason instead of a broken picture.
-- Screen readers get the labels of the diagram as its description; the code behind it stays in the text, and
-  the copy button copies it.
-- Diagrams are limited to 6,000 characters (drawing is done on your device and gets slow beyond that). Links and click actions in a diagram are ignored, and so is a leading front matter or `%%{init}%%` block.
-
-In the editor, type <Kbd keys="/" /> and "diagram" and pick **Diagram (Mermaid)**, or start a code block with
-` ```mermaid `. The drawing appears below the code and follows what you type; while the text is incomplete the
-last good drawing stays and a note says what is wrong.
-
-Diagrams work inside info panels too.
-
 ## Charts
 
 A fenced code block with the language `chart` holds a JSON description of the data and is drawn as a chart
 in the colours of the theme (light and dark, with the same eight series colours in both). Use it for numbers:
-trends, shares, comparisons, distributions, a few headline figures. Use Mermaid for structure (flows,
-sequences, relations).
+trends, shares, comparisons, distributions, a few headline figures.
 
 ````md
 ```chart
@@ -147,7 +115,7 @@ be one of the chart's `x` values.
 
 ## Agents
 
-Agents need no extra tool. They write the Markdown above (a `[!INFO]` quote, a `mermaid` code block or a `chart` code block with JSON) in a description, a comment or a knowledge page,
+Agents need no extra tool. They write the Markdown above (a `[!INFO]` quote or a `chart` code block with JSON) in a description, a comment or a knowledge page,
 and the server instructions at connect time mention the syntax. See [Working with agents](/agents/overview/).
 
 ## Colours and themes

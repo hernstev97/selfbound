@@ -83,7 +83,7 @@ dashboard (Settings → Environment Variables) or `node tooling/cloud.mjs env se
 | `XLR8_OWNER_IDS` | `<issuer>\|<user id>`, e.g. `https://clerk.selfbound.example.com\|user_2abc…`. Several owners separated by commas. Empty means nobody gets in | yes |
 | `XLR8_APP_URL` | `https://selfbound.example.com`. Turns on OAuth for connectors (claude.ai, ChatGPT) | no |
 | `XLR8_PUBLIC_SITE_URL` | custom address for MCP/OAuth instead of `…convex.site`, e.g. `https://mcp.selfbound.example.com` | no |
-| `XLR8_OWNER_NAME` | the owner's display name in MCP output (default `Owner`) | no |
+| `XLR8_OWNER_NAME` | fallback for the owner's display name in MCP output until you set a name in Settings → Profile (default `Owner`) | no |
 | `XLR8_LOCALE` | `de` for German push notification texts and German default status names of new teams (default English) | no |
 | `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_MANAGE_WEBHOOKS`, `GITHUB_REPOS`, `GITHUB_WEBHOOK_SECRET_PREVIOUS` | pull request integration, see [operations.md](operations.md#github) | no |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push; set them with `node tooling/vapid.mjs` | no |

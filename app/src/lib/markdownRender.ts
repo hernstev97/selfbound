@@ -9,7 +9,7 @@ import { BARE_IDENTIFIER_RE } from '@selfbound/backend/shared/links';
 import { calloutHtml, calloutOf } from './blocks/callout.ts';
 import { blockFenceHtml } from './blocks/fence.ts';
 import { blockFor } from './blocks/registry.ts';
-import { codeBlockHtml, escapeHtml } from './codeblock.ts';
+import { codeBlockHtml, escapeHtml, fenceClaim, TOKEN_STYLE } from './codeblock.ts';
 import { uploadNote } from './uploadNote.ts';
 
 /** Path in the app if a link points to a wiki page or an issue (otherwise null). */
@@ -100,10 +100,13 @@ export function createRender(
       },
     ],
     renderer: {
-      // A language a visual-block renderer claims (```mermaid) becomes a placeholder that mount.ts draws.
+      // A language a visual-block renderer claims (```mermaid) becomes a placeholder that mount.ts draws;
+      // one claimed with `claimFence` returns its finished HTML. Both skip the highlighter.
       code({ text, lang }) {
         const block = blockFor(lang);
-        return block ? blockFenceHtml(block, text, lang) : codeBlockHtml(text, lang, highlight(text, lang));
+        if (block) return blockFenceHtml(block, text, lang);
+        const claim = fenceClaim(lang);
+        return claim?.(text, lang!) ?? codeBlockHtml(text, lang, claim ? null : highlight(text, lang));
       },
       // `> [!WARNING] Title` is an info panel; any other quote stays a quote.
       blockquote(token) {
@@ -117,6 +120,10 @@ export function createRender(
         return href.startsWith('#upload-') ? img : `<a class="md-img" href="${escapeHtml(href)}">${img}</a>`;
       },
     },
+  });
+  // Colors of highlighted code: tokens carry them as custom properties (style is forbidden otherwise).
+  DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
+    if (data.attrName === 'style' && node.tagName === 'SPAN' && node.classList.contains('tk') && TOKEN_STYLE.test(data.attrValue)) data.forceKeepAttr = true;
   });
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A') {

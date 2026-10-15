@@ -194,7 +194,7 @@ export function unwrapCallout(pos: number, toQuote = false): Command {
   };
 }
 
-/** Code block of `lang` with `text` in it (the "/" menu's diagram entry); the cursor lands at the end. */
+/** Code block of `lang` with `text` in it (the "/" menu's chart entry); the cursor lands at the end. */
 export function insertCodeBlock(lang: string, text: string): Command {
   return (state, dispatch) => setBlock(n.code_block, { lang })(state, dispatch && ((tr) => dispatch(tr.insertText(text).scrollIntoView())));
 }

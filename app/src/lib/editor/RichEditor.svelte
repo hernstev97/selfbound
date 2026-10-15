@@ -110,13 +110,6 @@
       run: cmd(insertCallout(kind)),
     })),
     {
-      id: 'mermaid',
-      label: t('Diagram (Mermaid)'),
-      hint: '```mermaid',
-      words: 'diagram mermaid flowchart graph chart sequence diagramm ablauf',
-      run: cmd(insertCodeBlock('mermaid', 'flowchart TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Done]\n  B -->|No| D[Try again]')),
-    },
-    {
       id: 'chart',
       label: t('Chart (data)'),
       hint: '```chart',

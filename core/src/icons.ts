@@ -97,6 +97,7 @@ export const ICON = {
   blocked: svg16('<circle cx="8" cy="8" r="5.75" stroke="currentColor" stroke-width="1.3"/><path d="m4 12 8-8" stroke="currentColor" stroke-width="1.3"/>'),
   duplicate: stroke('M5.5 5.5h7v7h-7zM3.5 10.5v-7h7'),
   copy: stroke('M5.5 5.5h7v7h-7zM3.5 10.5v-7h7'),
+  user: svg16('<circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 13.5c.4-2.4 2.2-4 4.5-4s4.1 1.6 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>'),
   team: stroke('M5.5 7.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM2 13c.4-2 1.8-3.5 3.5-3.5S8.6 11 9 13M11 7.5a1.7 1.7 0 1 0 0-3.4M12 9.6c1 .5 1.8 1.7 2 3.4'),
   comment: stroke('M3 3.5h10a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5H7l-3 2.5v-2.5H3a.5.5 0 0 1-.5-.5V4a.5.5 0 0 1 .5-.5Z'),
   agent: svg16('<rect x="3" y="5" width="10" height="8" rx="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 2.5V5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.2" cy="9" r=".95" fill="currentColor"/><circle cx="9.8" cy="9" r=".95" fill="currentColor"/>'),
