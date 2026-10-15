@@ -4,7 +4,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { BLOCKS, blockFor } from '../src/lib/blocks/registry.ts';
 import { render } from '../src/lib/blocks/chart/index.ts';
-import { compact, niceTicks } from '../src/lib/blocks/chart/dom.ts';
+import { compact, exact, niceTicks } from '../src/lib/blocks/chart/dom.ts';
 import { parseChart } from '../src/lib/blocks/chart/spec.ts';
 
 const ctx = () => ({ signal: new AbortController().signal });
@@ -42,7 +42,9 @@ describe('claim and numbers', () => {
     expect(niceTicks(0, 8, 4)).toEqual([0, 2, 4, 6, 8]);
     expect(niceTicks(0, 97, 5)).toEqual([0, 20, 40, 60, 80, 100]);
     expect(niceTicks(0, 0.9, 5)).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1]);
-    expect([0, 7, 12.34, 1284, 12_940, 4_200_000, 3.2e9].map(compact)).toEqual(['0', '7', '12.3', '1284', '12.9K', '4.2M', '3.2B']);
+    expect([0, 7, 12.34, 1284, 12_940, 4_200_000, 3.2e9, 999_950, 999_949].map(compact)).toEqual(['0', '7', '12.3', '1284', '12.9K', '4.2M', '3.2B', '1M', '999.9K']);
+    expect(exact(0.0042)).toBe('0.0042');
+    expect(exact(1234.567)).toBe('1,234.57');
   });
 });
 
@@ -72,11 +74,20 @@ describe('spec', () => {
     ['stacked line', { ...AREA, type: 'line' }, /"stack" must be "none"/],
     ['negative bar', { type: 'bar', categories: ['a'], series: [{ name: 's', values: [-1] }] }, /without negative values in a bar chart/],
     ['heatmap shape', { type: 'heatmap', rows: ['r'], columns: ['a', 'b'], values: [[1]] }, /"values\[0\]" has 1 values, "columns" has 2/],
+    ['stack true on a line', { type: 'line', stack: true, x: ['a'], series: [{ name: 's', values: [1] }] }, /"stack" must be "none"/],
+    ['infinite value', { type: 'bar', categories: ['a'], series: [{ name: 's', values: ['__INF__'] }] }, /list of numbers/],
     ['bad color', { ...AREA, series: [{ name: 'a', values: [1, 2, 3], color: 9 }] }, /"series\[0\]\.color" must be a number from 1 to 8/],
     ['too many values', { type: 'heatmap', rows: Array.from({ length: 100 }, String), columns: Array.from({ length: 100 }, String), values: Array.from({ length: 100 }, () => new Array(100).fill(1)) }, /too large/],
   ];
   it.each(bad)('%s', (_name, spec, message) => {
-    expect(() => parseChart(typeof spec === 'string' ? spec : JSON.stringify(spec))).toThrow(message);
+    // JSON.stringify cannot write 1e999: the text is built by hand for that case
+    const text = (typeof spec === 'string' ? spec : JSON.stringify(spec)).replace('"__INF__"', '1e999');
+    expect(() => parseChart(text)).toThrow(message);
+  });
+  it('infinite x is refused, labels are cut', () => {
+    expect(() => parseChart('{"type":"line","x":[1,1e999],"series":[{"name":"s","values":[1,2]}]}')).toThrow(/list of labels/);
+    const spec = parseChart(JSON.stringify({ type: 'bar', categories: ['y'.repeat(500)], series: [{ name: 'n'.repeat(500), values: [1] }] }));
+    expect((spec as { categories: string[] }).categories[0]!.length).toBe(120);
   });
   it('too long', () => {
     expect(() => parseChart(`{"type":"stat","items":[],"pad":"${'x'.repeat(100_001)}"}`)).toThrow(/too long/);
@@ -85,12 +96,12 @@ describe('spec', () => {
 
 describe('drawing', () => {
   it('stacked area: one filled band per series, a legend, end labels, a description', () => {
-    const { host, description } = draw({ ...AREA, title: 'Share', subtitle: 'per week', rules: [{ x: 'b', label: 'Launch' }] });
+    const { host } = draw({ ...AREA, title: 'Share', subtitle: 'per week', rules: [{ x: 'b', label: 'Launch' }] });
     expect(host.querySelectorAll('svg path[fill^="var(--chart-"]').length).toBe(2);
     expect(host.querySelectorAll('.vchart-legend li').length).toBe(2);
     expect(host.querySelector('.vc-rule-label')?.textContent).toBe('Launch');
     expect([...host.querySelectorAll('.vc-end-label')].map((e) => e.textContent)).toEqual(['Two 25%', 'One 75%']); // top band first
-    expect(description).toBe('Share. per week. One, Two');
+    expect(host.querySelector('svg.vchart-svg')!.getAttribute('aria-label')).toBe('Share. per week. One, Two');
     // the y axis of a 100 % stack
     expect([...host.querySelectorAll('.vc-tick')].map((e) => e.textContent)).toEqual(expect.arrayContaining(['0%', '50%', '100%']));
   });
@@ -120,6 +131,47 @@ describe('drawing', () => {
     expect(host.querySelector('.vchart-stat-delta')?.textContent).toBe('+12%');
     expect(host.querySelectorAll('.vchart-spark').length).toBe(1);
   });
+  it('no NaN anywhere: all-zero bars, a single point, equal values, fixed bounds', () => {
+    const html = (spec: unknown) => draw(spec).host.innerHTML;
+    expect(html({ type: 'bar', categories: ['a', 'b'], series: [{ name: 's', values: [0, 0] }] })).not.toMatch(/NaN|Infinity/);
+    expect(html({ type: 'bar', orientation: 'horizontal', stack: 'percent', categories: ['a'], series: [{ name: 's', values: [0] }, { name: 't', values: [0] }] })).not.toMatch(/NaN|Infinity/);
+    const one = draw({ type: 'line', x: ['a'], series: [{ name: 's', values: [5] }] }).host;
+    expect(one.innerHTML).not.toMatch(/NaN|Infinity/);
+    expect(one.querySelectorAll('svg circle').length).toBeGreaterThanOrEqual(2); // the point (and the hover dot)
+    expect(html({ type: 'line', x: [1, 2], series: [{ name: 's', values: [3, 3] }] })).not.toMatch(/NaN|Infinity/);
+    expect(html({ type: 'heatmap', rows: ['r'], columns: ['c'], values: [[4]] })).not.toMatch(/NaN|Infinity/);
+    expect(html({ type: 'line', x: ['a', 'b'], yMin: 3, yMax: 97, series: [{ name: 's', values: [1, 120] }] })).not.toMatch(/NaN|Infinity/);
+  });
+  it('fixed bounds: ticks stay inside them and the marks are clipped to the plot', () => {
+    const { host } = draw({ type: 'line', x: ['a', 'b'], yMin: 3, yMax: 97, series: [{ name: 's', values: [1, 120] }] });
+    const ticks = [...host.querySelectorAll('.vc-tick')].map((e) => e.textContent).filter((t) => /^\d/.test(t!));
+    expect(ticks).not.toContain('0');
+    expect(ticks).not.toContain('100');
+    const clip = host.querySelector('clipPath')!.id;
+    expect(host.querySelector(`g[clip-path="url(#${clip})"] path`)).not.toBeNull();
+  });
+  it('long labels are cut, vertical category labels are thinned', () => {
+    const long = 'x'.repeat(100);
+    const { host } = draw({ type: 'bar', orientation: 'horizontal', categories: [long, 'b'], series: [{ name: 's', values: [1, 2] }] });
+    expect([...host.querySelectorAll('.vc-cat')].map((e) => e.textContent!).every((t) => t.length < 40)).toBe(true);
+    const many = draw({ type: 'bar', categories: Array.from({ length: 28 }, (_, i) => `Week ${i + 1}`), series: [{ name: 's', values: Array.from({ length: 28 }, (_, i) => i) }] }).host;
+    expect(many.querySelectorAll('svg text.vc-tick').length).toBeLessThan(28 + 6);
+  });
+  it('the keyboard moves the crosshair; shortcuts with modifiers are left alone', () => {
+    const { host } = draw(AREA);
+    const svg = host.querySelector('svg.vchart-svg')!;
+    const key = (init: KeyboardEventInit) => {
+      const event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init });
+      svg.dispatchEvent(event);
+      return event;
+    };
+    expect(key({ key: 'ArrowRight' }).defaultPrevented).toBe(true);
+    expect(host.querySelector('.vchart-tip')!.hasAttribute('hidden')).toBe(false);
+    expect(key({ key: 'ArrowLeft', altKey: true }).defaultPrevented).toBe(false); // browser back
+    expect(key({ key: 'Home', ctrlKey: true }).defaultPrevented).toBe(false);
+    expect(key({ key: 'Escape' }).defaultPrevented).toBe(true);
+    expect(host.querySelector('.vchart-tip')!.hasAttribute('hidden')).toBe(true);
+  });
   it('data never becomes markup', () => {
     const evil = '<img src=x onerror=window.__xss=1>';
     const { host } = draw({ type: 'bar', title: evil, subtitle: evil, note: evil, categories: [evil], series: [{ name: evil, values: [1] }] });
@@ -132,7 +184,7 @@ describe('drawing', () => {
     const toggle = host.querySelector<HTMLButtonElement>('.vchart-toggle')!;
     toggle.click();
     expect(host.querySelectorAll('table.vchart-table tbody tr').length).toBe(3);
-    expect([...host.querySelectorAll('table.vchart-table th')].map((e) => e.textContent)).toEqual(['x', 'One', 'Two']);
+    expect([...host.querySelectorAll('table.vchart-table th')].map((e) => e.textContent)).toEqual(['', 'One', 'Two']);
     expect(host.querySelector('svg.vchart-svg')).toBeNull();
     expect(toggle.getAttribute('aria-pressed')).toBe('true');
     toggle.click();
@@ -147,9 +199,11 @@ describe('drawing', () => {
     const svg = host.querySelector('svg.vchart-svg')!;
     expect(svg.getAttribute('width')).toBe('600');
     const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(420);
+    vi.stubGlobal('requestAnimationFrame', (cb: () => void) => (cb(), 1)); // the redraw is one per frame
     observers.at(-1)!.cb();
     expect(host.querySelector('svg.vchart-svg')!.getAttribute('width')).toBe('420');
     width.mockRestore();
+    vi.unstubAllGlobals();
     abort.abort();
     expect(disconnected).toBe(before + 1);
   });

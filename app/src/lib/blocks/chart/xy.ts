@@ -1,7 +1,7 @@
 // Line and area charts (also stacked and 100 % stacked), with an optional reference line, vertical
 // rules, labelled markers, end labels and a crosshair tooltip that is also reachable by keyboard.
 import type { XySpec } from './spec.ts';
-import { exact, format, html, niceTicks, slot, svg, textWidth, Tooltip } from './dom.ts';
+import { clipId, exact, fit, format, html, niceTicks, slot, svg, textWidth, Tooltip } from './dom.ts';
 
 const HEIGHT = 260;
 
@@ -32,6 +32,9 @@ export function drawXy(spec: XySpec, body: HTMLElement, width: number, label: st
     ticks = niceTicks(lo, hi, 5);
     hi = spec.yMax ?? ticks.at(-1)!;
     lo = spec.yMin ?? ticks[0]!;
+    // Fixed bounds: only ticks inside them (the bounds themselves are the axis ends)
+    if (spec.yMin !== null || spec.yMax !== null) ticks = ticks.filter((v) => v >= lo && v <= hi);
+    if (!(hi > lo)) hi = lo + 1;
   }
   const unit = percent ? '%' : spec.unit;
   const yLabels = ticks.map((v) => format(v, unit));
@@ -45,6 +48,7 @@ export function drawXy(spec: XySpec, body: HTMLElement, width: number, label: st
     endLabels.push({ y: mid, text: stacked || (series.length > 1 && series.length <= 4) ? `${s.name} ${value}` : '', slot: s.color });
   });
   const labelWidth = Math.min(Math.max(...endLabels.map((l) => textWidth(l.text))) + 10, width * 0.34);
+  const clip = clipId();
 
   const m = { top: 14, right: spec.series.length > 0 && endLabels.some((l) => l.text) ? labelWidth : 14, bottom: 26, left: Math.max(...yLabels.map(textWidth)) + 12 };
   const plotW = Math.max(60, width - m.left - m.right);
@@ -78,21 +82,25 @@ export function drawXy(spec: XySpec, body: HTMLElement, width: number, label: st
   }
   for (const l of xLabels) root.append(svg('text', { x: l.at, y: HEIGHT - 8, class: 'vc-tick', 'text-anchor': xLabels.length > 1 && l.at < m.left + 12 ? 'start' : l.at > m.left + plotW - 12 ? 'end' : 'middle' }, l.text));
 
-  // Marks
+  // Marks stay inside the plot (values beyond yMin/yMax, a far-off reference)
+  root.append(svg('clipPath', { id: clip }, svg('rect', { x: m.left - 1, y: m.top - 1, width: plotW + 2, height: plotH + 2 })));
+  const marks = svg('g', { 'clip-path': `url(#${clip})` });
+  root.append(marks);
   const line = (values: number[]) => values.map((v, i) => `${i ? 'L' : 'M'}${px(i).toFixed(1)},${py(v).toFixed(1)}`).join('');
   series.forEach((s, si) => {
     if (spec.type === 'area') {
       const upper = top[si]!;
       const lower = base[si]!;
       const d = `${line(upper)}${lower.map((_, k) => `L${px(n - 1 - k).toFixed(1)},${py(lower[n - 1 - k]!).toFixed(1)}`).join('')}Z`;
-      root.append(svg('path', { d, fill: slot(s.color), 'fill-opacity': stacked ? 1 : 0.12, stroke: stacked ? 'var(--vchart-surface)' : 'none', 'stroke-width': stacked ? 1.5 : 0, 'stroke-linejoin': 'round' }));
+      marks.append(svg('path', { d, fill: slot(s.color), 'fill-opacity': stacked ? 1 : 0.12, stroke: stacked ? 'var(--vchart-surface)' : 'none', 'stroke-width': stacked ? 1.5 : 0, 'stroke-linejoin': 'round' }));
     }
-    if (!stacked) root.append(svg('path', { d: line(plotted[si]!), fill: 'none', stroke: slot(s.color), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+    if (n === 1) marks.append(svg('circle', { cx: px(0), cy: py(top[si]![0]!), r: 4, fill: slot(s.color), stroke: 'var(--vchart-surface)', 'stroke-width': 2 }));
+    if (!stacked) marks.append(svg('path', { d: line(plotted[si]!), fill: 'none', stroke: slot(s.color), 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
   });
 
   if (spec.reference !== null) {
     const ref = spec.reference === 'diagonal' ? { x1: m.left, y1: py(lo), x2: m.left + plotW, y2: py(hi) } : { x1: m.left, y1: py(spec.reference), x2: m.left + plotW, y2: py(spec.reference) };
-    root.append(svg('line', { ...ref, class: 'vc-ref' }));
+    marks.append(svg('line', { ...ref, class: 'vc-ref' }));
   }
 
   const indexOf = (x: string | number) => spec.x.findIndex((v) => String(v) === String(x));
@@ -120,7 +128,7 @@ export function drawXy(spec: XySpec, body: HTMLElement, width: number, label: st
     const y = py(l.y);
     if (y - lastY < 15) continue;
     lastY = y;
-    root.append(svg('text', { x: m.left + plotW + 8, y, class: 'vc-end-label', 'dominant-baseline': 'middle' }, l.text));
+    root.append(svg('text', { x: m.left + plotW + 8, y, class: 'vc-end-label', 'dominant-baseline': 'middle' }, fit(l.text, labelWidth - 10)));
   }
 
   // Hover and keyboard: the crosshair finds the x, one tooltip lists every series
@@ -159,6 +167,7 @@ export function drawXy(spec: XySpec, body: HTMLElement, width: number, label: st
   hit.addEventListener('pointerleave', hide);
   root.insertBefore(hit, layer);
   root.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return; // browser and app shortcuts stay theirs
     const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
     if (step) show(active < 0 ? (step > 0 ? 0 : n - 1) : active + step);
     else if (event.key === 'Home') show(0);

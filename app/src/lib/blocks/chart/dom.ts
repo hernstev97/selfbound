@@ -1,6 +1,8 @@
 // Small helpers for the chart renderer: SVG/HTML building (text only through textContent, so chart
 // data, which often comes from tool output, can never become markup), number formatting, ticks,
 // and the hover tooltip.
+import { intlLocale } from '@selfbound/core/i18n';
+
 const NS = 'http://www.w3.org/2000/svg';
 
 type Attrs = Record<string, string | number | null | undefined>;
@@ -20,6 +22,10 @@ export function html<K extends keyof HTMLElementTagNameMap>(tag: K, className = 
 }
 
 /** Palette slot as a CSS color (the variables live in md.css and follow light and dark). */
+let clips = 0;
+/** A fresh id for an SVG clip path (several charts share one page). */
+export const clipId = () => `vc-clip-${++clips}`;
+
 export const slot = (n: number) => `var(--chart-${n})`;
 
 /** Width of a 12 px label, estimated: layout must not wait for the browser to measure. */
@@ -27,7 +33,7 @@ export const textWidth = (text: string) => Math.ceil(text.length * 6.6);
 
 /** 1,2,5 × 10^n steps: `count` or so ticks covering [min, max]. */
 export function niceTicks(min: number, max: number, count = 5): number[] {
-  if (!(max > min)) return [min, min + 1];
+  if (!(max > min) || !Number.isFinite(min) || !Number.isFinite(max)) return [min, min + 1];
   const raw = (max - min) / count;
   const pow = 10 ** Math.floor(Math.log10(raw));
   const step = [1, 2, 5, 10].map((m) => m * pow).find((s) => s >= raw)!;
@@ -41,12 +47,19 @@ export function niceTicks(min: number, max: number, count = 5): number[] {
   return ticks;
 }
 
+/** `text`, cut with an ellipsis so that it fits `px` pixels (estimated). */
+export function fit(text: string, px: number): string {
+  const room = Math.max(3, Math.floor(px / 6.6));
+  return text.length <= room ? text : `${text.slice(0, room - 1)}…`;
+}
+
 /** 1,284 · 12.9K · 4.2M; at most one decimal for the compact forms. */
 export function compact(n: number): string {
   const abs = Math.abs(n);
   const trim = (v: number, d: number) => String(Math.round(v * 10 ** d) / 10 ** d);
   if (abs >= 1e9) return `${trim(n / 1e9, 1)}B`;
-  if (abs >= 1e6) return `${trim(n / 1e6, 1)}M`;
+  // 999,950 rounds to 1000K: that is 1M
+  if (abs >= 1e6 || (abs >= 1e4 && Math.round(abs / 100) / 10 >= 1000)) return `${trim(n / 1e6, 1)}M`;
   if (abs >= 1e4) return `${trim(n / 1e3, 1)}K`;
   return trim(n, abs < 10 ? 2 : abs < 100 ? 1 : 0);
 }
@@ -54,7 +67,11 @@ export function compact(n: number): string {
 export const format = (n: number, unit = '') => `${compact(n)}${unit}`;
 
 /** Full precision for tooltips and tables: 1,284.5 */
-export const exact = (n: number, unit = '') => `${Number.isInteger(n) ? n.toLocaleString() : (Math.round(n * 100) / 100).toLocaleString()}${unit}`;
+export const exact = (n: number, unit = '') => {
+  const small = Math.abs(n) < 0.1 && n !== 0;
+  const text = n.toLocaleString(intlLocale(), small ? { maximumSignificantDigits: 2 } : { maximumFractionDigits: 2 });
+  return `${text}${unit}`;
+};
 
 export interface TipRow {
   /** Palette slot of the series, for the line key */

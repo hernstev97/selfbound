@@ -7,6 +7,10 @@ export const MAX_SOURCE_CHARS = 100_000;
 export const MAX_VALUES = 5_000;
 /** Categorical slots of the palette (md.css `--chart-1…8`); a ninth series is folded into "Other" by the author. */
 export const MAX_SERIES = 8;
+/** Larger magnitudes (JSON allows 1e999) would overflow sums and tick computation. */
+const MAX_ABS = 1e15;
+/** Labels are cut to this many characters. */
+const MAX_LABEL = 120;
 
 export type Stack = 'none' | 'stacked' | 'percent';
 
@@ -87,14 +91,14 @@ function required(o: Obj, key: string, path = key): string {
 
 function numbers(v: unknown, path: string): number[] {
   if (!Array.isArray(v)) throw v === undefined ? missing(path) : wrong(path, t('a list of numbers'));
-  if (v.some((n) => typeof n !== 'number' || !Number.isFinite(n))) throw wrong(path, t('a list of numbers'));
+  if (v.some((n) => typeof n !== 'number' || !Number.isFinite(n) || Math.abs(n) > MAX_ABS)) throw wrong(path, t('a list of numbers'));
   return v as number[];
 }
 
 function labels(v: unknown, path: string): (string | number)[] {
   if (!Array.isArray(v) || !v.length) throw v === undefined ? missing(path) : wrong(path, t('a list of labels'));
-  if (v.some((n) => typeof n !== 'string' && typeof n !== 'number')) throw wrong(path, t('a list of labels'));
-  return v as (string | number)[];
+  if (v.some((n) => (typeof n !== 'string' && typeof n !== 'number') || (typeof n === 'number' && (!Number.isFinite(n) || Math.abs(n) > MAX_ABS)))) throw wrong(path, t('a list of labels'));
+  return (v as (string | number)[]).map((n) => (typeof n === 'string' ? n.slice(0, MAX_LABEL) : n));
 }
 
 function series(v: unknown, length: number, lengthOf: string): Series[] {
@@ -107,22 +111,25 @@ function series(v: unknown, length: number, lengthOf: string): Series[] {
     if (values.length !== length) throw new Error(t('"{field}" has {n} values, "{of}" has {m}', { field: `${path}.values`, n: values.length, of: lengthOf, m: length }));
     const color = s.color === undefined ? i + 1 : s.color;
     if (!Number.isInteger(color) || (color as number) < 1 || (color as number) > MAX_SERIES) throw wrong(`${path}.color`, t('a number from 1 to {max}', { max: MAX_SERIES }));
-    return { name: required(s, 'name', `${path}.name`), values, color: color as number };
+    return { name: required(s, 'name', `${path}.name`).slice(0, MAX_LABEL), values, color: color as number };
   });
 }
 
 function stackOf(o: Obj, allowed: readonly Stack[], fallback: Stack): Stack {
   const v = o.stack;
   if (v === undefined) return fallback;
-  if (v === true) return 'stacked';
   if (v === false) return 'none';
+  if (v === true) {
+    if (!allowed.includes('stacked')) throw wrong('stack', allowed.map((a) => `"${a}"`).join(', '));
+    return 'stacked';
+  }
   if (typeof v !== 'string' || !allowed.includes(v as Stack)) throw wrong('stack', allowed.map((a) => `"${a}"`).join(', '));
   return v as Stack;
 }
 
 function optionalNumber(o: Obj, key: string): number | null {
   if (o[key] === undefined || o[key] === null) return null;
-  if (typeof o[key] !== 'number' || !Number.isFinite(o[key])) throw wrong(key, t('a number'));
+  if (typeof o[key] !== 'number' || !Number.isFinite(o[key]) || Math.abs(o[key] as number) > MAX_ABS) throw wrong(key, t('a number'));
   return o[key] as number;
 }
 
@@ -167,7 +174,7 @@ export function parseChart(source: string): ChartSpec {
   }
 
   if (type === 'heatmap') {
-    const rows = labels(raw.rows, 'rows').map(String);
+    const rows = labels(raw.rows, 'rows').map(String).map((x) => x.slice(0, MAX_LABEL));
     const columns = labels(raw.columns, 'columns').map(String);
     const grid = raw.values;
     if (!Array.isArray(grid)) throw grid === undefined ? missing('values') : wrong('values', t('a list of rows of numbers'));
@@ -205,7 +212,7 @@ export function parseChart(source: string): ChartSpec {
   if (!Array.isArray(markers)) throw wrong('markers', t('a list'));
   if (!Array.isArray(rules)) throw wrong('rules', t('a list'));
   const ref = raw.reference;
-  if (ref !== undefined && ref !== null && ref !== 'diagonal' && (typeof ref !== 'number' || !Number.isFinite(ref))) throw wrong('reference', t('"diagonal" or a number'));
+  if (ref !== undefined && ref !== null && ref !== 'diagonal' && (typeof ref !== 'number' || !Number.isFinite(ref) || Math.abs(ref) > MAX_ABS)) throw wrong('reference', t('"diagonal" or a number'));
   return {
     type: type as 'line' | 'area',
     ...common,

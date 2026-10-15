@@ -2,7 +2,7 @@
 // Bars are at most 24 px thick with a rounded data end; stacked segments are separated by a gap in
 // the surface colour; a value goes inside a segment only if it fits, otherwise it is left to the tooltip.
 import type { BarSpec } from './spec.ts';
-import { barPath, exact, format, html, niceTicks, slot, svg, textWidth, Tooltip } from './dom.ts';
+import { barPath, exact, fit, format, html, niceTicks, slot, svg, textWidth, Tooltip } from './dom.ts';
 
 const THICK = 24;
 /** Palette slots whose bar colour needs dark text in both modes (md.css `--chart-on-N`). */
@@ -18,13 +18,14 @@ export function drawBars(spec: BarSpec, body: HTMLElement, width: number, label:
   const base = series.map(() => new Array<number>(nc).fill(0));
   if (stacked) for (let s = 1; s < series.length; s++) for (let c = 0; c < nc; c++) base[s]![c] = base[s - 1]![c]! + shown[s - 1]![c]!;
 
-  const max = percent ? 100 : Math.max(1e-9, ...(stacked ? totals : shown.flat()));
+  const peak = Math.max(...(stacked ? totals : shown.flat()));
+  const max = percent ? 100 : peak > 0 ? peak : 1;
   const ticks = percent ? [] : niceTicks(0, max, horizontal ? 5 : 4);
   const hi = percent ? 100 : ticks.at(-1)!;
   const unit = percent ? '%' : spec.unit;
   const tickLabels = ticks.map((v) => format(v, unit));
 
-  const pitch = horizontal ? 38 : Math.max(24, 0);
+  const pitch = 38;
   const catLabelW = Math.min(Math.max(...categories.map(textWidth)) + 14, width * 0.35);
   const m = horizontal
     ? { top: 6, right: 16 + (!stacked && series.length === 1 ? textWidth(format(max, unit)) + 8 : 0), bottom: percent ? 6 : 26, left: catLabelW }
@@ -55,10 +56,12 @@ export function drawBars(spec: BarSpec, body: HTMLElement, width: number, label:
     });
   }
 
+  // Vertical bars: as many category labels as fit
+  const labelEvery = horizontal ? 1 : Math.max(1, Math.ceil((Math.min(Math.max(...categories.map(textWidth)), 90) + 10) / band));
   categories.forEach((name, c) => {
     const start = (horizontal ? m.top : m.left) + c * band + (band - thick * groups) / 2;
-    if (horizontal) root.append(svg('text', { x: m.left - 10, y: m.top + c * band + band / 2, class: 'vc-cat', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, name));
-    else root.append(svg('text', { x: m.left + c * band + band / 2, y: height - 9, class: 'vc-tick', 'text-anchor': 'middle' }, name));
+    if (horizontal) root.append(svg('text', { x: m.left - 10, y: m.top + c * band + band / 2, class: 'vc-cat', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, fit(name, m.left - 14)));
+    else if (c % labelEvery === 0) root.append(svg('text', { x: m.left + c * band + band / 2, y: height - 9, class: 'vc-tick', 'text-anchor': 'middle' }, fit(name, band * labelEvery - 6)));
 
     series.forEach((s, si) => {
       const v0 = base[si]![c]!;
@@ -82,7 +85,7 @@ export function drawBars(spec: BarSpec, body: HTMLElement, width: number, label:
         root.append(svg('text', horizontal ? { x: x + w + 8, y: y + h / 2, class: 'vc-value', 'dominant-baseline': 'middle' } : { x: x + w / 2, y: y - 6, class: 'vc-value', 'text-anchor': 'middle' }, t));
       }
       // The whole mark is the hit target, plus the gap around it
-      const target = svg('rect', { x: x - 1, y: y - 1, width: w + 2, height: h + 2, fill: 'transparent', tabindex: -1 });
+      const target = svg('rect', { x: x - 1, y: y - 1, width: w + 2, height: h + 2, fill: 'transparent' });
       const showTip = () => {
         const box = root.getBoundingClientRect();
         const at = target.getBoundingClientRect();

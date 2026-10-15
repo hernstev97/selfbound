@@ -41,7 +41,7 @@ function tableOf(spec: ChartSpec): HTMLTableElement {
     head(['', ...spec.series.map((s) => s.name)]);
     spec.categories.forEach((name, c) => row([name, ...spec.series.map((s) => exact(s.values[c]!, spec.unit))]));
   } else {
-    head([spec.xUnit ? `x (${spec.xUnit})` : 'x', ...spec.series.map((s) => s.name)]);
+    head([spec.xUnit, ...spec.series.map((s) => s.name)]);
     spec.x.forEach((x, i) => row([String(x), ...spec.series.map((s) => exact(s.values[i]!, spec.unit))]));
   }
   return table;
@@ -85,6 +85,7 @@ export function render(source: string, host: HTMLElement, ctx: BlockContext): st
   let table = false;
   let width = 0;
   const paint = () => {
+    const focused = body.contains(document.activeElement) && document.activeElement instanceof SVGElement;
     body.replaceChildren();
     if (table) return void body.append(tableOf(spec));
     width = Math.max(240, Math.floor(body.clientWidth) || 640);
@@ -92,6 +93,8 @@ export function render(source: string, host: HTMLElement, ctx: BlockContext): st
     else if (spec.type === 'heatmap') drawHeat(spec, body, width, description);
     else if (spec.type === 'bar') drawBars(spec, body, width, description);
     else drawXy(spec, body, width, description);
+    // A redraw on resize must not drop the keyboard focus
+    if (focused) body.querySelector<SVGElement>('svg.vchart-svg')?.focus();
   };
   toggle.addEventListener('click', () => {
     table = !table;
@@ -102,10 +105,14 @@ export function render(source: string, host: HTMLElement, ctx: BlockContext): st
   paint();
 
   // The drawing is laid out for the width it has: draw again when the width changes.
+  let frame = 0;
   const observer = new ResizeObserver(() => {
-    if (!table && spec.type !== 'stat' && Math.abs(Math.floor(body.clientWidth) - width) > 1) paint();
+    if (table || spec.type === 'stat' || Math.abs(Math.floor(body.clientWidth) - width) <= 1) return;
+    cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(paint); // once per frame while the width animates
   });
   observer.observe(body);
-  ctx.signal.addEventListener('abort', () => observer.disconnect(), { once: true });
-  return description;
+  ctx.signal.addEventListener('abort', () => (cancelAnimationFrame(frame), observer.disconnect()), { once: true });
+  // The host's name stays "Chart"; the svg carries the description (reading it twice helps nobody)
+  return '';
 }

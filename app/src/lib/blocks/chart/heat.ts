@@ -1,6 +1,6 @@
 // Heatmap: rows × columns, one hue, more = stronger (the cell colour mixes the series colour into the surface).
 import type { HeatSpec } from './spec.ts';
-import { exact, format, html, svg, textWidth, Tooltip } from './dom.ts';
+import { exact, fit, format, html, svg, textWidth, Tooltip } from './dom.ts';
 
 const GAP = 2;
 
@@ -18,14 +18,14 @@ export function drawHeat(spec: HeatSpec, body: HTMLElement, width: number, label
   const height = top + plotH + 26;
   const widest = Math.max(...columns.map(textWidth)) + 12;
   const every = Math.max(1, Math.ceil(widest / cell));
-  const tint = (v: number) => `${Math.round(6 + ((hi > lo ? (v - lo) / (hi - lo) : 1) * 94))}%`;
+  const tint = (v: number) => `${Math.round(6 + ((hi > lo ? (v - lo) / (hi - lo) : 0.5) * 94))}%`;
 
   const plot = html('div', 'vchart-plot');
   const root = svg('svg', { width, height, class: 'vchart-svg', role: 'img', 'aria-label': label });
   const tip = new Tooltip(plot);
 
   rows.forEach((name, r) => {
-    root.append(svg('text', { x: left - 10, y: top + r * cellH + cellH / 2, class: 'vc-cat', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, name));
+    root.append(svg('text', { x: left - 10, y: top + r * cellH + cellH / 2, class: 'vc-cat', 'text-anchor': 'end', 'dominant-baseline': 'middle' }, fit(name, left - 14)));
     columns.forEach((column, c) => {
       const v = values[r]![c]!;
       const x = left + c * cell;
@@ -43,7 +43,7 @@ export function drawHeat(spec: HeatSpec, body: HTMLElement, width: number, label
   });
   columns.forEach((column, c) => {
     if (c % every) return;
-    root.append(svg('text', { x: left + c * cell + cell / 2, y: height - 8, class: 'vc-tick', 'text-anchor': 'middle' }, column));
+    root.append(svg('text', { x: left + c * cell + cell / 2, y: height - 8, class: 'vc-tick', 'text-anchor': 'middle' }, fit(column, cell * every - 4)));
   });
 
   plot.prepend(root);
