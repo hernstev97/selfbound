@@ -10,6 +10,7 @@ import { Slice } from '@selfbound/core';
 import { builtin, loadBuiltin } from './builtin.ts';
 import { fontCss } from './fonts.ts';
 import { mapTheme, themeCss, type ContrastFix, type MappedTheme } from './map.ts';
+import { syntaxSet, syntaxTheme, type SyntaxSet, type SyntaxTheme } from './syntax.ts';
 import { readTheme, type ThemeType, type VsTheme } from './vscode.ts';
 
 export interface Override {
@@ -26,6 +27,11 @@ export interface LookSettings {
   /** "system" (default), a Fontsource id or "local:<name>" */
   mono: string;
   overrides: Override[];
+}
+
+interface Resolved {
+  theme: VsTheme | null;
+  mapped: MappedTheme | null;
 }
 
 export interface CustomThemeMeta {
@@ -90,6 +96,8 @@ export class Look {
   readonly fixes = new Slice<Record<ThemeType, ContrastFix[]>>({ dark: [], light: [] });
   /** Server has answered (the list of custom themes is complete) */
   readonly loaded = new Slice(false);
+  /** Syntax themes of code blocks; set by `render()`, otherwise on first use (`syntaxThemes()`) */
+  readonly syntax = new Slice<SyntaxSet | null>(null);
   #app: App | null = null;
   #at: number;
   #dirty: boolean;
@@ -98,18 +106,24 @@ export class Look {
   #saving = false;
   #server: ServerValue | null = null;
   #custom = new Map<string, { updatedAt: number; theme: VsTheme }>();
+  #syntaxRev = 0;
+  #syntaxBuild: Promise<SyntaxSet> | null = null;
+  #started: Promise<void>;
+  #markStarted!: () => void;
 
   constructor() {
     const cache = readCache();
     this.settings = new Slice<LookSettings>(cache ? { ...DEFAULT_LOOK, ...cache.settings } : { ...DEFAULT_LOOK });
     this.#at = cache?.at ?? 0;
     this.#dirty = cache?.dirty ?? false;
+    this.#started = new Promise((resolve) => (this.#markStarted = resolve));
   }
 
   /** Connect to the server. If the cached CSS does not match (new build, interrupted run): rebuild it. */
   start(app: App) {
     if (this.#app) return;
     this.#app = app;
+    this.#markStarted();
     const cache = readCache();
     const settings = this.settings.get();
     if (cache ? cache.build !== BUILD || !sameLook(cache.rendered ?? DEFAULT_LOOK, settings) : !sameLook(settings, DEFAULT_LOOK)) void this.render();
@@ -251,24 +265,55 @@ export class Look {
 
   /** Mapping of a theme with its saved overrides. */
   async mapped(ref: string, settings = this.settings.get()): Promise<MappedTheme | null> {
+    return (await this.#resolve(ref, settings)).mapped;
+  }
+
+  async #resolve(ref: string, settings: LookSettings): Promise<Resolved> {
     const theme = await this.theme(ref);
-    return theme && mapTheme(theme, overridesFor(settings, ref));
+    return { theme, mapped: theme && mapTheme(theme, overridesFor(settings, ref)) };
+  }
+
+  /** Syntax theme for one mode: only a theme of the matching type counts (as for the CSS). */
+  #syntaxFor(type: 'dark' | 'light', ref: string, settings: LookSettings, r: Resolved): SyntaxTheme | null {
+    return r.theme && r.mapped?.type === type ? syntaxTheme(r.theme, r.mapped, overridesFor(settings, ref)) : null;
+  }
+
+  /**
+   * Syntax themes of the chosen themes for the code blocks. After `render()` they are current; without
+   * a render since startup (cached CSS still matches) they are built here, when the first code block asks.
+   */
+  syntaxThemes(): Promise<SyntaxSet> {
+    const have = this.syntax.get();
+    if (have) return Promise.resolve(have);
+    this.#syntaxBuild ??= this.#buildSyntax().finally(() => (this.#syntaxBuild = null));
+    return this.#syntaxBuild;
+  }
+
+  async #buildSyntax(): Promise<SyntaxSet> {
+    const settings = this.settings.get();
+    // Custom themes come from the server, so wait for the connection.
+    if (!this.#app && [settings.dark, settings.light].some((ref) => ref.startsWith('custom:'))) await this.#started;
+    const [dark, light] = await Promise.all([this.#resolve(settings.dark, settings), this.#resolve(settings.light, settings)]);
+    // A render() may have been faster with newer settings.
+    if (!this.syntax.get()) this.syntax.set(syntaxSet(++this.#syntaxRev, this.#syntaxFor('dark', settings.dark, settings, dark), this.#syntaxFor('light', settings.light, settings, light)));
+    return this.syntax.get()!;
   }
 
   /** Build the CSS, apply it and store it for the next startup. If loading fails, the previous CSS stays. */
   async render() {
     const run = ++this.#render;
     const settings = this.settings.get();
-    let dark: MappedTheme | null;
-    let light: MappedTheme | null;
+    let resolved: [Resolved, Resolved];
     try {
-      [dark, light] = await Promise.all([this.mapped(settings.dark, settings), this.mapped(settings.light, settings)]);
+      resolved = await Promise.all([this.#resolve(settings.dark, settings), this.#resolve(settings.light, settings)]);
     } catch (error) {
       if (run === this.#render) this.#app?.toasts.error(t('Theme not loaded'), error);
       return;
     }
     if (run !== this.#render) return;
     // Only matching themes: a light theme in dark mode would contradict rules like [data-theme='dark'].
+    let dark = resolved[0].mapped;
+    let light = resolved[1].mapped;
     if (dark?.type !== 'dark') dark = null;
     if (light?.type !== 'light') light = null;
     const sans = fontCss(settings.sans, 'sans');
@@ -283,6 +328,7 @@ export class Look {
     apply(css);
     this.#app?.prefs.setBarColors(bar);
     this.fixes.set({ dark: dark?.fixes ?? [], light: light?.fixes ?? [] });
+    this.syntax.set(syntaxSet(++this.#syntaxRev, this.#syntaxFor('dark', settings.dark, settings, resolved[0]), this.#syntaxFor('light', settings.light, settings, resolved[1])));
     const preload = [sans.preload, mono.preload].filter((p): p is string => !!p);
     // Versions of the custom themes the CSS was built from (if another device changes one, #onServer rebuilds).
     const custom: Record<string, number> = {};

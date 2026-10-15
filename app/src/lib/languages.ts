@@ -1,13 +1,13 @@
-// Code block languages: names for the language picker and which highlight.js grammar colors them.
-// Small and without highlight.js, so the renderer and editor know the list before the highlighter
-// is loaded.
+// Code block languages: names for the language picker and which TextMate grammar colors them
+// (Shiki's name, loaded per language by highlight.ts). Small and without Shiki, so the renderer and
+// editor know the list before the highlighter is loaded.
 import { msg, t } from '@selfbound/core/i18n';
 
 export interface Language {
   /** What is written after the fence ("```typescript") */
   id: string;
   label: string;
-  /** highlight.js grammar (see highlight.ts) */
+  /** Grammar (Shiki language name, see highlight.ts) */
   grammar: string;
   /** Other spellings that map to this language */
   aliases: string[];
@@ -16,14 +16,13 @@ export interface Language {
 export const LANGUAGES: Language[] = [
   { id: 'typescript', label: 'TypeScript', grammar: 'typescript', aliases: ['ts', 'tsx'] },
   { id: 'javascript', label: 'JavaScript', grammar: 'javascript', aliases: ['js', 'jsx', 'mjs', 'cjs'] },
-  // Svelte and Vue have no highlight.js grammar of their own; xml fits as an HTML template.
-  { id: 'svelte', label: 'Svelte', grammar: 'xml', aliases: [] },
-  { id: 'vue', label: 'Vue', grammar: 'xml', aliases: [] },
-  { id: 'html', label: 'HTML', grammar: 'xml', aliases: [] },
+  { id: 'svelte', label: 'Svelte', grammar: 'svelte', aliases: [] },
+  { id: 'vue', label: 'Vue', grammar: 'vue', aliases: [] },
+  { id: 'html', label: 'HTML', grammar: 'html', aliases: [] },
   { id: 'xml', label: 'XML', grammar: 'xml', aliases: [] },
   { id: 'css', label: 'CSS', grammar: 'css', aliases: [] },
   { id: 'json', label: 'JSON', grammar: 'json', aliases: ['jsonc', 'json5'] },
-  { id: 'bash', label: 'Bash', grammar: 'bash', aliases: ['sh', 'shell', 'zsh', 'console'] },
+  { id: 'bash', label: 'Bash', grammar: 'shellscript', aliases: ['sh', 'shell', 'zsh', 'console'] },
   { id: 'sql', label: 'SQL', grammar: 'sql', aliases: ['postgresql', 'sqlite'] },
   { id: 'python', label: 'Python', grammar: 'python', aliases: ['py'] },
   { id: 'kotlin', label: 'Kotlin', grammar: 'kotlin', aliases: ['kt'] },

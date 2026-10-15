@@ -137,7 +137,7 @@ export const VARS: ThemeVar[] = VAR_LIST.map((v) => ({
   },
 }));
 
-/** TextMate scopes per syntax color, most important first (matching highlight.js classes in md.css). */
+/** TextMate scopes per syntax color, most important first (approximation for previews and swatches; code blocks read the theme itself, see syntax.ts). */
 export const SYNTAX_SCOPES: Record<string, string[]> = {
   'syn-keyword': ['keyword.control', 'keyword', 'storage.type', 'storage'],
   'syn-string': ['string.quoted', 'string'],

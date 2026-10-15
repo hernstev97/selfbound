@@ -10,6 +10,7 @@ import { Plugin, PluginKey, TextSelection, type Command, type EditorState } from
 import { goToNextCell, tableEditing } from 'prosemirror-tables';
 import { Decoration, DecorationSet, type EditorView } from 'prosemirror-view';
 import type { CodeRange } from '../highlight.ts';
+import { languageFor } from '../languages.ts';
 import {
   backspaceToParagraph,
   codeToText,
@@ -226,43 +227,49 @@ function placeholder(text: () => string) {
 
 // ---------------------------------------------------------------- Syntax colors
 
-type Highlighter = { codeRanges: (code: string, lang: string) => CodeRange[] | null };
+type Highlighter = typeof import('../highlight.ts');
 let highlighter: Highlighter | null = null;
-let highlighterLoading: Promise<void> | null = null;
+let highlighterLoading: Promise<Highlighter> | null = null;
 const highlightKey = new PluginKey<DecorationSet>('highlight');
+/** Counts theme changes: ranges from before are stale. */
+let colorVersion = 0;
 
 function loadHighlighter() {
   highlighterLoading ??= import('../highlight.ts').then(
     (mod) => {
       highlighter = mod;
+      mod.onChange(() => colorVersion++);
+      return mod;
     },
-    () => {
+    (error) => {
       highlighterLoading = null;
+      throw error;
     },
   );
   return highlighterLoading;
 }
 
 /** Ranges cached per code block node: typing only recolors the changed block. */
-const rangeCache = new WeakMap<Node, CodeRange[]>();
+const rangeCache = new WeakMap<Node, { version: number; ranges: CodeRange[] }>();
 
-function codeDecorations(doc: Node): { set: DecorationSet; missing: boolean } {
+/** `missing`: grammars of code blocks that cannot be colored yet. */
+function codeDecorations(doc: Node): { set: DecorationSet; missing: Set<string> } {
   const decos: Decoration[] = [];
-  let missing = false;
+  const missing = new Set<string>();
   doc.descendants((node, pos) => {
     if (node.type !== n.code_block) return node.isBlock && !node.isTextblock;
-    const lang = String(node.attrs.lang ?? '');
-    if (!lang) return false;
-    if (!highlighter) {
-      missing = true;
+    const grammar = languageFor(String(node.attrs.lang ?? ''))?.grammar;
+    if (!grammar) return false;
+    if (!highlighter || !highlighter.isReady(grammar)) {
+      missing.add(grammar);
       return false;
     }
-    let ranges = rangeCache.get(node);
-    if (!ranges) {
-      ranges = highlighter.codeRanges(node.textContent, lang) ?? [];
-      rangeCache.set(node, ranges);
+    let cached = rangeCache.get(node);
+    if (!cached || cached.version !== colorVersion) {
+      cached = { version: colorVersion, ranges: highlighter.codeRanges(node.textContent, String(node.attrs.lang)) ?? [] };
+      rangeCache.set(node, cached);
     }
-    for (const r of ranges) decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: r.cls }));
+    for (const r of cached.ranges) decos.push(Decoration.inline(pos + 1 + r.from, pos + 1 + r.to, { class: r.cls, style: r.style }));
     return false;
   });
   return { set: DecorationSet.create(doc, decos), missing };
@@ -279,14 +286,28 @@ function highlight() {
       decorations: (state) => highlightKey.getState(state),
     },
     view(view) {
+      let asked = '';
+      let stop: (() => void) | undefined;
       const check = () => {
-        if (highlighter || !codeDecorations(view.state.doc).missing) return;
-        void loadHighlighter().then(() => {
-          if (highlighter && !view.isDestroyed) view.dispatch(view.state.tr.setMeta(highlightKey, true));
-        });
+        const { missing } = codeDecorations(view.state.doc);
+        const key = [...missing].sort().join();
+        if (!missing.size || key === asked) return;
+        asked = key; // one request per set of grammars, not per keystroke
+        void loadHighlighter()
+          .then(async (mod) => {
+            await mod.prepare(missing);
+            // Another theme chosen later: color again.
+            if (!view.isDestroyed) stop ??= mod.onChange(() => !view.isDestroyed && view.dispatch(view.state.tr.setMeta(highlightKey, true)));
+          })
+          .then(
+            () => {
+              if (!view.isDestroyed) view.dispatch(view.state.tr.setMeta(highlightKey, true));
+            },
+            () => (asked = ''),
+          );
       };
       check();
-      return { update: check };
+      return { update: check, destroy: () => stop?.() };
     },
   });
 }
