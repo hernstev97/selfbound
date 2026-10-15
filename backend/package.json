@@ -10,7 +10,7 @@
     "./data": "./data/generate.ts"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p convex && tsc --noEmit -p .",
+    "typecheck": "tsc --noEmit -p convex && tsc --noEmit -p . && tsc --noEmit -p test/lib && tsc --noEmit -p ../tooling/linear-import",
     "test:lib": "vitest run -c vitest.lib.config.ts",
     "test": "vitest run",
     "test:integration": "node test/integration/run.mjs"
