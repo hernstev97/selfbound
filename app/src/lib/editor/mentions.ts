@@ -5,14 +5,14 @@ import { statusIcon } from '@selfbound/core';
 import type { Node } from 'prosemirror-model';
 import { Plugin, PluginKey } from 'prosemirror-state';
 import { Decoration, DecorationSet } from 'prosemirror-view';
-import { mentionLabel, type Mention } from '../mentions.ts';
+import { mentionClass, mentionLabel, type Mention } from '../mentions.ts';
 import { schema } from './schema.ts';
 
 export interface EditorMentions {
   teamKeys(): ReadonlySet<string>;
   info(key: string): Mention | null;
-  /** Calls back when a status, title or the set of issues changed; returns the cleanup. */
-  subscribe(listener: () => void): () => void;
+  /** Calls back when issues changed (their ids) or the statuses did (no ids); returns the cleanup. */
+  subscribe(listener: (ids?: ReadonlySet<string>) => void): () => void;
 }
 
 const key = new PluginKey<DecorationSet>('mentions');
@@ -37,7 +37,12 @@ function hitsOf(block: Node, teams: ReadonlySet<string>) {
   return hits;
 }
 
+/** Issues the last decoration pass showed, so unrelated store changes do not redraw. */
+const shown = { ids: new Set<string>(), missing: false };
+
 function decorations(doc: Node, source: EditorMentions): DecorationSet {
+  shown.ids = new Set();
+  shown.missing = false;
   const teams = source.teamKeys();
   if (!teams.size) return DecorationSet.empty;
   const decos: Decoration[] = [];
@@ -46,11 +51,15 @@ function decorations(doc: Node, source: EditorMentions): DecorationSet {
     if (!node.isTextblock) return true;
     for (const hit of hitsOf(node, teams)) {
       const info = source.info(hit.key);
-      if (!info) continue;
+      if (!info) {
+        shown.missing = true;
+        continue;
+      }
+      shown.ids.add(info.id);
       const from = pos + 1 + hit.from;
       const to = pos + 1 + hit.to;
       const label = mentionLabel(info);
-      const cls = info.status === 'done' ? 'mention-text mention-done' : info.status === 'canceled' || info.status === 'duplicate' ? 'mention-text mention-canceled' : 'mention-text';
+      const cls = `mention-text ${mentionClass(info.status)}`.trim();
       decos.push(
         Decoration.widget(
           from,
@@ -80,7 +89,10 @@ export function mentionStatus(source: EditorMentions) {
     },
     props: { decorations: (state) => key.getState(state) },
     view(view) {
-      const stop = source.subscribe(() => !view.isDestroyed && view.dispatch(view.state.tr.setMeta(key, true).setMeta('addToHistory', false)));
+      const stop = source.subscribe((ids) => {
+        if (view.isDestroyed || (ids && !shown.missing && ![...ids].some((id) => shown.ids.has(id)))) return;
+        view.dispatch(view.state.tr.setMeta(key, true).setMeta('addToHistory', false));
+      });
       return { destroy: stop };
     },
   });

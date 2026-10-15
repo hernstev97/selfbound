@@ -500,7 +500,7 @@
     },
     info: (key) => mentionInfo(app.store, key),
     subscribe(listener) {
-      const stops = [app.store.onChange(listener), app.store.meta.subscribe(listener)];
+      const stops = [app.store.onChange(listener), app.store.meta.subscribe(() => listener())];
       return () => stops.forEach((stop) => stop());
     },
   };

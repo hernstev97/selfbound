@@ -21,37 +21,48 @@ export interface Mention {
   color: string | null;
 }
 
-/** Old identifier → current one (null = does not exist); asked once per session. */
-const aliases = new Map<string, string | null>();
-const asking = new Set<string>();
+/** Old identifier → current one (null = does not exist); asked once per store (= per session). */
+const known = new WeakMap<object, { aliases: Map<string, string | null>; asking: Set<string> }>();
+function aliasState(source: MentionSource) {
+  let state = known.get(source);
+  if (!state) known.set(source, (state = { aliases: new Map(), asking: new Set() }));
+  return state;
+}
+
+/** CSS classes of a mention by status: done and canceled recede (shared by the rendered view and the editor). */
+export function mentionClass(status: Status) {
+  return status === 'done' ? 'mention-done' : status === 'canceled' || status === 'duplicate' ? 'mention-canceled' : '';
+}
 
 export function mentionInfo(source: MentionSource, key: string): Mention | null {
   const upper = key.toUpperCase();
-  const issue = source.byKey(upper) ?? source.byKey(aliases.get(upper) ?? '');
+  const issue = source.byKey(upper) ?? source.byKey(aliasState(source).aliases.get(upper) ?? '');
   if (!issue || issue.deletedAt) return null;
   const state = workflowsOf(source.meta.get()).of(issue);
   return { id: issue._id, key: issue.key, title: issue.title, status: state.status, stateName: state.name, color: state.color };
 }
 
-/** Is the set of issues complete enough to call an identifier unknown? */
+/** Is the set of issues complete enough to call an identifier unknown? (A cached start may lack newer issues.) */
 export function knowsAll(source: MentionSource) {
-  const phase = source.sync.get().phase;
-  return phase === 'live' || phase === 'cache';
+  return source.sync.get().phase === 'live';
 }
 
 /** Ask the server about an identifier the store lacks (old alias); `done` runs when it is known. */
 export function askAlias(source: MentionSource, key: string, done: () => void) {
   const upper = key.toUpperCase();
+  const { aliases, asking } = aliasState(source);
   if (aliases.has(upper) || asking.has(upper) || source.sync.get().phase !== 'live') return;
   asking.add(upper);
   source
     .resolve(upper)
-    .then((found) => aliases.set(upper, found && found.identifier !== upper ? found.identifier.toUpperCase() : null))
-    .catch(() => {}) // offline: the chip stays a plain link, asked again next time
-    .finally(() => {
-      asking.delete(upper);
-      done();
-    });
+    .then(
+      (found) => {
+        aliases.set(upper, found && found.identifier !== upper ? found.identifier.toUpperCase() : null);
+        done();
+      },
+      () => {}, // offline or failed: stays as is; asked again the next time a text with it is shown
+    )
+    .finally(() => asking.delete(upper));
 }
 
 /** Title and status for the hover text and screen readers. */
@@ -92,8 +103,9 @@ export function decorateMentions(root: HTMLElement, source: MentionSource): (() 
     a.classList.remove('mention-unknown');
     a.removeAttribute('tabindex');
     a.classList.add('mention');
-    a.classList.toggle('mention-done', m.status === 'done');
-    a.classList.toggle('mention-canceled', m.status === 'canceled' || m.status === 'duplicate');
+    const cls = mentionClass(m.status);
+    a.classList.toggle('mention-done', cls === 'mention-done');
+    a.classList.toggle('mention-canceled', cls === 'mention-canceled');
     const label = mentionLabel(m);
     a.dataset.title = label;
     a.setAttribute('aria-label', label);

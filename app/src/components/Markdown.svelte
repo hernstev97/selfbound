@@ -12,7 +12,6 @@
   import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';
   import { app } from '../app-instance.ts';
-  import { decorateMentions } from '../lib/mentions.ts';
 
   interface Props {
     markdown: string;
@@ -55,7 +54,16 @@
   // Issue mentions get their live status icon and title.
   const mentions: Attachment<HTMLElement> = (el) => {
     void html;
-    return decorateMentions(el, app.store);
+    if (!el.querySelector('a.xlink-issue')) return;
+    let stop: (() => void) | undefined;
+    let gone = false;
+    import('../lib/mentions.ts').then(({ decorateMentions }) => {
+      if (!gone) stop = decorateMentions(el, app.store);
+    }, () => {}); // if loading fails, the links stay plain
+    return () => {
+      gone = true;
+      stop?.();
+    };
   };
 
   // Visual blocks (```mermaid …): drawn once visible; the module loads only if the text has one.
