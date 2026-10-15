@@ -324,9 +324,6 @@ export default {
   'Open on YouTube': 'Auf YouTube öffnen',
   'The player loads from YouTube when you play.': 'Der Player wird erst beim Abspielen von YouTube geladen.',
   'Post by {name}': 'Beitrag von {name}',
-  'Image from the post': 'Bild aus dem Beitrag',
-  'Video in the post': 'Video im Beitrag',
-  Video: 'Video',
   'Open on X': 'Auf X öffnen',
   // Properties.svelte, Sidebar.svelte
   'Snoozed until {date}': 'Zurückgestellt bis {date}',

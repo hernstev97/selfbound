@@ -116,16 +116,6 @@ export function embedTtl(view: Pick<EmbedView, 'provider' | 'status' | 'incomple
 }
 export const EMBED_PURGE_MS = 30 * 86_400_000;
 
-export interface EmbedMediaView {
-  slot: string;
-  kind: 'photo' | 'video' | 'gif';
-  /** Our own URL (EMBED_MEDIA_PATH), never the provider's. */
-  src: string;
-  width?: number;
-  height?: number;
-  alt?: string;
-}
-
 /** What the app gets: ready to display, no storage IDs. */
 export interface EmbedView {
   provider: EmbedProvider;
@@ -142,8 +132,6 @@ export interface EmbedView {
   text?: string;
   /** Post time (ms). */
   createdAt?: number;
-  /** Video: thumbnail. Post: author's avatar. */
-  avatar?: string;
+  /** Video: our own URL of the thumbnail (EMBED_MEDIA_PATH), never the provider's. */
   thumbnail?: string;
-  media: EmbedMediaView[];
 }

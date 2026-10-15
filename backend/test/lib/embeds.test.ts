@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { decodeEntities, downloadMedia, EmbedFetchError, fetchEmbedMeta, parseSyndication, parseXOembed, parseYoutube, safeGet, syndicationToken, type FetchLike } from '../../convex/lib/embeds';
+import { decodeEntities, downloadMedia, EmbedFetchError, fetchEmbedMeta, parseXOembed, parseYoutube, safeGet, type FetchLike } from '../../convex/lib/embeds';
 import { embedLineStart, parseEmbedUrl, parseStart } from '../../convex/shared/embeds';
 
 // Embeds: recognizing links, parsing the provider answers (synthetic data in the shape of the
@@ -92,65 +92,42 @@ describe('answers of the providers', () => {
     expect(() => parseYoutube('nope', 'dQw4w9WgXcQ')).toThrow(EmbedFetchError);
   });
 
-  const post = {
-    __typename: 'Tweet',
-    id_str: '1585341984679469056',
-    created_at: '2022-10-26T18:45:58.000Z',
-    text: 'Fish &amp; chips https://t.co/AAAA and more https://t.co/BBBB',
-    entities: { urls: [{ url: 'https://t.co/AAAA', display_url: 'example.com/post' }], media: [{ url: 'https://t.co/BBBB' }] },
-    user: { name: 'Demo Author', screen_name: 'demo_user', profile_image_url_https: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg' },
-    mediaDetails: [
-      { type: 'photo', media_url_https: 'https://pbs.twimg.com/media/ABC.jpg', original_info: { width: 1200, height: 800 }, ext_alt_text: 'A demo picture' },
-      { type: 'video', media_url_https: 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/x.jpg', original_info: { width: 1920, height: 1080 } },
-      { type: 'photo', media_url_https: 'https://evil.example/ABC.jpg' },
-    ],
-  };
+  const html =
+    '<blockquote class="twitter-tweet" data-dnt="true"><p lang="en" dir="ltr">just setting up<br>my twttr &amp; <a href="https://t.co/x">pic.twitter.com/x</a></p>&mdash; Demo Author (@demo_user) <a href="https://x.com/demo_user/status/20?ref_src=twsrc%5Etfw">March 21, 2006</a></blockquote>\n';
 
-  test('X syndication: text, author, date, media from pbs.twimg.com only', () => {
-    const meta = parseSyndication(post, '1585341984679469056')!;
-    expect(meta).toMatchObject({ status: 'ok', author: 'Demo Author', handle: 'demo_user', createdAt: Date.parse('2022-10-26T18:45:58.000Z') });
-    // Media link removed, t.co replaced by the shown address, entities decoded.
-    expect(meta.text).toBe('Fish & chips example.com/post and more');
-    expect(meta.sources.map((s) => [s.slot, s.kind, s.url])).toEqual([
-      ['avatar', 'avatar', 'https://pbs.twimg.com/profile_images/1/a_bigger.jpg'],
-      ['m0', 'photo', 'https://pbs.twimg.com/media/ABC.jpg?name=medium'],
-      ['m1', 'video', 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/x.jpg?name=medium'],
-    ]);
-    expect(meta.sources[1]).toMatchObject({ width: 1200, height: 800, alt: 'A demo picture' });
-  });
-
-  test('X syndication: a handle that is not a handle is dropped', () => {
-    const meta = parseSyndication({ __typename: 'Tweet', id_str: '1', text: 'x', user: { name: 'N', screen_name: '../../evil' } }, '1');
-    expect(meta?.handle).toBeUndefined();
-  });
-
-  test('X syndication: tombstone is unavailable, other shapes are no post', () => {
-    expect(parseSyndication({ __typename: 'TweetTombstone', tombstone: {} }, '1')).toMatchObject({ status: 'unavailable' });
-    expect(parseSyndication({ __typename: 'Tweet', id_str: '2' }, '1')).toBeNull();
-    expect(parseSyndication('<html>', '1')).toBeNull();
-  });
-
-  test('X oEmbed fallback', () => {
-    const html =
-      '<blockquote class="twitter-tweet" data-dnt="true"><p lang="en" dir="ltr">just setting up<br>my twttr &amp; <a href="https://t.co/x">pic.twitter.com/x</a></p>&mdash; Demo Author (@demo_user) <a href="https://x.com/demo_user/status/20?ref_src=twsrc%5Etfw">March 21, 2006</a></blockquote>\n';
-    expect(parseXOembed({ author_name: 'Demo Author', html })).toEqual({
+  test('X oEmbed: author, text and date, no pictures', () => {
+    expect(parseXOembed({ author_name: 'Demo Author', author_url: 'https://x.com/demo_user', html })).toEqual({
       status: 'ok',
       author: 'Demo Author',
       handle: 'demo_user',
       text: 'just setting up\nmy twttr & pic.twitter.com/x',
       createdAt: Date.parse('2006-03-21T00:00:00Z'),
       sources: [],
-      partial: true,
     });
-    // A handle in the text of the post is not the author's.
-    const quoted = '<blockquote><p>Thanks (@bob) for the help</p>&mdash; Demo Author (@demo_user) <a href="x">March 21, 2006</a></blockquote>';
-    expect(parseXOembed({ html: quoted })?.handle).toBe('demo_user');
     expect(parseXOembed({ html: '<div>no quote</div>' })).toBeNull();
+    expect(parseXOembed('nope')).toBeNull();
   });
 
-  test('entities and token', () => {
+  test('X oEmbed: the handle is the author’s, from the author link or the signature, never from the text', () => {
+    const quoted = '<blockquote><p>Thanks (@bob) for the help</p>&mdash; Demo Author (@demo_user) <a href="x">March 21, 2006</a></blockquote>';
+    expect(parseXOembed({ html: quoted })?.handle).toBe('demo_user');
+    expect(parseXOembed({ html: quoted, author_url: 'https://twitter.com/other_user/' })?.handle).toBe('other_user');
+    expect(parseXOembed({ html: quoted, author_url: 'https://x.com/../../evil' })?.handle).toBe('demo_user');
+    expect(parseXOembed({ html: '<blockquote><p>Thanks (@bob)</p></blockquote>' })?.handle).toBeUndefined();
+  });
+
+  test('X oEmbed: markup in the text is removed completely, also when it is nested', () => {
+    for (const evil of ['a<scr<b>ipt>b', 'a<<b>script>b', 'a<scr<scr<i>ipt>ipt>b', '<img src=x onerror=alert(1)>a<b>b']) {
+      const text = parseXOembed({ html: `<blockquote><p>${evil}</p></blockquote>` })?.text ?? '';
+      expect(text, evil).not.toMatch(/[<>]/);
+    }
+    expect(parseXOembed({ html: '<blockquote><p>a<scr<b>ipt>b</p></blockquote>' })?.text).toBe('ab');
+    // Escaped markup is text, not markup (it is shown escaped).
+    expect(parseXOembed({ html: '<blockquote><p>1 &lt; 2 &amp;&amp; 3 &gt; 2</p></blockquote>' })?.text).toBe('1 < 2 && 3 > 2');
+  });
+
+  test('entities', () => {
     expect(decodeEntities('a &amp; b &lt;c&gt; &#39;d&#39; &#x1F600; &unknown;')).toBe("a & b <c> 'd' 😀 &unknown;");
-    expect(syndicationToken('20')).toBe(((20 / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, ''));
   });
 });
 
@@ -169,7 +146,7 @@ describe('outgoing requests', () => {
     await expect(safeGet('https://www.youtube.com/oembed', 'youtube', redirectTo('https://169.254.169.254/latest'), 1000)).rejects.toThrow(/host not allowed/);
     await expect(safeGet('https://www.youtube.com/oembed', 'youtube', redirectTo('http://www.youtube.com/x'), 1000)).rejects.toThrow(/host not allowed/);
     // A provider may not use another provider’s hosts.
-    await expect(safeGet('https://pbs.twimg.com/a.jpg', 'youtube', async () => json({}), 1000)).rejects.toThrow(/host not allowed/);
+    await expect(safeGet('https://publish.x.com/oembed', 'youtube', async () => json({}), 1000)).rejects.toThrow(/host not allowed/);
     expect(calls).toEqual(['https://www.youtube.com/oembed', 'https://www.youtube.com/oembed']);
   });
 
@@ -188,7 +165,7 @@ describe('outgoing requests', () => {
     let n = 0;
     const hops: FetchLike = async (url) => {
       n++;
-      return url.includes('publish.twitter.com')
+      return new URL(url).hostname === 'publish.twitter.com'
         ? new Response(null, { status: 301, headers: { location: 'https://publish.x.com/oembed?x=1' } })
         : json({ ok: true });
     };
@@ -220,25 +197,20 @@ describe('outgoing requests', () => {
     await expect(fetchEmbedMeta('youtube', '../etc', async () => json({}))).rejects.toThrow(/invalid id/);
   });
 
-  test('X: syndication first, then oEmbed, tombstone and gone posts', async () => {
+  test('X: oEmbed answer, gone and protected posts, outage, wrong shape', async () => {
     const id = '1585341984679469056';
-    const oembed = json({ author_name: 'Demo Author', html: '<blockquote><p>fallback text</p>&mdash; Demo Author (@demo_user) <a href="https://x.com/a/status/1">March 21, 2006</a></blockquote>' });
-    const syndication = json({ __typename: 'Tweet', id_str: id, text: 'from syndication', user: { name: 'Demo Author', screen_name: 'demo_user' } });
-    const both: FetchLike = async (url) => (url.includes('syndication') ? syndication.clone() : oembed.clone());
-    expect((await fetchEmbedMeta('x', id, both)).text).toBe('from syndication');
-
-    // HTML error page from syndication → oEmbed answers.
-    const htmlError: FetchLike = async (url) => (url.includes('syndication') ? new Response('<html>', { status: 404 }) : oembed.clone());
-    expect((await fetchEmbedMeta('x', id, htmlError)).text).toBe('fallback text');
-
-    const tombstone: FetchLike = async () => json({ __typename: 'TweetTombstone' });
-    expect(await fetchEmbedMeta('x', id, tombstone)).toMatchObject({ status: 'unavailable' });
-
-    const gone: FetchLike = async (url) => (url.includes('syndication') ? new Response('<html>', { status: 404 }) : json({}, 404));
-    expect(await fetchEmbedMeta('x', id, gone)).toMatchObject({ status: 'unavailable' });
-
-    const down: FetchLike = async () => json({}, 500);
-    await expect(fetchEmbedMeta('x', id, down)).rejects.toThrow(EmbedFetchError);
+    const oembed = () => json({ author_name: 'Demo Author', author_url: 'https://x.com/demo_user', html: '<blockquote><p>from oEmbed</p>&mdash; Demo Author (@demo_user) <a href="https://x.com/demo_user/status/1">March 21, 2006</a></blockquote>' });
+    const urls: string[] = [];
+    const ok = await fetchEmbedMeta('x', id, async (url) => (urls.push(url), oembed()));
+    expect(ok).toMatchObject({ status: 'ok', text: 'from oEmbed', handle: 'demo_user', sources: [] });
+    // Only the official oEmbed endpoint, with the post as URL parameter and without the widget script.
+    expect(urls).toHaveLength(1);
+    const asked = new URL(urls[0]!);
+    expect([asked.hostname, asked.pathname, asked.searchParams.get('url'), asked.searchParams.get('omit_script')]).toEqual(['publish.x.com', '/oembed', `https://x.com/i/status/${id}`, '1']);
+    for (const status of [403, 404]) expect(await fetchEmbedMeta('x', id, async () => json({}, status))).toMatchObject({ status: 'unavailable' });
+    await expect(fetchEmbedMeta('x', id, async () => json({}, 500))).rejects.toThrow(EmbedFetchError);
+    await expect(fetchEmbedMeta('x', id, async () => json({ html: '<div>x</div>' }))).rejects.toThrow(EmbedFetchError);
+    await expect(fetchEmbedMeta('x', id, async () => Promise.reject(new Error('offline')))).rejects.toThrow(EmbedFetchError);
   });
 
   test('media: only raster images, failures are left out', async () => {
@@ -250,7 +222,7 @@ describe('outgoing requests', () => {
     const fetchImpl: FetchLike = async (url) => files[url] ?? Promise.reject(new Error('offline'));
     const out = await downloadMedia(
       'youtube',
-      ['ok.png', 'svg', 'gone', 'offline'].map((name, i) => ({ slot: `m${i}`, kind: 'photo' as const, url: `https://i.ytimg.com/${name}` })),
+      ['ok.png', 'svg', 'gone', 'offline'].map((name, i) => ({ slot: `m${i}`, kind: 'thumb' as const, url: `https://i.ytimg.com/${name}` })),
       fetchImpl,
     );
     expect(out.map((m) => [m.slot, m.contentType])).toEqual([['m0', 'image/png']]);

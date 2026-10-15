@@ -16,8 +16,8 @@ import { embedKey, embedTtl, ID_PATTERN, type EmbedView } from './shared/embeds'
 // convex/http.ts). The player (YouTube, on click) is the only thing that loads from a third party.
 
 const providerValidator = v.union(v.literal('youtube'), v.literal('x'));
-type StoredMedia = { slot: string; kind: 'photo' | 'video' | 'gif' | 'avatar' | 'thumb'; storageId: Id<'_storage'>; contentType: string; width?: number; height?: number; alt?: string };
-const mediaKinds = v.union(v.literal('photo'), v.literal('video'), v.literal('gif'), v.literal('avatar'), v.literal('thumb'));
+type StoredMedia = { slot: string; kind: 'thumb'; storageId: Id<'_storage'>; contentType: string; width?: number; height?: number };
+const mediaKind = v.literal('thumb');
 
 /** Cached data for the card, or null if nothing is cached yet (then `resolve` fetches it). */
 export const get = ownerQuery({
@@ -50,11 +50,11 @@ export const resolve = ownerAction({
     }
     const media = meta.status === 'ok' ? await downloadMedia(args.provider, meta.sources) : [];
     const stored: StoredMedia[] = [];
-    const incomplete = meta.status === 'ok' && (meta.partial === true || media.length < meta.sources.length);
+    const incomplete = meta.status === 'ok' && media.length < meta.sources.length;
     try {
       for (const m of media) {
         const storageId = await ctx.storage.store(new Blob([m.bytes as BlobPart], { type: m.contentType }));
-        stored.push({ slot: m.slot, kind: m.kind, storageId, contentType: m.contentType, width: m.width, height: m.height, alt: m.alt });
+        stored.push({ slot: m.slot, kind: m.kind, storageId, contentType: m.contentType, width: m.width, height: m.height });
       }
       return await ctx.runMutation(internal.embeds.store, {
         key: embedKey(args.provider, args.id),
@@ -91,7 +91,7 @@ export const seedForTest = ownerAction({
     handle: v.optional(v.string()),
     text: v.optional(v.string()),
     createdAt: v.optional(v.number()),
-    media: v.array(v.object({ slot: v.string(), kind: mediaKinds, base64: v.string(), width: v.optional(v.number()), height: v.optional(v.number()), alt: v.optional(v.string()) })),
+    media: v.array(v.object({ slot: v.string(), kind: mediaKind, base64: v.string(), width: v.optional(v.number()), height: v.optional(v.number()) })),
   },
   handler: async (ctx, { media, id, ...fields }): Promise<EmbedView> => {
     if (!testSwitchesEnabled()) fail('access_denied', 'Test switches are disabled on this backend.');
@@ -100,7 +100,7 @@ export const seedForTest = ownerAction({
     for (const m of media) {
       const bytes = Uint8Array.from(atob(m.base64), (c) => c.charCodeAt(0));
       const storageId = await ctx.storage.store(new Blob([bytes], { type: 'image/png' }));
-      stored.push({ slot: m.slot, kind: m.kind, storageId, contentType: 'image/png', width: m.width, height: m.height, alt: m.alt });
+      stored.push({ slot: m.slot, kind: m.kind, storageId, contentType: 'image/png', width: m.width, height: m.height });
     }
     return await ctx.runMutation(internal.embeds.store, { ...fields, key: embedKey(fields.provider, id), fetchedAt: Date.now(), media: stored });
   },
@@ -130,12 +130,11 @@ export const store = internalMutation({
     media: v.array(
       v.object({
         slot: v.string(),
-        kind: mediaKinds,
+        kind: mediaKind,
         storageId: v.id('_storage'),
         contentType: v.string(),
         width: v.optional(v.number()),
         height: v.optional(v.number()),
-        alt: v.optional(v.string()),
       }),
     ),
   },

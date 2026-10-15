@@ -1,9 +1,10 @@
 import { ID_PATTERN, type EmbedProvider } from '../shared/embeds';
 import { sniffImage } from './image';
 
-// Fetching the data for embeds (XLR8-73): video and post metadata plus the media of the card. Runs
-// only in the backend, so the browser never talks to the provider. Rules for every request:
-// https only, fixed hosts per provider, redirects only to those hosts, short timeout, size limit.
+// Fetching the data for embeds (XLR8-73): video and post metadata plus the thumbnail of a video.
+// Runs only in the backend, so the browser never talks to the provider. Only official interfaces:
+// YouTube and X oEmbed. Rules for every request: https only, fixed hosts per provider, redirects
+// only to those hosts, short timeout, size limit.
 
 export type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -13,12 +14,12 @@ export class EmbedFetchError extends Error {}
 /** Hosts a provider's requests may go to (the first request and every redirect). */
 const HOSTS: Record<EmbedProvider, readonly string[]> = {
   youtube: ['www.youtube.com', 'i.ytimg.com'],
-  x: ['cdn.syndication.twimg.com', 'publish.x.com', 'publish.twitter.com', 'pbs.twimg.com'],
+  x: ['publish.x.com', 'publish.twitter.com'],
 };
 
 const TIMEOUT_MS = 8_000;
 const MAX_REDIRECTS = 3;
-export const EMBED_LIMITS = { jsonBytes: 256 * 1024, imageBytes: 2 * 1024 * 1024, avatarBytes: 300 * 1024, textChars: 2000, media: 4 } as const;
+export const EMBED_LIMITS = { jsonBytes: 256 * 1024, imageBytes: 2 * 1024 * 1024, textChars: 2000 } as const;
 
 async function readLimited(res: Response, max: number): Promise<Uint8Array> {
   const declared = Number(res.headers.get('content-length') ?? 0);
@@ -87,17 +88,16 @@ export async function safeGet(url: string, provider: EmbedProvider, fetchImpl: F
   throw new EmbedFetchError('too many redirects');
 }
 
-/** A media file to download for the card. `slot` is part of the URL under which it is served. */
+/** A picture to download for the card (a video's thumbnail). `slot` is part of the URL under which it is served. */
 export interface MediaSource {
   slot: string;
-  kind: 'photo' | 'video' | 'gif' | 'avatar' | 'thumb';
+  kind: 'thumb';
   url: string;
   width?: number;
   height?: number;
-  alt?: string;
 }
 
-/** Everything but the media bytes. */
+/** Everything but the picture bytes. */
 export interface EmbedMeta {
   status: 'ok' | 'unavailable';
   title?: string;
@@ -107,8 +107,6 @@ export interface EmbedMeta {
   text?: string;
   createdAt?: number;
   sources: MediaSource[];
-  /** Less than the provider's full answer (fallback without media): keep pictures stored earlier. */
-  partial?: boolean;
 }
 
 export interface DownloadedMedia extends Omit<MediaSource, 'url'> {
@@ -130,8 +128,6 @@ function parseJson(bytes: Uint8Array): unknown {
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const str = (v: unknown, max = 500) => (typeof v === 'string' && v ? v.slice(0, max) : undefined);
 const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
-const handleOf = (v: unknown) => (typeof v === 'string' && HANDLE.test(v) ? v : undefined);
-const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v) : undefined);
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", mdash: '—', ndash: '–', nbsp: ' ', hellip: '…' };
 export function decodeEntities(text: string): string {
@@ -170,79 +166,30 @@ async function fetchYoutube(id: string, fetchImpl: FetchLike): Promise<EmbedMeta
 
 // ---------------------------------------------------------------- X
 
-/** Token the syndication endpoint expects (derived from the post ID; not a secret). */
-export function syndicationToken(id: string) {
-  return ((Number(id) / 1e15) * Math.PI).toString(36).replace(/(0+|\.)/g, '');
-}
-
-function twimgUrl(raw: unknown, size?: string): string | undefined {
-  const value = str(raw, 400);
-  if (!value) return undefined;
-  try {
-    const url = new URL(value);
-    if (url.protocol !== 'https:' || url.hostname !== 'pbs.twimg.com') return undefined;
-    if (size && !url.search) url.searchParams.set('name', size);
-    return url.toString();
-  } catch {
-    return undefined;
+/** Plain text of oEmbed HTML: `<br>` becomes a line break, tags are removed until none is left. */
+function plainText(html: string): string {
+  let text = html.replace(/<br\s*\/?>/gi, '\n');
+  // One pass is not enough: removing `<b>` from `<scr<b>ipt>` leaves a tag.
+  for (let before = ''; before !== text; ) {
+    before = text;
+    text = text.replace(/<[^<>]*>/g, '');
   }
+  return decodeEntities(text);
 }
 
 /**
- * Text of the post as displayed: the trailing media links are removed, t.co links replaced by the
- * shown address. (`display_text_range` is not used: its indices count HTML entities inconsistently.)
+ * oEmbed answer of X (a blockquote as HTML) → author, text and date. oEmbed has no pictures, so a
+ * card shows no media. The text is plain text (rendered escaped); null if the answer has no post.
  */
-function postText(json: Record<string, unknown>): string | undefined {
-  let out = str(json.text, 30_000);
-  if (!out) return undefined;
-  const entities = isRecord(json.entities) ? json.entities : {};
-  for (const link of Array.isArray(entities.media) ? entities.media : []) {
-    if (isRecord(link) && typeof link.url === 'string') out = out.split(link.url).join('');
-  }
-  for (const link of Array.isArray(entities.urls) ? entities.urls : []) {
-    if (isRecord(link) && typeof link.url === 'string' && typeof link.display_url === 'string') out = out.split(link.url).join(link.display_url);
-  }
-  return decodeEntities(out).trim().slice(0, EMBED_LIMITS.textChars) || undefined;
-}
-
-/** Answer of the syndication endpoint → card data; null if it is no post (error page, other shape). */
-export function parseSyndication(json: unknown, id: string): EmbedMeta | null {
-  if (!isRecord(json)) return null;
-  if (json.__typename === 'TweetTombstone') return UNAVAILABLE;
-  if (json.__typename !== 'Tweet' || json.id_str !== id) return null;
-  const user = isRecord(json.user) ? json.user : {};
-  const handle = handleOf(user.screen_name);
-  const sources: MediaSource[] = [];
-  const avatar = twimgUrl(typeof user.profile_image_url_https === 'string' ? user.profile_image_url_https.replace('_normal.', '_bigger.') : undefined);
-  if (avatar) sources.push({ slot: 'avatar', kind: 'avatar', url: avatar, width: 73, height: 73 });
-  const details = Array.isArray(json.mediaDetails) ? json.mediaDetails.filter(isRecord) : [];
-  for (const m of details.slice(0, EMBED_LIMITS.media)) {
-    const kind = m.type === 'photo' ? 'photo' : m.type === 'video' ? 'video' : m.type === 'animated_gif' ? 'gif' : null;
-    const url = twimgUrl(m.media_url_https, 'medium');
-    if (!kind || !url) continue;
-    const size = isRecord(m.original_info) ? m.original_info : {};
-    sources.push({ slot: `m${sources.filter((s) => s.slot.startsWith('m')).length}`, kind, url, width: num(size.width), height: num(size.height), alt: str(m.ext_alt_text, 500) });
-  }
-  const created = typeof json.created_at === 'string' ? Date.parse(json.created_at) : NaN;
-  return {
-    status: 'ok',
-    author: str(user.name, 100),
-    handle,
-    text: postText(json),
-    createdAt: Number.isFinite(created) ? created : undefined,
-    sources,
-  };
-}
-
-/** oEmbed answer (blockquote HTML) → text, author and date. No media; used when syndication fails. */
 export function parseXOembed(json: unknown): EmbedMeta | null {
   if (!isRecord(json) || typeof json.html !== 'string') return null;
   const html = json.html;
   const paragraph = /<p[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1];
   if (paragraph === undefined) return null;
-  const text = decodeEntities(paragraph.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '')).trim().slice(0, EMBED_LIMITS.textChars);
-  // The handle is in the signature after the text ("— Name (@handle)"), not in the post itself.
-  const handle = /\(@([A-Za-z0-9_]{1,15})\)/.exec(html.slice(html.indexOf('</p>')))?.[1];
+  const text = plainText(paragraph).trim().slice(0, EMBED_LIMITS.textChars);
+  // The handle is in the author link, or in the signature after the text ("— Name (@handle)"), never in the post itself.
+  const authorHandle = typeof json.author_url === 'string' ? /^https:\/\/(?:x|twitter)\.com\/([^/?#]+)\/?$/.exec(json.author_url)?.[1] : undefined;
+  const handle = authorHandle && HANDLE.test(authorHandle) ? authorHandle : /\(@([A-Za-z0-9_]{1,15})\)/.exec(html.slice(html.indexOf('</p>')))?.[1];
   const day = /<a [^>]*>([^<]+)<\/a>\s*<\/blockquote>/.exec(html)?.[1];
   const created = day ? Date.parse(`${decodeEntities(day)} UTC`) : NaN;
   return {
@@ -252,32 +199,18 @@ export function parseXOembed(json: unknown): EmbedMeta | null {
     text: text || undefined,
     createdAt: Number.isFinite(created) ? created : undefined,
     sources: [],
-    partial: true,
   };
 }
 
 async function fetchX(id: string, fetchImpl: FetchLike): Promise<EmbedMeta> {
-  let failure: EmbedFetchError | undefined;
-  try {
-    const res = await safeGet(`https://cdn.syndication.twimg.com/tweet-result?id=${id}&token=${syndicationToken(id)}`, 'x', fetchImpl, EMBED_LIMITS.jsonBytes);
-    if (res.status === 200) {
-      const meta = parseSyndication(parseJson(res.bytes), id);
-      if (meta) return meta;
-    }
-    // An error page (HTML) for a post that does not exist: confirm through oEmbed below.
-    failure = new EmbedFetchError(`syndication answered ${res.status}`);
-  } catch (error) {
-    if (!(error instanceof EmbedFetchError)) throw error;
-    failure = error;
-  }
-  // Fallback: official oEmbed (text and author only, no media).
-  const res = await safeGet(`https://publish.x.com/oembed?omit_script=1&dnt=true&url=${encodeURIComponent(`https://x.com/i/status/${id}`)}`, 'x', fetchImpl, EMBED_LIMITS.jsonBytes);
+  const target = `https://x.com/i/status/${id}`;
+  const res = await safeGet(`https://publish.x.com/oembed?omit_script=1&dnt=true&url=${encodeURIComponent(target)}`, 'x', fetchImpl, EMBED_LIMITS.jsonBytes);
+  // 404: no such post, 403: protected account or removed. In both cases there is nothing to show.
   if (res.status === 404 || res.status === 403) return UNAVAILABLE;
-  if (res.status === 200) {
-    const meta = parseXOembed(parseJson(res.bytes));
-    if (meta) return meta;
-  }
-  throw failure ?? new EmbedFetchError(`oEmbed answered ${res.status}`);
+  if (res.status !== 200) throw new EmbedFetchError(`oEmbed answered ${res.status}`);
+  const meta = parseXOembed(parseJson(res.bytes));
+  if (!meta) throw new EmbedFetchError('unexpected answer');
+  return meta;
 }
 
 // ---------------------------------------------------------------- Registry and media
@@ -298,7 +231,7 @@ export async function downloadMedia(provider: EmbedProvider, sources: MediaSourc
   const results = await Promise.all(
     sources.map(async ({ url, ...rest }): Promise<DownloadedMedia | null> => {
       try {
-        const res = await safeGet(url, provider, fetchImpl, rest.kind === 'avatar' ? EMBED_LIMITS.avatarBytes : EMBED_LIMITS.imageBytes);
+        const res = await safeGet(url, provider, fetchImpl, EMBED_LIMITS.imageBytes);
         const contentType = res.status === 200 ? sniffImage(res.bytes) : null;
         return contentType ? { ...rest, bytes: res.bytes, contentType } : null;
       } catch {

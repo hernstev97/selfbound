@@ -53,10 +53,7 @@ test.beforeAll(async () => {
     handle: 'demo_user',
     text: 'Shipping a small thing today.\nSecond line of the post, with example.com/post in it.',
     createdAt: Date.parse('2026-10-14T09:30:00Z'),
-    media: [
-      { slot: 'avatar', kind: 'avatar', base64: png(73, 73, [200, 120, 60]) },
-      { slot: 'm0', kind: 'photo', base64: png(800, 450, [60, 150, 110]), width: 800, height: 450, alt: 'A green demo picture' },
-    ],
+    media: [],
   });
   await client.action(api.embeds.seedForTest, { provider: 'x', id: GONE, status: 'unavailable', media: [] });
 });
@@ -100,8 +97,8 @@ test('Cards for YouTube and X; nothing is requested from the providers before th
   await expect(post).toContainText('Demo Author');
   await expect(post).toContainText('@demo_user');
   await expect(post).toContainText('Shipping a small thing today.');
-  await expect(post.locator('img[alt="A green demo picture"]')).toBeVisible();
-  await expect(post.locator('img.emb-avatar')).toHaveAttribute('src', /\/embed\/x\/1585341984679469056\/avatar$/);
+  await expect(post).toContainText('Oct 14, 2026');
+  await expect(post.locator('img')).toHaveCount(0); // oEmbed has no pictures
   await expect(post.getByRole('link', { name: 'Open on X' })).toHaveAttribute('href', `https://x.com/demo_user/status/${POST}`);
 
   // The cards replace the plain links; sentence links and unavailable posts stay links.
@@ -156,7 +153,6 @@ test.describe('phone', () => {
     await freshIssue(page, description);
     const post = page.getByTestId('embed-x');
     await expect(post).toBeVisible();
-    await expect(post.locator('img[alt="A green demo picture"]')).toBeVisible();
     for (const card of [page.getByTestId('embed-youtube'), post]) {
       const box = (await card.boundingBox())!;
       expect(box.x).toBeGreaterThanOrEqual(0);

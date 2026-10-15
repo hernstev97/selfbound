@@ -26,7 +26,7 @@ import { plain } from './ops/mcp';
 //   GET  /ghmedia/<key>/<i>  image or video from a PR (private repo): 302 to a fresh GitHub URL
 //   GET  /logo/<id>    team logo with a strict Content-Security-Policy
 //   GET  /img/<token>  image from a description or comment (the token is the access control)
-//   GET  /embed/<provider>/<id>/<slot>  stored media of an embed card (video thumbnail, post image)
+//   GET  /embed/<provider>/<id>/<slot>  stored thumbnail of a video card
 //   GET  /health       status without data
 // All other /.well-known/* return 404.
 
@@ -246,7 +246,7 @@ http.route({
 // ---------------------------------------------------------------- Embeds
 
 /**
- * GET /embed/<provider>/<id>/<slot>: image of an embed card (thumbnail, avatar, post image), stored
+ * GET /embed/<provider>/<id>/<slot>: image of an embed card (a video thumbnail), stored
  * by the backend (embeds.resolve). Public content, so no token; only what the cache holds, and only
  * raster images that passed the check when stored. Same hardening as /img.
  */

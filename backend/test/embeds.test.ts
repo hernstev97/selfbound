@@ -26,16 +26,12 @@ const youtubeOk = {
   'i.ytimg.com': () => new Response(PNG),
 };
 const postOk = {
-  'cdn.syndication.twimg.com': () =>
+  'publish.x.com/oembed': () =>
     jsonRes({
-      __typename: 'Tweet',
-      id_str: POST,
-      text: 'Hello https://t.co/BBBB',
-      entities: { media: [{ url: 'https://t.co/BBBB' }] },
-      user: { name: 'Demo Author', screen_name: 'demo_user', profile_image_url_https: 'https://pbs.twimg.com/profile_images/1/a_normal.jpg' },
-      mediaDetails: [{ type: 'photo', media_url_https: 'https://pbs.twimg.com/media/ABC.jpg', original_info: { width: 800, height: 600 } }],
+      author_name: 'Demo Author',
+      author_url: 'https://x.com/demo_user',
+      html: '<blockquote class="twitter-tweet"><p>Hello</p>&mdash; Demo Author (@demo_user) <a href="https://x.com/demo_user/status/1">October 14, 2026</a></blockquote>',
     }),
-  'pbs.twimg.com': () => new Response(PNG),
 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -58,18 +54,15 @@ describe('resolve', () => {
     expect(JSON.stringify(first)).not.toMatch(/ytimg|kg[0-9a-z]{20}/);
   });
 
-  test('X post: text, author, avatar and image', async () => {
-    const { owner } = setup();
-    provider(postOk);
+  test('X post: author, text and date from oEmbed, no pictures', async () => {
+    const { t, owner } = setup();
+    const calls = provider(postOk);
     const view = await owner.action(api.embeds.resolve, { provider: 'x', id: POST });
-    expect(view).toMatchObject({
-      status: 'ok',
-      author: 'Demo Author',
-      handle: 'demo_user',
-      text: 'Hello',
-      avatar: `http://127.0.0.1:3211/embed/x/${POST}/avatar`,
-      media: [{ slot: 'm0', kind: 'photo', src: `http://127.0.0.1:3211/embed/x/${POST}/m0`, width: 800, height: 600 }],
-    });
+    expect(view).toMatchObject({ status: 'ok', author: 'Demo Author', handle: 'demo_user', text: 'Hello', createdAt: Date.parse('2026-10-14T00:00:00Z') });
+    expect(view).not.toHaveProperty('thumbnail');
+    expect(calls).toHaveLength(1);
+    expect(await t.run(async (ctx) => (await ctx.db.system.query('_storage').collect()).length)).toBe(0);
+    expect((await t.fetch(`/embed/x/${POST}/avatar`, { method: 'GET' })).status).toBe(404);
   });
 
   test('a stale entry is fetched again, a failing refresh keeps the old card', async () => {
@@ -114,16 +107,14 @@ describe('resolve', () => {
     expect((await t.fetch(`/embed/youtube/${VIDEO}/thumb`, { method: 'GET' })).status).toBe(200);
   });
 
-  test('X: when only the text fallback answers, the pictures of the earlier card stay', async () => {
+  test('X: a failing refresh keeps the old card, a removed post becomes unavailable', async () => {
     const { owner } = setup();
     provider(postOk);
     await owner.action(api.embeds.resolve, { provider: 'x', id: POST });
-    provider({
-      'cdn.syndication.twimg.com': () => new Response('', { status: 500 }),
-      'publish.x.com': () => jsonRes({ author_name: 'Demo Author', html: '<blockquote><p>Edited text</p>&mdash; Demo Author (@demo_user) <a href="x">March 21, 2006</a></blockquote>' }),
-    });
-    const view = await owner.action(api.embeds.resolve, { provider: 'x', id: POST, refresh: true });
-    expect(view).toMatchObject({ text: 'Edited text', avatar: expect.stringContaining('/avatar'), media: [expect.objectContaining({ slot: 'm0' })] });
+    provider({ 'publish.x.com/oembed': () => jsonRes({}, 500) });
+    expect(await owner.action(api.embeds.resolve, { provider: 'x', id: POST, refresh: true })).toMatchObject({ status: 'ok', text: 'Hello' });
+    provider({ 'publish.x.com/oembed': () => jsonRes({}, 404) });
+    expect(await owner.action(api.embeds.resolve, { provider: 'x', id: POST, refresh: true })).toMatchObject({ status: 'unavailable' });
   });
 
   test('a missing video is cached as unavailable, an outage stores nothing', async () => {
@@ -149,15 +140,15 @@ describe('resolve', () => {
 describe('GET /embed/<provider>/<id>/<slot>', () => {
   test('serves stored media with a hardened response, everything else is 404', async () => {
     const { t, owner } = setup();
-    provider(postOk);
-    await owner.action(api.embeds.resolve, { provider: 'x', id: POST });
-    const res = await t.fetch(`/embed/x/${POST}/m0`, { method: 'GET' });
+    provider(youtubeOk);
+    await owner.action(api.embeds.resolve, { provider: 'youtube', id: VIDEO });
+    const res = await t.fetch(`/embed/youtube/${VIDEO}/thumb`, { method: 'GET' });
     expect(res.status).toBe(200);
     expect(res.headers.get('content-type')).toBe('image/png');
     expect(res.headers.get('x-content-type-options')).toBe('nosniff');
     expect(res.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
     expect(new Uint8Array(await res.arrayBuffer())).toEqual(PNG);
-    for (const path of [`/embed/x/${POST}/m9`, `/embed/x/123/m0`, `/embed/youtube/${POST}/m0`, `/embed/x/${POST}`, `/embed/other/${POST}/m0`, '/embed/x/../m0', `/embed/x/${POST}/m0/extra`]) {
+    for (const path of [`/embed/youtube/${VIDEO}/m9`, `/embed/youtube/AAAAAAAAAAA/thumb`, `/embed/x/${VIDEO}/thumb`, `/embed/youtube/${VIDEO}`, `/embed/other/${VIDEO}/thumb`, '/embed/youtube/../thumb', `/embed/youtube/${VIDEO}/thumb/extra`]) {
       expect((await t.fetch(path, { method: 'GET' })).status, path).toBe(404);
     }
   });

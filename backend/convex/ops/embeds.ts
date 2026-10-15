@@ -18,16 +18,12 @@ export async function embedRow(ctx: QueryCtx, provider: EmbedProvider, id: strin
 export function embedView(row: Row, siteUrl = (process.env.CONVEX_SITE_URL ?? '').replace(/\/+$/, '')): EmbedView {
   const id = row.key.slice(row.provider.length + 1);
   const src = (slot: string) => `${siteUrl}${EMBED_MEDIA_PATH}${row.provider}/${id}/${slot}`;
-  const view: EmbedView = { provider: row.provider, id, status: row.status, fetchedAt: row.fetchedAt, media: [] };
+  const view: EmbedView = { provider: row.provider, id, status: row.status, fetchedAt: row.fetchedAt };
   if (row.incomplete) view.incomplete = true;
   for (const field of ['title', 'author', 'handle', 'authorUrl', 'text', 'createdAt'] as const) {
     if (row[field] !== undefined) Object.assign(view, { [field]: row[field] });
   }
-  for (const m of row.media) {
-    if (m.kind === 'avatar') view.avatar = src(m.slot);
-    else if (m.kind === 'thumb') view.thumbnail = src(m.slot);
-    else view.media.push({ slot: m.slot, kind: m.kind, src: src(m.slot), width: m.width, height: m.height, alt: m.alt });
-  }
+  for (const m of row.media) if (m.kind === 'thumb') view.thumbnail = src(m.slot);
   return view;
 }
 

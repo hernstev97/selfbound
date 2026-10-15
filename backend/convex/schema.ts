@@ -695,15 +695,15 @@ export default defineSchema({
     authorUrl: v.optional(v.string()),
     text: v.optional(v.string()),
     createdAt: v.optional(v.number()),
+    // Pictures kept in file storage: so far only a video's thumbnail (slot `thumb`).
     media: v.array(
       v.object({
         slot: v.string(),
-        kind: v.union(v.literal('photo'), v.literal('video'), v.literal('gif'), v.literal('avatar'), v.literal('thumb')),
+        kind: v.literal('thumb'),
         storageId: v.id('_storage'),
         contentType: v.string(),
         width: v.optional(v.number()),
         height: v.optional(v.number()),
-        alt: v.optional(v.string()),
       }),
     ),
   })
