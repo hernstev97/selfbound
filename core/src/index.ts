@@ -15,7 +15,7 @@ export { movePlan, moveLines, hasLoss, type MovePlan } from './move.ts';
 export { workflowsOf, type StateView, type StateGroup } from './workflow.ts';
 export { STATUS_LABEL, PRIORITY_LABEL, STATUS_ORDER, actorName, initials, nameHue, dayLabel, monthLabel, weekdaysShort, today, timeZone, setTimeZone, addDays, parseDay, dayOf, fullDate, relativeTime } from './format.ts';
 export { formatShortcut, shortcutKeys } from './keyboard.ts';
-export { computeWindow, sameRange, revealIndex, ROW_HEIGHT, ROW_HEIGHT_MOBILE, INBOX_ROW_HEIGHT, OVERSCAN, type Range } from './window.ts';
+export { computeWindow, computeVariableWindow, buildOffsets, indexAt, sameRange, revealIndex, revealSpan, ROW_HEIGHT, ROW_HEIGHT_MOBILE, INBOX_ROW_HEIGHT, OVERSCAN, type Range } from './window.ts';
 export { inInbox, unread } from './inbox.ts';
 export { VIEWS, GROUPING_LABEL, GROUP_ORDER_LABEL, subGroupings, ORDERING_LABEL, PROP_LABEL, viewKey } from './views.ts';
 export { CONSENT_PATH, DEFAULT_SETTINGS_SECTION, isConsentPath, pagePath, parsePath, viewPath, type Page } from './route.ts';

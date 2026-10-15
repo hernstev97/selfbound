@@ -7,10 +7,12 @@ import { VIEWS } from './views.ts';
 import { stateGroupKey, workflowsOf, type StateGroup } from './workflow.ts';
 import type { BoardColumn, BoardState, Issue, IssueId, Meta, Priority, ViewState } from './types.ts';
 
-/** Height of a card including the gap (windowing per column). */
-export const CARD_HEIGHT = 76;
-export const CARD_GAP = 6;
-export const CARD_SLOT = CARD_HEIGHT + CARD_GAP;
+/**
+ * Cards grow with their title (never cut off). Windowing per column uses measured heights and this
+ * estimate (a one-to-two-line card) for cards not shown yet; `CARD_GAP` sits below each card.
+ */
+export const CARD_ESTIMATE = 112;
+export const CARD_GAP = 8;
 
 const CLOSED_TYPES = new Set(['completed', 'canceled']);
 

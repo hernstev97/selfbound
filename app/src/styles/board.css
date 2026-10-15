@@ -1,4 +1,4 @@
-/* Board: horizontally scrolling columns, fixed-height cards (core/src/board.ts CARD_SLOT 82 px). */
+/* Board: horizontally scrolling columns; cards grow with their title (measured, core/src/board.ts CARD_ESTIMATE). */
 .board {
   flex: 1;
   min-height: 0;
@@ -11,7 +11,7 @@
 }
 .board-column {
   flex: none;
-  width: 300px;
+  width: 320px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -26,6 +26,9 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+.board.dragging .board-column.allowed {
+  background: color-mix(in oklch, var(--tint, var(--text-muted)) 8%, transparent);
+}
 .board.dragging .board-column.allowed.over {
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
@@ -33,8 +36,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 36px;
-  padding: 0 8px;
+  height: 40px;
+  padding: 0 10px;
   flex: none;
   font-weight: 510;
   cursor: pointer;
@@ -70,25 +73,27 @@
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
+  /* Windowing corrects the scroll position itself (Column.svelte). */
+  overflow-anchor: none;
   contain: strict;
 }
 .column-inner {
   position: relative;
   width: 100%;
 }
+/* Height follows the content (title in full); `contain` without size so the card can measure itself. */
 .card {
   position: absolute;
   left: 6px;
   right: 6px;
-  height: 76px;
-  padding: 8px 10px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  border-radius: var(--radius);
+  gap: 8px;
+  border-radius: var(--radius-lg);
   background: var(--bg-panel);
   box-shadow: 0 0 0 0.5px var(--border-strong);
-  contain: strict;
+  contain: layout paint style;
   cursor: default;
   --row-bg: var(--bg-panel);
   --icon-cut: var(--row-bg);
@@ -103,7 +108,11 @@
 }
 /* Dragged cards stay faded at their origin. */
 .card {
-  transition: opacity var(--dur-2) var(--ease-out), scale var(--dur-2) var(--ease-out);
+  transition: opacity var(--dur-2) var(--ease-out), scale var(--dur-2) var(--ease-out), background-color var(--dur-1) var(--ease-out);
+}
+/* After a drop or move the cards below close the gap instead of jumping (only while it settles). */
+.board.settling .card {
+  transition: top var(--dur-4) var(--ease-glide), opacity var(--dur-2) var(--ease-out), scale var(--dur-2) var(--ease-out), background-color var(--dur-1) var(--ease-out);
 }
 .board.dragging .card.dragged {
   opacity: 0.45;
@@ -120,7 +129,8 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: var(--fs-small);
+  line-height: 18px;
   color: var(--text-muted);
   min-width: 0;
 }
@@ -129,8 +139,8 @@
 }
 .card-check {
   margin-left: auto;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
@@ -148,22 +158,20 @@
   box-shadow: none;
 }
 .card-check.mi::before {
-  width: 10px;
-  height: 10px;
+  width: 12px;
+  height: 12px;
 }
+/* The whole title, wrapped (also long words and URLs); generous line height so descenders are not cut. */
 .card-title {
-  font-size: 13px;
-  line-height: 17px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  word-break: break-word;
+  font-size: var(--fs-large);
+  line-height: 1.4;
+  font-weight: 450;
+  overflow-wrap: anywhere;
 }
 .card-bottom {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   min-width: 0;
   overflow: hidden;
   margin-top: auto;
@@ -171,8 +179,8 @@
 .card-bottom .cell {
   display: grid;
   place-items: center;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-sm);
   flex: none;
 }
@@ -181,10 +189,19 @@
 }
 .card-bottom .pill {
   flex: none;
-  max-width: 110px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board.settling .card,
+  .card {
+    transition: none;
+  }
+  .board.dragging .card.dragged {
+    scale: 1;
+  }
 }
 @media (max-width: 768px) {
   .board {
