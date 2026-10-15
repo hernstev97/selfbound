@@ -3,10 +3,27 @@ import { ConvexError } from 'convex/values';
 import { App } from '../src/app/index.ts';
 import { ACTIONS, KEYMAP, actionById } from '../src/app/actions.ts';
 import { Auth } from '../src/auth.ts';
+import { historyText } from '../src/app/historyText.ts';
+import { setDictionary } from '../src/i18n.ts';
+import de from '../src/locales/de.ts';
 import { OWNER_KIND, type IssueId } from '../src/types.ts';
 import { callName, doc, entry, fakeClient, flush, meta } from './helpers.ts';
 
 describe('owner profile', () => {
+  test('history says "you" only without a name; with one it is third person (also in German)', async () => {
+    const { client, app } = await setup();
+    const row = { field: 'title', from: 'a', to: 'b', actor: { kind: OWNER_KIND } } as never;
+    setDictionary('de', de);
+    try {
+      expect(historyText(row, app.store)).toBe('hast den Titel geändert');
+      client.push('meta:get', {}, { ...meta, owner: { name: 'Jane Doe', avatarUrl: null } });
+      await flush();
+      expect(historyText(row, app.store)).toBe('hat den Titel geändert');
+    } finally {
+      setDictionary('en', null);
+    }
+  });
+
   test('the profile name replaces "You" in the actor names, and goes away again', async () => {
     const { client, app } = await setup();
     expect(app.store.agents.get().get(OWNER_KIND)).toBeUndefined();

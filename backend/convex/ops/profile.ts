@@ -29,9 +29,9 @@ export async function ownerProfile(ctx: QueryCtx) {
 /** Trims and collapses whitespace; returns null for an empty name. */
 export function cleanName(raw: string | null): string | null {
   if (raw === null) return null;
-  // eslint-disable-next-line no-control-regex
-  if (/[\u0000-\u001f\u007f]/.test(raw)) invalid('The name must not contain control characters.');
   const name = raw.replace(/\s+/g, ' ').trim();
+  // Control and invisible format characters (zero-width, bidi overrides) would hide in a name.
+  if (/[\p{Cc}\p{Cf}]/u.test(name)) invalid('The name must not contain control or invisible characters.');
   if (name.length > LIMITS.profileNameMax) invalid(`The name is too long (at most ${LIMITS.profileNameMax} characters).`);
   return name || null;
 }

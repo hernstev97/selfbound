@@ -35,7 +35,11 @@ describe('profile', () => {
   test('rejects names that are too long or contain control characters', async () => {
     const { owner } = setup();
     await expectCode(owner.mutation(api.profile.setName, { name: 'x'.repeat(LIMITS.profileNameMax + 1) }), 'invalid');
-    await expectCode(owner.mutation(api.profile.setName, { name: 'a\nb' }), 'invalid');
+    await expectCode(owner.mutation(api.profile.setName, { name: 'a\u0001b' }), 'invalid');
+    await expectCode(owner.mutation(api.profile.setName, { name: '\u200B' }), 'invalid');
+    await expectCode(owner.mutation(api.profile.setName, { name: 'Jane\u202Eevil' }), 'invalid');
+    // Tabs and line breaks are whitespace: collapsed, not rejected
+    expect(await owner.mutation(api.profile.setName, { name: 'Jane\t\nDoe' })).toEqual({ name: 'Jane Doe' });
     await owner.mutation(api.profile.setName, { name: 'x'.repeat(LIMITS.profileNameMax) });
   });
 
@@ -84,6 +88,14 @@ describe('profile', () => {
     expect(await exists(second.storageId)).toBe(false);
     // Removing again is harmless
     await owner.mutation(api.profile.removeAvatar, {});
+  });
+
+  test('agents cannot change it (no tool, and their keys are no owner identity)', async () => {
+    const { t, owner } = setup();
+    const { key } = await owner.action(api.agents.create, { name: 'Bot' });
+    const res = await t.fetch('/mcp', { method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) });
+    const tools = JSON.stringify(await res.json());
+    expect(tools).not.toMatch(/profile|avatar/i);
   });
 
   test('only the owner may change it', async () => {

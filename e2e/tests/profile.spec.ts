@@ -82,10 +82,6 @@ test('Name and picture: set in the settings, shown in the activity, removed agai
   await expect(comment.locator('img')).toBeVisible();
   await expect(page.locator('[data-testid="activity-event"][data-source="steven"] .who').first()).toHaveText('Jane Doe');
 
-  // Agents keep their own identity
-  const agent = await backend().action(api.agents.create, { name: 'Test Agent' });
-  expect(agent.agentId).toBeTruthy();
-
   // Remove the picture: initials again; clear the name: "You"
   await page.goto('/settings/profile');
   await page.getByTestId('profile-remove-picture').click();

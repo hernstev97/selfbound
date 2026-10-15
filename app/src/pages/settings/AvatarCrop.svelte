@@ -47,13 +47,15 @@
   const up = () => (drag = null);
   function wheel(e: WheelEvent) {
     e.preventDefault();
-    crop = zoomCrop(crop, crop.zoom * Math.exp(-e.deltaY / 400));
+    // Firefox reports mouse wheels in lines (3 per notch), others in pixels.
+    const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
+    crop = zoomCrop(crop, crop.zoom * Math.exp(-delta / 400));
   }
   function keydown(e: KeyboardEvent) {
     const dir: Record<string, [number, number]> = { ArrowLeft: [-STEP, 0], ArrowRight: [STEP, 0], ArrowUp: [0, -STEP], ArrowDown: [0, STEP] };
     if (dir[e.key]) {
-      // Moves the picture, like dragging it
-      crop = clampCrop({ ...crop, x: crop.x - dir[e.key]![0], y: crop.y - dir[e.key]![1] });
+      // An arrow key moves the picture in that direction, like dragging it
+      crop = clampCrop({ ...crop, x: crop.x + dir[e.key]![0], y: crop.y + dir[e.key]![1] });
     } else if (e.key === '+' || e.key === '=') crop = zoomCrop(crop, crop.zoom * 1.15);
     else if (e.key === '-' || e.key === '_') crop = zoomCrop(crop, crop.zoom / 1.15);
     else return;
@@ -61,15 +63,19 @@
     e.stopPropagation();
   }
 
-  /** WebP (about 10–30 KB); without a WebP encoder PNG comes back, then JPEG if that is too large. */
+  /** WebP (about 10–30 KB); without a WebP encoder (Safari) PNG comes back, kept if small enough, else JPEG. */
   async function encode(): Promise<Blob | null> {
     const out = document.createElement('canvas');
     draw(out, LIMITS.avatarPx);
     const blob = (type: string, quality: number) => new Promise<Blob | null>((resolve) => out.toBlob(resolve, type, quality));
-    const webp = await blob('image/webp', 0.9);
-    if (webp?.type === 'image/webp' && webp.size <= LIMITS.avatarMaxBytes) return webp;
-    const jpeg = await blob('image/jpeg', 0.9);
-    return jpeg && jpeg.size <= LIMITS.avatarMaxBytes ? jpeg : (webp ?? jpeg);
+    const first = await blob('image/webp', 0.9);
+    if (first && first.size <= LIMITS.avatarMaxBytes) return first;
+    // JPEG has no transparency: paint a neutral background under the picture first.
+    const g = out.getContext('2d')!;
+    g.globalCompositeOperation = 'destination-over';
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, out.width, out.height);
+    return (await blob('image/jpeg', 0.9)) ?? first;
   }
 
   async function submit() {

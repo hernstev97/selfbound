@@ -16,13 +16,14 @@ export const RELATION_LABEL: Record<string, string> = translated({
 });
 
 /**
- * Event text after the actor's name. The owner is shown as "You" (German "Du"), which needs the
+ * Event text after the actor's name. The owner is shown as "You" (German "Du") unless the profile has a name, which needs the
  * second person in German: each text exists as tc('you', …) for the owner and t(…) for others.
  */
 export function historyText(h: Pick<HistoryDoc, 'field' | 'from' | 'to' | 'actor'>, store: IssueStore): string | null {
   const meta = store.meta.get();
   // Both calls stay literal so tooling/i18n-check.mjs can check them.
-  const own = h.actor.kind === OWNER_KIND;
+  // With a profile name the owner is a third person ("Jane Doe changed …"), not "You".
+  const own = h.actor.kind === OWNER_KIND && !meta?.owner?.name;
   const say = (yours: string, theirs: string) => (own ? yours : theirs);
   const keyOf = (id: unknown) => (typeof id === 'string' ? (store.get(id as IssueId)?.key ?? t('an issue')) : t('an issue'));
   const labelName = (id: string) => meta?.labels.find((l) => l._id === id)?.name ?? t('Label');
