@@ -56,7 +56,7 @@ export type NotifyKind = (typeof NOTIFY_EVENTS)[number]['id'];
 
 export const NOTIFY_KINDS: readonly NotifyKind[] = NOTIFY_EVENTS.map((e) => e.id);
 
-/** Hour (Europe/Berlin) of the morning notification unless configured otherwise. */
+/** Hour (instance time zone) of the morning notification unless configured otherwise. */
 export const DEFAULT_MORNING_HOUR = 8;
 
 /** Enabled events from the stored overrides; missing ones use their default. */

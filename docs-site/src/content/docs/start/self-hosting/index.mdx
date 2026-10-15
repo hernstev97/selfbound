@@ -115,7 +115,7 @@ To keep your instance current, see [Updating](/start/self-hosting/updating/).
 ## Limitations to know
 
 - **One owner per instance.** All accounts in `SELFBOUND_OWNER_IDS` act as the same owner.
-- **Fixed time zone.** Calendar days (due dates, sprints, recurring issues, the morning notifications)
-  are computed in Europe/Berlin. There is no setting for this yet.
-
-<Planned issue="XLR8-53">A configurable time zone per instance is planned.</Planned>
+- **One time zone per instance.** Calendar days (due dates, sprints, recurring issues, the morning
+  notifications, what agents see as "today") are counted in the instance's time zone. The first sign-in
+  saves your browser's zone; change it under **Settings → General → Time zone**. See
+  [Time zone](/reference/settings/#time-zone).

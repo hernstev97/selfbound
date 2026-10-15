@@ -23,10 +23,30 @@ Name and picture are stored in Selfbound, not taken from your sign-in account, a
 Settings for this device:
 
 - **Language**: English, Deutsch (German), or **Automatic (browser language)**. The page reloads after a change. See [Language](/using/language/).
+- **Time zone**: see below; this one applies to the whole instance, not only this device.
 - **Teams in the sidebar**: **Small** shows logo and name, **Large** adds the counts.
 - **Sounds**: soft sounds for clicks, keys, menus, success and errors, with a volume slider.
 - **Local cache**: Selfbound keeps a copy of your issues in the browser for a fast start. **Clear** empties it.
 - **Sign out** (not shown with the local test sign-in).
+
+#### Time zone
+
+The time zone decides where a calendar day begins. It is used for due dates and "overdue", the day a snoozed
+issue comes back, the default dates and the start and end of sprints, recurring issues, the morning
+notifications, and what agents see as "today" (`due`, `overdue` and `done_today` in `list_issues`). Timestamps
+such as "3 hours ago" are shown in your device's time zone either way.
+
+- At your **first sign-in**, Selfbound saves the time zone of your browser. Until then (and on an instance
+  that was set up before this setting existed) it counts in Europe/Berlin.
+- Change it under **Settings → General → Time zone**, or with **Settings: Time zone** in the command menu. If
+  this browser is in another zone than the instance, a button offers to switch to the browser's.
+- It is stored on the server, so the nightly jobs, the morning notifications and MCP use it without a browser.
+- Only the owner can change it.
+
+Changing the zone converts nothing. Due dates, snooze days and sprint dates are plain calendar days
+(`2026-10-23`) and stay as they are; only the moment a day starts moves. If you move from Berlin to New York,
+an issue due on the 23rd is still due on the 23rd, now until midnight in New York. Recurring issues that were
+due "today" in the old zone are created once; the next date is calculated in the new zone.
 
 ### Appearance
 

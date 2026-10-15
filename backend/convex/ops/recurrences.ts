@@ -2,15 +2,16 @@ import { ConvexError } from 'convex/values';
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
-import { berlinDay, daysBetween, nextMonthDay, nextWeekday, type Day } from '../lib/dates';
+import { daysBetween, nextMonthDay, nextWeekday, type Day } from '../lib/dates';
 import { invalid, notFound } from '../lib/errors';
 import type { Priority } from '../shared/constants';
 import { syncFileRefs } from './files';
+import { todayOf } from './instance';
 import { createIssues } from './issues';
 import { assertIssuesAllowed, checkDay, checkDescription, checkEstimate, checkLabels, checkProject, checkTitle, getTeam } from './validate';
 
 // Recurrences: weekly (weekday 1 = Monday … 7 = Sunday) or monthly (monthDay 1–28),
-// computed in Europe/Berlin. An hourly cron creates exactly one issue per
+// computed in the instance time zone (ops/instance.ts). An hourly cron creates exactly one issue per
 // (template, date) for due dates (recurrenceRuns).
 
 export const SYSTEM: Actor = { kind: 'system' };
@@ -61,7 +62,7 @@ export async function createRecurrence(
   const team = await getTeam(ctx, args.teamId);
   assertIssuesAllowed(team, 'recurrences');
   checkSchedule(args.cadence, args.weekday, args.monthDay);
-  const today = berlinDay(Date.now());
+  const today = await todayOf(ctx);
   const from = args.startDate ? checkDay(args.startDate, 'The start date') : today;
   const recurrenceId = await ctx.db.insert('recurrences', {
     teamId: team._id,
@@ -119,7 +120,7 @@ export async function updateRecurrence(ctx: MutationCtx, _actor: Actor, args: Up
     patch.cadence = cadence;
     patch.weekday = weekday;
     patch.monthDay = monthDay;
-    patch.nextDate = nextOccurrence({ cadence, weekday, monthDay }, berlinDay(Date.now()), true);
+    patch.nextDate = nextOccurrence({ cadence, weekday, monthDay }, await todayOf(ctx), true);
   }
   await ctx.db.patch('recurrences', r._id, patch);
   if (args.description !== undefined) await syncFileRefs(ctx, r._id, patch.description ?? null);
@@ -139,14 +140,14 @@ export async function removeRecurrence(ctx: MutationCtx, _actor: Actor, args: { 
 }
 
 /**
- * Creates one issue per due recurrence (nextDate ≤ today in Berlin).
+ * Creates one issue per due recurrence (nextDate ≤ today in the instance time zone).
  * Idempotent via recurrenceRuns (recurrenceId, date). Missed dates are not all
  * made up: at most one, then it continues with the next date from today.
  * If creating fails for a business reason (e.g. an archived label), the
  * recurrence is paused (active = false).
  */
 export async function runDueRecurrences(ctx: MutationCtx, now = Date.now(), limit = 25) {
-  const today = berlinDay(now);
+  const today = await todayOf(ctx, now);
   const due = await ctx.db
     .query('recurrences')
     .withIndex('by_next', (q) => q.eq('active', true).lte('nextDate', today))

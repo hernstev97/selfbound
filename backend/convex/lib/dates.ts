@@ -1,27 +1,72 @@
-// Calendar days in Europe/Berlin, without Intl: the EU daylight saving rule is fixed (last Sunday
-// in March 01:00 UTC to last Sunday in October 01:00 UTC), so nothing depends on the runtime's
-// time zone database. A calendar day is a string "YYYY-MM-DD".
+// Calendar days in the instance's time zone (an IANA name such as "Europe/Berlin", see
+// ops/instance.ts). A calendar day is a string "YYYY-MM-DD". Moments are UTC milliseconds.
 
 export type Day = string;
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 const DAY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-/** Start of summer time or winter time in a year (UTC milliseconds). */
-function lastSundayAt1Utc(year: number, monthIndex: number) {
-  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0));
-  return Date.UTC(year, monthIndex, lastDay.getUTCDate() - lastDay.getUTCDay(), 1, 0, 0);
+/** Used until the owner (or the first sign-in) sets a zone: what every instance did before the setting existed. */
+export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+
+const formats = new Map<string, Intl.DateTimeFormat>();
+
+function formatterFor(timeZone: string) {
+  let fmt = formats.get(timeZone);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+    });
+    formats.set(timeZone, fmt);
+  }
+  return fmt;
 }
 
-/** Offset of Europe/Berlin from UTC in minutes (60 in winter, 120 in summer). */
-export function berlinOffsetMinutes(ms: number): number {
-  const year = new Date(ms).getUTCFullYear();
-  return ms >= lastSundayAt1Utc(year, 2) && ms < lastSundayAt1Utc(year, 9) ? 120 : 60;
+/**
+ * Checks a time zone name and fixes its case ("europe/berlin" → "Europe/Berlin"). Returns null if the
+ * runtime does not know it. Aliases keep their spelling ("Asia/Kolkata": the runtime reports it as
+ * "Asia/Calcutta", but the name the user picked is the one to show again).
+ */
+export function canonicalTimeZone(value: string): string | null {
+  if (value.length === 0 || value.length > 64 || !/^[A-Za-z][A-Za-z0-9_+\-/]*$/.test(value)) return null;
+  try {
+    const resolved = formatterFor(value).resolvedOptions().timeZone;
+    return resolved.toLowerCase() === value.toLowerCase() ? resolved : value;
+  } catch {
+    return null;
+  }
 }
 
-/** Calendar day in Berlin at a point in time. */
-export function berlinDay(ms: number): Day {
-  return new Date(ms + berlinOffsetMinutes(ms) * 60_000).toISOString().slice(0, 10);
+/** Wall clock in the zone at a moment, as if it were UTC (so the difference to `ms` is the offset). */
+function wallClock(ms: number, timeZone: string): number {
+  const p: Record<string, number> = {};
+  for (const part of formatterFor(timeZone).formatToParts(ms)) if (part.type !== 'literal') p[part.type] = Number(part.value);
+  // Years before 1 or after 9999 do not occur here; Date.UTC maps years 0–99 to 1900+, which is unused.
+  return Date.UTC(p.year!, p.month! - 1, p.day!, p.hour!, p.minute!, p.second!);
+}
+
+/** Offset of the zone from UTC in minutes at a moment (e.g. 60 or 120 for Europe/Berlin, 330 for Asia/Kolkata). */
+export function zoneOffsetMinutes(ms: number, timeZone: string): number {
+  // Drop the milliseconds: the formatter works in whole seconds.
+  const whole = Math.floor(ms / 1000) * 1000;
+  return Math.round((wallClock(whole, timeZone) - whole) / 60_000);
+}
+
+/** Calendar day in the zone at a moment. */
+export function dayInZone(ms: number, timeZone: string): Day {
+  return new Date(ms + zoneOffsetMinutes(ms, timeZone) * 60_000).toISOString().slice(0, 10);
+}
+
+/** Hour (0–23) in the zone at a moment. */
+export function hourInZone(ms: number, timeZone: string): number {
+  return new Date(ms + zoneOffsetMinutes(ms, timeZone) * 60_000).getUTCHours();
 }
 
 export function isDay(value: string): boolean {
@@ -77,13 +122,16 @@ export function nextMonday(today: Day): Day {
   return nextWeekday(today, 1, false);
 }
 
-/** Start of a calendar day in Berlin (local midnight) in UTC milliseconds. */
-export function berlinDayStart(day: Day): number {
-  const midnightUtc = toUtc(day);
-  // Local midnight is 1 or 2 hours before midnight UTC; the right one is the offset in effect at that moment.
-  for (const offset of [120, 60]) {
-    const candidate = midnightUtc - offset * 60_000;
-    if (berlinOffsetMinutes(candidate) === offset) return candidate;
-  }
-  return midnightUtc - 60 * 60_000;
+/**
+ * Start of a calendar day in the zone (local midnight) in UTC milliseconds. If the clocks skip
+ * midnight (a few zones switch to summer time at 00:00), the day starts at the first moment that exists.
+ */
+export function dayStartInZone(day: Day, timeZone: string): number {
+  const midnight = toUtc(day);
+  // Local midnight lies at most 14 hours before or 12 hours after midnight UTC. Take the offsets in
+  // effect at both ends of that window; the right candidate is the one that maps back to this day.
+  const offsets = new Set([zoneOffsetMinutes(midnight - 14 * 3_600_000, timeZone), zoneOffsetMinutes(midnight + 12 * 3_600_000, timeZone)]);
+  const starts = [...offsets].map((o) => midnight - o * 60_000).sort((a, b) => a - b);
+  for (const candidate of starts) if (dayInZone(candidate, timeZone) === day && dayInZone(candidate - 1, timeZone) !== day) return candidate;
+  return starts[0]!;
 }

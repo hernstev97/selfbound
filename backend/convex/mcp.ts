@@ -48,7 +48,7 @@ export const countCall = internalMutation({
 
 /**
  * Read tool, step 2: as a query (cacheable). Checks the key again so that a key revoked in
- * the meantime reads nothing. The action passes `today` (calendar day, Europe/Berlin) so the
+ * the meantime reads nothing. The action passes `today` (calendar day in the instance time zone) so the
  * query does not depend on the clock.
  */
 export const read = internalQuery({

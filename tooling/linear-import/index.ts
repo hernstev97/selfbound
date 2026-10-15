@@ -2,7 +2,7 @@
 // Linear import (read-only on the Linear side): fetches a one-time copy of a Linear workspace.
 //
 //   node tooling/linear-import/index.ts fetch [--dry-run] [--out <dir>] [--key-file <file>]
-//                                             [--map-status "Name=status" …]
+//                                             [--map-status "Name=status" …] [--time-zone <IANA name>]
 //   node tooling/linear-import/index.ts push <dir-or-staging.jsonl> [--yes] [--backend-dir <dir>] [--prod]
 //   node tooling/linear-import/index.ts files scan|download|upload|rewrite …   (files hosted by Linear, files.ts)
 //   node tooling/linear-import/index.ts document <copy.md> --team <KEY> [--project <name>] [--yes] [--prod]
@@ -41,6 +41,7 @@ export interface FetchCommandOptions {
   outRoot?: string;
   keyFile?: string;
   statusOverrides?: Record<string, ImportStatus>;
+  timeZone?: string;
   fetch?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   now?: () => number;
@@ -88,7 +89,7 @@ export async function runFetch(options: FetchCommandOptions = {}): Promise<Fetch
   const run = runId(started);
   print(`Linear import ${run}${options.dryRun ? ' (dry run, writes nothing)' : ''}: fetching data (read-only) …`);
   const raw = await fetchLinearData(client, (step, count) => print(`  ${step}: ${count}`));
-  const snapshot = normalize(raw, { run, fetchedAt: started, statusOverrides: options.statusOverrides });
+  const snapshot = normalize(raw, { run, fetchedAt: started, statusOverrides: options.statusOverrides, timeZone: options.timeZone });
   const counts = snapshotCounts(snapshot);
   const operations = client.summary();
 
@@ -124,7 +125,7 @@ export async function runFetch(options: FetchCommandOptions = {}): Promise<Fetch
 function usage() {
   return [
     'Usage: node tooling/linear-import/index.ts fetch [--dry-run] [--out <dir>] [--key-file <file>]',
-    '                                                 [--map-status "Name=status" …]',
+    '                                                 [--map-status "Name=status" …] [--time-zone <IANA name>]',
     '       node tooling/linear-import/index.ts push <dir-or-staging.jsonl> [--yes] [--backend-dir <dir>] [--prod]',
     '       node tooling/linear-import/index.ts files scan|download|upload|rewrite [--prod | --backend-dir <dir>] [--dir <dir>]',
     '                                                 [--key-file <file>] [--substitute <sha256>=<file> …] [--link <sha256>=<url> …]',
@@ -194,6 +195,7 @@ export async function main(argv: string[]) {
     outRoot: value('--out'),
     keyFile: value('--key-file'),
     statusOverrides: parseStatusOverrides(statusPairs),
+    timeZone: value('--time-zone'),
   });
   return 0;
 }

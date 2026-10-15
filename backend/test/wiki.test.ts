@@ -2,12 +2,12 @@ import { describe, expect, test } from 'vitest';
 import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import type { Actor } from '../convex/lib/actor';
-import { berlinDay, DAY_MS } from '../convex/lib/dates';
+import { DAY_MS } from '../convex/lib/dates';
 import { CHUNK_CHARS, plainText, searchChunks } from '../convex/lib/wikiText';
 import { TRASH_DAYS } from '../convex/ops/issues';
 import { appendArticleBodyCore, purgeArticleTrash, setArticleBodyCore } from '../convex/ops/wiki';
 import { OWNER_KIND, WIKI } from '../convex/shared/constants';
-import { expectCode, fixture, setup, type Client, type T } from './helpers';
+import { berlinDay, expectCode, fixture, setup, type Client, type T } from './helpers';
 
 // Knowledge base (wiki): page tree, versioned text with revisions, search, sources, topics, trash.
 

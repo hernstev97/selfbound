@@ -159,7 +159,7 @@ const listIssues = object({
         '"done_today" = issues completed today;',
         '"triage" = issues in triage (the inbox);',
         '"sprint" = issues in the currently active sprint.',
-        'Days are calendar days in Europe/Berlin.',
+        'Days are calendar days in the instance\'s time zone (Settings → Time zone).',
       ].join(' '),
     }),
   ),
@@ -266,7 +266,7 @@ const updateIssue = object(
     snoozedUntil: optional(
       nullable(
         realDay(
-          'Snooze the issue until this day, YYYY-MM-DD (after today, Europe/Berlin), or null to unsnooze. A snoozed issue is hidden from the owner\'s lists; on that day, in the morning, it returns to the inbox with a push notification. Only open issues can be snoozed; closing an issue ends its snooze.',
+          'Snooze the issue until this day, YYYY-MM-DD (after today in the instance\'s time zone), or null to unsnooze. A snoozed issue is hidden from the owner\'s lists; on that day, in the morning, it returns to the inbox with a push notification. Only open issues can be snoozed; closing an issue ends its snooze.',
         ),
       ),
     ),

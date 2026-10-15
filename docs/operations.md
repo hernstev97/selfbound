@@ -219,7 +219,7 @@ On desktop (Chrome, Edge, Firefox) the same; installing is optional.
 ### When a notification is sent
 
 - Which events trigger one is set under Settings → Notifications (for all devices). Morning notifications
-  (due today, sprint ending) arrive at 08:00 Europe/Berlin.
+  (due today, sprint ending) arrive at 08:00 in the instance time zone (Settings → General → Time zone).
 - If Selfbound is visibly open and in use on any device (input in the last 3 minutes), no push goes out; the
   app shows an in-app notice with a sound instead. If no app acknowledges the notice within 45 s (window
   just closed), the push is sent after all.
@@ -473,6 +473,21 @@ one. A run without progress for 15 minutes (e.g. because the backend restarted) 
 latest after an hour, immediately on the next `push`. Only one run can be active at a time.
 
 <a id="inbox-entries-migration"></a>
+
+**Time zone (migration):** calendar days are counted in the instance time zone, a setting stored in
+`instanceSettings` (one row). Until a row exists, Europe/Berlin applies, which is what every instance did before.
+The first sign-in after the update saves the browser's zone if none is stored. To pin the zone yourself (an
+existing instance, or a sign-in from a browser in another zone), run before that sign-in:
+
+```sh
+node tooling/cloud.mjs run migrations:setInstanceTimeZone                                  # shows the current zone
+node tooling/cloud.mjs run migrations:setInstanceTimeZone '{"timeZone":"Europe/Berlin"}'  # sets it
+```
+
+**Nothing has to be converted:** due dates, snooze days, sprint dates and recurrence dates are `YYYY-MM-DD`
+strings and stay as they are; timestamps are UTC milliseconds. Changing the zone later only moves where a
+day begins. The GitHub Actions backup runs at 03:30 Berlin time (`backup.yml`); that is the repository's
+schedule and independent of the instance zone.
 
 **Inbox entries (migration):** the inbox has its own table now. Before the first use after the deploy,
 create the entries for what is in the inbox today (issues without `reviewedAt`, with their read marker):

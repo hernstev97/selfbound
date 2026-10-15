@@ -2,12 +2,13 @@ import { internal } from '../_generated/api';
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
-import { addDays, berlinDay, berlinOffsetMinutes, DAY_MS } from '../lib/dates';
+import { addDays, dayInZone, DAY_MS, hourInZone } from '../lib/dates';
 import { pushText } from '../lib/pushText';
 import type { VapidKeys } from '../lib/webpush';
 import { identifierOf, OPEN_STATUSES } from '../shared/constants';
 import { record } from './history';
 import { openSnoozedEntry } from './inboxChanges';
+import { timeZoneOf } from './instance';
 import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage } from '../shared/notifyEvents';
 import { envVar } from '../lib/legacyEnv';
 
@@ -26,7 +27,7 @@ export const DELIVER_DELAY_MS = 10_000;
 /** A device counts as active for this long after its last presence ping (the app pings every minute). */
 export const PRESENCE_MS = 90_000;
 export const EVENTS_KEEP_DAYS = 7;
-/** The morning notification is still sent up to this hour (Europe/Berlin) if the cron missed it. */
+/** The morning notification is still sent up to this hour (instance time zone) if the cron missed it. */
 const MORNING_LAST_HOUR = 21;
 const BUNDLE_LINES = 4;
 const SYSTEM: Actor = { kind: 'system' };
@@ -206,20 +207,16 @@ export async function notifyPullRequest(
   }
 }
 
-/** Hour (0–23, Europe/Berlin) of a timestamp. */
-export function berlinHour(ms: number) {
-  return new Date(ms + berlinOffsetMinutes(ms) * 60_000).getUTCHours();
-}
-
 /**
  * Morning notifications (hourly cron): due and overdue issues, sprint ending tomorrow or today.
  * At most once a day per notification (the key contains the day).
  */
 export async function morning(ctx: MutationCtx, now = Date.now()) {
   const settings = await readPushSettings(ctx);
-  const hour = berlinHour(now);
+  const timeZone = await timeZoneOf(ctx);
+  const hour = hourInZone(now, timeZone);
   if (hour < settings.morningHour || hour > MORNING_LAST_HOUR) return { sent: [] as string[] };
-  const today = berlinDay(now);
+  const today = dayInZone(now, timeZone);
   const sent: string[] = [];
   const done = async (key: string) =>
     (await ctx.db

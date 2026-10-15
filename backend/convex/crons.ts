@@ -11,7 +11,7 @@ crons.daily('cleanup-requests', { hourUTC: 2, minuteUTC: 45 }, internal.maintena
 crons.daily('sweep-files', { hourUTC: 3, minuteUTC: 0 }, internal.files.sweep, {});
 crons.daily('purge-embeds', { hourUTC: 3, minuteUTC: 10 }, internal.embeds.purge, {});
 crons.hourly('fail-stale-imports', { minuteUTC: 20 }, internal.importer.failStale, {});
-// Morning notifications (due issues, sprint end): hourly; the function checks the Berlin time itself.
+// Morning notifications (due issues, sprint end): hourly; the function checks the instance's local time itself.
 crons.hourly('push-morning', { minuteUTC: 0 }, internal.push.morning, {});
 crons.hourly('cleanup-oauth', { minuteUTC: 35 }, internal.oauth.cleanup, {});
 // GitHub: check the webhooks in all repos of the token and create missing ones (never locally).

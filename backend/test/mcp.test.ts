@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
-import { addDays, berlinDay } from '../convex/lib/dates';
+import { addDays } from '../convex/lib/dates';
 import { dayWindow, minuteWindow, RATE_PER_MINUTE } from '../convex/ops/agents';
-import { createOne, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
+import { berlinDay, createOne, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
 // MCP endpoint over HTTP (t.fetch → convex/http.ts → internal.mcp.call), with real agent keys.
 

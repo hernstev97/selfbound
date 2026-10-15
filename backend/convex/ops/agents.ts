@@ -1,15 +1,16 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
-import { berlinDay } from '../lib/dates';
+import { dayInZone, DEFAULT_TIME_ZONE } from '../lib/dates';
 import { fail, notFound } from '../lib/errors';
 import { isOwnerKind } from '../shared/constants';
+import { timeZoneOf } from './instance';
 import { revokeConnector } from './oauth';
 import { checkName } from './validate';
 
 // Agents: one key per agent, stored only as a SHA-256 hash. Connectors (claude.ai, ChatGPT)
 // authenticate with OAuth access tokens instead (ops/oauth.ts).
-// Rate limit per agent: 120 calls per minute, 5000 per day (calendar day, Europe/Berlin).
+// Rate limit per agent: 120 calls per minute, 5000 per day (calendar day, instance time zone).
 
 export const RATE_PER_MINUTE = 120;
 export const RATE_PER_DAY = 5000;
@@ -87,7 +88,7 @@ export async function authenticateAgent(ctx: QueryCtx, hash: string, now?: numbe
 }
 
 export const minuteWindow = (now: number) => `m:${Math.floor(now / 60_000)}`;
-export const dayWindow = (now: number) => `d:${berlinDay(now)}`;
+export const dayWindow = (now: number, timeZone = DEFAULT_TIME_ZONE) => `d:${dayInZone(now, timeZone)}`;
 
 async function windowRow(ctx: QueryCtx, agentId: Id<'agents'>, window: string) {
   return await ctx.db
@@ -98,7 +99,7 @@ async function windowRow(ctx: QueryCtx, agentId: Id<'agents'>, window: string) {
 
 /** An agent's calls today (for the ops page). */
 export async function callsToday(ctx: QueryCtx, agentId: Id<'agents'>, now: number) {
-  return (await windowRow(ctx, agentId, dayWindow(now)))?.count ?? 0;
+  return (await windowRow(ctx, agentId, dayWindow(now, await timeZoneOf(ctx))))?.count ?? 0;
 }
 
 /**
@@ -109,7 +110,8 @@ export async function consumeRate(ctx: MutationCtx, agentId: Id<'agents'>, now =
   const agent = (await ctx.db.get('agents', agentId)) ?? notFound('The agent');
   if (agent.revokedAt !== undefined) fail('access_denied', 'This agent key has been revoked.');
   const minute = await windowRow(ctx, agentId, minuteWindow(now));
-  const day = await windowRow(ctx, agentId, dayWindow(now));
+  const dayKey = dayWindow(now, await timeZoneOf(ctx));
+  const day = await windowRow(ctx, agentId, dayKey);
   if ((minute?.count ?? 0) >= RATE_PER_MINUTE) {
     fail('rate_limited', `Too many calls: at most ${RATE_PER_MINUTE} per minute.`, { retryAfterMs: 60_000 - (now % 60_000) });
   }
@@ -119,7 +121,7 @@ export async function consumeRate(ctx: MutationCtx, agentId: Id<'agents'>, now =
   if (minute) await ctx.db.patch('rateWindows', minute._id, { count: minute.count + 1 });
   else await ctx.db.insert('rateWindows', { agentId, window: minuteWindow(now), count: 1 });
   if (day) await ctx.db.patch('rateWindows', day._id, { count: day.count + 1 });
-  else await ctx.db.insert('rateWindows', { agentId, window: dayWindow(now), count: 1 });
+  else await ctx.db.insert('rateWindows', { agentId, window: dayKey, count: 1 });
   if (agent.lastUsedAt === undefined || now - agent.lastUsedAt >= LAST_USED_EVERY_MS) {
     await ctx.db.patch('agents', agentId, { lastUsedAt: now });
   }

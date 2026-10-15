@@ -38,8 +38,8 @@ export const KEY_FORMAT = new RegExp(`^${ANY_PREFIX}_[A-Za-z0-9_-]{43}$`);
 
 export interface McpBackend {
   sha256(text: string): Promise<string>;
-  /** Calendar day (Europe/Berlin) for read tools, e.g. "completed today". */
-  today(): string;
+  /** Calendar day in the instance's time zone for read tools, e.g. "completed today". */
+  today(): string | Promise<string>;
   /** Hash of a key or access token → agent; `now` checks a token's expiry. */
   authenticate(keyHash: string, now: number): Promise<{ agentId: string; name: string }>;
   countCall(keyHash: string): Promise<unknown>;
@@ -135,7 +135,7 @@ export async function mcpEndpoint(
       if (isReadTool(name)) {
         try {
           await retryOnConflict(() => backend.countCall(keyHash));
-          return await backend.read(keyHash, name, args, backend.today());
+          return await backend.read(keyHash, name, args, await backend.today());
         } catch (error) {
           const data = errorData(error);
           if (!data) throw error;
