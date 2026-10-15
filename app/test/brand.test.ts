@@ -29,7 +29,7 @@ describe('logo', () => {
 
   it('only the two brand colours appear in the sources and generated SVGs', () => {
     const files = [
-      ...['symbol', 'wordmark', 'lockup', 'favicon'].map((n) => read('brand', `${n}.svg`)),
+      ...['symbol', 'wordmark', 'lockup'].map((n) => read('brand', `${n}.svg`)),
       read('app', 'public', 'favicon.svg'),
       read('app', 'public', 'brand', 'selfbound-lockup-ink.svg'),
       read('app', 'public', 'brand', 'selfbound-lockup-paper.svg'),

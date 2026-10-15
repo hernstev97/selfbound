@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-// Generates every logo file from the four source files in brand/:
-//   brand/symbol.svg    the symbol (loading screen, app icons, animated landing page background)
+// Generates every logo file from the three source files in brand/:
+//   brand/symbol.svg    the symbol (favicons, app icons, loading screen, animated landing page background)
 //   brand/wordmark.svg  the lettering "Selfbound"
 //   brand/lockup.svg    symbol + wordmark (headers, sign-in screen, social image)
-//   brand/favicon.svg   the symbol simplified for 16 px (favicons)
 // Outputs: SVG variants, favicons, app icons (PNG, ICO), social image, web manifest, the inline paths
 // for the app (app/src/lib/brand.ts) and the copies for the landing page and the docs site.
 //
@@ -56,7 +55,6 @@ function readShape(file) {
 const symbol = readShape('symbol.svg');
 const wordmark = readShape('wordmark.svg');
 const lockup = readShape('lockup.svg');
-const small = readShape('favicon.svg');
 
 const attrs = (p) => (p.transform ? ` transform="${p.transform}"` : '');
 const pathsIn = (s, fill) => s.paths.map((p) => `<path fill="${fill}" fill-rule="${s.rule}"${attrs(p)} d="${p.d}"/>`).join('');
@@ -72,11 +70,11 @@ for (const [name, s] of [['symbol', symbol], ['wordmark', wordmark], ['lockup', 
   writeFileSync(join(brand, `selfbound-${name}-paper.svg`), shapeSvg(s, PAPER, LABEL));
 }
 
-// ---- Favicon: simplified symbol, ink on light tabs and paper on dark tabs.
+// ---- Favicon: the full symbol, ink on light tabs and paper on dark tabs.
 writeFileSync(
   join(pub, 'favicon.svg'),
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${small.viewBox}">\n<title>${LABEL}</title>\n<style>path{fill:${INK}}@media (prefers-color-scheme:dark){path{fill:${PAPER}}}</style>\n${small.paths
-    .map((p) => `<path fill-rule="${small.rule}"${attrs(p)} d="${p.d}"/>`)
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${symbol.viewBox}">\n<title>${LABEL}</title>\n<style>path{fill:${INK}}@media (prefers-color-scheme:dark){path{fill:${PAPER}}}</style>\n${symbol.paths
+    .map((p) => `<path fill-rule="${symbol.rule}"${attrs(p)} d="${p.d}"/>`)
     .join('\n')}\n</svg>\n`,
 );
 
@@ -103,10 +101,11 @@ function png(name, svg, size, outDir = brand) {
   const r = spawnSync('rsvg-convert', ['-w', String(size[0]), '-h', String(size[1]), '-o', join(outDir, `${name}.png`), file], { stdio: 'inherit' });
   if (r.status !== 0) throw new Error(`rsvg-convert failed: ${name}`);
 }
-// App icon proportions: symbol 56 % of the tile, corner radius 22.5 %. Favicons use the simplified symbol.
+// App icon proportions: symbol 56 % of the tile, corner radius 22.5 % (the artwork uploaded to Clerk).
+// Favicons use the same tile and symbol; the symbol is larger there so the arrows stay readable.
 const APP = [0.5625, 0.225];
-// The simplified symbol fills the whole tile: its 2-unit gap then lands on whole pixels (16 → 2 px, 32 → 4 px, 48 → 6 px).
-for (const s of [16, 32, 48]) png(`favicon-${s}`, tile(small, s, 1, 0.2), [s, s], pub);
+const FAV_SHARE = 0.85;
+for (const s of [16, 32, 48]) png(`favicon-${s}`, tile(symbol, s, FAV_SHARE, APP[1]), [s, s], pub);
 png('apple-touch-icon', tile(symbol, 180, APP[0], 0), [180, 180], pub); // iOS rounds the corners itself
 png('icon-192', tile(symbol, 192, APP[0], APP[1]), [192, 192], pub);
 png('icon-512', tile(symbol, 512, APP[0], APP[1]), [512, 512], pub);

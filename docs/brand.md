@@ -1,15 +1,14 @@
 # Logo and brand assets
 
-Four source files in `brand/` define the logo. Everything else is generated from them with
+Three source files in `brand/` define the logo. Everything else is generated from them with
 `node tooling/brand.mjs` (needs `rsvg-convert` and ImageMagick) and copied to the app, the landing page
 and the docs site. **To swap the logo, replace these files and run the script.**
 
 | Source | Purpose |
 | --- | --- |
-| `brand/symbol.svg` | the symbol: app icons, loading screen, animated landing page background |
+| `brand/symbol.svg` | the symbol: favicons, app icons, loading screen, animated landing page background |
 | `brand/wordmark.svg` | the lettering "Selfbound" |
 | `brand/lockup.svg` | symbol + wordmark: sidebar, sign-in and consent screens, landing and docs headers, social image |
-| `brand/favicon.svg` | the symbol simplified for 16 px: favicons |
 
 Requirements: outlined shapes only (`<path>`, optionally with a `translate`/`scale` transform; no `<text>`,
 strokes, gradients or masks), one colour (it is replaced), a `viewBox` that includes the padding you want,
@@ -29,8 +28,8 @@ other colour appears.
 | --- | --- |
 | `app/public/brand/selfbound-{symbol,wordmark,lockup}.svg` | `fill="currentColor"`, takes the surrounding text colour |
 | `app/public/brand/…-ink.svg`, `…-paper.svg` | fixed colour for places without CSS |
-| `app/public/favicon.svg` | simplified symbol, ink or paper depending on `prefers-color-scheme` |
-| `app/public/favicon.ico`, `favicon-16/32/48.png` | simplified symbol filling an ink tile; its gap lands on whole pixels at 16, 32 and 48 px |
+| `app/public/favicon.svg` | the full symbol, ink or paper depending on `prefers-color-scheme` |
+| `app/public/favicon.ico`, `favicon-16/32/48.png` | the same tile as the app icon (and the Clerk logo) with the full symbol, drawn larger (85 %) so the arrows stay readable at 16 px |
 | `app/public/apple-touch-icon.png` | 180 × 180, full square (iOS rounds the corners itself) |
 | `app/public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png` | web manifest (`site.webmanifest`, also written by the script); the maskable one keeps the symbol inside the 80 % safe zone |
 | `app/public/badge-96.png` | notification status bar icon (paper on transparent) |
