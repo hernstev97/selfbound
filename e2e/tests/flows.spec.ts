@@ -1,6 +1,6 @@
 // Triage, trash with undo, inbox, live changes from a second client.
 import { expect, test } from '@playwright/test';
-import { agentCall, api, backend, focusedRow, open, resolve, row, settled } from '../support/helpers.ts';
+import { agentCall, allIssues, api, backend, focusedRow, open, resolve, row, settled } from '../support/helpers.ts';
 
 test.afterEach(async ({ page }) => {
   if (!page.isClosed()) await settled(page);
@@ -22,7 +22,7 @@ test('Triage: accept (1 → Todo) and decline (3)', async ({ page }) => {
   await expect(row(page, second)).toHaveCount(0);
   await expect(page.getByTestId('view-count')).toHaveText(String(count - 2));
   await settled(page);
-  const accepted = (await backend().query(api.issues.bucket, { bucket: 0 })).concat(...(await Promise.all([1, 2, 3, 4, 5, 6].map((b) => backend().query(api.issues.bucket, { bucket: b })))));
+  const accepted = await allIssues();
   expect(accepted.find((i) => i._id === id)).toMatchObject({ status: 'todo' });
   // Accepting marks an inbox entry as read but does not remove it.
   const entry = (await backend().query(api.inbox.list, {})).find((e) => e.issueId === id);
