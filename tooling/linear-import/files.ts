@@ -189,11 +189,11 @@ export async function runDownload(o: FilesOptions = {}) {
     let response: Response | undefined;
     for (let attempt = 1; attempt <= 4; attempt++) {
       // Do not follow redirects automatically: the API key goes to uploads.linear.app only.
-      response = await doFetch(path, { method: 'GET', headers: { Authorization: key }, redirect: 'manual' });
+      response = await doFetch(url.href, { method: 'GET', headers: { Authorization: key }, redirect: 'manual' });
       if (response.status >= 300 && response.status < 400) {
         // Follow one redirect (e.g. to storage with a signed URL) once, without the key.
         const location = response.headers.get('location');
-        const target = location ? new URL(location, path) : null;
+        const target = location ? new URL(location, url) : null;
         if (!target || target.protocol !== 'https:') break;
         response = await doFetch(target.href, { method: 'GET', redirect: 'manual' });
       }
