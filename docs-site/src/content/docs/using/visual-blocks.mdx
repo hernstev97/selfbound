@@ -92,9 +92,9 @@ yet: the text stays visible as code with a short note.
 
 - The diagram loads only when it comes into view, so texts without diagrams are as fast as before.
 - If the text is not a valid diagram, you see the source and the reason instead of a broken picture.
-- A diagram is a picture with a text alternative for screen readers; the code behind it stays in the text, and
+- Screen readers get the labels of the diagram as its description; the code behind it stays in the text, and
   the copy button copies it.
-- Diagrams are limited to 20,000 characters. Links and click actions in a diagram are ignored.
+- Diagrams are limited to 6,000 characters (drawing is done on your device and gets slow beyond that). Links and click actions in a diagram are ignored, and so is a leading front matter or `%%{init}%%` block.
 
 In the editor, type <Kbd keys="/" /> and "diagram" and pick **Diagram (Mermaid)**, or start a code block with
 ` ```mermaid `. The drawing appears below the code and follows what you type; while the text is incomplete the

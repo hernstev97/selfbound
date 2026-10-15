@@ -7,13 +7,14 @@ import { onThemeChange } from './theme.ts';
 
 type State = 'loading' | 'ready' | 'error';
 
-/** Draws `source` into `host` with the renderer; resolves to an error message or null. */
+/** Draws `source` into `host` with the renderer; resolves to an error message or null. The host's accessible name gains the renderer's description of the drawing. */
 export async function drawBlock(renderer: BlockRenderer, source: string, host: HTMLElement, signal: AbortSignal): Promise<string | null> {
   try {
     const module = await loadBlock(renderer);
     if (signal.aborted) return null;
     host.replaceChildren();
-    await module.render(source, host, { signal });
+    const description = await module.render(source, host, { signal });
+    if (description) host.setAttribute('aria-label', `${renderer.label()}: ${description}`);
     return null;
   } catch (error) {
     if (signal.aborted) return null;
@@ -33,9 +34,9 @@ function setNote(block: HTMLElement, message: string | null) {
   block.append(note);
 }
 
-/** Visible failure text, e.g. "Could not draw the diagram: Parse error on line 2". */
+/** Visible failure text, e.g. "Diagram could not be drawn: Parse error on line 2". */
 export function failureText(renderer: BlockRenderer, reason: string) {
-  return t('Could not draw the {kind}: {reason}', { kind: renderer.label().toLowerCase(), reason });
+  return t('{kind} could not be drawn: {reason}', { kind: renderer.label(), reason });
 }
 
 /**

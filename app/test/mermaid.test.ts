@@ -54,6 +54,19 @@ describe('draws', () => {
   });
 });
 
+describe('preamble and description', () => {
+  it('front matter, init directives and comments before the type are fine', () => {
+    for (const source of ['---\ntitle: x\n---\nflowchart TD\n  A --> B', '%% a comment\nsequenceDiagram\n  A->>B: hi', '%%{init: {"theme": "dark"}}%%\nclassDiagram\n  class A', '%%{init: {\n "theme": "dark"\n}}%%\nerDiagram\n  A ||--o{ B : has', 'xychart\n  bar [1, 2]']) {
+      expect(draw(source).shadowRoot?.querySelector('svg'), source).not.toBeNull();
+    }
+  });
+  it('the accessible description lists the labels of the drawing', () => {
+    const host = document.createElement('div');
+    document.body.append(host);
+    expect(render('flowchart TD\n  A[Create issue] --> B{Triage}', host, ctx)).toBe('Create issue, Triage');
+  });
+});
+
 describe('says so instead of failing silently', () => {
   it('not drawn yet: the type is named', () => {
     expect(() => draw('pie title Pets\n  "Dogs": 3')).toThrow(/pie diagrams are not drawn yet/);
@@ -64,7 +77,7 @@ describe('says so instead of failing silently', () => {
     expect(() => draw('this is not a diagram')).toThrow(/mermaid|header|diagram/i);
     expect(() => draw('')).toThrow();
   });
-  it('too long', () => {
+  it('too long: the limit keeps layout time in check', () => {
     expect(() => draw(`graph TD\n${'  A --> B\n'.repeat(MAX_DIAGRAM_CHARS / 10)}`)).toThrow(/too long/);
   });
 });

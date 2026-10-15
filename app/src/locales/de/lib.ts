@@ -156,7 +156,7 @@ export default {
   'Change panel type': 'Art des Infoblocks ändern',
   'Turn into quote': 'In Zitat umwandeln',
   'Turn into text': 'In Text umwandeln',
-  'Could not draw the {kind}: {reason}': '{kind} konnte nicht gezeichnet werden: {reason}',
+  '{kind} could not be drawn: {reason}': '{kind} konnte nicht gezeichnet werden: {reason}',
   // lib/blocks/mermaid.ts, lib/blocks/registry.ts, lib/editor/RichEditor.svelte (diagrams)
   Diagram: 'Diagramm',
   'Diagram (Mermaid)': 'Diagramm (Mermaid)',

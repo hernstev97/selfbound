@@ -47,6 +47,11 @@ describe('sanitizeSvg', () => {
     expect(out).not.toContain('evil.example');
     expect(out).toContain('--bg:#fff');
   });
+  it('presentation attributes with an external url() are dropped, a local one stays', () => {
+    const out = html('<svg xmlns="http://www.w3.org/2000/svg"><rect fill="url(https://evil.example/a.svg#x)" stroke="url(https://evil.example/b#y)" width="1"/><rect fill="url(#grad)" width="2"/><path stroke="u\\72l(https://evil.example)" d="M0 0"/></svg>');
+    expect(out).not.toContain('evil.example');
+    expect(out).toContain('fill="url(#grad)"');
+  });
   it('a crafted label cannot cut a hole through the markup (no string surgery on the output)', () => {
     const out = html('<svg xmlns="http://www.w3.org/2000/svg"><text id="@import" x="1">&lt;text id="@import"&gt;;" onmouseover="alert(1)" x=&lt;/text&gt;</text></svg>');
     expect(out).not.toMatch(/<[^>]+onmouseover/i);

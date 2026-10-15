@@ -35,7 +35,7 @@ test('A diagram is drawn in the description, light and dark; the chunk loads onl
   const block = page.getByTestId('detail-description').locator('.vblock');
   await expect(block).toHaveAttribute('data-state', 'ready');
   await expect(block.locator('.vblock-view')).toHaveAttribute('role', 'img');
-  await expect(block.locator('.vblock-view')).toHaveAttribute('aria-label', 'Diagram');
+  await expect(block.locator('.vblock-view')).toHaveAttribute('aria-label', /^Diagram: .*Create issue.*Triage/);
   // The drawing sits in a shadow root; Playwright pierces it
   await expect(block.locator('svg text', { hasText: 'Triage' })).toHaveCount(1);
   // The source stays in the page (copy button) but is hidden
@@ -148,7 +148,7 @@ test('Errors keep the source and say why: invalid text, a type that is not drawn
   await expect(blocks.nth(0)).toHaveAttribute('data-state', 'error');
   await expect(blocks.nth(0).locator('pre')).toBeVisible();
   await expect(blocks.nth(0).locator('pre')).toContainText('this is not a diagram');
-  await expect(blocks.nth(0).locator('.vblock-error')).toContainText('Could not draw the diagram');
+  await expect(blocks.nth(0).locator('.vblock-error')).toContainText('Diagram could not be drawn');
   await expect(blocks.nth(1)).toHaveAttribute('data-state', 'error');
   await expect(blocks.nth(1).locator('.vblock-error')).toContainText('pie diagrams are not drawn yet');
   await expect(blocks.nth(2)).toHaveAttribute('data-state', 'ready');

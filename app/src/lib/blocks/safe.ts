@@ -10,8 +10,9 @@ const UNSAFE_CSS = /@import|@namespace|@font-face|\\|expression\s*\(|behavior\s*
 
 // A separate instance: its hooks must not touch the one that sanitizes Markdown.
 const purify = DOMPurify(window);
+// Every attribute value, not only `style`: presentation attributes (fill, stroke, filter …) take url() too.
 purify.addHook('uponSanitizeAttribute', (_node, data) => {
-  if (data.attrName === 'style' && UNSAFE_CSS.test(data.attrValue)) data.keepAttr = false;
+  if (UNSAFE_CSS.test(data.attrValue)) data.keepAttr = false;
 });
 
 const CONFIG: Config = {

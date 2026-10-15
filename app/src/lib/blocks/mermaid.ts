@@ -8,23 +8,37 @@ import { renderMermaidSVG } from 'beautiful-mermaid';
 import type { BlockContext } from './registry.ts';
 import { setSvg } from './safe.ts';
 
-/** A diagram this long is a mistake (or an attack on the layout engine). */
-export const MAX_DIAGRAM_CHARS = 20_000;
+/**
+ * Layout is synchronous and roughly quadratic: about 620 chained nodes (8,000 characters) take
+ * 0.5 to 0.7 s, 2,000 nodes several seconds and would freeze the tab. 6,000 keeps it around 0.3 s.
+ */
+export const MAX_DIAGRAM_CHARS = 6_000;
 
-const UNSUPPORTED = /^(pie|gantt|journey|mindmap|timeline|gitGraph|quadrantChart|sankey(?:-beta)?|requirementDiagram|C4\w*|block(?:-beta)?|packet(?:-beta)?|kanban|architecture(?:-beta)?|radar(?:-beta)?|treemap(?:-beta)?|zenuml|xychart(?!-beta))\b/;
+const UNSUPPORTED = /^(pie|gantt|journey|mindmap|timeline|gitGraph|quadrantChart|sankey(?:-beta)?|requirementDiagram|C4\w*|block(?:-beta)?|packet(?:-beta)?|kanban|architecture(?:-beta)?|radar(?:-beta)?|treemap(?:-beta)?|zenuml)\b/;
 
-/** First line that is neither empty, a `%%` comment nor front matter. */
-function typeOf(source: string): string {
-  const lines = source.replace(/^\s*---[\s\S]*?\n---\s*\n/, '').split('\n');
-  const first = lines.map((l) => l.trim()).find((l) => l && !l.startsWith('%%'));
-  return first ?? '';
+/** The library wants the diagram type on the first line: drop front matter, `%%{init}%%` directives and `%%` comments. */
+function withoutPreamble(source: string): string {
+  return source
+    .replace(/^\s*---[\s\S]*?\n---[ \t]*(?:\n|$)/, '')
+    .replace(/%%\{[\s\S]*?\}%%/g, '')
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('%%'))
+    .join('\n')
+    .trim();
 }
 
-export function render(source: string, host: HTMLElement, _ctx: BlockContext) {
+/** What a screen reader gets in place of the picture: the labels in the drawing. */
+function describe(root: ParentNode): string {
+  const words = [...root.querySelectorAll('svg text')].map((el) => el.textContent?.trim()).filter(Boolean);
+  return words.join(', ').slice(0, 300);
+}
+
+export function render(source: string, host: HTMLElement, _ctx: BlockContext): string {
   if (source.length > MAX_DIAGRAM_CHARS) throw new Error(t('Diagram text is too long ({n} characters, at most {max})', { n: source.length, max: MAX_DIAGRAM_CHARS }));
-  const unsupported = UNSUPPORTED.exec(typeOf(source))?.[1];
+  const text = withoutPreamble(source);
+  const unsupported = UNSUPPORTED.exec(text)?.[1];
   if (unsupported) throw new Error(t('{type} diagrams are not drawn yet (flowchart, state, sequence, class, ER and XY charts are)', { type: unsupported }));
-  const svg = renderMermaidSVG(source, {
+  const svg = renderMermaidSVG(text, {
     bg: 'var(--bg-raised)',
     fg: 'var(--text)',
     line: 'var(--text-muted)',
@@ -40,4 +54,5 @@ export function render(source: string, host: HTMLElement, _ctx: BlockContext) {
   const font = document.createElement('style');
   font.textContent = 'text, .label { font-family: var(--font); }';
   host.shadowRoot?.append(font);
+  return describe(host.shadowRoot ?? host);
 }
