@@ -64,7 +64,7 @@ describe('rowRestHtml: columns', () => {
 
   it('model: own and inherited (dimmed), escaped, empty cell without one', () => {
     const own = rowRestHtml(row({ model: { label: 'Claude <Opus>', inherited: false } }), props('model'), false);
-    expect(own).toContain('<span class="c c-model"><span class="pill mi ui-model" title="Model">Claude &lt;Opus&gt;</span></span>');
+    expect(own).toContain('<span class="c c-model"><span class="pill mi ui-model" title="Claude &lt;Opus&gt;">Claude &lt;Opus&gt;</span></span>');
     const inherited = rowRestHtml(row({ model: { label: 'GPT-6 Sol', inherited: true } }), props('model'), false);
     expect(inherited).toContain('class="pill mi ui-model inherited"');
     expect(rowRestHtml(row(), props('model'), false)).toContain('<span class="c c-model"></span>');

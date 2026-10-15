@@ -15,7 +15,7 @@ export const COLUMN_WIDTH: Record<(typeof ROW_COLUMNS)[number], number> = {
   labels: 184,
   project: 168,
   sprint: 136,
-  model: 152,
+  model: 176,
   estimate: 40,
   due: 84,
 };

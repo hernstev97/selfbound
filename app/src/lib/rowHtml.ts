@@ -18,8 +18,7 @@ function fixedTexts() {
     due: esc(t('Due')),
     snoozed: esc(t('Snoozed until')),
     estimate: esc(t('Estimate')),
-    model: esc(t('Model')),
-    modelInherited: esc(t('Model, inherited from the parent issue or the team default')),
+    modelInherited: esc(t('inherited from the parent issue or the team default')),
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
     plannedTip: esc(t('In the planned sprint')),
@@ -90,7 +89,7 @@ function colsHtml(r: RowState, props: ReadonlySet<DisplayProp>) {
   if (props.has('estimate')) html += r.estimate !== null ? `<span class="c c-estimate row-est mi i-estimate" title="${tx.estimate}">${esc(r.estimate)}</span>` : '<span class="c c-estimate"></span>';
   if (props.has('model')) {
     html += r.model
-      ? `<span class="c c-model"><span class="pill mi ui-model${r.model.inherited ? ' inherited' : ''}" title="${r.model.inherited ? tx.modelInherited : tx.model}">${esc(r.model.label)}</span></span>`
+      ? `<span class="c c-model"><span class="pill mi ui-model${r.model.inherited ? ' inherited' : ''}" title="${esc(r.model.label)}${r.model.inherited ? `, ${tx.modelInherited}` : ''}">${esc(r.model.label)}</span></span>`
       : '<span class="c c-model"></span>';
   }
   if (props.has('sprint')) {
