@@ -1,19 +1,11 @@
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { claimFence, codeBlockHtml, TOKEN_STYLE } from '../src/lib/codeblock.ts';
 import { LANGUAGES } from '../src/lib/languages.ts';
 import { contrast, parseHex } from '../src/lib/look/color.ts';
 import { mapTheme, MIN_SYNTAX } from '../src/lib/look/map.ts';
 import { selfboundSyntax, syntaxSet, syntaxTheme, type SyntaxSet } from '../src/lib/look/syntax.ts';
 import { readTheme, type VsTheme } from '../src/lib/look/vscode.ts';
-
-// The browser fetches the .wasm file; here the same engine reads it from disk.
-vi.mock('../src/lib/highlightEngine.ts', async () => {
-  const { createOnigurumaEngine } = await import('shiki/engine/oniguruma');
-  const wasm = createRequire(import.meta.url).resolve('shiki/onig.wasm');
-  return { createEngine: () => createOnigurumaEngine(readFileSync(wasm)) };
-});
 
 const highlight = await import('../src/lib/highlight.ts');
 const { look } = await import('../src/lib/look/index.ts');
@@ -25,14 +17,17 @@ const set = (dark: VsTheme | null, light: VsTheme | null, rev: number): SyntaxSe
 
 describe('code block language', () => {
   it('detects the required languages and their short forms', () => {
-    for (const info of ['ts', 'typescript', 'js', 'javascript', 'svelte', 'json', 'bash', 'sh', 'shell', 'sql', 'python', 'py', 'kotlin', 'kt', 'yaml', 'yml', 'markdown', 'md', 'diff']) {
+    for (const info of ['ts', 'typescript', 'js', 'javascript', 'svelte', 'json', 'bash', 'sh', 'shell', 'sql', 'python', 'py', 'kotlin', 'kt', 'markdown', 'md', 'diff']) {
       expect(highlight.languageOf(info), info).not.toBeNull();
     }
     expect(highlight.languageOf('TS')).toBe('typescript');
     expect(highlight.languageOf('ts title="a.ts"')).toBe('typescript');
   });
-  it('has a grammar for every language of the picker', () => {
+  it('has a grammar for every language of the picker, except YAML (no licensed grammar)', () => {
     for (const lang of LANGUAGES) expect(highlight.languageOf(lang.id), lang.id).toBe(lang.grammar);
+    expect(LANGUAGES.filter((l) => !l.grammar).map((l) => l.id)).toEqual(['yaml']);
+    expect(highlight.languageOf('yaml')).toBeNull();
+    expect(highlight.languageOf('yml')).toBeNull();
   });
   it('guesses nothing: without an info string or with an unknown language it stays neutral', () => {
     expect(highlight.languageOf(undefined)).toBeNull();
@@ -47,6 +42,8 @@ describe('loading only when needed', () => {
     for (const text of ['```ts\nx\n```', '~~~sh\nx\n~~~', '> ```ts\n> x', '- ```ts\n  x', '1. ```json\n   {}']) expect(needsHighlight(text), text).toBe(true);
     for (const text of ['```\nx\n```', 'Text without code', 'Inline ```ts in a sentence', '```klingon\nx\n```']) expect(needsHighlight(text), text).toBe(false);
     expect(fenceGrammars('```ts\na\n```\n```TSX\nb\n```\n```py\nc\n```').sort()).toEqual(['python', 'typescript']);
+    // YAML has no grammar: a text with only YAML blocks loads nothing.
+    expect(needsHighlight('```yaml\na: 1\n```')).toBe(false);
   });
   it('another renderer can claim a fence language; the highlighter never sees it', () => {
     expect(needsHighlight('```mermaid\ngraph TD\n```')).toBe(false);
@@ -116,7 +113,7 @@ describe('highlighting', () => {
 
   it('the Selfbound colors follow the CSS variables', async () => {
     look.syntax.set(syntaxSet(4, null, null));
-    await highlight.prepare(['typescript', 'yaml']);
+    await highlight.prepare(['typescript']);
     const html = highlight.highlightCode('const a = "x"; // c', 'ts')!;
     expect(html).toContain('--d:var(--sx-keyword);--l:var(--sx-keyword)">const');
     expect(html).toContain('var(--sx-string)');
@@ -168,12 +165,11 @@ describe('highlighting', () => {
       sql: "select id from issues where title = 'x'",
       python: 'def f(x):\n    return x + 1',
       kotlin: 'fun main() { println("hi") }',
-      yaml: 'name: ci\non: [push]',
       markdown: '# Title\n- **bold**',
       diff: '-old\n+new',
     };
-    await highlight.prepare(LANGUAGES.map((l) => l.grammar));
-    for (const lang of LANGUAGES) expect(highlight.highlightCode(samples[lang.id]!, lang.id), lang.id).toMatch(/<span class="tk/);
+    await highlight.prepare(LANGUAGES.flatMap((l) => (l.grammar ? [l.grammar] : [])));
+    for (const lang of LANGUAGES.filter((l) => l.grammar)) expect(highlight.highlightCode(samples[lang.id]!, lang.id), lang.id).toMatch(/<span class="tk/);
   });
 });
 

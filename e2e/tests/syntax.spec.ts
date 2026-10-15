@@ -103,8 +103,8 @@ test('Code blocks: the neutral block and the colored one have the same size (no 
   const key = await describeWith(page, TS);
   let release!: () => void;
   const gate = new Promise<void>((resolve) => (release = resolve));
-  // The regex engine's .wasm file arrives late: the block stays neutral meanwhile.
-  await page.route('**/*.wasm', async (route) => {
+  // The TypeScript grammar arrives late: the block stays neutral meanwhile.
+  await page.route('**/assets/typescript-*.js', async (route) => {
     await gate;
     await route.continue();
   });
@@ -131,14 +131,15 @@ test('Code blocks: Shiki and each grammar load only when a text uses them', asyn
   await page.goto('/all');
   await expect(page.getByTestId('issue-row').first()).toBeVisible();
   await page.waitForTimeout(1500);
-  expect(loaded(/\/assets\/(highlight-|onig|typescript-|shellscript-)/)).toBe(false);
+  expect(loaded(/\/assets\/(highlight-|typescript-|shellscript-)/)).toBe(false);
 
   await page.goto(`/issue/${key}`);
   await expect(page.getByTestId('detail-description').locator('.codeblock .tk').first()).toBeVisible();
   expect(loaded(/\/assets\/highlight-/)).toBe(true);
   expect(loaded(/\/assets\/typescript-/)).toBe(true);
   expect(loaded(/\/assets\/shellscript-/)).toBe(true);
-  expect(loaded(/\/assets\/onig.*\.wasm$/)).toBe(true);
+  // The regex engine is JavaScript: no WebAssembly file.
+  expect(loaded(/\.wasm$/)).toBe(false);
   // Languages the text does not use stay unloaded.
   expect(loaded(/\/assets\/(python|kotlin|sql|yaml|vue)-/)).toBe(false);
 });

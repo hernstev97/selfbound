@@ -7,8 +7,8 @@ export interface Language {
   /** What is written after the fence ("```typescript") */
   id: string;
   label: string;
-  /** Grammar (Shiki language name, see highlight.ts) */
-  grammar: string;
+  /** Grammar (Shiki language name, see highlight.ts); null = the block stays neutral */
+  grammar: string | null;
   /** Other spellings that map to this language */
   aliases: string[];
 }
@@ -26,7 +26,8 @@ export const LANGUAGES: Language[] = [
   { id: 'sql', label: 'SQL', grammar: 'sql', aliases: ['postgresql', 'sqlite'] },
   { id: 'python', label: 'Python', grammar: 'python', aliases: ['py'] },
   { id: 'kotlin', label: 'Kotlin', grammar: 'kotlin', aliases: ['kt'] },
-  { id: 'yaml', label: 'YAML', grammar: 'yaml', aliases: ['yml'] },
+  // No grammar: the only YAML grammar available (textmate/yaml.tmbundle) has no declared license.
+  { id: 'yaml', label: 'YAML', grammar: null, aliases: ['yml'] },
   { id: 'markdown', label: 'Markdown', grammar: 'markdown', aliases: ['md'] },
   { id: 'diff', label: 'Diff', grammar: 'diff', aliases: ['patch'] },
 ];

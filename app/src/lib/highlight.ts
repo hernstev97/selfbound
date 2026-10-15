@@ -27,7 +27,6 @@ const GRAMMARS: Record<string, () => Promise<unknown>> = {
   typescript: () => import('shiki/langs/typescript.mjs'),
   vue: () => import('shiki/langs/vue.mjs'),
   xml: () => import('shiki/langs/xml.mjs'),
-  yaml: () => import('shiki/langs/yaml.mjs'),
 };
 
 /** Longer code stays neutral: tokenizing runs on the main thread, once per mode. The editor does it on every keystroke, so its limit is lower. */
