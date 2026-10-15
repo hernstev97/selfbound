@@ -118,7 +118,7 @@ async function interactions(browser: Browser, ws: Dataset, cpu: number) {
       await page.getByTestId('mobile-menu').tap();
       await page.waitForTimeout(400);
       const card = page.locator(`[data-testid="nav-team-${key}"]`).first();
-      keep(warm, 'tap.team (switch team in drawer)', await measure(page, (k) => !document.querySelector('[data-testid="app"].drawer') && !!document.querySelector('[data-testid="issue-row"]')?.getAttribute('data-key')?.startsWith(`${k}-`), () => card.tap(), new Function(`return () => ${JSON.stringify(key)}`)() as () => unknown));
+      keep(warm, 'tap.team (switch team in drawer)', await measure(page, (k) => !document.querySelector('[data-testid="app"].drawer') && !!document.querySelector('[data-testid="issue-row"]')?.getAttribute('data-key')?.startsWith(`${k}-`), () => card.tap(), Object.assign(() => key, { toString: () => `() => (${JSON.stringify(key)})` })));
       await page.waitForTimeout(400);
     }
 

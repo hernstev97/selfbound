@@ -5,7 +5,7 @@
 // when XLR8_DEV_JWKS is set, which happens only in local backends.
 
 import { createPrivateKey, createPublicKey, createSign, generateKeyPairSync } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -20,10 +20,23 @@ export const DEV_OWNER_ID = `${DEV_ISSUER}|${DEV_SUBJECT}`;
 const KID = 'xlr8-dev-1';
 
 function privateKey() {
-  if (!existsSync(keyFile)) {
-    mkdirSync(dir, { recursive: true });
-    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-    writeFileSync(keyFile, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
+  // No existsSync between check and use: read first, create on ENOENT with "wx" (a parallel start never overwrites a key).
+  try {
+    return createPrivateKey(readFileSync(keyFile));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  mkdirSync(dir, { recursive: true });
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  // Complete file first, then link it in place: linkSync fails if a parallel start was faster, and nobody reads half a key.
+  const tmp = `${keyFile}.${process.pid}.tmp`;
+  writeFileSync(tmp, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600, flag: 'wx' });
+  try {
+    linkSync(tmp, keyFile);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  } finally {
+    rmSync(tmp, { force: true });
   }
   return createPrivateKey(readFileSync(keyFile));
 }

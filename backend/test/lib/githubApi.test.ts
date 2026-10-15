@@ -404,6 +404,16 @@ describe('media', () => {
     expect(classifyMediaUrl('https://private-user-images.githubusercontent.com/1/broken.png?jwt=x', REPO)).toBeNull();
   });
 
+  test('attribute entities are decoded once: &#x26;amp; stays &amp;', () => {
+    const uuid = '71d87879-3e6f-4561-abd8-4416f2837ddb';
+    const url = `https://private-user-images.githubusercontent.com/49064878/670463668-${uuid}.webp?jwt=D`;
+    const encode = (u: string, amp: string) => u.replace('?', `?a=1${amp}b=2${amp}`);
+    expect(findSignedUrl(`<img src="${encode(url, '&#x26;')}">`, uuid)).toBe(encode(url, '&'));
+    expect(findSignedUrl(`<img src="${encode(url, '&#X26;')}">`, uuid)).toBe(encode(url, '&'));
+    expect(findSignedUrl(`<img src="${url.replace('?', '?a=1&#x26;amp;b=2&')}">`, uuid)).toBe(url.replace('?', '?a=1&amp;b=2&'));
+    expect(findSignedUrl(`<img src="${url.replace('?', '?a=1&amp;amp;b=2&')}">`, uuid)).toBe(url.replace('?', '?a=1&amp;b=2&'));
+  });
+
   test('video link alone in a paragraph gets a <video>; the link stays below it', () => {
     const s = state();
     const out = rewriteMedia(`<p dir="auto"><a href="https://github.com/${REPO}/blob/abc/v/tour.mp4?raw=true">Tour</a></p>`, s);

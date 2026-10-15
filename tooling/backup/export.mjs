@@ -19,7 +19,7 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { appendFileSync, chmodSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { appendFileSync, chmodSync, closeSync, fchmodSync, fstatSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -96,10 +96,17 @@ async function main() {
   const zip = `${base}.zip`;
   log(`Exporting (${sourceKind}) to ${zip} …`);
   await exportTo(zip);
-  chmodSync(zip, 0o600);
-
-  const bytes = statSync(zip).size;
-  const digest = createHash('sha256').update(readFileSync(zip)).digest('hex');
+  // One handle for mode, size and content: the file cannot be swapped in between.
+  const fd = openSync(zip, 'r');
+  let bytes;
+  let digest;
+  try {
+    fchmodSync(fd, 0o600);
+    bytes = fstatSync(fd).size;
+    digest = createHash('sha256').update(readFileSync(fd)).digest('hex');
+  } finally {
+    closeSync(fd);
+  }
   const summary = summarizeSnapshot(zip);
   const tables = Object.fromEntries(Object.entries(summary.tables).map(([name, t]) => [name, t.rows]));
   const manifest = {

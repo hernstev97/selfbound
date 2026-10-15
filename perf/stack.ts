@@ -81,7 +81,8 @@ function describeOwner(port: number) {
 // Two runs at the same time distort each other, even on separate ports; parallel worktrees sharing
 // ports and backends used to be the most common cause of aborted runs. The lock is machine-wide,
 // for run.ts, mobile.ts and record.ts.
-const LOCK = join(process.env.XDG_RUNTIME_DIR || os.tmpdir(), 'xlr8-perf.lock');
+// Own directory of the user, never the shared /tmp: another user could put a symlink there.
+const LOCK = join(process.env.XDG_RUNTIME_DIR || join(os.homedir(), '.cache'), 'xlr8-perf.lock');
 
 function alive(pid: number) {
   try {
@@ -93,6 +94,7 @@ function alive(pid: number) {
 }
 
 export function acquireLock() {
+  mkdirSync(dirname(LOCK), { recursive: true });
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       writeFileSync(LOCK, JSON.stringify({ pid: process.pid, dir: root, cmd: process.argv.slice(1).join(' '), started: new Date().toISOString() }), { flag: 'wx' });

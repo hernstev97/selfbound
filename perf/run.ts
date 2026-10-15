@@ -184,7 +184,7 @@ function store(base: Omit<Sample, 'metric' | 'value' | 'extra'>, metric: string,
 }
 
 /** Pass a value into the page as context (a function returning it). */
-const constant = (value: unknown) => new Function(`return () => (${JSON.stringify(value)})`)() as () => unknown;
+const constant = (value: unknown) => Object.assign(() => value, { toString: () => `() => (${JSON.stringify(value)})` });
 
 // Predicates (run in the page, must not use anything from outside)
 const focusedId = () => (document.querySelector('[data-testid="issue-row"].focused') as HTMLElement | null)?.dataset.id ?? null;
