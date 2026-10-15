@@ -172,7 +172,8 @@ export function readLocation(url: URL): Location {
     label: list(p.get('label')),
     project: list(p.get('project')),
     sprint: list(p.get('sprint')),
-    model: list(p.get('model')),
+    // Values are "provider/modelId"; a comma inside one is written as %2C (and % as %25).
+    model: list(p.get('model')).map((v) => v.replace(/%2C/gi, ',').replace(/%25/g, '%')),
     unreviewed: p.get('unreviewed') === '1',
     snoozed: p.get('snoozed') === '1',
   };
@@ -230,7 +231,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
     set('label', f.label.map((id) => labelParam(id, labels)).join(','));
     set('project', f.project.join(','));
     set('sprint', f.sprint.join(','));
-    set('model', (f.model ?? []).join(','));
+    set('model', f.model.map((v) => v.replace(/%/g, '%25').replace(/,/g, '%2C')).join(','));
     set('unreviewed', f.unreviewed ? '1' : null);
     set('snoozed', f.snoozed ? '1' : null);
     set('q', loc.quick);

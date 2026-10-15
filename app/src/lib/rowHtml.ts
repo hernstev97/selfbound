@@ -7,6 +7,7 @@
 // ALL user text (title, labels, project, team, logo URL) goes through `esc`.
 import type { DisplayProp, RowState, TeamBadge } from '@selfbound/core';
 import { t } from '@selfbound/core/i18n';
+import { logoClass } from './providerLogo.ts';
 
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (text: string | number) => String(text).replace(/[&<>"']/g, (c) => ESC[c]);
@@ -89,7 +90,7 @@ function colsHtml(r: RowState, props: ReadonlySet<DisplayProp>) {
   if (props.has('estimate')) html += r.estimate !== null ? `<span class="c c-estimate row-est mi i-estimate" title="${tx.estimate}">${esc(r.estimate)}</span>` : '<span class="c c-estimate"></span>';
   if (props.has('model')) {
     html += r.model
-      ? `<span class="c c-model"><span class="pill mi ui-model${r.model.inherited ? ' inherited' : ''}" title="${esc(r.model.label)}${r.model.inherited ? `, ${tx.modelInherited}` : ''}">${esc(r.model.label)}</span></span>`
+      ? `<span class="c c-model"><span class="pill mi ${logoClass(r.model.logo)}${r.model.inherited ? ' inherited' : ''}" title="${esc(r.model.label)}${r.model.inherited ? `, ${tx.modelInherited}` : ''}">${esc(r.model.label)}</span></span>`
       : '<span class="c c-model"></span>';
   }
   if (props.has('sprint')) {

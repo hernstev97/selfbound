@@ -11,7 +11,7 @@ import { doc, fakeClient, flush, meta } from './helpers.ts';
 // Desired model per issue in lists (XLR8-93): filter, grouping and column by the effective model
 // (own, parent's, team default), and sub-issues following a parent's change.
 
-const OPUS: ModelInfo = { provider: 'anthropic', providerName: 'Anthropic', modelId: 'claude-opus-5-5', name: 'Claude Opus 5.5', efforts: ['low', 'xhigh'], modes: ['fast'], enabled: true };
+const OPUS: ModelInfo = { provider: 'anthropic', providerName: 'Anthropic', modelId: 'claude-opus-5-5', name: 'Claude Opus 5.5', efforts: ['low', 'xhigh'], modes: ['fast'], enabled: true, logo: 'https://x/logo/anthropic' };
 const SOL: ModelInfo = { provider: 'openai', providerName: 'OpenAI', modelId: 'gpt-6-sol', name: 'GPT-6 Sol', efforts: [], modes: [], enabled: true };
 const withModels: Meta = {
   ...meta,
@@ -57,6 +57,9 @@ describe('filter by model', () => {
     expect(visible({ model: ['none'] })).toEqual(['i0']);
     expect(visible({ model: ['none', 'openai/gpt-6-sol'] })).toEqual(['i0', 'i1']);
     expect(visible({ model: ['acme/old-1'] })).toEqual(['i6']);
+    // Same matching as MCP: a bare model ID, any case.
+    expect(visible({ model: ['Claude-Opus-5-5'] })).toEqual(['i2', 'i3', 'i4']);
+    expect(visible({ model: ['OpenAI'] })).toEqual(['i1']);
   });
 
   test('in the address', () => {
@@ -65,6 +68,9 @@ describe('filter by model', () => {
     const url = writeLocation(new URL('http://x/all'), { page: loc.page, filters: loc.filters, quick: '', group: 'model', sub: null, order: null });
     expect(url.searchParams.get('model')).toBe('anthropic/claude-opus-5-5,none');
     expect(url.searchParams.get('group')).toBe('model');
+    // A comma inside a model ID survives the round trip.
+    const odd = writeLocation(new URL('http://x/all'), { page: loc.page, filters: { ...loc.filters, model: ['x/a,b', 'none'] }, quick: '', group: null, sub: null, order: null });
+    expect(readLocation(odd).filters.model).toEqual(['x/a,b', 'none']);
   });
 });
 
@@ -75,7 +81,7 @@ describe('grouping by model', () => {
     expect(outline(l.rows)).toEqual({
       'anthropic/claude-opus-5-5|Claude Opus 5.5': ['i4', 'i3', 'i2'],
       'openai/gpt-6-sol|GPT-6 Sol': ['i1'],
-      'acme/old-1|old-1': ['i6'],
+      'acme/old-1|old-1 · acme': ['i6'],
       'none|No model': ['i0'],
     });
   });
@@ -101,15 +107,24 @@ describe('list column', () => {
   test('own model, inherited ones marked; a parent change redraws its sub-issues', async () => {
     const { client, app } = await setup();
     const row = (id: string) => app.main.rows.get(id as IssueId).get()!;
-    expect(row('i2').model).toEqual({ label: 'Claude Opus 5.5 · xhigh', inherited: false });
-    expect(row('i4').model).toEqual({ label: 'Claude Opus 5.5 · xhigh', inherited: true });
-    expect(row('i1').model).toEqual({ label: 'GPT-6 Sol', inherited: true });
+    expect(row('i2').model).toEqual({ label: 'Claude Opus 5.5 · xhigh', inherited: false, logo: 'https://x/logo/anthropic' });
+    expect(row('i4').model).toEqual({ label: 'Claude Opus 5.5 · xhigh', inherited: true, logo: 'https://x/logo/anthropic' });
+    expect(row('i1').model).toEqual({ label: 'GPT-6 Sol', inherited: true, logo: null });
     expect(row('i0').model).toBeNull();
-    expect(row('i6').model).toEqual({ label: 'old-1', inherited: false });
+    expect(row('i6').model).toEqual({ label: 'old-1', inherited: false, logo: null });
 
     client.push('issues:bucket', { bucket: 0 }, issues.map(({ key: _k, ...d }) => (d._id === 'i2' ? { ...d, model: { provider: 'openai', modelId: 'gpt-6-sol' } } : d) as IssueDoc));
     await flush();
-    expect(row('i4').model).toEqual({ label: 'GPT-6 Sol', inherited: true });
+    expect(row('i4').model).toEqual({ label: 'GPT-6 Sol', inherited: true, logo: null });
+  });
+
+  test('with the column hidden, a parent change still reaches its sub-issue once the column is shown', async () => {
+    const { client, app } = await setup();
+    app.main.toggleProp('model');
+    client.push('issues:bucket', { bucket: 0 }, issues.map(({ key: _k, ...d }) => (d._id === 'i2' ? { ...d, model: { provider: 'openai', modelId: 'gpt-6-sol' } } : d) as IssueDoc));
+    await flush();
+    app.main.toggleProp('model');
+    expect(app.main.rows.get('i4' as IssueId).get()!.model).toMatchObject({ label: 'GPT-6 Sol', inherited: true });
   });
 
   test('grouped by model, a parent change moves its sub-issue to the other group', async () => {

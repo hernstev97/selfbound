@@ -285,8 +285,8 @@ export interface RowState {
   project: string | null;
   sprint: { name: string; late: boolean; active: boolean } | null;
   estimate: number | null;
-  /** Effective model ("Claude Opus 5.5 · xhigh"); `inherited` from the parent or the team default */
-  model: { label: string; inherited: boolean } | null;
+  /** Effective model ("Claude Opus 5.5 · xhigh"); `inherited` from the parent or the team default; the provider's logo */
+  model: { label: string; inherited: boolean; logo: string | null } | null;
   due: { label: string; overdue: boolean; soon: boolean } | null;
   /** Snoozed until (column "Snoozed") */
   snoozed: string | null;
@@ -335,6 +335,8 @@ export interface GroupInfo {
   team?: TeamBadge;
   /** Label groups: the label's color */
   hue?: number;
+  /** Model groups: the provider's logo */
+  logo?: string;
   /** Team groups: priority budget "Urgent 1/1 · High 3/3" */
   budget?: string;
   overBudget?: boolean;

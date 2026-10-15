@@ -988,11 +988,11 @@ export class PaletteController {
       const models = meta?.models ?? [];
       add({ id: 'fm:none', label: `${pre(msg('Model'))}${t('No model')}`, icon: ICON.model, checked: f.model.includes('none') }, () => list.toggleFilter('model', 'none'));
       for (const [provider, name] of new Map(models.map((m) => [m.provider, m.providerName]))) {
-        add({ id: `fm:p:${provider}`, label: `${pre(msg('Model'))}${name}`, detail: t('All models'), icon: ICON.model, checked: f.model.includes(provider), keywords: provider }, () => list.toggleFilter('model', provider));
+        add({ id: `fm:p:${provider}`, label: `${pre(msg('Model'))}${name}`, detail: t('All models'), icon: ICON.model, logo: models.find((m) => m.provider === provider)?.logo, checked: f.model.includes(provider), keywords: provider }, () => list.toggleFilter('model', provider));
       }
       for (const m of models) {
         const key = modelKey(m.provider, m.modelId);
-        add({ id: `fm:${key}`, label: `${pre(msg('Model'))}${m.name}`, detail: m.providerName, icon: ICON.model, checked: f.model.includes(key), keywords: m.modelId }, () => list.toggleFilter('model', key));
+        add({ id: `fm:${key}`, label: `${pre(msg('Model'))}${m.name}`, detail: m.providerName, icon: ICON.model, logo: m.logo, checked: f.model.includes(key), keywords: m.modelId }, () => list.toggleFilter('model', key));
       }
     }
     return { items, run, multi: !flat };

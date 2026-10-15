@@ -5,6 +5,7 @@ import { intlLocale, t, tn, translated } from './i18n.ts';
 import { stateGroupKey, statusMatcher, workflowsOf, type StateView } from './workflow.ts';
 import { VIEWS, type ViewContext } from './views.ts';
 import { haystackOf } from './haystack.ts';
+import { modelFilterMatches } from '@selfbound/backend/shared/models';
 import { effectiveChoice, modelKey, teamModels } from './models.ts';
 import { inboxAt, unread } from './inbox.ts';
 import type { Filters, GroupInfo, GroupOrder, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, Priority, SprintItemKind, TeamBadge, ViewState } from './types.ts';
@@ -101,8 +102,8 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
   const labels = f.label.length ? new Set(f.label) : null;
   const projects = f.project.length ? new Set(f.project) : null;
   const sprints = f.sprint.length ? new Set(f.sprint) : null;
-  // Effective model: "provider/modelId", a provider id, or "none".
-  const models = f.model?.length ? new Set(f.model) : null;
+  // Effective model: "provider/modelId", a model ID, a provider ID or "none" (as MCP's `model` filter).
+  const models = f.model.length ? f.model : null;
   const teamDefaults = teamModels(meta);
   const hideClosed = def.closedOption && !view.display.showClosed && !status;
   const tokens = view.quick.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -121,7 +122,7 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
     if (sprints && !sprints.has(issue.sprintId ?? 'none')) return false;
     if (models) {
       const m = effectiveChoice(issue, ctx.issueOf, teamDefaults);
-      if (m ? !models.has(modelKey(m.provider, m.modelId)) && !models.has(m.provider) : !models.has('none')) return false;
+      if (!models.some((value) => modelFilterMatches(value, m))) return false;
     }
     if (unreviewed && !unread(issue) && !ctx.keep.has(issue._id)) return false;
     if (tokens.length && !tokens.every((token) => haystackOf(issue).includes(token))) return false;
@@ -362,9 +363,9 @@ function groupSpec(by: Grouping, meta: Meta | null, dark: boolean, extras: ListE
         order: (keys, showEmpty) => {
           const known = new Set(models.map((x) => x.key));
           return [
-            ...models.filter((x) => keys.has(x.key) || (showEmpty && !x.m.removed)).map((x) => ({ by, value: x.key, label: label(x.m) })),
-            // A model no longer enabled: its ID.
-            ...[...keys].filter((k) => k !== NONE && !known.has(k)).map((k) => ({ by, value: k, label: k.slice(k.indexOf('/') + 1) })),
+            ...models.filter((x) => keys.has(x.key) || (showEmpty && !x.m.removed)).map((x) => ({ by, value: x.key, label: label(x.m), ...(x.m.logo ? { logo: x.m.logo } : {}) })),
+            // A model no longer enabled: its ID and provider.
+            ...[...keys].filter((k) => k !== NONE && !known.has(k)).map((k) => ({ by, value: k, label: `${k.slice(k.indexOf('/') + 1)} · ${k.slice(0, k.indexOf('/'))}` })),
             ...(keys.has(NONE) || showEmpty ? [{ by, value: NONE, label: t('No model') }] : []),
           ];
         },

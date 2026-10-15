@@ -63,10 +63,11 @@ describe('rowRestHtml: columns', () => {
   });
 
   it('model: own and inherited (dimmed), escaped, empty cell without one', () => {
-    const own = rowRestHtml(row({ model: { label: 'Claude <Opus>', inherited: false } }), props('model'), false);
+    const own = rowRestHtml(row({ model: { label: 'Claude <Opus>', inherited: false, logo: null } }), props('model'), false);
     expect(own).toContain('<span class="c c-model"><span class="pill mi ui-model" title="Claude &lt;Opus&gt;">Claude &lt;Opus&gt;</span></span>');
-    const inherited = rowRestHtml(row({ model: { label: 'GPT-6 Sol', inherited: true } }), props('model'), false);
-    expect(inherited).toContain('class="pill mi ui-model inherited"');
+    // With the provider's logo: a mask class per logo (lib/providerLogo.ts).
+    const inherited = rowRestHtml(row({ model: { label: 'GPT-6 Sol', inherited: true, logo: 'https://x/logo/abc' } }), props('model'), false);
+    expect(inherited).toMatch(/class="pill mi plogo pl-\d+ inherited"/);
     expect(rowRestHtml(row(), props('model'), false)).toContain('<span class="c c-model"></span>');
   });
 

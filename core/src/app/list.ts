@@ -13,8 +13,7 @@ import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext }
 import { revealIndex, revealSpan } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
-import { encodeChoice } from '@selfbound/backend/shared/models';
-import { effectiveChoice, modelFilterLabel, modelLabel, teamModels } from '../models.ts';
+import { effectiveChoice, modelFilterLabel, modelInfo, modelLabel, teamModels } from '../models.ts';
 import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
 
@@ -129,8 +128,8 @@ export class ListController {
   #projects = new Map<string, string>();
   #sprints = new Map<string, { name: string; state: string }>();
   #badges = new Map<string, TeamBadge>();
-  /** Model chip texts by `encodeChoice`, rebuilt when meta changes (a row only looks one up) */
-  #modelLabels = new Map<string, string>();
+  /** Model chip texts per choice object (issue, parent or team default), dropped when meta changes */
+  #modelLabels = new WeakMap<object, string>();
   /** Board: column and position per issue (also in collapsed columns) */
   #boardPos = new Map<IssueId, { col: number; index: number }>();
   #columnScrollers = new Map<string, ColumnScroller>();
@@ -213,7 +212,7 @@ export class ListController {
     this.#labels = new Map(meta?.labels.map((l) => [l._id, { name: l.name, hue: l.hue }]) ?? []);
     this.#projects = new Map(meta?.projects.map((p) => [p._id, p.name]) ?? []);
     this.#sprints = new Map(meta?.sprints.map((s) => [s._id, { name: s.name, state: s.state }]) ?? []);
-    this.#modelLabels.clear();
+    this.#modelLabels = new WeakMap();
     this.#badges.clear();
     this.rows.refreshAll();
     this.recompute();
@@ -227,8 +226,8 @@ export class ListController {
 
   onIssues(ids: ReadonlySet<IssueId>) {
     for (const id of ids) this.rows.refresh(id);
-    // Sub-issues show the parent's model as inherited.
-    if (this.view.get().display.props.includes('model')) for (const id of ids) for (const child of this.app.store.childrenOf(id)) this.rows.refresh(child._id);
+    // Sub-issues show the parent's model as inherited (row state is cached across views, so always).
+    for (const id of ids) for (const child of this.app.store.childrenOf(id)) this.rows.refresh(child._id);
     const quick = this.#tryInPlace(ids);
     // Pending issue confirmed: focus and selection move to the real one.
     const store = this.app.store;
@@ -295,12 +294,12 @@ export class ListController {
     // Groups that do not depend on the issue alone: budget (team), sprint scope and the parent's title in its header; several groups per issue (labels); two levels.
     if (grouping === 'team' || grouping === 'scope' || grouping === 'parent' || multiGrouping(grouping)) return false;
     if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
-    // The effective model also depends on the parent: a parent's change moves its sub-issues.
-    if (grouping === 'model' || view.filters.model.length) return false;
     const store = this.app.store;
+    // The effective model also depends on the parent: a parent's change may move its sub-issues.
+    if ((grouping === 'model' || view.filters.model.length) && [...ids].some((id) => store.childrenOf(id).length > 0)) return false;
     const matches = visibleFilter(view, store.meta.get(), this.context());
     const compare = viewComparator(view);
-    const groupKey = groupKeyOf(grouping, {}, store.meta.get());
+    const groupKey = groupKeyOf(grouping, { issueOf: (id) => store.get(id) }, store.meta.get());
     const rows = this.list.get().rows;
     const issueAt = (i: number) => {
       const row = rows[i];
@@ -427,9 +426,9 @@ export class ListController {
     const board = this.board.get();
     if (this.idle || !board || ids.size > 200) return false;
     const view = this.view.get();
-    // A parent's model decides whether its sub-issues pass the model filter.
-    if (view.filters.model.length) return false;
     const store = this.app.store;
+    // A parent's model decides whether its sub-issues pass the model filter.
+    if (view.filters.model.length && [...ids].some((id) => store.childrenOf(id).length > 0)) return false;
     const meta = store.meta.get();
     const matches = visibleFilter(view, meta, this.context());
     const compare = viewComparator(view);
@@ -681,10 +680,9 @@ export class ListController {
     const meta = store.meta.get();
     const choice = effectiveChoice(issue, (id) => store.get(id), teamModels(meta));
     if (!choice) return null;
-    const key = encodeChoice(choice);
-    let label = this.#modelLabels.get(key);
-    if (label === undefined) this.#modelLabels.set(key, (label = modelLabel(meta, choice)));
-    return { label, inherited: !issue.model };
+    let label = this.#modelLabels.get(choice);
+    if (label === undefined) this.#modelLabels.set(choice, (label = modelLabel(meta, choice)));
+    return { label, inherited: !issue.model, logo: modelInfo(meta, choice)?.logo ?? null };
   }
 
   /** Column in use changed (sprint planning): redraw the focus row. */
