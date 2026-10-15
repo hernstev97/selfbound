@@ -37,6 +37,7 @@ export default {
   'All issues': 'Alle Issues',
   Active: 'Aktiv',
   'Complete sprint': 'Sprint abschließen',
+  'Edit sprint': 'Sprint bearbeiten',
   Project: 'Projekt',
   Trash: 'Papierkorb',
   Sprint: 'Sprint',

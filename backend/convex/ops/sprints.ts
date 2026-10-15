@@ -279,7 +279,8 @@ export async function removeFromSprint(
 
 /**
  * Starts a sprint (only from planning, at most one active sprint). If the planned start is in
- * the future, it starts today; the length stays and the end moves along (`moved`).
+ * the future, it starts today and keeps its planned end (`moved`). If the planned end already
+ * lies in the past, the sprint would start overdue: it starts today and keeps its length instead.
  */
 export async function startSprint(ctx: MutationCtx, _actor: Actor, args: { sprintId: Id<'sprints'> }) {
   const sprint = await getSprint(ctx, args.sprintId);
@@ -298,7 +299,12 @@ export async function startSprint(ctx: MutationCtx, _actor: Actor, args: { sprin
   const now = Date.now();
   const today = berlinDay(now);
   const early = sprint.startDate > today;
-  const range = early ? { startDate: today, endDate: addDays(today, daysBetween(sprint.startDate, sprint.endDate)) } : null;
+  const overdue = sprint.endDate < today;
+  const range = early
+    ? { startDate: today, endDate: sprint.endDate }
+    : overdue
+      ? { startDate: today, endDate: addDays(today, daysBetween(sprint.startDate, sprint.endDate)) }
+      : null;
   await ctx.db.patch('sprints', sprint._id, { state: 'active', startedAt: now, updatedAt: now, ...(range ?? {}) });
   return { sprintId: sprint._id, startedAt: now, moved: range };
 }

@@ -216,6 +216,18 @@ export const ACTIONS: Action[] = [
       if (id) void a.loadSprints().then((s) => s.start(id));
     },
   },
+  {
+    id: 'sprint.edit',
+    label: msg('Edit sprint'),
+    section: 'Sprint',
+    icon: 'edit',
+    keywords: 'sprint edit change name goal dates end start capacity bearbeiten ändern ziel ende kapazität',
+    when: hasActive,
+    run: (a) => {
+      a.nav.goView({ kind: 'sprint', team: null });
+      void a.loadSprints().then((s) => s.editing.set(true));
+    },
+  },
   { id: 'sprint.close', label: msg('Complete sprint'), section: 'Sprint', icon: 'check', keywords: 'sprint complete finish end close abschluss abschließen ende beenden', when: hasActive, run: (a) => a.nav.goView({ kind: 'close', team: null }) },
   {
     id: 'sprint.add',

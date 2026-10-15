@@ -1,5 +1,6 @@
 // Sprints, priority budget, identifier column, settings helpers.
 import { describe, expect, test } from 'vitest';
+import { actionById } from '../src/app/actions.ts';
 import { App } from '../src/app/index.ts';
 import { mcpCommand, precheckLogo, siteUrl } from '../src/app/admin.ts';
 import { Auth } from '../src/auth.ts';
@@ -183,6 +184,37 @@ describe('app: planning and completion', () => {
     const close = calls(client, 'sprints:close').at(-1)![1] as { decisions: unknown[]; nextSprintId: string };
     expect(close.nextSprintId).toBe('s5');
     expect(close.decisions).toEqual(expect.arrayContaining([{ issueId: 'i4', outcome: 'next' }, { issueId: 'i3', outcome: 'backlog' }]));
+  });
+
+  test('the active sprint can be edited: dates and name go through sprints.update, capacity is parsed', async () => {
+    const { client, app } = await setup();
+    app.nav.goView({ kind: 'sprint', team: null });
+    await flush();
+    app.sprints.update('s4' as never, { name: 'Renamed', endDate: '2026-10-23' });
+    expect(calls(client, 'sprints:update').at(-1)![1]).toEqual({ sprintId: 's4', name: 'Renamed', endDate: '2026-10-23' });
+    app.sprints.setCapacity('s4' as never, '12,5');
+    expect(calls(client, 'sprints:update').at(-1)![1]).toEqual({ sprintId: 's4', capacity: 12.5 });
+    client.push('meta:get', {}, { ...meta, sprints: meta.sprints.map((sp) => (sp._id === 's4' ? { ...sp, capacity: 10 } : sp)) });
+    await flush();
+    app.sprints.setCapacity('s4' as never, '');
+    expect(calls(client, 'sprints:update').at(-1)![1]).toEqual({ sprintId: 's4', capacity: null });
+    const before = calls(client, 'sprints:update').length;
+    app.sprints.setCapacity('s4' as never, '-3');
+    app.sprints.setCapacity('s4' as never, 'abc');
+    expect(calls(client, 'sprints:update')).toHaveLength(before);
+  });
+
+  test('"Edit sprint" opens the edit form on the sprint page and closes it when leaving', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null });
+    await flush();
+    actionById('sprint.edit')!.run(app);
+    await flush();
+    expect(app.sprints.editing.get()).toBe(true);
+    expect(app.nav.page.get()).toMatchObject({ name: 'view', view: { kind: 'sprint' } });
+    app.nav.goView({ kind: 'all', team: null });
+    await flush();
+    expect(app.sprints.editing.get()).toBe(false);
   });
 
   test('priority budget: notice above the budget, "Downgrade" opens the candidates', async () => {
