@@ -1,13 +1,16 @@
 <script lang="ts">
   // Sprint view header: inline goal, points done/total, issues, capacity, share added late, date
   // range. The core computes the numbers (app.sprints.active).
-  import { t } from '@selfbound/core/i18n';
+  import { ICON } from '@selfbound/core';
+  import { t, tc } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { points } from '@selfbound/core/sprintlogic';
   import Goal from './Goal.svelte';
 
   const activeSlice = fromSlice(app.sprints.active);
+  const editingSlice = fromSlice(app.sprints.editing);
+  const editing = $derived(editingSlice.current);
   const s = $derived(activeSlice.current);
   const tot = $derived(s?.totals);
   const pct = $derived(tot && tot.points ? Math.round((tot.donePoints / tot.points) * 100) : 0);
@@ -16,7 +19,21 @@
 
 {#if s && tot}
   <section class="sprint-head" data-testid="sprint-head">
-    <Goal sprintId={s.id} goal={s.goal} />
+    <div class="sprint-head-row">
+      <Goal sprintId={s.id} goal={s.goal} />
+      <button class={['icon-btn', editing && 'on']} title={t('Edit sprint')} aria-label={t('Edit sprint')} aria-pressed={editing} data-testid="sprint-edit" onclick={() => app.sprints.editing.set(!editing)}>
+        <span class="icon">{@html ICON.edit}</span>
+      </button>
+    </div>
+    {#if editing}
+      <div class="sprint-edit" data-testid="sprint-edit-form">
+        <label>{t('Name')} <input class="input" data-testid="sprint-edit-name" value={s.name} onchange={(e) => app.sprints.update(s.id, { name: e.currentTarget.value })} /></label>
+        <label>{t('Start')} <input class="input" type="date" data-testid="sprint-edit-start" value={s.startDate} onchange={(e) => app.sprints.update(s.id, { startDate: e.currentTarget.value })} /></label>
+        <label>{t('End')} <input class="input" type="date" data-testid="sprint-edit-end" value={s.endDate} onchange={(e) => app.sprints.update(s.id, { endDate: e.currentTarget.value })} /></label>
+        <label>{t('Capacity')} <input class="input num" inputmode="decimal" data-testid="sprint-edit-capacity" value={s.capacity !== null ? points(s.capacity) : ''} onchange={(e) => app.sprints.setCapacity(s.id, e.currentTarget.value)} /> {t('points')}</label>
+        <button class="btn small" data-testid="sprint-edit-done" onclick={() => app.sprints.editing.set(false)}>{tc('button', 'Done')}</button>
+      </div>
+    {/if}
     <div class="sprint-stats">
       <div class="stat wide" title={t('{pct} % of the points done', { pct })}>
         <span class="stat-label">{t('Progress')}</span>

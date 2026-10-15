@@ -89,6 +89,8 @@ export class SprintController {
   readonly closing = new Slice<CloseState | null>(null);
   /** /sprints */
   readonly rows = new Slice<SprintRow[] | null>(null);
+  /** Edit form (name, dates, capacity) in the header of the active sprint is open. */
+  readonly editing = new Slice(false);
 
   /** Retro text when completing (a field on the page, kept here for Ctrl+Enter) */
   retroDraft = '';
@@ -112,6 +114,7 @@ export class SprintController {
       this.#target = null;
     }
     this.#page = next;
+    if (next !== 'sprint') this.editing.set(false);
     if (next === 'plan' && !this.#suggestion) {
       this.#suggestion = this.app.store.watch(api.sprints.capacitySuggestion, {});
       this.#suggestion.slice.subscribe(() => this.refresh());
@@ -349,6 +352,14 @@ export class SprintController {
         });
       })
       .catch((error) => this.app.toasts.error(t('Sprint not updated'), error));
+  }
+
+  /** Capacity from a text field: empty clears it, a comma works as decimal separator, invalid input is ignored. */
+  setCapacity(sprintId: SprintId, value: string) {
+    const n = value.trim() === '' ? null : Number(value.replace(',', '.'));
+    if (n !== null && (!Number.isFinite(n) || n < 0)) return;
+    const current = this.app.store.meta.get()?.sprints.find((s) => s._id === sprintId)?.capacity ?? null;
+    if (n !== current) this.update(sprintId, { capacity: n });
   }
 
   async start(sprintId: SprintId) {

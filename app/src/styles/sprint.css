@@ -41,6 +41,26 @@
   flex-direction: column;
   gap: 10px;
 }
+.sprint-head-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.sprint-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  color: var(--text-muted);
+}
+.sprint-edit label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sprint-edit .input.num {
+  width: 72px;
+}
 .sprint-goal {
   display: block;
   width: 100%;

@@ -53,14 +53,14 @@ describe('Sprints', () => {
     expect(suggestedStart([{ endDate: '2026-11-01' }, { endDate: '2026-10-18' }], '2026-10-14')).toBe('2026-11-02');
   });
 
-  test('start early: begins today, length kept; close early: ends today', async () => {
+  test('start early: begins today, planned end kept; close early: ends today', async () => {
     const { owner } = setup();
     const today = berlinDay(Date.now());
     const { id } = await owner.mutation(api.sprints.create, { startDate: addDays(today, 5), endDate: addDays(today, 18) });
     const started = await owner.mutation(api.sprints.start, { sprintId: id });
-    expect(started.moved).toEqual({ startDate: today, endDate: addDays(today, 13) });
+    expect(started.moved).toEqual({ startDate: today, endDate: addDays(today, 18) });
     let sprint = (await owner.query(api.sprints.list, {})).find((s) => s._id === id)!;
-    expect([sprint.startDate, sprint.endDate]).toEqual([today, addDays(today, 13)]);
+    expect([sprint.startDate, sprint.endDate]).toEqual([today, addDays(today, 18)]);
     const closed = await owner.mutation(api.sprints.close, { sprintId: id, decisions: [] });
     expect(closed.endedEarly).toBe(today);
     sprint = (await owner.query(api.sprints.list, {})).find((s) => s._id === id)!;
@@ -68,6 +68,27 @@ describe('Sprints', () => {
     // Started on time: nothing moved.
     const b = await owner.mutation(api.sprints.create, { startDate: addDays(today, -3), endDate: addDays(today, 10) });
     expect((await owner.mutation(api.sprints.start, { sprintId: b.id })).moved).toBeNull();
+  });
+
+  test('start with a planned end in the past: begins today and keeps its length', async () => {
+    const { owner } = setup();
+    const today = berlinDay(Date.now());
+    const { id } = await owner.mutation(api.sprints.create, { startDate: addDays(today, -20), endDate: addDays(today, -7) });
+    const started = await owner.mutation(api.sprints.start, { sprintId: id });
+    expect(started.moved).toEqual({ startDate: today, endDate: addDays(today, 13) });
+    const sprint = (await owner.query(api.sprints.list, {})).find((s) => s._id === id)!;
+    expect([sprint.startDate, sprint.endDate]).toEqual([today, addDays(today, 13)]);
+  });
+
+  test('the dates of an active sprint can be edited, with the usual validation', async () => {
+    const { owner } = setup();
+    const today = berlinDay(Date.now());
+    const { id } = await owner.mutation(api.sprints.create, { startDate: addDays(today, 4), endDate: addDays(today, 8) });
+    await owner.mutation(api.sprints.start, { sprintId: id });
+    await owner.mutation(api.sprints.update, { sprintId: id, name: 'Renamed', endDate: addDays(today, 10), capacity: 20 });
+    const sprint = (await owner.query(api.sprints.list, {})).find((s) => s._id === id)!;
+    expect(sprint).toMatchObject({ name: 'Renamed', state: 'active', startDate: today, endDate: addDays(today, 10), capacity: 20 });
+    await expectCode(owner.mutation(api.sprints.update, { sprintId: id, endDate: addDays(today, -1) }), 'invalid');
   });
 
   test('no sprint runs without being started; at most one active sprint', async () => {

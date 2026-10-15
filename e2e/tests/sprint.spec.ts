@@ -156,6 +156,42 @@ test('Start, add late via the app and a second client, header with numbers', asy
   expect(items.filter((i) => i.kind === 'late' && i.removedAt === null).map((i) => i.issueId).sort()).toEqual([late, second].sort());
 });
 
+test('Edit the active sprint: name, dates and capacity from the header; an invalid date range is rejected', async ({ page }) => {
+  const before = (await meta()).sprints.find((s) => s.state === 'active')!;
+  const shifted = (day: string, by: number) => new Date(Date.parse(`${day}T00:00:00Z`) + by * 86_400_000).toISOString().slice(0, 10);
+  const newEnd = shifted(before.endDate, 3);
+
+  // Command menu: "Edit sprint" goes to the sprint and opens the form.
+  await open(page, '/all?group=none&order=created');
+  await page.keyboard.press('Control+k');
+  await page.keyboard.type('Edit sprint');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/sprint$/);
+  await expect(page.getByTestId('sprint-edit-form')).toBeVisible();
+  await expect(page.getByTestId('sprint-edit-end')).toHaveValue(before.endDate);
+
+  await page.getByTestId('sprint-edit-name').fill('E2E renamed sprint');
+  await page.getByTestId('sprint-edit-name').press('Tab');
+  await page.getByTestId('sprint-edit-end').fill(newEnd);
+  await page.getByTestId('sprint-edit-capacity').fill('9,5');
+  await page.getByTestId('sprint-edit-capacity').press('Tab');
+  await settled(page);
+  let sprint = (await meta()).sprints.find((s) => s._id === before._id)!;
+  expect(sprint).toMatchObject({ name: 'E2E renamed sprint', startDate: before.startDate, endDate: newEnd, capacity: 9.5, state: 'active' });
+  await expect(page.getByTestId('nav-sprint')).toContainText('E2E renamed sprint');
+
+  // End before start: the server refuses, the dates stay.
+  await page.getByTestId('sprint-edit-end').fill(shifted(before.startDate, -1));
+  await expect(page.getByTestId('toast').filter({ hasText: 'Sprint not updated' })).toBeVisible();
+  sprint = (await meta()).sprints.find((s) => s._id === before._id)!;
+  expect(sprint.endDate).toBe(newEnd);
+
+  // Restore for the following tests; the form closes with "Done".
+  await backend().mutation(api.sprints.update, { sprintId: before._id, name: before.name, endDate: before.endDate, capacity: null });
+  await page.getByTestId('sprint-edit-done').click();
+  await expect(page.getByTestId('sprint-edit-form')).toHaveCount(0);
+});
+
 test('Closing: impossible without all decisions, 1/2/3 and bulk decision, carried over as planned', async ({ page }) => {
   const { sprints } = await meta();
   const active = sprints.find((s) => s.state === 'active')!;
