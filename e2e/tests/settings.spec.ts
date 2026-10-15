@@ -30,10 +30,15 @@ test('Uploading a team logo: SVG accepted and visible everywhere, SVG with a scr
   await expect(page.getByTestId('logo-dark')).toContainText('Not set');
 
   // Visible in the sidebar and in cross-team rows.
+  // The list is newest first and virtualized: earlier specs create issues in other teams, so an
+  // existing NOVA issue may be far below the rendered rows. Create one that is on top.
+  const meta = await backend().query(api.meta.get, {});
+  const nova = meta.teams.find((t) => t.key === 'NOVA')!;
+  const { issues } = await backend().mutation(api.issues.create, { issues: [{ teamId: nova._id, title: `Logo row ${Date.now()}`, status: 'todo' }] });
   await page.getByTestId('settings-back').click();
   await open(page, '/all?group=none&order=created');
   await expect(page.getByTestId('nav-team-NOVA').locator('img')).toHaveCount(1);
-  const novaRow = page.locator('[data-testid="issue-row"][data-key^="NOVA-"]').first();
+  const novaRow = page.locator(`[data-testid="issue-row"][data-key="${issues[0].identifier}"]`);
   await expect(novaRow.locator('.p-team img')).toHaveCount(1);
   const src = (await novaRow.locator('.p-team img').getAttribute('src'))!;
   expect(src).toContain('/logo/');
