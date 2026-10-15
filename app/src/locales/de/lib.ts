@@ -147,4 +147,14 @@ export default {
   saving: 'wird gespeichert',
   'Project of {team}': 'Projekt von {team}',
   'deleted {date}': 'gelöscht {date}',
+  // lib/blocks/, lib/editor/views.ts (info panels and visual blocks)
+  Info: 'Info',
+  Note: 'Hinweis',
+  Success: 'Erfolg',
+  'Panel: {kind}': 'Infoblock: {kind}',
+  'Panel type': 'Art des Infoblocks',
+  'Change panel type': 'Art des Infoblocks ändern',
+  'Turn into quote': 'In Zitat umwandeln',
+  'Turn into text': 'In Text umwandeln',
+  'Could not draw the {kind}: {reason}': '{kind} konnte nicht gezeichnet werden: {reason}',
 } satisfies Dictionary;

@@ -98,6 +98,7 @@ export function plainText(markdown: string, max = 600) {
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_`>~]/g, '')
+    .replace(/^\s*\[![A-Za-z]+\]\s*/gm, '') // info panel marker (the title stays)
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/^\s*[-+]\s+/gm, '• ')
     .replace(/\n{3,}/g, '\n\n')

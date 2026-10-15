@@ -22,7 +22,8 @@
   import { onDestroy, untrack } from 'svelte';
   import { imageFiles, insertImages, pickImages, type ImageRef, type UploadTarget } from '../imageInput.ts';
   import LangPicker from '../../components/LangPicker.svelte';
-  import { codeToText, insertRule, insertTable, quote, setBlock, toggleList } from './commands.ts';
+  import { CALLOUT_KINDS, calloutLabel, type CalloutKind } from '../blocks/callout.ts';
+  import { codeToText, insertCallout, insertRule, insertTable, quote, setBlock, setCalloutKind, toggleList, unwrapCallout } from './commands.ts';
   import { markdownFragment, parseMarkdown, type Source } from './parse.ts';
   import { closeSlash, plugins, slashKey } from './plugins.ts';
   import { app } from '../../app-instance.ts';
@@ -80,6 +81,9 @@
     if (view) fn(view.state, view.dispatch);
   };
 
+  // German search words per panel kind
+  const CALLOUT_WORDS: Record<CalloutKind, string> = { info: 'info', note: 'hinweis notiz', success: 'erfolg', warning: 'warnung achtung', error: 'fehler' };
+
   // Labels are translated here (component script, runs at mount); `words` are search synonyms in
   // English and German.
   const ITEMS: Item[] = [
@@ -92,6 +96,13 @@
     { id: 'task', label: t('Checklist'), hint: '[ ]', words: 'checklist todo task checkbox checkliste aufgaben', run: cmd(toggleList(n.bullet_list, true)) },
     { id: 'quote', label: t('Quote'), hint: '>', words: 'quote blockquote zitat', run: cmd(quote) },
     { id: 'code', label: t('Code block'), hint: '```', words: 'code codeblock snippet', run: cmd(setBlock(n.code_block)) },
+    ...CALLOUT_KINDS.map((kind): Item => ({
+      id: `callout-${kind}`,
+      label: t('Panel: {kind}', { kind: calloutLabel(kind) }),
+      hint: `[!${kind.toUpperCase()}]`,
+      words: `panel callout alert box infobox ${kind} ${CALLOUT_WORDS[kind]}`,
+      run: cmd(insertCallout(kind)),
+    })),
     { id: 'table', label: t('Table'), hint: '', words: 'table tabelle', run: cmd(insertTable) },
     { id: 'rule', label: t('Divider'), hint: '---', words: 'divider rule line hr trennlinie linie', run: cmd(insertRule) },
   ];
@@ -117,7 +128,9 @@
   let slashIndex = $state(0);
   const items = $derived.by(() => {
     if (!slash) return [];
-    const all = [...ITEMS, ...(upload ? [IMAGE_ITEM] : []), ...(wikiOn() ? [PAGE_ITEM] : [])];
+    // A panel does not fit everywhere (list items, table cells): then the entries are not offered.
+    const panels = view ? insertCallout('info')(view.state) : true;
+    const all = [...ITEMS.filter((i) => panels || !i.id.startsWith('callout-')), ...(upload ? [IMAGE_ITEM] : []), ...(wikiOn() ? [PAGE_ITEM] : [])];
     const q = slash.query.toLowerCase();
     return q ? all.filter((i) => i.label.toLowerCase().includes(q) || i.words.includes(q)) : all;
   });
@@ -306,6 +319,30 @@
     };
   }
 
+  // ---------------------------------------------------------------- Info panel kind
+
+  let kindMenu = $state<{ pos: number; kind: CalloutKind; x: number; y: number } | null>(null);
+
+  function openKind(pos: number, anchor: HTMLElement) {
+    const node = view?.state.doc.nodeAt(pos);
+    if (!view || node?.type !== n.callout) return;
+    const box = anchor.getBoundingClientRect();
+    kindMenu = { pos, kind: node.attrs.kind as CalloutKind, x: Math.max(8, Math.min(box.left, innerWidth - 268)), y: Math.min(box.bottom + 4, innerHeight - 260) };
+  }
+
+  const kindItems = $derived(
+    kindMenu
+      ? CALLOUT_KINDS.map((kind) => ({ id: kind, label: calloutLabel(kind), checked: kindMenu!.kind === kind, run: () => applyKind(setCalloutKind(kindMenu!.pos, kind)) }))
+      : [],
+  );
+
+  function applyKind(fn: (state: EditorState, dispatch: EditorView['dispatch']) => boolean) {
+    if (!view) return;
+    fn(view.state, view.dispatch);
+    kindMenu = null;
+    view.focus();
+  }
+
   // ---------------------------------------------------------------- Link (Ctrl K)
 
   let link = $state<{ from: number; to: number; href: string; x: number; y: number } | null>(null);
@@ -448,8 +485,9 @@
         slashKey: slashKeyDown,
         flush,
         escape: () => {
-          if (tableMenu) {
+          if (tableMenu || kindMenu) {
             tableMenu = null;
+            kindMenu = null;
             return true;
           }
           if (onescape?.() === true) return true;
@@ -478,7 +516,7 @@
       { mount: el },
       {
         state: createState(lastEmitted),
-        nodeViews: nodeViews({ openLang }),
+        nodeViews: nodeViews({ openLang, openKind }),
         attributes: {
           class: `md rich ${cls}`.trim(),
           role: 'textbox',
@@ -501,6 +539,7 @@
           syncSlash();
           // Close the menu as soon as the text changes or the cursor leaves the cell
           if (tableMenu && (tr.docChanged || cellPos(state) !== tableMenu.cell)) tableMenu = null;
+          if (kindMenu && (tr.docChanged || tr.selectionSet)) kindMenu = null;
           syncTable();
         },
         // "[[" opens the wiki page picker (as in many wikis).
@@ -564,6 +603,7 @@
             flush();
             onblur?.();
             tableMenu = null;
+            kindMenu = null;
             queueMicrotask(syncTable);
             return false;
           },
@@ -658,6 +698,27 @@
         </button>
       {/each}
     {/each}
+  </div>
+{/if}
+
+{#if kindMenu}
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="table-menu" role="menu" tabindex="-1" aria-label={t('Panel type')} data-testid="callout-menu" style:left="{kindMenu.x}px" style:top="{kindMenu.y}px" onmousedown={(e) => e.preventDefault()}>
+    {#each kindItems as item (item.id)}
+      <button type="button" class="table-item" role="menuitemradio" aria-checked={item.checked} data-testid="callout-menu-item" data-id={item.id} onclick={item.run}>
+        <span class="table-check">{item.checked ? '✓' : ''}</span>
+        <span class="grow">{item.label}</span>
+      </button>
+    {/each}
+    <div class="table-sep"></div>
+    <button type="button" class="table-item" role="menuitem" data-testid="callout-menu-item" data-id="to-quote" onclick={() => applyKind(unwrapCallout(kindMenu!.pos, true))}>
+      <span class="table-check"></span>
+      <span class="grow">{t('Turn into quote')}</span>
+    </button>
+    <button type="button" class="table-item" role="menuitem" data-testid="callout-menu-item" data-id="to-text" onclick={() => applyKind(unwrapCallout(kindMenu!.pos))}>
+      <span class="table-check"></span>
+      <span class="grow">{t('Turn into text')}</span>
+    </button>
   </div>
 {/if}
 
@@ -765,6 +826,46 @@
   /* Language and copy: md.css (.codebar); room for the button at the top right */
   :global(.rich .codeblock pre) {
     padding-right: 96px;
+  }
+  /* Info panel: shared look in md.css (.callout); here the symbol is a button next to the title. */
+  :global(.rich .callout) {
+    position: relative;
+  }
+  :global(.rich .callout > button.callout-icon) {
+    position: absolute;
+    left: 12px;
+    top: 13px;
+    padding: 0;
+    border: 0;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  :global(.rich .callout > button.callout-icon:hover) {
+    filter: brightness(1.2);
+  }
+  :global(.rich .callout > button.callout-icon:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  :global(.rich .callout-title) {
+    display: block;
+    padding-left: 26px;
+    min-height: 24px;
+  }
+  /* No title: the kind's name as a hint (set by CalloutView) */
+  :global(.rich .callout.untitled .callout-title::before) {
+    content: var(--label);
+    float: left;
+    height: 0;
+    color: var(--text-subtle);
+    font-weight: 400;
+    pointer-events: none;
+  }
+  :global(.rich .callout-inner > :not(.callout-title)) {
+    margin-left: 26px;
+  }
+  :global(.rich .callout-inner > :last-child) {
+    margin-bottom: 0;
   }
   :global(.rich pre.raw-md) {
     border: 1px dashed var(--border-strong);

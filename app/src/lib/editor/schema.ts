@@ -1,4 +1,4 @@
-// Editor schema (ProseMirror). Covers exactly what the renderer (marked, GFM) knows.
+// Editor schema (ProseMirror). Covers exactly what the renderer (marked, GFM, info panels) knows.
 // Blocks the editor does not understand (HTML blocks, link definitions …) become `raw_block`:
 // shown as source and saved unchanged. Inline HTML becomes `html_inline`. Attributes such as
 // `bullet`, `delim`, `fence` and `markup` remember the source notation, so an edited list keeps
@@ -6,6 +6,7 @@
 import { t } from '@selfbound/core/i18n';
 import { Schema, type DOMOutputSpec, type MarkSpec, type NodeSpec } from 'prosemirror-model';
 import { tableNodes } from 'prosemirror-tables';
+import { CALLOUT_KINDS } from '../blocks/callout.ts';
 
 const align = {
   default: null,
@@ -37,6 +38,28 @@ const nodes: Record<string, NodeSpec> = {
     defining: true,
     parseDOM: [{ tag: 'blockquote' }],
     toDOM: () => ['blockquote', 0],
+  },
+  // Info panel (`> [!WARNING] Title`): the title is its own text block, then any blocks.
+  callout: {
+    group: 'block',
+    content: 'callout_title block+',
+    defining: true,
+    // word: the keyword as written (`TIP`), so an untouched panel is written back as it was
+    attrs: { kind: { default: 'info' }, word: { default: null } },
+    parseDOM: [
+      {
+        tag: 'div.callout',
+        getAttrs: (dom: HTMLElement) => ({ kind: CALLOUT_KINDS.find((k) => dom.classList.contains(`callout-${k}`)) ?? 'info' }),
+      },
+    ],
+    toDOM: (node): DOMOutputSpec => ['div', { class: `callout callout-${node.attrs.kind}` }, 0],
+  },
+  callout_title: {
+    content: 'text*',
+    marks: '',
+    defining: true,
+    parseDOM: [{ tag: 'div.callout-title' }],
+    toDOM: () => ['div', { class: 'callout-title' }, 0],
   },
   horizontal_rule: {
     group: 'block',
