@@ -65,7 +65,7 @@ const OPEN = new Set(['triage', 'backlog', 'todo', 'in_progress', 'in_review']);
 const PLAN_PROPS: DisplayProp[] = ['team', 'priority', 'id', 'status', 'labels', 'estimate', 'due'];
 const inTeam = (i: Issue, ctx: ViewContext) => !ctx.teamId || i.teamId === ctx.teamId;
 
-const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'none'];
+const ALL_GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'none'];
 const ALL_ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due'];
 const PLAN_ORDERINGS: Ordering[] = ['rank', 'priority', 'status', 'created', 'updated', 'due'];
 
@@ -333,6 +333,8 @@ export const GROUPING_LABEL: Record<Grouping, string> = translated({
   project: 'Project',
   sprint: 'Sprint',
   label: 'Label',
+  labelGroup: 'Label group',
+  creator: 'Creator',
   estimate: 'Estimate',
   due: 'Due date',
   parent: 'Parent issue',

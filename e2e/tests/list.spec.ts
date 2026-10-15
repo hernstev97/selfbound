@@ -344,6 +344,11 @@ test('Grouping by label, estimate and due date; second level; order and empty gr
   const counted = await headers.evaluateAll((els) => els.map((el) => Number(el.querySelector('.group-count')?.textContent)));
   expect(counted.length).toBeGreaterThan(1);
 
+  await page.getByTestId('display-grouping').selectOption('creator');
+  await expect(headers.first()).toBeVisible();
+  await page.getByTestId('display-grouping').selectOption('labelGroup');
+  await expect(headers.first()).toBeVisible();
+
   await page.getByTestId('display-grouping').selectOption('estimate');
   await expect(headers.last()).toContainText(/No estimate|point/);
   await page.getByTestId('display-grouping').selectOption('due');

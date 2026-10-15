@@ -177,7 +177,7 @@ export interface NewIssue {
 export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
 /** scope = planned / added later (active sprint); due, created, updated = date buckets */
-export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'estimate' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
+export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
 /** Order of the groups: the natural order, reversed, or the biggest group first */
 export type GroupOrder = 'asc' | 'desc' | 'size';
 export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status' | 'snoozed';
@@ -192,6 +192,8 @@ export interface Display {
   groupOrder?: GroupOrder;
   /** Also show groups without issues; missing = hide them */
   emptyGroups?: boolean;
+  /** Board only: one column per priority instead of per status; missing = status */
+  boardColumns?: 'priority';
   ordering: Ordering;
   props: DisplayProp[];
   /** Show done, canceled and duplicate issues */
@@ -204,12 +206,14 @@ export type Layout = 'list' | 'board';
 
 /** Board column: one status (same type and name across teams). */
 export interface BoardColumn {
-  /** Group key `<type>:<name>` */
+  /** Group key `<type>:<name>`, or `p:<priority>` in a priority column */
   key: string;
   label: string;
   status: Status;
   type: import('@selfbound/backend/shared/workflow').StateType;
   color: string | null;
+  /** Priority board: the column's priority (`status` and `type` are then placeholders) */
+  priority?: Priority;
   /** The column's issues in the view's order (even when collapsed) */
   ids: IssueId[];
   /** Collapsed: header with count only (done and canceled by default) */

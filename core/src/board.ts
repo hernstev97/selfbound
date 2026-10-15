@@ -1,10 +1,11 @@
 // Board: columns from the teams' statuses, synchronous in memory like the list.
 // One column per status; across teams, the same type and name form one column.
 // Done and canceled columns are collapsed by default (speed: fewer cards to render).
+import { PRIORITY_GROUP_ORDER, PRIORITY_LABEL } from './format.ts';
 import { hasFilters } from './query.ts';
 import { VIEWS } from './views.ts';
 import { stateGroupKey, workflowsOf, type StateGroup } from './workflow.ts';
-import type { BoardColumn, BoardState, Issue, IssueId, Meta, ViewState } from './types.ts';
+import type { BoardColumn, BoardState, Issue, IssueId, Meta, Priority, ViewState } from './types.ts';
 
 /** Height of a card including the gap (windowing per column). */
 export const CARD_HEIGHT = 76;
@@ -24,6 +25,24 @@ export function collapsedByDefault(type: string) {
  */
 export function isCollapsed(type: string, key: string, toggled: ReadonlySet<string>) {
   return collapsedByDefault(type) ? !toggled.has(`b+:${key}`) : toggled.has(`b-:${key}`);
+}
+
+/** The column an issue belongs to: its status group, or its priority on a priority board. */
+export function boardKeyOf(issue: Issue, view: ViewState, meta: Meta | null) {
+  return view.display.boardColumns === 'priority' ? priorityKey(issue.priority) : stateGroupKey(workflowsOf(meta).of(issue));
+}
+
+const priorityKey = (priority: Priority) => `p:${priority}`;
+
+/** Priority board: always all five columns (they are the drop targets), none collapsed by default. */
+function computePriorityBoard(visible: readonly Issue[], view: ViewState, toggled: ReadonlySet<string>): BoardState {
+  const byPriority = new Map<Priority, IssueId[]>(PRIORITY_GROUP_ORDER.map((p) => [p, []]));
+  for (const issue of visible) byPriority.get(issue.priority)?.push(issue._id);
+  const columns: BoardColumn[] = PRIORITY_GROUP_ORDER.map((p) => {
+    const key = priorityKey(p);
+    return { key, label: PRIORITY_LABEL[p], status: 'todo', type: 'unstarted', color: null, priority: p, ids: byPriority.get(p)!, collapsed: toggled.has(`b-:${key}`) };
+  });
+  return { columns, count: visible.length, empty: visible.length > 0 ? null : hasFilters(view) ? 'filtered' : 'none' };
 }
 
 /** Teams whose statuses appear as columns: the view's team, the project's team, or all active ones. */
@@ -48,6 +67,7 @@ export function boardTeams(view: ViewState, meta: Meta | null, visible: readonly
  * only if the view shows them or they have issues.
  */
 export function computeBoard(visible: readonly Issue[], view: ViewState, meta: Meta | null, toggled: ReadonlySet<string>): BoardState {
+  if (view.display.boardColumns === 'priority') return computePriorityBoard(visible, view, toggled);
   const def = VIEWS[view.route.kind];
   const workflows = workflowsOf(meta);
   const byKey = new Map<string, IssueId[]>();
@@ -95,6 +115,7 @@ export function reuseBoard(prev: BoardState | null, next: BoardState): BoardStat
       old.key === column.key &&
       old.label === column.label &&
       old.color === column.color &&
+      old.priority === column.priority &&
       old.collapsed === column.collapsed &&
       sameIds(old.ids, column.ids)
     ) {

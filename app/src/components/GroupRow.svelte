@@ -61,7 +61,7 @@
       <TeamLogo team={row.group.team} />
     {:else if row.group.hue !== undefined}
       <span class="icon"><span class="label-dot" style:--hue={row.group.hue}></span></span>
-    {:else if row.group.by === 'label'}
+    {:else if row.group.by === 'label' || row.group.by === 'labelGroup'}
       <span class="icon mi ui-label" style="color: var(--text-muted)"></span>
     {:else if row.group.by === 'estimate'}
       <span class="icon mi ui-estimate" style="color: var(--text-muted)"></span>

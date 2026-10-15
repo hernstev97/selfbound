@@ -2,11 +2,11 @@
 // Computes outside the components and passes unchanged results through (reuseList), so Svelte
 // only redraws changed rows.
 import { t, tn, translated } from '../i18n.ts';
-import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
+import { CLOSED, OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
 import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, multiGrouping, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
-import { CARD_SLOT, computeBoard, reuseBoard } from '../board.ts';
+import { CARD_SLOT, boardKeyOf, computeBoard, reuseBoard } from '../board.ts';
 import { stateGroupKey } from '../workflow.ts';
 
 import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext } from '../views.ts';
@@ -343,6 +343,7 @@ export class ListController {
     const extras: ListExtras = {};
     if (view.display.grouping === 'scope') extras.kinds = this.app.store.sprintKinds.get();
     if (view.display.grouping === 'team') extras.budget = this.app.budgetLabels();
+    if (view.display.grouping === 'creator' || view.display.subGrouping === 'creator') extras.actors = this.app.store.agents.get();
     if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent') extras.issueOf = (id) => this.app.store.get(id);
     const next = reuseList(this.list.get(), computeList(visible, view, meta, this.#collapsedFor(view.route), this.app.prefs.dark.get(), extras));
     if (next !== this.list.get()) {
@@ -414,7 +415,6 @@ export class ListController {
     const meta = store.meta.get();
     const matches = visibleFilter(view, meta, this.context());
     const compare = viewComparator(view);
-    const workflows = workflowsOf(meta);
     for (const id of ids) {
       const next = store.get(id);
       const shown = next !== undefined && store.resolvedId(id) === id && matches(next);
@@ -425,7 +425,7 @@ export class ListController {
       }
       if (!next || !shown) return false;
       const column = board.columns[pos.col];
-      if (stateGroupKey(workflows.of(next)) !== column.key) return false;
+      if (boardKeyOf(next, view, meta) !== column.key) return false;
       const before = column.ids[pos.index - 1];
       const after = column.ids[pos.index + 1];
       const b = before ? store.get(before) : undefined;
@@ -488,6 +488,14 @@ export class ListController {
   dropProblem(ids: readonly IssueId[], key: string): string | null {
     const column = this.board.get()?.columns.find((c) => c.key === key);
     if (!column) return t('Column does not exist');
+    if (column.priority !== undefined) {
+      // Done, canceled and duplicate issues carry no priority (backend).
+      for (const id of ids) {
+        const issue = this.app.store.get(id);
+        if (issue && column.priority !== 0 && CLOSED.has(issue.status)) return t('{key} is closed and carries no priority', { key: issue.key });
+      }
+      return null;
+    }
     const workflows = workflowsOf(this.app.store.meta.get());
     for (const id of ids) {
       const issue = this.app.store.get(id);
@@ -513,7 +521,8 @@ export class ListController {
       this.app.toasts.show(problem, undefined, 'error');
       return false;
     }
-    this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
+    if (column.priority !== undefined) this.app.edit.patch([...ids], { priority: column.priority });
+    else this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
     return true;
   }
 
@@ -719,6 +728,7 @@ export class ListController {
       ...(saved.subGrouping && grouping !== 'none' && subGroupings(def, grouping).includes(saved.subGrouping) ? { subGrouping: saved.subGrouping } : {}),
       ...(saved.groupOrder === 'desc' || saved.groupOrder === 'size' ? { groupOrder: saved.groupOrder } : {}),
       ...(saved.emptyGroups === true ? { emptyGroups: true } : {}),
+      ...(saved.boardColumns === 'priority' && def.boardTypes ? { boardColumns: 'priority' as const } : {}),
       ordering: saved.ordering && def.orderings.includes(saved.ordering) ? saved.ordering : base.ordering,
       props: Array.isArray(saved.props) ? saved.props : base.props,
       showClosed: typeof saved.showClosed === 'boolean' ? saved.showClosed : base.showClosed,
@@ -769,6 +779,7 @@ export class ListController {
     if (!display.subGrouping || display.grouping === 'none' || !subGroupings(VIEWS[view.route.kind], display.grouping).includes(display.subGrouping)) delete display.subGrouping;
     if (display.groupOrder === 'asc' || display.grouping === 'none') delete display.groupOrder;
     if (!display.emptyGroups || display.grouping === 'none') delete display.emptyGroups;
+    if (display.boardColumns !== 'priority') delete display.boardColumns;
     this.view.set({ ...view, display });
     writeJson(`selfbound:display:${viewKey(view.route)}`, display);
     this.recompute();

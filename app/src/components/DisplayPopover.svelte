@@ -33,6 +33,18 @@
       <span class="icon">{@html ICON.chevronDown}</span>
     </span>
   </div>
+  {#if v.display.layout === 'board'}
+    <div class="dp-row">
+      <span>{t('Board columns')}</span>
+      <span class="dp-select">
+        <select data-testid="display-boardcolumns" value={v.display.boardColumns ?? 'status'} onchange={(e) => app.main.setDisplay({ boardColumns: e.currentTarget.value === 'priority' ? 'priority' : undefined })}>
+          <option value="status">{GROUPING_LABEL.status}</option>
+          <option value="priority">{GROUPING_LABEL.priority}</option>
+        </select>
+        <span class="icon">{@html ICON.chevronDown}</span>
+      </span>
+    </div>
+  {/if}
   {#if v.display.grouping !== 'none'}
     {#if subs.length > 0}
       <div class="dp-row">

@@ -97,22 +97,24 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 
 ### Grouping (`query.ts`, `GroupRow.svelte`, `DisplayPopover.svelte`)
 
-`Display` (saved per view in `xlr8:display:<view>`, so saved views can store it later) holds `grouping`, the optional `subGrouping` (second level), `groupOrder` (`asc` default, `desc`, `size`) and `emptyGroups`. Defaults are not stored. `setDisplay` drops a second level that is no longer allowed (`subGroupings(def, grouping)`: the view's groupings without `none`, `scope` and the first level). The URL carries `group` and `sub`.
+`Display` (saved per view in `selfbound:display:<view>`, so saved views can store it later) holds `grouping`, the optional `subGrouping` (second level), `groupOrder` (`asc` default, `desc`, `size`) `emptyGroups` and, for the board, `boardColumns` (`priority`; missing = status). Defaults are not stored. `setDisplay` drops a second level that is no longer allowed (`subGroupings(def, grouping)`: the view's groupings without `none`, `scope` and the first level). The URL carries `group` and `sub`.
 
 | Grouping | Groups |
 |---|---|
 | `status`, `priority`, `team`, `project`, `sprint` | as before; empty groups: all statuses of the view's teams, all priorities, active teams, projects of those teams that are not done or canceled, sprints that are not closed |
 | `label` | one group per label, **an issue appears under each of its labels**, then “No label”; label color on the header |
+| `labelGroup` | one group per label group (named by the group, in its color); an issue appears once in each group it has a label from, then “No label group” for issues without a grouped label |
+| `creator` | one group per creator (the owner first, then agents and others by name; the old stored owner kind counts as the owner), named through `ListExtras.actors`; no “+” prefill |
 | `estimate` | one group per point value, numeric, then “No estimate” |
 | `due` | Overdue, Today, This week (rest, Monday start like “next week” in the due date input), Next week, Later, “Closed, was due earlier” (closed issues are never overdue), No due date |
 | `created`, `updated` | Today, Yesterday, Last 7 days, Last 30 days, Older |
 | `parent` | one group per parent issue (named “KEY title” through `ListExtras.issueOf`), in the order of its first sub-issue in the list, then “No parent issue” |
 
 - **One pass, no extra sort:** `computeList` receives the already sorted issues and `bucket` splits them into groups in that order, so every group keeps the view's ordering. Date buckets compare strings (`dueDate`) or numbers (boundaries computed once from `today()`, `addDays`, `parseDay`), no date object per issue. Groups the spec does not know (e.g. a deleted label) are appended as “Unknown” so no issue disappears.
-- **Several groups per issue** (`GroupSpec.keys`, only `label`): the row keys of repeats get the group key as a prefix (`g:label:x|<id>`), the first row keeps the plain id. The rest of the list sees one entry per issue: `order()`, `#rowIndex`, selection, J/K and the count use the first row; a focused issue is highlighted in every group it appears in. Known limit: after clicking or hovering a repeat, J/K continue from the issue's first row. Scroll anchoring uses the row key, so it stays on the row that was on screen. `reuseList` and the windowing work on the rows as before.
+- **Several groups per issue** (`GroupSpec.keys`: `label` and `labelGroup`, see `multiGrouping`): the row keys of repeats get the group key as a prefix (`g:label:x|<id>`), the first row keeps the plain id. The rest of the list sees one entry per issue: `order()`, `#rowIndex`, selection, J/K and the count use the first row; a focused issue is highlighted in every group it appears in. Known limit: after clicking or hovering a repeat, J/K continue from the issue's first row. Scroll anchoring uses the row key, so it stays on the row that was on screen. `reuseList` and the windowing work on the rows as before.
 - **Second level:** after each group header come sub-group headers (`GroupInfo.parent` set, class `sub`, indented), collapse keys `g:<by>:<value>/<by2>:<value2>` so the same sub-group collapses separately in each group. Collapsing the outer group hides its sub-groups. Empty groups apply to the first level only.
 - **Quick path:** `#tryInPlace` skips the full recompute for single-valued groupings with one level; it falls back for `team`, `scope`, `parent` (the header shows the parent's title), `label` and any second level; those recompute filter, sort and groups for the whole view like the team grouping always did.
-- **Not here:** the board keeps its status columns (dragging a card means “set the status”; other fields would need their own drop rules).
+- **Board:** columns by status or, with `display.boardColumns = 'priority'`, by priority (see Board below). Other fields (sprint, label …) are not board columns: a drop would need its own rule.
 - The date groups are computed with the device's days (`today()`); once the configured time zone lands (XLR8-53) they follow the same helpers.
 
 ### Board (`board.ts`, `components/board/`)
@@ -120,6 +122,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 The board is a **layout** of every list view that has `boardTypes` (All, Active, Backlog, Sprint, Project): `display.layout = 'board'`, `?layout=board` in the URL, remembered per view. **Ctrl B** (`layout.toggle`, also the button in the view bar) switches and keeps the focus.
 
 - **Columns** (`computeBoard`): one per status of the view's teams (team, project team, otherwise all active); across teams, same type and name = one column. Empty columns only for the view's types. Completed and canceled columns are **collapsed** by default (header with count only, no cards in the DOM); clicking the header toggles (remembered per view). Each column uses the view's ordering.
+- **Columns by priority:** `display.boardColumns = 'priority'` (display options → Board columns, command `board.columns`; remembered per view, not in the URL) gives five fixed columns `p:<priority>` (`BoardColumn.priority`; `status`/`type` are placeholders). A drop sets the priority (`dropOnColumn` → `edit.patch`); closed issues carry no priority and can only go to “No priority” (`dropProblem`). `boardKeyOf` is the one place that says which column an issue belongs to (also for `#tryInPlaceBoard`).
 - **Computation:** in the `ListController` (`recompute` → `#recomputeBoard`); `reuseBoard` keeps unchanged columns. If an issue changes without moving column or position, only its card is redrawn (`#tryInPlaceBoard`). The flat order (`order()`) runs column by column, so selection, Shift-click, peek paging and actions work unchanged.
 - **Cards** read the same row state as the list (`rows.get(id)`), fixed height 76 + 6 px (`CARD_SLOT`), windowing per column (`computeWindow`).
 - **Keyboard:** J/K or ↑/↓ within the column, ←/→ to the next column with cards, **Shift ←/→** moves the selection or card one column over (also into collapsed ones), all other shortcuts as in the list (S, P, L, X, Ctrl Z …).

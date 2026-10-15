@@ -79,6 +79,7 @@ export default {
   Grouping: 'Gruppierung',
   'Then group by': 'Danach gruppieren nach',
   'Group order': 'Reihenfolge der Gruppen',
+  'Board columns': 'Board-Spalten',
   'Show empty groups': 'Leere Gruppen zeigen',
   Ordering: 'Sortierung',
   'Show completed': 'Erledigte zeigen',

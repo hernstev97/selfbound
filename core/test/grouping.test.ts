@@ -71,6 +71,59 @@ describe('grouping by label', () => {
   });
 });
 
+describe('grouping by label group', () => {
+  // meta: group g1 "Type" holds the labels l1 (Bug) and l2 (Feature); l3 (Mobile) has no group.
+  const issues = [
+    enrich(doc(1, { labelIds: ['l1', 'l2'] as never, createdAt: 5 })),
+    enrich(doc(2, { labelIds: ['l3'] as never, createdAt: 4 })),
+    enrich(doc(3, { labelIds: ['l2', 'l3'] as never, createdAt: 3 })),
+    enrich(doc(4, { labelIds: [] as never, createdAt: 2 })),
+  ];
+
+  test('an issue appears once per group, however many of its labels belong to it; ungrouped labels count as none', () => {
+    const l = list(issues, { grouping: 'labelGroup', ordering: 'created' });
+    expect(outline(l.rows)).toEqual({ 'g1:2': ['i1', 'i3'], 'none:2': ['i2', 'i4'] });
+    expect(labels(l.rows)).toEqual(['Type', 'No label group']);
+    expect(l.rows[0]).toMatchObject({ group: { hue: 25 } });
+    expect(l.count).toBe(4);
+    expect(groupKeyOf('labelGroup', {}, meta)).toBeNull();
+  });
+
+  test('empty groups show with the option', () => {
+    const l = list([enrich(doc(2, { labelIds: ['l3'] as never }))], { grouping: 'labelGroup', emptyGroups: true });
+    expect(groups(l.rows)).toEqual(['g1', 'none']);
+  });
+});
+
+describe('grouping by creator', () => {
+  const issues = [
+    enrich(doc(1, { createdBy: { kind: 'agent', agentId: 'a2' } as never, createdAt: 5 })),
+    enrich(doc(2, { createdBy: { kind: 'owner' } as never, createdAt: 4 })),
+    enrich(doc(3, { createdBy: { kind: 'agent', agentId: 'a1' } as never, createdAt: 3 })),
+    enrich(doc(4, { createdBy: { kind: 'agent', agentId: 'a2' } as never, createdAt: 2 })),
+    enrich(doc(5, { createdBy: { kind: 'github' } as never, createdAt: 1 })),
+  ];
+  const actors = new Map([['owner', 'Steven'], ['a1', 'Zed'], ['a2', 'Aleister']]);
+  const run = (display: Partial<Display>) => {
+    const v = view(display);
+    return computeList(computeVisible(issues, v, meta, ctx()), v, meta, new Set(), true, { now: NOW, actors });
+  };
+
+  test('the owner first, then the others by name; each creator is one group', () => {
+    const l = run({ grouping: 'creator', ordering: 'created' });
+    expect(labels(l.rows)).toEqual(['Steven', 'Aleister', 'GitHub', 'Zed']);
+    expect(outline(l.rows)).toEqual({ 'owner:1': ['i2'], 'agent:a2:2': ['i1', 'i4'], 'github:1': ['i5'], 'agent:a1:1': ['i3'] });
+  });
+
+  test('the old stored owner kind lands in the owner group; a creator is found by key', () => {
+    const legacy = [enrich(doc(1, { createdBy: { kind: 'steven' } as never })), enrich(doc(2, { createdBy: { kind: 'owner' } as never }))];
+    const v = view({ grouping: 'creator' });
+    const l = computeList(computeVisible(legacy, v, meta, ctx()), v, meta, new Set(), true, { now: NOW, actors });
+    expect(groups(l.rows)).toEqual(['owner']);
+    expect(groupKeyOf('creator', { actors }, meta)?.(legacy[0])).toBe('owner');
+  });
+});
+
 describe('grouping by estimate', () => {
   test('one group per value in numeric order, none last', () => {
     const issues = [3, 10, 1, undefined, 3, 0.5].map((estimate, i) => enrich(doc(i, { ...(estimate === undefined ? {} : { estimate }) })));

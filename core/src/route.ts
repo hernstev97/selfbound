@@ -54,7 +54,7 @@ export interface Location {
 
 const GLOBAL: Record<string, ViewKind> = { inbox: 'inbox', snoozed: 'snoozed', triage: 'triage', all: 'all', active: 'active', backlog: 'backlog', sprint: 'sprint', trash: 'trash' };
 const TEAM_TABS: Record<string, ViewKind> = { '': 'active', all: 'all', active: 'active', backlog: 'backlog', triage: 'triage', sprint: 'sprint', snoozed: 'snoozed' };
-const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'scope', 'none'];
+const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'scope', 'none'];
 const ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due', 'status', 'snoozed'];
 /** Settings section shown for /settings */
 export const DEFAULT_SETTINGS_SECTION = 'general';

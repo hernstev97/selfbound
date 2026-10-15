@@ -1,5 +1,6 @@
 // Filtering, sorting, grouping: synchronous in memory, outside the components.
-import { CLOSED, PRIORITY_GROUP_ORDER, PRIORITY_LABEL, STATUS_GROUP_ORDER, addDays, parseDay, priorityRank, today } from './format.ts';
+import { CLOSED, PRIORITY_GROUP_ORDER, PRIORITY_LABEL, STATUS_GROUP_ORDER, actorName, addDays, parseDay, priorityRank, today } from './format.ts';
+import { OWNER_KIND, isOwnerKind } from './types.ts';
 import { intlLocale, t, tn, translated } from './i18n.ts';
 import { stateGroupKey, statusMatcher, workflowsOf, type StateView } from './workflow.ts';
 import { VIEWS, type ViewContext } from './views.ts';
@@ -13,6 +14,8 @@ export interface ListExtras {
   kinds?: ReadonlyMap<IssueId, SprintItemKind>;
   /** Team groups: budget text and whether it is exceeded, per team id */
   budget?: ReadonlyMap<string, { label: string; over: boolean }>;
+  /** Creator groups: display names of agents and the owner (store.agents) */
+  actors?: ReadonlyMap<string, string>;
   /** Parent groups: name of the parent issue */
   issueOf?: (id: IssueId) => Issue | undefined;
   /** "Now" for the date groups (tests) */
@@ -143,7 +146,7 @@ export function groupKeyOf(by: Grouping, extras: ListExtras = {}, meta: Meta | n
 
 /** Groups in which an issue appears more than once (a list may then show one issue several times). */
 export function multiGrouping(by: Grouping) {
-  return by === 'label';
+  return by === 'label' || by === 'labelGroup';
 }
 
 export function teamBadge(team: Meta['teams'][number] | undefined, dark: boolean): TeamBadge {
@@ -260,6 +263,44 @@ function groupSpec(by: Grouping, meta: Meta | null, dark: boolean, extras: ListE
           ...labels.filter((l) => keys.has(l._id) || (showEmpty && !l.archived && inTeams(l.teamId))).map((l) => ({ by, value: l._id as string, label: l.name, hue: l.hue })),
           ...(keys.has(NONE) || showEmpty ? [{ by, value: NONE, label: t('No label') }] : []),
         ],
+      };
+    }
+    case 'labelGroup': {
+      const groups = [...(meta?.labelGroups ?? [])].sort((a, b) => a.name.localeCompare(b.name, intlLocale()));
+      const groupOf = new Map<string, string>();
+      for (const label of meta?.labels ?? []) if (label.groupId) groupOf.set(label._id, label.groupId);
+      // An issue appears once per group, however many of the group's labels it has.
+      const keysOf = (i: Issue) => {
+        const out: string[] = [];
+        for (const id of i.labelIds) {
+          const g = groupOf.get(id);
+          if (g && !out.includes(g)) out.push(g);
+        }
+        return out.length ? out : NO_GROUP;
+      };
+      return {
+        key: (i) => keysOf(i)[0]!,
+        keys: keysOf,
+        order: (keys, showEmpty) => [
+          ...groups.filter((g) => keys.has(g._id) || (showEmpty && inTeams(g.teamId))).map((g) => ({ by, value: g._id as string, label: g.name, hue: g.hue })),
+          ...(keys.has(NONE) || showEmpty ? [{ by, value: NONE, label: t('No label group') }] : []),
+        ],
+      };
+    }
+    case 'creator': {
+      const names = new Map<string, string>();
+      return {
+        key: (i) => {
+          const actor = i.createdBy;
+          const key = isOwnerKind(actor.kind) ? OWNER_KIND : actor.kind === 'agent' ? `agent:${actor.agentId ?? ''}` : actor.kind;
+          if (!names.has(key)) names.set(key, actorName(actor, extras.actors ?? new Map()));
+          return key;
+        },
+        // The owner first, then the others by name.
+        order: (keys) =>
+          [...keys]
+            .sort((a, b) => (a === OWNER_KIND ? -1 : b === OWNER_KIND ? 1 : names.get(a)!.localeCompare(names.get(b)!, intlLocale())))
+            .map((k) => ({ by, value: k, label: names.get(k)! })),
       };
     }
     case 'estimate':
