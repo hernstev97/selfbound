@@ -559,6 +559,18 @@ describe('a change to an issue recomputes only its row', () => {
     expect(app.main.list.get().rows.filter((r) => r.kind === 'issue').map((r) => r.id)).toEqual(['i1', 'i2', 'i4']);
   });
 
+  test('collapsing a group with sub-groups signals every row that disappears, headers included', async () => {
+    const { client, app } = await setup(63);
+    app.nav.goView({ kind: 'all', team: null }, { group: 'priority', sub: 'estimate', order: 'created' });
+    client.push('issues:bucket', { bucket: 0 }, [doc(0, { priority: 1, estimate: 2, createdAt: 3 }), doc(2, { priority: 1, estimate: 3, createdAt: 2 }), doc(4, { priority: 1, estimate: 3, createdAt: 1 })]);
+    await flush();
+    // Below the urgent header: two sub-headers and three issues.
+    app.main.toggleGroup('g:priority:1');
+    expect(app.main.motion.get()).toMatchObject({ kind: 'toggle', key: 'g:priority:1', rows: 5, open: false });
+    app.main.toggleGroup('g:priority:1');
+    expect(app.main.motion.get()).toMatchObject({ kind: 'toggle', rows: 5, open: true });
+  });
+
   test('grouping options are saved per view and restored, and a second level needs a first one', async () => {
     const storage = new Map<string, string>();
     vi.stubGlobal('localStorage', { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.delete(k) });

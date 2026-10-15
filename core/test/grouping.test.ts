@@ -200,6 +200,10 @@ describe('group order and empty groups', () => {
     expect(labels(l.rows)).toContain('In Progress');
     expect(l.rows.filter((r) => r.kind === 'issue')).toHaveLength(1);
   });
+  test('empty groups are content: a view without issues still shows them', () => {
+    expect(list([], { grouping: 'priority', emptyGroups: true }).empty).toBeNull();
+    expect(list([], { grouping: 'priority' }).empty).toBe('none');
+  });
   test('empty groups only on the first level', () => {
     const l = list([enrich(doc(0, { priority: 1 }))], { grouping: 'priority', subGrouping: 'estimate', emptyGroups: true });
     expect(groups(l.rows).filter((g) => g === 'none')).toHaveLength(1);

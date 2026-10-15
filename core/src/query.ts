@@ -431,7 +431,8 @@ export function computeList(visible: Issue[], view: ViewState, meta: Meta | null
     rows,
     ...keyWidth(visible),
     count: visible.length,
-    empty: visible.length > 0 ? null : hasFilters(view) ? 'filtered' : 'none',
+    // Empty groups on screen are content too (they carry the "+" button).
+    empty: rows.length > 0 ? null : hasFilters(view) ? 'filtered' : 'none',
     style: VIEWS[view.route.kind].style,
   };
 }

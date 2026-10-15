@@ -13,7 +13,7 @@ import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext }
 import { revealIndex } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
-import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
+import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
 
 export interface HeaderState {
@@ -68,6 +68,21 @@ function writeJson(key: string, value: unknown) {
   } catch {
     // ignore
   }
+}
+
+/** Rows below a group header up to the next header of the same or a higher level (issues and sub-group headers). */
+function groupSpan(rows: readonly ListRow[], key: string): number {
+  const index = rows.findIndex((row) => row.kind === 'group' && row.key === key);
+  const head = rows[index];
+  if (head?.kind !== 'group') return 0;
+  const depth = head.group.parent ? 1 : 0;
+  let n = 0;
+  for (let i = index + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.kind === 'group' && (row.group.parent ? 1 : 0) <= depth) break;
+    n++;
+  }
+  return n;
 }
 
 export class ListController {
@@ -258,8 +273,8 @@ export class ListController {
     if (this.idle || ids.size > 200 || this.#rowIndex.size === 0) return false;
     const view = this.view.get();
     const grouping = view.display.grouping;
-    // Groups that do not depend on the issue alone: budget (team) and sprint scope; several groups per issue (labels); two levels.
-    if (grouping === 'team' || grouping === 'scope' || multiGrouping(grouping)) return false;
+    // Groups that do not depend on the issue alone: budget (team), sprint scope and the parent's title in its header; several groups per issue (labels); two levels.
+    if (grouping === 'team' || grouping === 'scope' || grouping === 'parent' || multiGrouping(grouping)) return false;
     if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
     const store = this.app.store;
     const matches = visibleFilter(view, store.meta.get(), this.context());
@@ -531,22 +546,24 @@ export class ListController {
   }
 
   /** Topmost (fully or partly) visible issue and its distance from the top edge. */
-  #scrollAnchor(): { id: IssueId; offset: number } | null {
+  #scrollAnchor(): { key: string; offset: number } | null {
     const el = this.#scroller;
     if (!el || el.scrollTop <= 0) return null;
     const h = this.app.rowHeight();
     const rows = this.list.get().rows;
     for (let i = Math.floor(el.scrollTop / h); i < rows.length; i++) {
       const row = rows[i];
-      if (row.kind === 'issue') return { id: row.id, offset: i * h - el.scrollTop };
+      if (row.kind === 'issue') return { key: row.key, offset: i * h - el.scrollTop };
     }
     return null;
   }
 
-  #restoreAnchor(anchor: { id: IssueId; offset: number }) {
+  #restoreAnchor(anchor: { key: string; offset: number }) {
     const el = this.#scroller;
-    const index = this.#rowIndex.get(anchor.id);
-    if (!el || index === undefined) return;
+    if (!el) return;
+    // By row key: an issue listed under several groups (labels) must not jump to its first row.
+    const index = this.list.get().rows.findIndex((row) => row.key === anchor.key);
+    if (index < 0) return;
     const top = index * this.app.rowHeight() - anchor.offset;
     if (Math.abs(top - el.scrollTop) >= 1) {
       el.scrollTop = top;
@@ -744,8 +761,8 @@ export class ListController {
     const display = { ...view.display, ...patch };
     // Grouping options that go back to their default are not stored; a second level needs a first one it differs from.
     if (!display.subGrouping || display.grouping === 'none' || !subGroupings(VIEWS[view.route.kind], display.grouping).includes(display.subGrouping)) delete display.subGrouping;
-    if (display.groupOrder === 'asc') delete display.groupOrder;
-    if (!display.emptyGroups) delete display.emptyGroups;
+    if (display.groupOrder === 'asc' || display.grouping === 'none') delete display.groupOrder;
+    if (!display.emptyGroups || display.grouping === 'none') delete display.emptyGroups;
     this.view.set({ ...view, display });
     writeJson(`xlr8:display:${viewKey(view.route)}`, display);
     this.recompute();
@@ -835,6 +852,8 @@ export class ListController {
     const route = this.view.get().route;
     const set = this.#collapsedFor(route);
     const open = set.has(groupKey);
+    // Closing: the rows that disappear are the old ones. They include sub-group headers.
+    const before = open ? 0 : groupSpan(this.list.get().rows, groupKey);
     if (open) set.delete(groupKey);
     else set.add(groupKey);
     writeJson(`xlr8:collapsed:${viewKey(route)}`, [...set]);
@@ -842,7 +861,8 @@ export class ListController {
     const rows = this.list.get().rows;
     const index = rows.findIndex((row) => row.kind === 'group' && row.key === groupKey);
     const head = rows[index];
-    if (head?.kind === 'group' && head.count > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: head.count, open });
+    const span = open ? groupSpan(rows, groupKey) : before;
+    if (head?.kind === 'group' && span > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: span, open });
   }
 
   /** T: collapse/expand the focused issue's group. A second T right after expands it again. */
