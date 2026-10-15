@@ -47,6 +47,22 @@ describe('tool definitions', () => {
     expect(filter.description).toMatch(/assigned.*open.*triage.*dormant/s);
     expect(filter.description).toMatch(/no assignee/);
   });
+
+  test('every field that takes Markdown points to info panels and charts', () => {
+    type Node = { properties?: Record<string, Node>; items?: Node; description?: string };
+    const fields: [string, string[]][] = [
+      ['create_issues', ['issues', 'description']],
+      ['update_issue', ['description']],
+      ['add_comment', ['body']],
+      ['create_article', ['markdown']],
+      ['update_article', ['markdown']],
+      ['update_article', ['append']],
+    ];
+    for (const [tool, path] of fields) {
+      const field = path.reduce((n, key) => n.properties![key]!.items ?? n.properties![key]!, TOOLS.find((t) => t.name === tool)!.inputSchema as Node);
+      expect(field.description, `${tool}.${path.join('.')}`).toMatch(/\[!INFO\].*```chart/);
+    }
+  });
 });
 
 describe('argument validation', () => {

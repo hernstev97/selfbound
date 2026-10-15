@@ -23,13 +23,24 @@ export const LEGACY_VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26', '2024-
 export const SUPPORTED_VERSIONS: readonly string[] = [...MODERN_VERSIONS, ...LEGACY_VERSIONS];
 
 export const SERVER_NAME = 'selfbound';
+/** One valid chart per type, shown to agents in the instructions; a test draws each of them (app/test/charts.test.ts). */
+export const CHART_EXAMPLES = [
+  '{"type":"line","title":"Done per day","x":["Mon","Tue","Wed"],"series":[{"name":"Done","values":[3,5,4]}]}',
+  '{"type":"area","stack":"stacked","x":["W1","W2"],"series":[{"name":"Bugs","values":[2,3]},{"name":"Features","values":[4,1]}]}',
+  '{"type":"bar","orientation":"horizontal","categories":["Alpha","Beta"],"series":[{"name":"Open","values":[9,4]}]}',
+  '{"type":"heatmap","rows":["Mon","Tue"],"columns":["AM","PM"],"values":[[1,4],[0,2]]}',
+  '{"type":"stat","items":[{"label":"Done","value":"42","delta":"+8","trend":[1,3,2,5]},{"label":"Open","value":"17"}]}',
+];
+
 export const INSTRUCTIONS = [
   'This Selfbound instance is a single-owner issue tracker.',
   'Use these tools to find, read and manage issues across its teams: search_issues and list_issues to find work, get_issue for details with comments, relations and pull requests, create_issues / update_issue / set_status / move_issues / add_comment to make changes, and get_current_sprint for the sprint that spans all teams.',
   'Identifiers look like "ACME-106" (team key + number). Teams are referenced by key, labels, projects and statuses by name; call list_teams, list_labels, list_projects or list_statuses to look up valid values. Each team has its own workflow statuses.',
   'There is a single user (the owner) and no assignee field: the "assigned" filter means all open issues outside triage in teams that are not dormant and not knowledge-only.',
   'Teams can also have a knowledge area (list_teams field `wiki`): pages in a tree with Markdown text, topics and sources. Use search_articles, list_articles and get_article to read it, create_article and update_article (`append` to add findings) to write; search first to avoid duplicates.',
-  'Descriptions, comments and knowledge pages are Markdown. For an info panel start a quote with "> [!INFO] Optional title" (kinds INFO, NOTE, SUCCESS, WARNING, ERROR; the GitHub alert names TIP, IMPORTANT and CAUTION work too) and put the content on the following "> " lines. A ```chart code block with JSON is drawn as a data chart: {"type":"line|area|bar|heatmap|stat","title":…} with x/series, categories/series, rows/columns/values or items (area and bar take "stack":"stacked"|"percent"; bar takes "orientation":"horizontal").',
+  'Descriptions, comments and knowledge pages are Markdown, and two visual blocks are plain Markdown too (no extra tool). Info panel: a quote whose first line is "> [!INFO] Optional title" (kinds INFO, NOTE, SUCCESS, WARNING, ERROR; the GitHub alert names TIP, IMPORTANT and CAUTION work too), the content on the following "> " lines. Chart: a fenced code block with the language `chart` that holds one JSON object; "title", "subtitle", "note" and "unit" are optional for every type. Valid examples (the JSON between the fences): ' +
+    CHART_EXAMPLES.join(' ') +
+    ' Line and area charts take "x" (labels, or numbers in increasing order); area and bar also take "stack":"stacked"|"percent"; bar takes "orientation":"horizontal". Every series needs one value per x or category (at most 8 series, no negative values in bars). Invalid JSON is not rejected on save, the reader sees an error instead of the chart.',
   'Always pass a fresh requestId to create_issues, add_comment, create_article and update_article; retrying with the same requestId is safe. Business errors come back as tool results with isError and a plain explanation.',
 ].join(' ');
 
