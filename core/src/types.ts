@@ -368,6 +368,8 @@ export interface MenuItem {
   team?: TeamBadge;
   /** Color dot (labels) */
   dot?: number;
+  /** Logo URL of a model provider, drawn as a mask icon (instead of `icon`) */
+  logo?: string;
   /** Current value (check mark) */
   checked?: boolean;
   /** Multiple choice: checkbox instead of check mark */

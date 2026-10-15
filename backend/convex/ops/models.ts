@@ -1,7 +1,9 @@
 import type { Doc } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
+import type { Id } from '../_generated/dataModel';
 import { fail, invalid, notFound } from '../lib/errors';
+import { logoUrl } from '../lib/logo';
 import type { SlimModel, SlimProvider } from '../lib/modelsCatalog';
 import { isOwnerKind } from '../shared/constants';
 import { MODEL_LIMITS, type ModelInfo } from '../shared/models';
@@ -111,7 +113,8 @@ export async function providerHashes(ctx: QueryCtx): Promise<Record<string, stri
   return Object.fromEntries(rows.filter((r) => r.removedAt === undefined).map((r) => [r.provider, r.hash]));
 }
 
-export function modelInfo(row: Doc<'models'>): ModelInfo {
+export function modelInfo(row: Doc<'models'>, logos?: ReadonlyMap<string, string>): ModelInfo {
+  const logo = logos?.get(row.provider);
   return {
     provider: row.provider,
     providerName: row.providerName,
@@ -125,7 +128,52 @@ export function modelInfo(row: Doc<'models'>): ModelInfo {
     ...(row.releaseDate ? { releaseDate: row.releaseDate } : {}),
     ...(row.enabled ? { enabled: true } : {}),
     ...(row.removedAt !== undefined ? { removed: true } : {}),
+    ...(logo ? { logo } : {}),
   };
+}
+
+// ---------------------------------------------------------------- Provider logos
+
+async function logoRow(ctx: QueryCtx, provider: string) {
+  return await ctx.db
+    .query('modelLogos')
+    .withIndex('by_provider', (q) => q.eq('provider', provider))
+    .unique();
+}
+
+/** Logo URLs of some providers (only `modelLogos` rows, which change only with the logos). */
+export async function providerLogos(ctx: QueryCtx, providers: Iterable<string>): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  for (const provider of new Set(providers)) {
+    const row = await logoRow(ctx, provider);
+    if (row?.storageId) out.set(provider, logoUrl(row.storageId));
+  }
+  return out;
+}
+
+/** For the sync: per provider the ETag of its logo; providers without a row were never checked. */
+export async function logoState(ctx: QueryCtx): Promise<Record<string, { etag?: string }>> {
+  const rows = await ctx.db.query('modelLogos').take(2000);
+  return Object.fromEntries(rows.map((r) => [r.provider, r.etag ? { etag: r.etag } : {}]));
+}
+
+/** Stores the result of a logo check; a replaced file is deleted. */
+export async function setProviderLogo(ctx: MutationCtx, args: { provider: string; storageId?: Id<'_storage'>; etag?: string }, now: number) {
+  const row = await logoRow(ctx, args.provider);
+  const fields = { storageId: args.storageId, etag: args.etag, checkedAt: now };
+  if (row) await ctx.db.patch('modelLogos', row._id, fields);
+  else await ctx.db.insert('modelLogos', { provider: args.provider, checkedAt: now, ...(args.storageId ? { storageId: args.storageId } : {}), ...(args.etag ? { etag: args.etag } : {}) });
+  if (row?.storageId && row.storageId !== args.storageId) await ctx.storage.delete(row.storageId);
+}
+
+/** Is this file a provider's logo? (GET /logo/<storageId>) */
+export async function isProviderLogo(ctx: QueryCtx, storageId: Id<'_storage'>) {
+  return (
+    (await ctx.db
+      .query('modelLogos')
+      .withIndex('by_storage', (q) => q.eq('storageId', storageId))
+      .first()) !== null
+  );
 }
 
 /** Newest first; models without a date last, then by name. */
@@ -146,27 +194,33 @@ export async function enabledModels(ctx: QueryCtx): Promise<ModelInfo[]> {
     .query('models')
     .withIndex('by_enabled', (q) => q.eq('enabled', true))
     .take(MODEL_LIMITS.enabled);
-  return rows.map(modelInfo).sort((a, b) => a.providerName.localeCompare(b.providerName) || byRelease(a, b));
+  const logos = await providerLogos(
+    ctx,
+    rows.map((r) => r.provider),
+  );
+  return rows.map((r) => modelInfo(r, logos)).sort((a, b) => a.providerName.localeCompare(b.providerName) || byRelease(a, b));
 }
 
 /** The catalog's providers for the settings, by name, with the number of models. */
 export async function listProviders(ctx: QueryCtx) {
   const rows = await ctx.db.query('modelProviders').take(2000);
+  const logos = new Map((await ctx.db.query('modelLogos').take(2000)).flatMap((r) => (r.storageId ? [[r.provider, logoUrl(r.storageId)] as const] : [])));
   return rows
     .filter((r) => r.removedAt === undefined)
-    .map((r) => ({ provider: r.provider, name: r.name, count: r.count }))
+    .map((r) => ({ provider: r.provider, name: r.name, count: r.count, ...(logos.has(r.provider) ? { logo: logos.get(r.provider) } : {}) }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** The models of one provider for the settings, newest first. Models that left the catalog only while enabled. */
 export async function listProviderModels(ctx: QueryCtx, provider: string): Promise<ModelInfo[]> {
+  const logos = await providerLogos(ctx, [provider]);
   const rows = await ctx.db
     .query('models')
     .withIndex('by_provider_model', (q) => q.eq('provider', provider))
     .take(3000);
   return rows
     .filter((r) => r.removedAt === undefined || r.enabled)
-    .map(modelInfo)
+    .map((r) => modelInfo(r, logos))
     .sort(byRelease);
 }
 
@@ -178,10 +232,12 @@ export async function searchModels(ctx: QueryCtx, q: string, provider: string | 
     .query('models')
     .withSearchIndex('search_name', (s) => (provider ? s.search('name', text).eq('provider', provider) : s.search('name', text)))
     .take(limit * 2);
-  return rows
-    .filter((r) => r.removedAt === undefined || r.enabled)
-    .slice(0, limit)
-    .map(modelInfo);
+  const shown = rows.filter((r) => r.removedAt === undefined || r.enabled).slice(0, limit);
+  const logos = await providerLogos(
+    ctx,
+    shown.map((r) => r.provider),
+  );
+  return shown.map((r) => modelInfo(r, logos));
 }
 
 /** Owner only: offer a model in the chip (and allow it for new choices), or stop offering it. */

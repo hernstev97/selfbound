@@ -185,7 +185,7 @@ describe('inheritance and texts', () => {
 
     app.nav.go({ name: 'issue', key: 'ACME-5' });
     await flush();
-    expect(app.detail.state.get()?.model).toEqual({ label: 'Claude Opus 5.5 · high', context: '1M context', source: 'parent', from: 'ACME-3', problem: null });
+    expect(app.detail.state.get()?.model).toEqual({ label: 'Claude Opus 5.5 · high', context: '1M context', source: 'parent', from: 'ACME-3', problem: null, logo: null });
     app.nav.go({ name: 'issue', key: 'PX-2' });
     await flush();
     expect(app.detail.state.get()?.model).toMatchObject({ label: 'GPT-6 Sol · pro', source: 'team', from: 'Pixelwerk' });

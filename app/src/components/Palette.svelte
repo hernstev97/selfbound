@@ -6,6 +6,7 @@
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { autofocus, keepInView } from '../lib/ui.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import { leave } from '../lib/motion.ts';
   import { modal } from '../lib/modal.ts';
   import TeamLogo from './TeamLogo.svelte';
@@ -110,7 +111,9 @@
             {:else if p.kind !== 'command' && p.kind !== 'search' && p.kind !== 'help' && p.kind !== 'filter'}
               <span class="check">{#if item.checked}{@html ICON.check}{/if}</span>
             {/if}
-            {#if item.team && !item.icon}
+            {#if item.logo}
+              <span class={['icon mi', logoClass(item.logo)]}></span>
+            {:else if item.team && !item.icon}
               <TeamLogo team={item.team} />
             {:else if item.icon}
               <span class="icon">{@html item.icon}</span>

@@ -752,6 +752,19 @@ export default defineSchema({
     .index('by_enabled', ['enabled'])
     .searchIndex('search_name', { searchField: 'name', filterFields: ['provider'] }),
 
+  // Logos of the catalog's providers (models.dev/logos/<provider>.svg), fetched by the sync and checked
+  // like team logos, served through GET /logo/<storageId>. Separate from `modelProviders`, so the
+  // enabled models' logos are read without rows the sync rewrites. Missing `storageId` = models.dev has
+  // none, or it did not pass the check.
+  modelLogos: defineTable({
+    provider: v.string(),
+    storageId: v.optional(v.id('_storage')),
+    etag: v.optional(v.string()),
+    checkedAt: v.number(),
+  })
+    .index('by_provider', ['provider'])
+    .index('by_storage', ['storageId']),
+
   // Providers of the catalog: name, number of models and the hash of their slim form at the last sync.
   modelProviders: defineTable({
     provider: v.string(),

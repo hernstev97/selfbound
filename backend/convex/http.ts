@@ -194,7 +194,7 @@ http.route({
     const blob = await ctx.storage.get(logo.storageId);
     if (!blob) return json(404, { error: 'not found' });
     const bytes = new Uint8Array(await blob.arrayBuffer());
-    const check = checkLogo(bytes, logo.contentType);
+    const check = checkLogo(bytes, logo.contentType, { square: logo.square });
     if (!check.ok) return json(404, { error: 'not found' });
     return new Response(bytes, {
       status: 200,
@@ -205,6 +205,8 @@ http.route({
         // A storageId always points to the same file (new logo = new id).
         'Cache-Control': 'public, max-age=31536000, immutable',
         'Cross-Origin-Resource-Policy': 'cross-origin',
+        // Provider logos are drawn as CSS masks, which load in CORS mode. Public images either way.
+        'Access-Control-Allow-Origin': '*',
       },
     });
   }),

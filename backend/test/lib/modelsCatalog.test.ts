@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, test } from 'vitest';
-import { CATALOG_URL, fetchCatalog, providerHash, reduceCatalog, slimModel } from '../../convex/lib/modelsCatalog';
+import { CATALOG_URL, fetchCatalog, fetchLogo, providerHash, reduceCatalog, slimModel } from '../../convex/lib/modelsCatalog';
 import { choiceProblem, compactTokens, effectiveModel, normalizeChoice, parseModelKey, sameChoice, speedsOf } from '../../convex/shared/models';
 
 // The models.dev catalog reduced to the slim form (XLR8-93). The fixture is a shortened copy of the
@@ -98,6 +98,29 @@ describe('fetchCatalog', () => {
     await expect(fetchCatalog(undefined, (async () => new Response('', { status: 302, headers: { location: 'https://example.com' } })) as typeof fetch)).rejects.toThrow(/302/);
     await expect(fetchCatalog(undefined, (async () => ok('{', {})) as typeof fetch)).rejects.toThrow();
     await expect(fetchCatalog(undefined, (async () => ok('{}', { 'content-length': String(64 * 1024 * 1024) })) as typeof fetch)).rejects.toThrow(/too large/);
+  });
+});
+
+describe('fetchLogo', () => {
+  const svg = (body: string, viewBox = '0 0 40 40') => `<svg viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">${body}</svg>`;
+  const answer = (status: number, body = '', etag?: string) => (async (url: string, init: RequestInit) => {
+    expect(url).toBe('https://models.dev/logos/wafer.ai.svg');
+    expect(new Headers(init.headers).get('if-none-match')).toBe(etag ?? null);
+    return new Response(status === 304 ? null : body, { status, headers: { etag: '"l2"' } });
+  }) as unknown as typeof fetch;
+
+  test('a logo that passes the check, also a wide one; ETag and 304', async () => {
+    const wide = svg('<path d="M0 0h120v30H0Z" fill="currentColor"/>', '0 0 120 30');
+    const res = await fetchLogo('wafer.ai', undefined, answer(200, wide));
+    expect(res.status === 'ok' && new TextDecoder().decode(res.svg)).toBe(wide);
+    expect(res).toMatchObject({ etag: '"l2"' });
+    expect(await fetchLogo('wafer.ai', '"l1"', answer(304, '', '"l1"'))).toEqual({ status: 'not_modified' });
+  });
+
+  test('no logo, errors, too large', async () => {
+    expect(await fetchLogo('wafer.ai', undefined, answer(404))).toEqual({ status: 'none' });
+    await expect(fetchLogo('wafer.ai', undefined, answer(500))).rejects.toThrow(/500/);
+    await expect(fetchLogo('wafer.ai', undefined, answer(200, svg(`<!-- ${'x'.repeat(300 * 1024)} -->`)))).rejects.toThrow(/too large/);
   });
 });
 

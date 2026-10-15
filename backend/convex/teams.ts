@@ -6,6 +6,7 @@ import { invalid, notFound } from './lib/errors';
 import { checkLogo } from './lib/logo';
 import { assertWritable } from './lib/testSwitches';
 import { logoVariantValidator } from './lib/validators';
+import { isProviderLogo } from './ops/models';
 import * as ops from './ops/teams';
 import { actorValidator, modelChoiceValidator } from './schema';
 import { LIMITS } from './shared/constants';
@@ -121,9 +122,11 @@ export const logoFile = internalQuery({
     const storageId = ctx.db.system.normalizeId('_storage', args.storageId);
     if (!storageId) return null;
     const teams = await ctx.db.query('teams').take(500);
-    if (!teams.some((t) => t.logoId === storageId || t.logoDarkId === storageId)) return null;
+    const team = teams.some((t) => t.logoId === storageId || t.logoDarkId === storageId);
+    // Model provider logos (models.dev, XLR8-93) are served the same way; they need not be square.
+    if (!team && !(await isProviderLogo(ctx, storageId))) return null;
     const meta = await ctx.db.system.get('_storage', storageId);
-    return meta ? { storageId, contentType: meta.contentType ?? null } : null;
+    return meta ? { storageId, contentType: meta.contentType ?? null, square: team } : null;
   },
 });
 

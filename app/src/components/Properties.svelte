@@ -4,6 +4,7 @@
   import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { anchorOf, tip } from '../lib/ui.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import TeamLogo from './TeamLogo.svelte';
 
   let { detail: d }: { detail: DetailState } = $props();
@@ -61,7 +62,7 @@
   >
   <div class="props-title">{t('Model')}</div>
   <button class="prop-row" data-testid="detail-model" title={tip(t('Model'), 'issue.model')} onclick={(e) => open('model', e)}
-    ><span class="icon" style="color: var(--text-muted)">{@html ICON.model}</span>{#if d.model}<span class={['val', d.model.source !== 'issue' && 'inherited']}>{d.model.label}</span>{:else}<span class="empty-val">{t('Choose model')}</span>{/if}</button
+    ><span class={['icon mi', logoClass(d.model?.logo)]} style="color: var(--text-muted)"></span>{#if d.model}<span class={['val', d.model.source !== 'issue' && 'inherited']}>{d.model.label}</span>{:else}<span class="empty-val">{t('Choose model')}</span>{/if}</button
   >
   {#if modelNote.length || d.model?.problem}
     <div class="prop-note" data-testid="detail-model-note">{modelNote.join(' · ')}{#if d.model?.problem}<span class="warn">{modelNote.length ? ' · ' : ''}{d.model.problem}</span>{/if}</div>

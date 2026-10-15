@@ -74,7 +74,7 @@ export interface DetailState {
    * Desired model, own or inherited (`source` parent or team, shown dimmed with `from`): "Claude Opus 5.5 ·
    * xhigh", the context window as info, and a hint if the model is no longer enabled or in the catalog.
    */
-  model: { label: string; context: string | null; source: ModelSource; from: string | null; problem: string | null } | null;
+  model: { label: string; context: string | null; source: ModelSource; from: string | null; problem: string | null; logo: string | null } | null;
   due: { day: string; label: string; long: string; overdue: boolean } | null;
   /** Snoozed until this day */
   snoozed: { day: string; long: string } | null;
@@ -358,6 +358,7 @@ export class DetailController {
             source: model.source,
             from: model.source === 'parent' ? (parent?.key ?? null) : model.source === 'team' ? (meta?.teams.find((x) => x._id === issue.teamId)?.name ?? null) : null,
             problem: modelProblem(meta, model.choice),
+            logo: modelInfo(meta, model.choice)?.logo ?? null,
           }
         : null,
       due: issue.dueDate && due ? { day: issue.dueDate, label: due.label, long: dayLabel(issue.dueDate), overdue: due.overdue } : null,

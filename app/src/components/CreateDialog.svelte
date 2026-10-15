@@ -1,13 +1,14 @@
 <script lang="ts">
   // Create dialog: team, title, description, property chips with the same pickers.
   // Ctrl Enter creates, Ctrl Shift Enter creates and stays open ("Create more").
-  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, statusIcon, dayLabel, formatShortcut, issueModel, modelLabel, type PaletteKind } from '@selfbound/core';
+  import { ICON, PRIORITY_ICON, PRIORITY_LABEL, statusIcon, dayLabel, formatShortcut, issueModel, modelInfo, modelLabel, type PaletteKind } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { leave } from '../lib/motion.ts';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import type { ImageField } from '../lib/imageInput.ts';
   import { anchorOf } from '../lib/ui.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import { modal } from '../lib/modal.ts';
   import ImageButton from './ImageButton.svelte';
   import TeamLogo from './TeamLogo.svelte';
@@ -119,7 +120,7 @@
       <button class={['chip', d.estimate === null && 'unset']} data-testid="create-estimate" onclick={(e) => pick('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
       <button class={['chip', !d.dueDate && 'unset']} data-testid="create-due" onclick={(e) => pick('due', e)}><span class="icon">{@html ICON.calendar}</span>{d.dueDate ? dayLabel(d.dueDate) : t('Due date')}</button>
       <button class={['chip', !sprint && 'unset']} data-testid="create-sprint" onclick={(e) => pick('sprint', e)}><span class="icon">{@html ICON.sprint}</span>{sprint?.name ?? t('Sprint')}</button>
-      <button class={['chip', model?.source !== 'issue' && 'unset']} data-testid="create-model" title={model && model.source !== 'issue' ? t('Inherited') : undefined} onclick={(e) => pick('model', e)}><span class="icon">{@html ICON.model}</span><span class="chip-text">{model ? modelLabel(meta, model.choice) : t('Model')}</span></button>
+      <button class={['chip', model?.source !== 'issue' && 'unset']} data-testid="create-model" title={model && model.source !== 'issue' ? t('Inherited') : undefined} onclick={(e) => pick('model', e)}><span class={['icon mi', logoClass(model ? modelInfo(meta, model.choice)?.logo : null)]}></span><span class="chip-text">{model ? modelLabel(meta, model.choice) : t('Model')}</span></button>
       <button class={['chip', !parent && 'unset']} data-testid="create-parent" onclick={(e) => pick('parent', e)}><span class="icon">{@html ICON.parent}</span><span class="chip-text">{parent ? parent.key : t('Parent')}</span></button>
     </div>
     <div class="create-foot">

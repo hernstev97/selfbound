@@ -15,19 +15,35 @@ const QWEN = { provider: 'deepinfra', modelId: 'Qwen/Qwen3.8-Flash' };
 type Catalog = Record<string, { name?: string; models: Record<string, Record<string, unknown>> }>;
 const clone = (): Catalog => structuredClone(raw) as unknown as Catalog;
 
-/** models.dev stand-in: answers with `catalog` and an ETag, 304 on a matching If-None-Match. */
+const LOGO = '<svg width="24" height="24" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><path d="M4 4h32v32H4Z" fill="currentColor"/></svg>';
+const WIDE_LOGO = '<svg viewBox="0 0 120 30" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h120v30H0Z" fill="currentColor"/></svg>';
+const BAD_LOGO = '<svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>';
+/** Logos of the stand-in: Anthropic a normal one, Google a wide one, OpenAI one that fails the check, the rest none. */
+const LOGOS: Record<string, string> = { anthropic: LOGO, google: WIDE_LOGO, openai: BAD_LOGO };
+
+/** models.dev stand-in: answers with `catalog` and an ETag, 304 on a matching If-None-Match; logos too. */
 function modelsDev(state: { catalog: Catalog | string; etag: string; status?: number }) {
   const calls: { ifNoneMatch: string | null }[] = [];
+  const logoCalls: { provider: string; ifNoneMatch: string | null }[] = [];
   vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
-    expect(url).toBe('https://models.dev/api.json');
     const ifNoneMatch = new Headers(init?.headers).get('if-none-match');
+    const logo = /^https:\/\/models\.dev\/logos\/(.+)\.svg$/.exec(url);
+    if (logo) {
+      const provider = decodeURIComponent(logo[1]!);
+      logoCalls.push({ provider, ifNoneMatch });
+      const svg = LOGOS[provider];
+      if (!svg) return new Response('', { status: 404 });
+      if (ifNoneMatch === `"logo-${provider}"`) return new Response(null, { status: 304 });
+      return new Response(svg, { status: 200, headers: { etag: `"logo-${provider}"`, 'content-type': 'image/svg+xml' } });
+    }
+    expect(url).toBe('https://models.dev/api.json');
     calls.push({ ifNoneMatch });
     if (state.status) return new Response('down', { status: state.status });
     if (ifNoneMatch === state.etag) return new Response(null, { status: 304 });
     const body = typeof state.catalog === 'string' ? state.catalog : JSON.stringify(state.catalog);
     return new Response(body, { status: 200, headers: { etag: state.etag } });
   });
-  return calls;
+  return Object.assign(calls, { logos: logoCalls });
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -48,7 +64,7 @@ describe('sync', () => {
     const { t } = setup();
     const calls = modelsDev({ catalog: clone(), etag: '"v1"' });
     expect(await t.action(internal.models.sync, {})).toMatchObject({ changed: 5 });
-    expect(calls).toEqual([{ ifNoneMatch: null }]);
+    expect([...calls]).toEqual([{ ifNoneMatch: null }]);
     const stored = await models(t);
     expect(stored).toHaveLength(9);
     expect(await row(t, OPUS)).toMatchObject({ name: 'Claude Opus 5.5', efforts: ['low', 'medium', 'high', 'xhigh', 'max'], modes: ['fast'], context: 1_000_000 });
@@ -144,6 +160,45 @@ describe('sync', () => {
     state.catalog = many;
     await t.action(internal.models.sync, {});
     expect(calls.at(-1)).toEqual({ ifNoneMatch: null });
+  });
+});
+
+describe('provider logos', () => {
+  test('fetched with the catalog, checked like team logos (any aspect ratio), served by /logo with CORS', async () => {
+    const { t, owner } = setup();
+    const calls = modelsDev({ catalog: clone(), etag: '"v1"' });
+    await t.action(internal.models.sync, {});
+    expect(calls.logos.map((c) => c.provider).sort()).toEqual(['anthropic', 'deepinfra', 'google', 'openai', 'sarvam']);
+    const logos = await t.run(async (ctx) => await ctx.db.query('modelLogos').collect());
+    expect(Object.fromEntries(logos.map((l) => [l.provider, l.storageId !== undefined]))).toEqual({ anthropic: true, google: true, openai: false, deepinfra: false, sarvam: false });
+
+    await owner.mutation(api.models.setEnabled, { ...OPUS, enabled: true });
+    await owner.mutation(api.models.setEnabled, { provider: 'openai', modelId: 'gpt-6-sol', enabled: true });
+    const meta = await owner.query(api.meta.get, {});
+    const opus = meta.models.find((m) => m.modelId === OPUS.modelId)!;
+    expect(opus.logo).toMatch(/^http:\/\/127\.0\.0\.1:3211\/logo\/.+/);
+    expect(meta.models.find((m) => m.provider === 'openai')!.logo).toBeUndefined();
+    const res = await t.fetch(new URL(opus.logo!).pathname);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toBe('image/svg+xml');
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(await res.text()).toBe(LOGO);
+    const google = (await owner.query(api.models.catalog, {})).providers.find((p) => p.provider === 'google')!;
+    expect((await t.fetch(new URL(google.logo!).pathname)).status).toBe(200);
+
+    // Unchanged catalog: no logo requests. A changed provider asks again with its ETag.
+    const next = clone();
+    next.anthropic!.models['claude-opus-5-5']!.name = 'Claude Opus 5.5 (renamed)';
+    calls.logos.length = 0;
+    await t.action(internal.models.sync, { force: true });
+    expect(calls.logos).toEqual([]);
+    const state = { catalog: next, etag: '"v2"' };
+    vi.unstubAllGlobals();
+    const again = modelsDev(state);
+    await t.action(internal.models.sync, {});
+    expect(again.logos).toEqual([{ provider: 'anthropic', ifNoneMatch: '"logo-anthropic"' }]);
+    // The file stays the same (304).
+    expect((await owner.query(api.meta.get, {})).models.find((m) => m.modelId === OPUS.modelId)!.logo).toBe(opus.logo);
   });
 });
 

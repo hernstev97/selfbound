@@ -21,6 +21,8 @@ export type ModelInfo = {
   enabled?: boolean;
   /** No longer in the models.dev catalog: existing choices stay, new ones are refused. */
   removed?: boolean;
+  /** The provider's logo (our own /logo/<id>, from models.dev); missing = none */
+  logo?: string;
 };
 
 /** Where an effective model comes from. */

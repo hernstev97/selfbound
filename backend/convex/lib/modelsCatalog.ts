@@ -1,9 +1,12 @@
 // The models.dev catalog (https://models.dev/api.json, about 5.7 MB) reduced to what Selfbound needs
 // (XLR8-93). Pure functions; the fetch is in `fetchCatalog`, the storing in convex/models.ts.
 
+import { LIMITS } from '../shared/constants';
 import { MODEL_LIMITS } from '../shared/models';
 
 export const CATALOG_URL = 'https://models.dev/api.json';
+/** Provider logos: monochrome SVGs, mostly in `currentColor`. */
+export const logoSource = (provider: string) => `https://models.dev/logos/${encodeURIComponent(provider)}.svg`;
 
 /** One model as stored in `models` (without the owner's `enabled` flag and the sync bookkeeping). */
 export type SlimModel = {
@@ -137,6 +140,24 @@ export async function fetchCatalog(etag: string | undefined, fetcher: typeof fet
   return { status: 'ok', etag: res.headers.get('etag') ?? undefined, catalog: JSON.parse(body) };
 }
 
+export type LogoResponse = { status: 'not_modified' } | { status: 'none'; etag?: string } | { status: 'ok'; etag?: string; svg: Uint8Array };
+
+/**
+ * GET a provider's logo with `If-None-Match`, at most 256 KB. `none`: models.dev has none. The caller
+ * checks the SVG (`checkLogo`). Throws on network errors and unexpected statuses (the next run tries again).
+ */
+export async function fetchLogo(provider: string, etag: string | undefined, fetcher: typeof fetch = fetch): Promise<LogoResponse> {
+  const headers: Record<string, string> = { accept: 'image/svg+xml' };
+  if (etag) headers['if-none-match'] = etag;
+  const res = await fetcher(logoSource(provider), { headers, redirect: 'manual', signal: AbortSignal.timeout(15_000) });
+  if (res.status === 304) return { status: 'not_modified' };
+  if (res.status === 404) return { status: 'none' };
+  if (res.status !== 200) throw new Error(`models.dev logo ${provider}: ${res.status}`);
+  const next = res.headers.get('etag') ?? undefined;
+  const text = await readLimited(res, LIMITS.logoMaxBytes);
+  return { status: 'ok', etag: next, svg: new TextEncoder().encode(text) };
+}
+
 async function readLimited(res: Response, max: number): Promise<string> {
   if (!res.body) return await res.text();
   const reader = res.body.getReader();
@@ -148,7 +169,7 @@ async function readLimited(res: Response, max: number): Promise<string> {
     size += value.byteLength;
     if (size > max) {
       await reader.cancel();
-      throw new Error('models.dev: the catalog is too large');
+      throw new Error('models.dev: the answer is too large');
     }
     chunks.push(value);
   }

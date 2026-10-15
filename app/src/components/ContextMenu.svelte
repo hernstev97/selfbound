@@ -4,6 +4,7 @@
   import { fromSlice } from '../slice.svelte.ts';
   import { keepInView } from '../lib/ui.ts';
   import { leave } from '../lib/motion.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import TeamLogo from './TeamLogo.svelte';
 
   const menuSlice = fromSlice(app.menu.state);
@@ -59,7 +60,7 @@
             {:else}
               <span class="check">{#if item.checked}{@html ICON.check}{/if}</span>
             {/if}
-            {#if item.team}<TeamLogo team={item.team} />{:else if item.icon}<span class="icon">{@html item.icon}</span>{:else if item.dot !== undefined}<span class="icon"><span class="label-dot" style:--hue={item.dot}></span></span>{/if}
+            {#if item.logo}<span class={['icon mi', logoClass(item.logo)]}></span>{:else if item.team}<TeamLogo team={item.team} />{:else if item.icon}<span class="icon">{@html item.icon}</span>{:else if item.dot !== undefined}<span class="icon"><span class="label-dot" style:--hue={item.dot}></span></span>{/if}
             <span class="label">{item.label}</span>
             {#if item.detail}<span class="detail">{item.detail}</span>{/if}
           </button>

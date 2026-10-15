@@ -1,14 +1,18 @@
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
-import { internalAction, internalMutation, internalQuery } from './_generated/server';
+import type { Id } from './_generated/dataModel';
+import { internalAction, internalMutation, internalQuery, type ActionCtx } from './_generated/server';
 import { ownerQuery, ownerWriteMutation } from './lib/auth';
 import { fail } from './lib/errors';
-import { fetchCatalog, providerHash, reduceCatalog, type SlimProvider } from './lib/modelsCatalog';
+import { checkLogo } from './lib/logo';
+import { fetchCatalog, fetchLogo, providerHash, reduceCatalog, type SlimProvider } from './lib/modelsCatalog';
 import { testSwitchesEnabled } from './lib/testSwitches';
 import { modelRefValidator, slimProviderValidator } from './lib/validators';
 import {
   applyProvider,
   catalogStatus,
+  logoState,
+  setProviderLogo,
   listProviderModels,
   listProviders,
   providerHashes,
@@ -27,6 +31,8 @@ import {
 const MODELS_PER_BATCH = 1500;
 /** Removed providers per mutation. */
 const REMOVALS_PER_BATCH = 20;
+/** Provider logos fetched at the same time. */
+const LOGOS_PARALLEL = 6;
 /** "Update now" does nothing if the last check is younger than this. */
 const REFRESH_MIN_MS = 60_000;
 
@@ -149,6 +155,7 @@ export const sync = internalAction({
       await ctx.runMutation(internal.models.recordSync, { status: { ok: false, checkedAt, error: `Storing failed: ${message}`.slice(0, 300), etag: '' } });
       return { changed: 0, error: message };
     }
+    await syncLogos(ctx, providers.map((p) => p.provider), new Set(changed.map((p) => p.provider)));
     const models = providers.reduce((n, p) => n + p.models.length, 0);
     // The ETag only after everything is stored: a failure halfway reads the whole catalog again next time.
     await ctx.runMutation(internal.models.recordSync, {
@@ -156,6 +163,44 @@ export const sync = internalAction({
     });
     return { changed: changed.length, removed: gone.length };
   },
+});
+
+/**
+ * Logos of new and changed providers, and of those never checked (first sync: all of them), with
+ * `If-None-Match`. A logo that fails is skipped and tried again next time; it never fails the sync.
+ */
+async function syncLogos(ctx: ActionCtx, providers: string[], changed: ReadonlySet<string>) {
+  const known: Record<string, { etag?: string }> = await ctx.runQuery(internal.models.logoStateQuery, {});
+  const targets = providers.filter((p) => !known[p] || changed.has(p));
+  for (let i = 0; i < targets.length; i += LOGOS_PARALLEL) {
+    await Promise.all(
+      targets.slice(i, i + LOGOS_PARALLEL).map(async (provider) => {
+        let stored: Id<'_storage'> | undefined;
+        try {
+          const res = await fetchLogo(provider, known[provider]?.etag);
+          if (res.status === 'not_modified') return;
+          // Checked like a team logo (no scripts, no external references …), any aspect ratio; else none.
+          if (res.status === 'ok' && checkLogo(res.svg, 'image/svg+xml', { square: false }).ok) {
+            stored = await ctx.storage.store(new Blob([res.svg as BlobPart], { type: 'image/svg+xml' }));
+          }
+          await ctx.runMutation(internal.models.setLogo, { provider, ...(stored ? { storageId: stored } : {}), ...(res.etag ? { etag: res.etag } : {}) });
+        } catch (error) {
+          if (stored) await ctx.storage.delete(stored);
+          console.warn('models.dev logo failed:', provider, error instanceof Error ? error.message : String(error));
+        }
+      }),
+    );
+  }
+}
+
+export const logoStateQuery = internalQuery({
+  args: {},
+  handler: async (ctx) => await logoState(ctx),
+});
+
+export const setLogo = internalMutation({
+  args: { provider: v.string(), storageId: v.optional(v.id('_storage')), etag: v.optional(v.string()) },
+  handler: async (ctx, args) => await setProviderLogo(ctx, args, Date.now()),
 });
 
 export const syncState = internalQuery({

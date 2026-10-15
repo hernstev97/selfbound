@@ -425,7 +425,7 @@ export class PaletteController {
     if (!inPicker) {
       // Context submenu and command menu: the enabled models; effort and speed follow in the picker.
       none();
-      for (const m of models) add({ id: `m:${modelKey(m.provider, m.modelId)}`, label: m.name, detail: m.providerName, icon, checked: every((c) => isModel(c, m)), keywords: `${m.provider} ${m.modelId} ${m.family ?? ''}` }, () => this.#pickModel(m, target));
+      for (const m of models) add({ id: `m:${modelKey(m.provider, m.modelId)}`, label: m.name, detail: m.providerName, icon, logo: m.logo, checked: every((c) => isModel(c, m)), keywords: `${m.provider} ${m.modelId} ${m.family ?? ''}` }, () => this.#pickModel(m, target));
       return undefined;
     }
     const step = (this.#modelStep ??= this.#modelStart());
@@ -439,10 +439,10 @@ export class PaletteController {
     };
     if (step.step === 'provider') {
       none();
-      const counts = new Map<string, { name: string; count: number }>();
-      for (const m of models) counts.set(m.provider, { name: m.providerName, count: (counts.get(m.provider)?.count ?? 0) + 1 });
-      for (const [provider, { name, count }] of counts) {
-        add({ id: `mp:${provider}`, label: name, detail: tn(count, '{count} model', '{count} models'), icon, submenu: true, checked: every((c) => c.provider === provider), keywords: provider }, () => this.#modelGo({ step: 'model', provider }));
+      const counts = new Map<string, { name: string; count: number; logo?: string }>();
+      for (const m of models) counts.set(m.provider, { name: m.providerName, count: (counts.get(m.provider)?.count ?? 0) + 1, logo: m.logo });
+      for (const [provider, { name, count, logo }] of counts) {
+        add({ id: `mp:${provider}`, label: name, detail: tn(count, '{count} model', '{count} models'), icon, logo, submenu: true, checked: every((c) => c.provider === provider), keywords: provider }, () => this.#modelGo({ step: 'model', provider }));
       }
       if (!models.length) {
         add({ id: 'm:settings', label: t('Choose models in the settings …'), icon: ICON.settings }, () => this.app.nav.go({ name: 'settings', section: 'models' }));
@@ -457,7 +457,7 @@ export class PaletteController {
         const next = m.efforts.length ? 'effort' : m.modes.length ? 'speed' : null;
         const choice = { provider: m.provider, modelId: m.modelId };
         add(
-          { id: `mm:${m.modelId}`, label: m.name, detail: contextLabel(m) ?? undefined, icon, submenu: !!next, checked: every((c) => isModel(c, m)), keywords: `${m.modelId} ${m.family ?? ''}` },
+          { id: `mm:${m.modelId}`, label: m.name, detail: contextLabel(m) ?? undefined, icon, logo: m.logo, submenu: !!next, checked: every((c) => isModel(c, m)), keywords: `${m.modelId} ${m.family ?? ''}` },
           next ? () => this.#modelGo({ step: next, provider: m.provider, modelId: m.modelId }) : () => this.apply({ model: choice }, target),
         );
       }

@@ -1,6 +1,7 @@
 import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { ownerQuery } from './lib/auth';
+import { logoUrl } from './lib/logo';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
 import { storedTimeZone } from './ops/instance';
@@ -12,14 +13,6 @@ import { compareStates } from './shared/workflow';
 /** Number of closed sprints meta.get returns. */
 const RECENT_CLOSED = 6;
 
-/**
- * URL of a team logo: our own endpoint GET /logo/<storageId> (convex/http.ts) with a strict
- * Content-Security-Policy, not the raw storage URL.
- */
-function logoUrl(storageId: Id<'_storage'>) {
-  const site = (process.env.CONVEX_SITE_URL ?? '').replace(/\/+$/, '');
-  return `${site}/logo/${storageId}`;
-}
 
 /**
  * Reference data for the UI, one subscription per client. Deliberately WITHOUT the counter: new

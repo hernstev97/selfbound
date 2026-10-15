@@ -3,6 +3,7 @@
   import { contextLabel, type ModelInfo } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { speedsOf } from '@selfbound/backend/shared/models';
+  import { logoClass } from '../../lib/providerLogo.ts';
 
   let { model, showProvider = false, on }: { model: ModelInfo; showProvider?: boolean; on: (model: ModelInfo, enabled: boolean) => void } = $props();
   const details = $derived(
@@ -17,6 +18,7 @@
 </script>
 
 <div class="card-row" data-testid="model-row" data-model="{model.provider}/{model.modelId}">
+  <span class={['icon mi', logoClass(model.logo)]} style="color: var(--text-muted)"></span>
   <span class="t"
     >{model.name}
     <div class="sub">{details.join(' · ')}{#if model.removed}<span class="warn-text"> · {t('No longer in the catalog')}</span>{/if}</div></span
