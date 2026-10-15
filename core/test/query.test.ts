@@ -8,7 +8,7 @@ await loadFuzzy();
 import { computeWindow, revealIndex } from '../src/window.ts';
 import { isConsentPath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import { VIEWS, type ViewContext } from '../src/views.ts';
-import { actorName, branchName, dayLabel, dueLabel, fullDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
+import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
 import { setDictionary } from '../src/i18n.ts';
 import de from '../src/locales/de.ts';
 import { eventCombo, formatShortcut } from '../src/keyboard.ts';
@@ -319,11 +319,24 @@ describe('odds and ends', () => {
     expect(parseDueInput('nonsense 12', now)).toBeNull();
   });
 
+  test('initials: first letters of the first and last word, upper case', () => {
+    expect(initials('Jane Q. Doe')).toBe('JD');
+    expect(initials('  jane ')).toBe('J');
+    expect(initials('Élodie Çelik')).toBe('ÉÇ');
+    expect(initials('😀 Smile')).toBe('😀S');
+    expect(initials('   ')).toBe('');
+    expect(nameHue('Jane')).toBe(nameHue('Jane'));
+    expect(nameHue('Jane')).toBeGreaterThanOrEqual(0);
+    expect(nameHue('Jane')).toBeLessThan(360);
+  });
+
   test('the owner shows as "You" ("Du" in German)', () => {
     const agents = new Map([['a1', 'Claude Code']]);
     expect(actorName({ kind: OWNER_KIND }, agents)).toBe('You');
     expect(actorName({ kind: OWNER_KIND }, agents, 'Jane')).toBe('Jane');
     expect(actorName({ kind: 'agent', agentId: 'a1' } as never, agents)).toBe('Claude Code');
+    // A profile name replaces "You"
+    expect(actorName({ kind: OWNER_KIND }, new Map([...agents, [OWNER_KIND, 'Jane Doe']]))).toBe('Jane Doe');
     setDictionary('de', de);
     expect(actorName({ kind: OWNER_KIND }, agents)).toBe('Du');
     setDictionary('en', null);

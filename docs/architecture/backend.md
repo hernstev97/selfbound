@@ -15,6 +15,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/shared/constants.ts` | Constants shared by backend, core and UI (also run in the browser) |
 | `convex/crons.ts` | Scheduled jobs |
 | `convex/http.ts` | HTTP endpoints `/mcp`, `/github`, `/logo/<id>`, `/img/<token>`, `/health` ([below](#http-endpoints-convexhttpts)) |
+| `convex/profile.ts`, `convex/ops/profile.ts` | The owner's profile: display name and profile picture ([below](#profile)) |
 | `convex/files.ts`, `convex/ops/files.ts`, `convex/lib/image.ts` | Images in descriptions and comments: validated upload, references, cleanup ([below](#files-images)) |
 | `convex/wiki.ts`, `convex/ops/wiki.ts`, `convex/lib/wikiText.ts` | Knowledge base: pages per team as a tree, text with revisions, sources, topics, search, trash ([below](#wiki-knowledge-base)) |
 | `convex/lib/search.ts` | Search terms, "contains all words" matching and snippets for `issues.search` and `wiki.search` |
@@ -74,6 +75,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `articleTombstones` | Permanently deleted pages: `articleId` (text), `teamId`, `purgedAt` (for a later sync) | `by_purged` |
 | `opsStatus` | Operational state: `backup`, `auditSprints`, `seed` | `by_key` |
 | `settings` | Test switches (`rejectWrites`) | `by_key` |
+| `profile` | The owner's profile, one row: `name?`, `avatarToken?` (token of an image in `files`), `updatedAt`. A missing row or field means "not set"; no migration was needed | |
 
 **Index notes:**
 
@@ -108,7 +110,7 @@ This document is the contract between the backend and the UI. It describes the t
 `actor = { kind: 'steven' | 'agent' | 'github' | 'import' | 'system', agentId? }`. `'steven'` is the legacy stored value for the instance owner. The actor always comes from the verified identity, never as an argument from the client:
 
 - UI: `requireOwner` checks the token (Convex) and the allowlist `XLR8_OWNER_IDS` (`tokenIdentifier`, comma-separated) → `steven` (owner). Tokens from the local test sign-in (issuer `https://dev.xlr8.local`) are only accepted when `CONVEX_CLOUD_URL` (set by Convex in every function) points to `127.0.0.1` or `localhost`; otherwise `access_denied`, even if `XLR8_DEV_JWKS` is set by mistake.
-- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from `XLR8_OWNER_NAME` (default "Owner").
+- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from the profile ([below](#profile)); without one, `XLR8_OWNER_NAME`, else "Owner".
 - Crons: `system`. GitHub webhook: `github`. Import: `import`.
 
 Permissions that depend on the actor:
@@ -167,7 +169,7 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, Selfbound sprints first; imported Linear cycles only fill up while there are fewer than 6 Selfbound sprints; descending by number), `rejectWrites }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
+| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, Selfbound sprints first; imported Linear cycles only fill up while there are fewer than 6 Selfbound sprints; descending by number), `rejectWrites`, `owner: { name, avatarUrl }` (the profile, `null` = not set; `avatarUrl` = `<site>/img/<token>`) }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
 | `meta.counter` (query) | – | `{ maxSeq }` (−1 without issues). The buckets `0 … floor(maxSeq/64)` follow from it. |
 
 ### issues
@@ -320,9 +322,23 @@ Relations: no self-reference, no second relation of the same type between the sa
 
 **Access (design decision):** `<img>` sends no auth header, so an authenticated endpoint would only work with cookies or with URLs the app has re-signed on every display. Both cost function calls and make the Markdown useless for agents and the import (expiring links). So: **unguessable URLs.** The token is 32 random bytes (256 bits, generated in the action, not in a mutation); anyone who doesn't know it from a text they are allowed to read can't find the image. Raw storage IDs and unknown tokens return 404. The token does not expire; whoever shares a link shares the image. Deleted images (below) are gone immediately. The app sends no full referrer to other sites (`strict-origin-when-cross-origin`), and images themselves load with `referrerpolicy="no-referrer"`.
 
-**References and cleanup** (`ops/files.ts`): every write path for texts calls `syncFileRefs(ctx, owner, text)`, with `null` on delete: descriptions (`ops/bodies.ts`, so also MCP, import, recurrences), comments (add, edit, remove; import), earlier revisions (import), recurrence templates, permanent deletion of an issue, text and earlier revisions of knowledge pages (`ops/wiki.ts`). The same image in several places stays as long as any text references it. Without a reference the file gets `deleteAfter`: 7 days after a fresh upload (drafts only live in the browser), 1 day after removal from the last text (so undo still works). If a reference comes back before then, `deleteAfter` is cleared. The cron `sweep-files` then deletes the file and the entry. Issues in the trash keep their images until permanent deletion.
+**References and cleanup** (`ops/files.ts`): every write path for texts calls `syncFileRefs(ctx, owner, text)`, with `null` on delete: descriptions (`ops/bodies.ts`, so also MCP, import, recurrences), comments (add, edit, remove; import), earlier revisions (import), recurrence templates, permanent deletion of an issue, text and earlier revisions of knowledge pages (`ops/wiki.ts`). The same image in several places stays as long as any text references it. The profile picture counts as a holder too (owner `profile`). Without a reference the file gets `deleteAfter`: 7 days after a fresh upload (drafts only live in the browser), 1 day after removal from the last text (so undo still works). If a reference comes back before then, `deleteAfter` is cleared. The cron `sweep-files` then deletes the file and the entry. Issues in the trash keep their images until permanent deletion.
 
 **Storage:** `ops.status().storage` = `{ files, bytes, images, imageBytes, orphaned, capped }` (all files in Convex storage, logos included; counted up to 8000 per table, `capped` beyond that). Convex free plan: 1 GB storage, 1 GB data transfer per month.
+
+### profile
+
+The owner's display name and picture. Read through `meta.get` (`owner`), so there is no extra subscription and the cache holds it. **Stored in Convex, not taken from Clerk** (design decision): MCP output and the history are built in the backend, where Clerk's data is not available; the local sign-in and the tests have no Clerk; the value is then the same on every device and offline from the cache. Clerk stays the sign-in.
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `profile.setName` | `{ name: string \| null }` | `{ name }`: trimmed, whitespace collapsed, at most 60 characters (`LIMITS.profileNameMax`), no control characters; empty or `null` clears it |
+| `profile.setAvatar` | `{ token }`: the token from the URL that `files.register` returned | `{ avatarUrl }`: PNG, JPEG or WebP (no GIF, no SVG), at most 256 KB (`LIMITS.avatarMaxBytes`) |
+| `profile.removeAvatar` | – | `{ avatarUrl: null }` |
+
+**Picture:** upload as for [images](#files-images) (`files.generateUploadUrl` → POST → `files.register`), then `profile.setAvatar`. The UI crops in the browser to a 256 × 256 square (WebP, so camera metadata is gone); the circle is drawn by CSS. The profile references the image under the owner id `profile` in `fileRefs` (`syncFileRefs`), so a replaced or removed picture loses its reference and the cron `sweep-files` deletes it after the usual one-day grace period. Served via `GET /img/<token>` like any image.
+
+**Names in the UI and MCP:** the store puts the name into `store.agents` under `OWNER_KIND`, so `actorName` shows it instead of "You" everywhere (history, comments, inbox text, version labels). MCP (`Lookup.actorName`) uses the profile name, then `XLR8_OWNER_NAME`, then "Owner". Agents keep `"<name> (agent)"`. The stored actor kind `steven` is unchanged.
 
 ### agents
 

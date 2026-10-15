@@ -3,6 +3,7 @@ import type { Id } from './_generated/dataModel';
 import { ownerQuery } from './lib/auth';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
+import { ownerProfile } from './ops/profile';
 import { recentClosedSprints } from './ops/sprints';
 import { compareStates } from './shared/workflow';
 
@@ -60,6 +61,8 @@ export const get = ownerQuery({
       labels,
       sprints: [...active, ...planning, ...closed].sort((a, b) => b.number - a.number),
       rejectWrites: await rejectWritesActive(ctx),
+      // The owner's profile (name and picture URL; null = not set)
+      owner: await ownerProfile(ctx),
     };
   },
 });

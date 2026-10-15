@@ -36,6 +36,14 @@ export interface Meta {
   labels: LabelDoc[];
   sprints: SprintDoc[];
   rejectWrites: boolean;
+  /** The owner's profile; missing in a cache written before the profile existed */
+  owner?: OwnerProfile;
+}
+
+/** Display name and picture URL of the owner (null = not set). */
+export interface OwnerProfile {
+  name: string | null;
+  avatarUrl: string | null;
 }
 
 /**
