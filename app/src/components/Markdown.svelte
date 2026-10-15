@@ -112,6 +112,11 @@
   });
 
   async function onclick(event: MouseEvent) {
+    // Using a chart (table toggle, hovering and clicking in the plot) does not start editing the text.
+    if ((event.target as Element).closest('.vchart-toggle, .vchart-svg, .vchart-table')) {
+      event.stopPropagation();
+      return;
+    }
     const box = (event.target as Element).closest<HTMLInputElement>('input[data-task]');
     if (box && ontoggle) {
       // The check mark comes with the saved text (optimistically), not from the browser.

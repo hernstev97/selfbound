@@ -160,7 +160,7 @@ class CodeView implements NodeView {
     // The last good drawing stays while the text is incomplete; a note says what is wrong.
     const host = document.createElement('div');
     host.className = 'vblock-view';
-    host.setAttribute('role', 'img');
+    host.setAttribute('role', renderer.role ?? 'img');
     host.setAttribute('aria-label', renderer.label());
     // Laid out but invisible until it is drawn, so the last good drawing does not jump.
     host.style.cssText = 'position: absolute; inset-inline: 0; visibility: hidden';

@@ -81,6 +81,12 @@
     if (view) fn(view.state, view.dispatch);
   };
 
+  const CHART_SAMPLE = JSON.stringify(
+    { type: 'bar', title: 'Issues done per week', unit: '', categories: ['W1', 'W2', 'W3', 'W4'], series: [{ name: 'Done', values: [3, 5, 8, 6] }] },
+    null,
+    2,
+  );
+
   // German search words per panel kind
   const CALLOUT_WORDS: Record<CalloutKind, string> = { info: 'info', note: 'hinweis notiz', success: 'erfolg', warning: 'warnung achtung', error: 'fehler' };
 
@@ -109,6 +115,13 @@
       hint: '```mermaid',
       words: 'diagram mermaid flowchart graph chart sequence diagramm ablauf',
       run: cmd(insertCodeBlock('mermaid', 'flowchart TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Done]\n  B -->|No| D[Try again]')),
+    },
+    {
+      id: 'chart',
+      label: t('Chart (data)'),
+      hint: '```chart',
+      words: 'chart graph plot bar line area heatmap stat kpi data diagramm balken kurve kennzahl',
+      run: cmd(insertCodeBlock('chart', CHART_SAMPLE)),
     },
     { id: 'table', label: t('Table'), hint: '', words: 'table tabelle', run: cmd(insertTable) },
     { id: 'rule', label: t('Divider'), hint: '---', words: 'divider rule line hr trennlinie linie', run: cmd(insertRule) },

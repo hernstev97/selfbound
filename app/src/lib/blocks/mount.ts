@@ -61,7 +61,7 @@ export function mountBlocks(root: HTMLElement, blocks: readonly BlockRenderer[] 
     setNote(el, null);
     const host = document.createElement('div');
     host.className = 'vblock-view';
-    host.setAttribute('role', 'img');
+    host.setAttribute('role', renderer.role ?? 'img');
     host.setAttribute('aria-label', renderer.label());
     el.querySelector(':scope > .vblock-view')?.remove();
     el.prepend(host);

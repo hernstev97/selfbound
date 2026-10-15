@@ -29,6 +29,8 @@ export interface BlockRenderer {
   langs: readonly string[];
   /** Short name for the accessible label ("Diagram"); translated when called */
   label: () => string;
+  /** ARIA role of the drawing's host (default `img`: a picture with a text alternative). A chart has controls and its own focusable plot, so it is a `group`. */
+  role?: 'img' | 'group';
   /** Does the drawing contain fixed colors? Then it is drawn again when the theme changes. Drawings that use the app's CSS variables need no redraw. */
   themed?: boolean;
   load: () => Promise<BlockModule>;
@@ -37,6 +39,7 @@ export interface BlockRenderer {
 /** Registered renderers. Add one line per renderer. */
 export const BLOCKS: BlockRenderer[] = [
   { id: 'mermaid', langs: ['mermaid', 'mmd'], label: () => t('Diagram'), load: () => import('./mermaid.ts') },
+  { id: 'chart', langs: ['chart'], label: () => t('Chart'), role: 'group', load: () => import('./chart/index.ts') },
 ];
 
 /** Renderer that claims the code block's info string (`mermaid`, `mermaid title=…`), or null. */

@@ -20,7 +20,7 @@ describe('claim', () => {
     expect(blockFor('mermaid')?.id).toBe('mermaid');
     expect(blockFor('MMD')?.id).toBe('mermaid');
     expect(blockFor('ts')).toBeNull();
-    expect(BLOCKS.map((b) => b.id)).toEqual(['mermaid']);
+    expect(BLOCKS.map((b) => b.id)).toEqual(['mermaid', 'chart']);
     expect(blockFenceHtml(blockFor('mermaid')!, 'graph TD\n  A-->B', 'mermaid')).toContain('data-block="mermaid"');
   });
   it('a diagram alone does not load the code highlighter', () => {
