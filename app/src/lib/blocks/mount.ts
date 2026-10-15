@@ -7,13 +7,14 @@ import { onThemeChange } from './theme.ts';
 
 type State = 'loading' | 'ready' | 'error';
 
-/** Draws `source` into `host` with the renderer; resolves to an error message or null. */
+/** Draws `source` into `host` with the renderer; resolves to an error message or null. The host's accessible name gains the renderer's description of the drawing. */
 export async function drawBlock(renderer: BlockRenderer, source: string, host: HTMLElement, signal: AbortSignal): Promise<string | null> {
   try {
     const module = await loadBlock(renderer);
     if (signal.aborted) return null;
     host.replaceChildren();
-    await module.render(source, host, { signal });
+    const description = await module.render(source, host, { signal });
+    if (description) host.setAttribute('aria-label', `${renderer.label()}: ${description}`);
     return null;
   } catch (error) {
     if (signal.aborted) return null;
@@ -60,7 +61,7 @@ export function mountBlocks(root: HTMLElement, blocks: readonly BlockRenderer[] 
     setNote(el, null);
     const host = document.createElement('div');
     host.className = 'vblock-view';
-    host.setAttribute('role', 'img');
+    host.setAttribute('role', renderer.role ?? 'img');
     host.setAttribute('aria-label', renderer.label());
     el.querySelector(':scope > .vblock-view')?.remove();
     el.prepend(host);

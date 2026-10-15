@@ -23,7 +23,7 @@
   import { imageFiles, insertImages, pickImages, type ImageRef, type UploadTarget } from '../imageInput.ts';
   import LangPicker from '../../components/LangPicker.svelte';
   import { CALLOUT_KINDS, calloutLabel, type CalloutKind } from '../blocks/callout.ts';
-  import { codeToText, insertCallout, insertRule, insertTable, quote, setBlock, setCalloutKind, toggleList, unwrapCallout } from './commands.ts';
+  import { codeToText, insertCallout, insertCodeBlock, insertRule, insertTable, quote, setBlock, setCalloutKind, toggleList, unwrapCallout } from './commands.ts';
   import { markdownFragment, parseMarkdown, type Source } from './parse.ts';
   import { closeSlash, plugins, slashKey } from './plugins.ts';
   import { app } from '../../app-instance.ts';
@@ -81,6 +81,12 @@
     if (view) fn(view.state, view.dispatch);
   };
 
+  const CHART_SAMPLE = JSON.stringify(
+    { type: 'bar', title: 'Issues done per week', unit: '', categories: ['W1', 'W2', 'W3', 'W4'], series: [{ name: 'Done', values: [3, 5, 8, 6] }] },
+    null,
+    2,
+  );
+
   // German search words per panel kind
   const CALLOUT_WORDS: Record<CalloutKind, string> = { info: 'info', note: 'hinweis notiz', success: 'erfolg', warning: 'warnung achtung', error: 'fehler' };
 
@@ -103,6 +109,13 @@
       words: `panel callout alert box infobox ${kind} ${CALLOUT_WORDS[kind]}`,
       run: cmd(insertCallout(kind)),
     })),
+    {
+      id: 'chart',
+      label: t('Chart (data)'),
+      hint: '```chart',
+      words: 'chart graph plot bar line area heatmap stat kpi data diagramm balken kurve kennzahl',
+      run: cmd(insertCodeBlock('chart', CHART_SAMPLE)),
+    },
     { id: 'table', label: t('Table'), hint: '', words: 'table tabelle', run: cmd(insertTable) },
     { id: 'rule', label: t('Divider'), hint: '---', words: 'divider rule line hr trennlinie linie', run: cmd(insertRule) },
   ];
