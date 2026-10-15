@@ -78,7 +78,7 @@ describe('migrateConvexEnv', () => {
     assert.equal(f.store.get('SELFBOUND_MCP_KEY'), 'other', 'an existing twin is never overwritten');
     assert.equal(f.store.get('XLR8_OWNER_IDS'), SECRET, 'old variables stay');
     assert.ok(!out.text().includes(SECRET));
-    assert.ok(!out.text().includes('https://x.example'));
+    assert.doesNotMatch(out.text(), /x\.example/);
     assert.deepEqual(f.writes().map((c) => c[2]), ['SELFBOUND_OWNER_IDS']);
   });
 
