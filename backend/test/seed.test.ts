@@ -61,11 +61,11 @@ describe('test data generator', () => {
 });
 
 describe('seed', () => {
-  test('only with XLR8_ALLOW_SEED=1 and only for the owner', async () => {
+  test('only with SELFBOUND_ALLOW_SEED=1 and only for the owner', async () => {
     const { t, owner } = setup({ allowSeed: false });
     await expectCode(owner.mutation(api.seed.reset, {}), 'access_denied');
     await expectCode(owner.query(api.seed.status, {}), 'access_denied');
-    process.env.XLR8_ALLOW_SEED = '1';
+    process.env.SELFBOUND_ALLOW_SEED = '1';
     await expectCode(t.mutation(api.seed.reset, {}), 'access_denied');
   });
 

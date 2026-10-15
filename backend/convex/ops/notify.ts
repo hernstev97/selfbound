@@ -10,6 +10,7 @@ import { record } from './history';
 import { openSnoozedEntry } from './inboxChanges';
 import { timeZoneOf } from './instance';
 import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage } from '../shared/notifyEvents';
+import { envVar } from '../lib/legacyEnv';
 
 // Notifications: collect events, bundle them and prepare them for delivery (push.ts).
 //
@@ -18,7 +19,7 @@ import { DEFAULT_MORNING_HOUR, enabledEvents, type NotifyKind, type PushMessage 
 // agent call arrive as one notification. Delivery claims all waiting rows in one mutation
 // (claimPending): if Selfbound is active on a device right now, they go to the app instead of the phone.
 //
-// Texts are English, or German with XLR8_LOCALE=de (lib/pushText.ts). They are translated when
+// Texts are English, or German with SELFBOUND_LOCALE=de (lib/pushText.ts). They are translated when
 // the event is recorded, so a stored event keeps its language.
 
 /** Delay before delivery: long enough to bundle a burst of issues or comments. */
@@ -45,15 +46,15 @@ export function vapidFromEnv(env: Record<string, string | undefined> = process.e
 
 /**
  * VAPID keys plus subject for sending; null = push is not set up. The subject (contact for push
- * services, RFC 8292) is VAPID_SUBJECT, else XLR8_APP_URL. With keys but neither of those set,
+ * services, RFC 8292) is VAPID_SUBJECT, else SELFBOUND_APP_URL. With keys but neither of those set,
  * sending fails with this error rather than announcing a made-up contact.
  */
 export function vapidForSending(env: Record<string, string | undefined> = process.env): VapidKeys | null {
   const keys = vapidFromEnv(env);
   if (!keys) return null;
-  const subject = env.VAPID_SUBJECT?.trim() || env.XLR8_APP_URL?.trim();
+  const subject = env.VAPID_SUBJECT?.trim() || envVar('APP_URL', env)?.trim();
   if (!subject) {
-    throw new Error('Web Push needs a VAPID subject: set VAPID_SUBJECT (a mailto: or https: URL) or XLR8_APP_URL on the Convex deployment.');
+    throw new Error('Web Push needs a VAPID subject: set VAPID_SUBJECT (a mailto: or https: URL) or SELFBOUND_APP_URL on the Convex deployment.');
   }
   return { ...keys, subject };
 }

@@ -37,7 +37,7 @@ export const decide = ownerAction({
   handler: async (ctx, args): Promise<{ redirect: string }> => {
     assertOwner(ctx.actor, 'approve connectors');
     const requestId = requestIdOf(args);
-    const cfg = oauthConfig() ?? fail('invalid', 'OAuth is not enabled on this backend (XLR8_APP_URL is not set).');
+    const cfg = oauthConfig() ?? fail('invalid', 'OAuth is not enabled on this backend (SELFBOUND_APP_URL is not set).');
     if (!args.approve) {
       const { redirectUri, state } = await ctx.runMutation(internal.oauth.deny, { request: requestId });
       return {

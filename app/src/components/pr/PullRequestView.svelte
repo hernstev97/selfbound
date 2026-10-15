@@ -75,7 +75,7 @@
   });
 
   // ---- Merge
-  const METHOD_KEY = 'xlr8:prMergeMethod';
+  const METHOD_KEY = 'selfbound:prMergeMethod';
   let method = $state<MergeMethod>((globalThis.localStorage?.getItem(METHOD_KEY) as MergeMethod | null) ?? 'squash');
   const methods = $derived(detail?.mergeMethods.length ? detail.mergeMethods : (['merge'] as MergeMethod[]));
   const chosen = $derived(methods.includes(method) ? method : methods[0]!);

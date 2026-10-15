@@ -31,8 +31,9 @@ You don't have to work it out: **Settings → Agents** shows the address at the 
 
 1. Open **Settings → Agents** (or search for "Settings: Agents" in the command menu).
 2. Click **Create key**, enter an **Agent name** such as "Claude Code", and click **Generate**.
-3. Copy the key from the dialog. It starts with `xlr8_` followed by 43 characters, for example
-   `xlr8_3qZ…`. The dialog also offers a ready-made command for Claude Code.
+3. Copy the key from the dialog. It starts with `selfbound_` followed by 43 characters, for example
+   `selfbound_3qZ…`. The dialog also offers a ready-made command for Claude Code.
+   Keys created before 2026-10-15 start with `xlr8_` and keep working.
 4. Click **Done**.
 
 </Steps>
@@ -57,7 +58,7 @@ address and key in these examples with yours.
 
 ```sh
 claude mcp add --transport http selfbound https://happy-otter-123.convex.site/mcp \
-  --header "Authorization: Bearer xlr8_…"
+  --header "Authorization: Bearer selfbound_…"
 ```
 
 Add `--scope user` to make Selfbound available in all your projects. In Claude Code, `/mcp` should list
@@ -71,10 +72,10 @@ In `~/.codex/config.toml`:
 ```toml
 [mcp_servers.selfbound]
 url = "https://happy-otter-123.convex.site/mcp"
-bearer_token_env_var = "XLR8_MCP_KEY"
+bearer_token_env_var = "SELFBOUND_MCP_KEY"
 ```
 
-Then provide the key in the environment variable `XLR8_MCP_KEY`. The exact syntax depends on your Codex
+Then provide the key in the environment variable `SELFBOUND_MCP_KEY`. The exact syntax depends on your Codex
 version; `codex mcp --help` shows it.
 
 </TabItem>
@@ -89,7 +90,7 @@ configuration like this:
     "selfbound": {
       "url": "https://happy-otter-123.convex.site/mcp",
       "headers": {
-        "Authorization": "Bearer xlr8_…"
+        "Authorization": "Bearer selfbound_…"
       }
     }
   }
@@ -111,7 +112,7 @@ Ask your agent something like "List my Selfbound teams". If you have the Selfbou
 installed (`pnpm install`), you can also test from the command line:
 
 ```sh
-XLR8_MCP_KEY=xlr8_… node backend/scripts/mcp-smoke.ts --url https://happy-otter-123.convex.site/mcp
+SELFBOUND_MCP_KEY=selfbound_… node backend/scripts/mcp-smoke.ts --url https://happy-otter-123.convex.site/mcp
 ```
 
 It prints the server name, the protocol version, the tools and whether one read call (`list_teams`)
@@ -128,7 +129,7 @@ key. The revoked entry stays in the list, so the history still shows which agent
 
 ### Turn on connectors
 
-Connectors need the backend environment variable `XLR8_APP_URL`, set to the address of your Selfbound app (for
+Connectors need the backend environment variable `SELFBOUND_APP_URL`, set to the address of your Selfbound app (for
 example `https://selfbound.example.com`). The sign-in and consent page lives there. Without it, the connector
 card in **Settings → Agents** says it is not enabled. Setting environment variables is covered in
 [Self-hosting: Convex](/start/self-hosting/convex/). Once it is set, `https://<deployment>.convex.site/health`
@@ -192,12 +193,12 @@ requests for that host to Convex:
    `["mcp.selfbound.example.com"]`, and deploy the web app again with `node tooling/deploy-web.mjs`. The deploy
    writes the forwarding rule for the host (a rewrite in the Vercel configuration).
 2. Point the host's DNS (a CNAME record) at your static host.
-3. Set the backend environment variable `XLR8_PUBLIC_SITE_URL` to `https://mcp.selfbound.example.com`.
+3. Set the backend environment variable `SELFBOUND_PUBLIC_SITE_URL` to `https://mcp.selfbound.example.com`.
 
 </Steps>
 
 To check, open `https://mcp.selfbound.example.com/.well-known/oauth-protected-resource/mcp`: it should show
 `"resource":"https://mcp.selfbound.example.com/mcp"`.
 
-`XLR8_PUBLIC_SITE_URL` names exactly one address, and that address is part of every connector's identity.
+`SELFBOUND_PUBLIC_SITE_URL` names exactly one address, and that address is part of every connector's identity.
 If you change it later, reconnect your connectors. Agents with a key can keep using either address.

@@ -50,7 +50,7 @@ async function authorize(t: T, clientId: string, extra: Record<string, string> =
     code_challenge_method: 'S256',
     state: 'state-1',
     resource: RESOURCE,
-    scope: 'xlr8 offline_access',
+    scope: 'selfbound offline_access',
     ...extra,
   });
   return await t.fetch(`/oauth/authorize?${params}`);
@@ -105,7 +105,7 @@ async function connectorAgents(owner: Client) {
   return (await owner.query(api.ops.status, {})).agents.filter((a) => a.connector !== null);
 }
 
-describe('OAuth off (no XLR8_APP_URL)', () => {
+describe('OAuth off (no SELFBOUND_APP_URL)', () => {
   test('everything 404, 401 without challenge, approval impossible', async () => {
     const { t, owner } = setup();
     for (const path of ['/.well-known/oauth-protected-resource/mcp', '/.well-known/oauth-authorization-server', '/oauth/authorize']) {
@@ -127,7 +127,8 @@ describe('OAuth on', () => {
       resource: RESOURCE,
       authorization_servers: [SITE],
       bearer_methods_supported: ['header'],
-      scopes_supported: ['xlr8'],
+      // legacy-xlr8: the old scope stays advertised until the fallbacks go
+      scopes_supported: ['selfbound', 'xlr8'],
       resource_name: 'Selfbound',
     });
     expect(await (await t.fetch('/.well-known/oauth-protected-resource')).json()).toEqual(prm);
@@ -140,10 +141,10 @@ describe('OAuth on', () => {
 
     const none = await mcp(t, null);
     expect(none.status).toBe(401);
-    expect(none.challenge).toBe(`Bearer resource_metadata="${SITE}/.well-known/oauth-protected-resource/mcp", scope="xlr8"`);
-    expect((await mcp(t, `xlr8_at_${'A'.repeat(43)}`)).challenge).toMatch(/error="invalid_token"/);
+    expect(none.challenge).toBe(`Bearer resource_metadata="${SITE}/.well-known/oauth-protected-resource/mcp", scope="selfbound"`);
+    expect((await mcp(t, `selfbound_at_${'A'.repeat(43)}`)).challenge).toMatch(/error="invalid_token"/);
     // Agent keys: still 401 without challenge, valid keys work.
-    const wrong = await mcp(t, 'xlr8_wrong');
+    const wrong = await mcp(t, 'selfbound_wrong');
     expect(wrong.status).toBe(401);
     expect(wrong.challenge).toBeNull();
     const { key } = await owner.action(api.agents.create, { name: 'Claude Code' });
@@ -160,11 +161,11 @@ describe('OAuth on', () => {
     expect((await owner.query(api.ops.status, {})).connectorsArmedUntil).toBeGreaterThan(Date.now());
     const ok = await register(t);
     expect(ok.status).toBe(201);
-    expect(ok.body).toMatchObject({ client_id: expect.stringMatching(/^xlr8-claude-/), token_endpoint_auth_method: 'none', redirect_uris: [CLAUDE] });
+    expect(ok.body).toMatchObject({ client_id: expect.stringMatching(/^selfbound-claude-/), token_endpoint_auth_method: 'none', redirect_uris: [CLAUDE] });
     expect(ok.body.client_secret).toBeUndefined();
     expect(await register(t, { redirect_uris: ['https://evil.example/cb'] })).toMatchObject({ status: 400, body: { error: 'invalid_redirect_uri' } });
     const gpt = await register(t, { redirect_uris: [CHATGPT], token_endpoint_auth_method: 'client_secret_post' });
-    expect(gpt.body).toMatchObject({ client_id: expect.stringMatching(/^xlr8-chatgpt-/), client_secret: expect.stringMatching(/^xlr8_cs_/) });
+    expect(gpt.body).toMatchObject({ client_id: expect.stringMatching(/^selfbound-chatgpt-/), client_secret: expect.stringMatching(/^selfbound_cs_/) });
     // Stored only as a hash.
     const stored = await t.run(async (ctx) => await ctx.db.query('oauthClients').collect());
     expect(JSON.stringify(stored)).not.toContain(gpt.body.client_secret);
@@ -177,7 +178,7 @@ describe('OAuth on', () => {
     const { body: reg } = await register(t);
 
     // Unknown client or wrong redirect: a page, no redirect.
-    const unknown = await authorize(t, 'xlr8-claude-nonexistent');
+    const unknown = await authorize(t, 'selfbound-claude-nonexistent');
     expect(unknown.status).toBe(400);
     expect(unknown.headers.get('location')).toBeNull();
     expect((await authorize(t, reg.client_id, { redirect_uri: CHATGPT })).status).toBe(400);
@@ -216,7 +217,7 @@ describe('OAuth on', () => {
     expect(back.searchParams.get('state')).toBe('state-1');
     expect(back.searchParams.get('iss')).toBe(SITE);
     const code = back.searchParams.get('code')!;
-    expect(code).toMatch(/^xlr8_ac_/);
+    expect(code).toMatch(/^selfbound_ac_/);
     // Disarmed; the request is handled.
     expect((await owner.query(api.ops.status, {})).connectorsArmedUntil).toBeNull();
     await expectCode(owner.action(api.oauth.decide, { request, approve: true, name: 'x' }), 'conflict');
@@ -232,11 +233,11 @@ describe('OAuth on', () => {
     expect(tokens.status).toBe(200);
     expect(tokens.headers.get('cache-control')).toBe('no-store');
     expect(tokens.body).toMatchObject({
-      access_token: expect.stringMatching(/^xlr8_at_/),
-      refresh_token: expect.stringMatching(/^xlr8_rt_/),
+      access_token: expect.stringMatching(/^selfbound_at_/),
+      refresh_token: expect.stringMatching(/^selfbound_rt_/),
       token_type: 'Bearer',
       expires_in: 3600,
-      scope: 'xlr8',
+      scope: 'selfbound',
     });
     const stored = await t.run(async (ctx) => await ctx.db.query('oauthTokens').collect());
     expect(stored).toHaveLength(2);
@@ -299,7 +300,7 @@ describe('OAuth on', () => {
     tick(30_000);
     expect((await token(t, { grant_type: 'refresh_token', refresh_token: c.refresh, client_id: c.clientId })).status).toBe(200);
     // Another client with the token: nothing.
-    expect((await token(t, { grant_type: 'refresh_token', refresh_token: first.body.refresh_token, client_id: 'xlr8-claude-other' })).status).toBe(401);
+    expect((await token(t, { grant_type: 'refresh_token', refresh_token: first.body.refresh_token, client_id: 'selfbound-claude-other' })).status).toBe(401);
     // After the grace period: stolen → connector revoked, the new tokens are dead too.
     tick(2 * 60_000);
     const reuse = await token(t, { grant_type: 'refresh_token', refresh_token: c.refresh, client_id: c.clientId });
@@ -378,7 +379,7 @@ describe('OAuth on', () => {
     const code = new URL(redirect).searchParams.get('code')!;
     const fields = { grant_type: 'authorization_code', code, code_verifier: VERIFIER, redirect_uri: CHATGPT };
     expect((await token(t, { ...fields, client_id: reg.client_id })).status).toBe(401);
-    expect((await token(t, { ...fields, client_id: reg.client_id, client_secret: 'xlr8_cs_wrong' })).status).toBe(401);
+    expect((await token(t, { ...fields, client_id: reg.client_id, client_secret: 'selfbound_cs_wrong' })).status).toBe(401);
     const basic = `Basic ${btoa(`${encodeURIComponent(reg.client_id)}:${encodeURIComponent(reg.client_secret)}`)}`;
     const ok = await token(t, fields, { Authorization: basic });
     expect(ok.status).toBe(200);

@@ -8,7 +8,7 @@ import { resolveIssue } from '../lib/identifiers';
 import type { ToolArgs, ToolName } from '../lib/mcp/tools';
 import type { IssuePatch, NewIssue } from '../lib/validators';
 import { teamStates, type State } from '../lib/workflow';
-import { CLOSED_STATUSES, identifierOf, isOpen, OPEN_STATUSES, OWNER_KIND, STATUSES, type Priority, type Status } from '../shared/constants';
+import { CLOSED_STATUSES, identifierOf, isOpen, LEGACY_OWNER_KIND, OPEN_STATUSES, OWNER_KIND, STATUSES, type Priority, type Status } from '../shared/constants';
 import {
   activeStates,
   allowedTargets,
@@ -40,6 +40,7 @@ import {
   setArticleBodyCore,
   updateArticleCore,
 } from './wiki';
+import { envVar } from '../lib/legacyEnv';
 
 // The MCP tools for agents. Each tool maps the agents' arguments (team keys, label and
 // project names, identifiers) onto the shared operations in ops/*.ts and builds a lean
@@ -64,8 +65,8 @@ export const SCAN_MAX = 1000;
 
 const iso = (ms: number | undefined) => (ms === undefined ? undefined : new Date(ms).toISOString());
 
-/** Fallback for the owner's display name in MCP output when the profile has none: XLR8_OWNER_NAME, else "Owner". */
-export const ownerName = (env: Record<string, string | undefined> = process.env) => env.XLR8_OWNER_NAME?.trim() || 'Owner';
+/** Fallback for the owner's display name in MCP output when the profile has none: SELFBOUND_OWNER_NAME, else "Owner". */
+export const ownerName = (env: Record<string, string | undefined> = process.env) => envVar('OWNER_NAME', env)?.trim() || 'Owner';
 
 // ---------------------------------------------------------------- Lookup
 
@@ -219,6 +220,7 @@ class Lookup {
     if (authorName) return authorName;
     switch (actor.kind) {
       case OWNER_KIND:
+      case LEGACY_OWNER_KIND:
         // Name from the owner's profile (Settings → Profile), else the environment fallback.
         this.ownerCache ??= (await profileRow(this.ctx))?.name ?? ownerName();
         return this.ownerCache;
@@ -596,7 +598,7 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
 }
 
 /** No inbox entry is waiting for the owner: never was one, removed, or read (a new agent change makes it unread again). */
-async function reviewedByOwner(ctx: QueryCtx, issueId: Id<'issues'>) {
+async function isReviewedByOwner(ctx: QueryCtx, issueId: Id<'issues'>) {
   const entry = await openEntry(ctx, issueId);
   return !entry || entry.readAt !== undefined;
 }
@@ -654,6 +656,7 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
       });
     }
   }
+  const reviewedByOwner = await isReviewedByOwner(ctx, id);
   return {
     id,
     ...(await lookup.brief(issue)),
@@ -663,9 +666,10 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     ...(issue.completedAt ? { completedAt: iso(issue.completedAt) } : {}),
     ...(issue.canceledAt ? { canceledAt: iso(issue.canceledAt) } : {}),
     createdBy: await lookup.actorName(issue.createdBy),
-    // Legacy field name (= reviewed by the owner), kept because agents rely on it: true unless an
-    // unread inbox entry is waiting (a new change by an agent makes it false again).
-    reviewedBySteven: await reviewedByOwner(ctx, id),
+    // True unless an unread inbox entry is waiting (a new change by an agent makes it false again).
+    reviewedByOwner,
+    // legacy-xlr8: deprecated name of reviewedByOwner (same value), kept because agents rely on it
+    reviewedBySteven: reviewedByOwner,
     ...(await allowedStatuses(lookup, issue)),
     ...(aliases.length ? { previousIdentifiers: aliases.map((a) => a.key) } : {}),
     description: { markdown: body?.markdown ?? '', version: body?.version ?? 0 },

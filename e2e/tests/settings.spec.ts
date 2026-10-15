@@ -58,7 +58,7 @@ test('Create an agent key (shown once, with a command) and revoke it', async ({ 
   const dialog = page.getByTestId('agent-key-dialog');
   await expect(dialog).toBeVisible();
   const key = (await page.getByTestId('agent-key').textContent())!;
-  expect(key).toMatch(/^xlr8_/);
+  expect(key).toMatch(/^selfbound_/);
   await expect(page.getByTestId('agent-command')).toHaveText(`claude mcp add --transport http selfbound http://127.0.0.1:${BACKEND_PORT + 1}/mcp --header "Authorization: Bearer ${key}"`);
 
   const call = () =>
@@ -84,7 +84,7 @@ test('Create an agent key (shown once, with a command) and revoke it', async ({ 
   // Ops: revoked but with calls today, so it stays under "Agents today".
   // Only once the dialog has left its history entry: otherwise its Back would run into page.goto.
   await expect(page.getByTestId('agent-revoke-dialog')).toHaveCount(0);
-  await page.waitForFunction(() => !(history.state as { xlr8Overlay?: boolean } | null)?.xlr8Overlay);
+  await page.waitForFunction(() => !(history.state as { selfboundOverlay?: boolean } | null)?.selfboundOverlay);
   await page.goto('/settings/ops');
   const ops = page.locator('[data-testid="ops-agent"]').filter({ hasText: 'E2E key test' });
   await expect(ops).toHaveAttribute('data-revoked', 'true');

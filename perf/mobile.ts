@@ -13,6 +13,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
 import { chromium, type Browser, type Page } from '@playwright/test';
+import { constant, contextArg } from './context.ts';
 import { installProbe } from './probe.ts';
 import { fmt } from './report.ts';
 import { appBase, here, startStack, type Dataset } from './stack.ts';
@@ -52,7 +53,7 @@ async function newPage(browser: Browser, cpu: number) {
 
 type Pred = (ctx: any) => boolean;
 async function measure(page: Page, pred: Pred, act: (p: Page) => Promise<void>, ctxFn?: () => unknown, timeout = 8000) {
-  await page.evaluate(([p, c]) => (window as any).__bench.arm({ main: p }, c, false), [pred.toString(), ctxFn ? ctxFn.toString() : null] as const);
+  await page.evaluate(([p, c]) => (window as any).__bench.arm({ main: p }, c, false), [pred.toString(), contextArg(ctxFn)] as const);
   await page.waitForTimeout(Math.random() * 17);
   await act(page);
   const res = await page.evaluate((t) => (window as any).__bench.wait(t), timeout);
@@ -118,7 +119,7 @@ async function interactions(browser: Browser, ws: Dataset, cpu: number) {
       await page.getByTestId('mobile-menu').tap();
       await page.waitForTimeout(400);
       const card = page.locator(`[data-testid="nav-team-${key}"]`).first();
-      keep(warm, 'tap.team (switch team in drawer)', await measure(page, (k) => !document.querySelector('[data-testid="app"].drawer') && !!document.querySelector('[data-testid="issue-row"]')?.getAttribute('data-key')?.startsWith(`${k}-`), () => card.tap(), new Function(`return () => ${JSON.stringify(key)}`)() as () => unknown));
+      keep(warm, 'tap.team (switch team in drawer)', await measure(page, (k) => !document.querySelector('[data-testid="app"].drawer') && !!document.querySelector('[data-testid="issue-row"]')?.getAttribute('data-key')?.startsWith(`${k}-`), () => card.tap(), constant(key)));
       await page.waitForTimeout(400);
     }
 

@@ -54,7 +54,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `relations` | `fromId`, `toId`, `type` (blocks: from blocks to; duplicate: from is a duplicate of to; related) | `by_from`, `by_to` |
 | `history` | One row per change: `field`, `from`, `to`, `actor`, `at`, `requestId` | `by_issue` |
 | `inboxEntries` | The owner's inbox: `issueId`, `kind` (`created` \| `changed` \| `snoozed`), `actor` (latest), `changes` (latest change per field: `field`, `actor`, `at`, `value?`, `from?`), `createdAt`, `updatedAt`, `readAt?`, `removedAt?`. At most one open entry (no `removedAt`) per issue | `by_issue` (`issueId`, `removedAt`), `by_removed` (`removedAt`, `updatedAt`) |
-| `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`xlr8`/`linear`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
+| `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`selfbound`/`linear`; the old value `xlr8` is still accepted and counts as `selfbound`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
 | `sprintItems` | Sprint, issue, `kind` (planned/late/imported), `carriedFrom`, `addedAt`, `addedBy`, `removedAt`, `outcome`, `points` (estimate at close) | `by_sprint`, `by_issue` |
 | `agents` | Name, `keyHash` (SHA-256 hex), `keyPrefix` (both only for keys), `connector` (`{ app, clientId }` for connectors), `revokedAt`, `revokedReason`, `lastUsedAt` | `by_hash` |
 | `oauthClients`, `oauthRequests`, `oauthTokens` | OAuth for connectors: registered clients, authorization requests until the code is redeemed, access and refresh tokens (hashes only). See [`mcp.md`](mcp.md#oauth-for-connectors) | `by_client`, `by_approved_created`; `by_public`, `by_code`, `by_client_status`, `by_expires`; `by_hash`, `by_agent`, `by_expires` |
@@ -110,11 +110,13 @@ This document is the contract between the backend and the UI. It describes the t
 
 ## Actors
 
-`actor = { kind: 'steven' | 'agent' | 'github' | 'import' | 'system', agentId? }`. `'steven'` is the legacy stored value for the instance owner. The actor always comes from the verified identity, never as an argument from the client:
+`actor = { kind: 'owner' | 'agent' | 'github' | 'import' | 'system', agentId? }`. `'owner'` is the instance owner. Rows written before 2026-10-15 store the old kind `'steven'` (`legacy-xlr8`): the schema accepts both, every owner check goes through `isOwnerKind` (true for both), new writes use `'owner'`, and `legacyNames:step` rewrites the old rows (see [Moving from the XLR8 names](../operations.md#moving-from-the-xlr8-names)). The actor always comes from the verified identity, never as an argument from the client:
 
-- UI: `requireOwner` checks the token (Convex) and the allowlist `XLR8_OWNER_IDS` (`tokenIdentifier`, comma-separated) → `steven` (owner). Tokens from the local test sign-in (issuer `https://dev.xlr8.local`) are only accepted when `CONVEX_CLOUD_URL` (set by Convex in every function) points to `127.0.0.1` or `localhost`; otherwise `access_denied`, even if `XLR8_DEV_JWKS` is set by mistake.
-- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from the profile ([below](#profile)); without one, `XLR8_OWNER_NAME`, else "Owner".
+- UI: `requireOwner` checks the token (Convex) and the allowlist `SELFBOUND_OWNER_IDS` (`tokenIdentifier`, comma-separated) → `owner`. Tokens from the local test sign-in (issuer `https://dev.selfbound.local`) are only accepted when `CONVEX_CLOUD_URL` (set by Convex in every function) points to `127.0.0.1` or `localhost`; otherwise `access_denied`, even if `SELFBOUND_DEV_JWKS` is set by mistake.
+- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from the profile ([below](#profile)); without one, `SELFBOUND_OWNER_NAME`, else "Owner".
 - Crons: `system`. GitHub webhook: `github`. Import: `import`.
+
+**Environment variables with the old prefix.** `lib/legacyEnv.ts` (`envVar('OWNER_IDS')`) reads `SELFBOUND_<NAME>` first and falls back to `XLR8_<NAME>` (`legacy-xlr8`), with one `console.warn` per variable and process (never the value). All backend code reads its settings through it. The fallbacks, the old actor kind, the old sprint source, the `xlr8_…` token prefixes and the `xlr8` OAuth scope are removed in a follow-up once the instance has migrated; see [Moving from the XLR8 names](../operations.md#moving-from-the-xlr8-names).
 
 Permissions that depend on the actor:
 
@@ -155,7 +157,7 @@ If the operation fails, nothing is stored and a retry runs it again. Each actor 
 
 ## Test switches
 
-Only effective with `XLR8_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect. `embeds.seedForTest` (action) puts an embed card with base64 PNGs into the cache so end-to-end tests need no network; without the variable it answers `access_denied`.
+Only effective with `SELFBOUND_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect. `embeds.seedForTest` (action) puts an embed card with base64 PNGs into the cache so end-to-end tests need no network; without the variable it answers `access_denied`.
 
 ## Public functions
 
@@ -165,8 +167,8 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `health.status` (query, no sign-in) | – | `{ ok, local, devAuth, devAuthConfigured, clerk, testSwitches }`: `local` = local deployment (`CONVEX_CLOUD_URL`), `devAuth` = local test sign-in configured **and** effective (local only), `devAuthConfigured` = `XLR8_DEV_JWKS` set. `devAuth` must be `false` before a production deploy ([`operations.md`](../operations.md)) |
-| `health.whoami` (query) | – | actor `{ kind: 'steven' }` (owner) |
+| `health.status` (query, no sign-in) | – | `{ ok, local, devAuth, devAuthConfigured, clerk, testSwitches }`: `local` = local deployment (`CONVEX_CLOUD_URL`), `devAuth` = local test sign-in configured **and** effective (local only), `devAuthConfigured` = `SELFBOUND_DEV_JWKS` set. `devAuth` must be `false` before a production deploy ([`operations.md`](../operations.md)) |
+| `health.whoami` (query) | – | actor `{ kind: 'owner' }` |
 
 ### meta
 
@@ -228,7 +230,7 @@ Rules for changes:
 
 ### Statuses per team
 
-Each team has its own statuses (`workflowStates`), each with a type: triage, backlog, unstarted (planned), started, completed, canceled. Order: by type, then by `position` within the type (`compareStates`). A new team gets the eight default statuses (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), each with a `legacyKey`. The names are stored per team; with `XLR8_LOCALE=de` new teams get German names (`defaultStateName` in `shared/workflow.ts`). Statuses are never deleted, only archived.
+Each team has its own statuses (`workflowStates`), each with a type: triage, backlog, unstarted (planned), started, completed, canceled. Order: by type, then by `position` within the type (`compareStates`). A new team gets the eight default statuses (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), each with a `legacyKey`. The names are stored per team; with `SELFBOUND_LOCALE=de` new teams get German names (`defaultStateName` in `shared/workflow.ts`). Statuses are never deleted, only archived.
 
 **Status kind** (`issue.status`): the eight legacy keys, derived from the status (`statusOfState`: `isDuplicate` → `duplicate`, otherwise `legacyKey`, otherwise the key of the type, e.g. "Testing" of type started → `in_progress`). It backs the indexes (`by_status…`, `by_team_priority`, `by_project`), the open/closed sets, sprint close, priority budget, timestamps and the MCP filters. That is why custom statuses change none of these rules.
 
@@ -291,7 +293,7 @@ Relations: no self-reference, no second relation of the same type between the sa
   - `backlog` → out of the sprint, status unchanged.
   - `canceled` → out of the sprint, status `canceled`.
   - Nothing is moved automatically.
-- **Capacity:** suggestion = average of the completed points of the last 3 closed sprints with `source: 'xlr8'` (by `closedAt`), rounded to one decimal. Every entry with `outcome: 'done'` counts with the `points` recorded at close (older entries without `points`: the issue's current estimate). Later changes to the issue (reopened, new estimate, permanently deleted) don't change the value. Imported Linear cycles don't count.
+- **Capacity:** suggestion = average of the completed points of the last 3 closed sprints with `source: 'selfbound'` or the old `'xlr8'` (by `closedAt`), rounded to one decimal. Every entry with `outcome: 'done'` counts with the `points` recorded at close (older entries without `points`: the issue's current estimate). Later changes to the issue (reopened, new estimate, permanently deleted) don't change the value. Imported Linear cycles don't count.
 - The client classifies planned/late via `sprints.items`; the issue buckets only carry `sprintId`.
 
 ### teams, projects, labels, labelGroups
@@ -341,7 +343,7 @@ The owner's display name and picture. Read through `meta.get` (`owner`), so ther
 
 **Picture:** upload as for [images](#files-images) (`files.generateUploadUrl` → POST → `files.register`), then `profile.setAvatar`. The UI crops in the browser to a 256 × 256 square (WebP, so camera metadata is gone); the circle is drawn by CSS. The profile references the image under the owner id `profile` in `fileRefs` (`syncFileRefs`), so a replaced or removed picture loses its reference and the cron `sweep-files` deletes it after the usual one-day grace period. Served via `GET /img/<token>` like any image.
 
-**Names in the UI and MCP:** the store puts the name into `store.agents` under `OWNER_KIND`, so `actorName` shows it instead of "You" everywhere (history, comments, inbox text, version labels). MCP (`Lookup.actorName`) uses the profile name, then `XLR8_OWNER_NAME`, then "Owner". Agents keep `"<name> (agent)"`. The stored actor kind `steven` is unchanged.
+**Names in the UI and MCP:** the store puts the name into `store.agents` under `OWNER_KIND`, so `actorName` shows it instead of "You" everywhere (history, comments, inbox text, version labels). MCP (`Lookup.actorName`) uses the profile name, then `SELFBOUND_OWNER_NAME`, then "Owner". Agents keep `"<name> (agent)"`. Old rows keep the actor kind `steven` until the data migration has run; it is treated like `owner`.
 
 ### Instance time zone
 
@@ -376,7 +378,7 @@ A YouTube or X link alone on a line becomes a card in the app (XLR8-73, frontend
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `agents.create` (action) | `{ name }` | `{ agentId, key, keyPrefix }`: `key` = `xlr8_` + 32 random bytes base64url, only appears in this response |
+| `agents.create` (action) | `{ name }` | `{ agentId, key, keyPrefix }`: `key` = `selfbound_` + 32 random bytes base64url, only appears in this response |
 | `agents.revoke` | `{ agentId }` | `{ agentId }`; for connectors all tokens are deleted as well |
 | `agents.list` (query) | – | `[{ _id, name, keyPrefix, connector, createdAt, revokedAt, revokedReason, lastUsedAt }]` (never the hash; newest first) |
 | `oauth.arm` | `{ on }` | `{ armedUntil }`: accept new connectors for 15 minutes, or switch off immediately |
@@ -468,8 +470,8 @@ Action errors: `ConvexError { code, message, status }` with an English message; 
 | Function | Arguments | Returns |
 |---|---|---|
 | `ops.status` (query) | – | `{ backup: { value: { ok, at, bytes, sha256, tables, documents, files, run }, at } | null, lastImport` ({ run, status, phase, startedAt, finishedAt, counts, deviations, error })`, agents: [Agent & { callsToday }]` (Agent: `keyPrefix`, or `null` for connectors, `connector: { app } | null`, `revokedReason`)`, connectors: { enabled, url }, connectorsArmedUntil, github: { event, receivedAt } | null` (last accepted delivery)`, sprintAudit: { value: { ok, problems, sprints, items, startedAt, error? }, at } | null, seed, storage` (file storage, see [images](#files-images))`, testSwitches, rejectWrites }` |
-| `admin.setRejectWrites` | `{ value }` | `{ rejectWrites }` (only with `XLR8_TEST_SWITCHES=1`) |
-| `seed.status`, `seed.reset`, `seed.insertBase`, `seed.insertIssues`, `seed.insertLinks`, `seed.finish` | see `convex/seed.ts` | owner only AND only with `XLR8_ALLOW_SEED=1` |
+| `admin.setRejectWrites` | `{ value }` | `{ rejectWrites }` (only with `SELFBOUND_TEST_SWITCHES=1`) |
+| `seed.status`, `seed.reset`, `seed.insertBase`, `seed.insertIssues`, `seed.insertLinks`, `seed.finish` | see `convex/seed.ts` | owner only AND only with `SELFBOUND_ALLOW_SEED=1` |
 
 ## HTTP endpoints (`convex/http.ts`)
 
@@ -477,10 +479,10 @@ Served under the site URL (locally the backend port + 1, in the cloud `https://<
 
 | Path | Behaviour |
 |---|---|
-| `POST /mcp` | Bearer key (format `xlr8_` + 43 characters, otherwise 401 immediately) or OAuth access token (`xlr8_at_…`) → SHA-256 → `internal.agents.authenticate` (failure → 401; for keys without `WWW-Authenticate`, for a missing bearer and for access tokens with it, if OAuth is on), then `handleMcpHttp` (`lib/mcp/endpoint.ts`). Read tools: `internal.mcp.countCall` (mutation, rate limit), then `internal.mcp.read` (query, cacheable). Write tools: **one** mutation `internal.mcp.call` (key, rate limit, idempotency, operation, result). Revoked between authentication and call → 401. Details: [`mcp.md`](mcp.md) |
+| `POST /mcp` | Bearer key (format `selfbound_` + 43 characters, otherwise 401 immediately) or OAuth access token (`selfbound_at_…`) → SHA-256 → `internal.agents.authenticate` (failure → 401; for keys without `WWW-Authenticate`, for a missing bearer and for access tokens with it, if OAuth is on), then `handleMcpHttp` (`lib/mcp/endpoint.ts`). Read tools: `internal.mcp.countCall` (mutation, rate limit), then `internal.mcp.read` (query, cacheable). Write tools: **one** mutation `internal.mcp.call` (key, rate limit, idempotency, operation, result). Revoked between authentication and call → 401. Details: [`mcp.md`](mcp.md) |
 | `GET`/`DELETE /mcp` | 405 |
-| `GET /.well-known/oauth-protected-resource[/mcp]`, `GET /.well-known/oauth-authorization-server` | OAuth metadata for connectors (only with `XLR8_APP_URL`, otherwise 404). Other `/.well-known/*` → 404 |
-| `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `XLR8_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
+| `GET /.well-known/oauth-protected-resource[/mcp]`, `GET /.well-known/oauth-authorization-server` | OAuth metadata for connectors (only with `SELFBOUND_APP_URL`, otherwise 404). Other `/.well-known/*` → 404 |
+| `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `SELFBOUND_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
 | `POST /github` | Read the raw body, verify `X-Hub-Signature-256` with `GITHUB_WEBHOOK_SECRET` (during rotation also `GITHUB_WEBHOOK_SECRET_PREVIOUS`) → otherwise 401. `ping` → 200. Otherwise `internal.github.applyDelivery` |
 | `GET /logo/<storageId>` | Team logo, no sign-in (like a storage URL; `<img>` sends no token). Only files a team uses as its logo and that pass the logo check, otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
 | `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches) |
@@ -504,7 +506,7 @@ If a mutation fails on write conflicts (Convex retried several times and gave up
 
 Returns `{ duplicate, kind: 'pull_request'|'ping'|'ignored'|'refresh', pr?, linked[], closed[], refresh? }` (`refresh`: PRs for which a fetch is scheduled or pending). The cron `requests-aufraeumen` deletes deliveries and `githubCheckRuns` after 30 days.
 
-**Webhooks in all repos** (`githubPr.ensureWebhooks`, cron `github-webhooks`): checks all non-archived repos owned by the token's user (`/user/repos?affiliation=owner`, up to 300; optionally filtered with `GITHUB_REPOS` = "owner/name" or "owner/*", comma-separated) for a hook pointing to `<CONVEX_SITE_URL>/github` (or `<XLR8_PUBLIC_SITE_URL>/github`). If missing, creates it (`content_type: json`, secret = `GITHUB_WEBHOOK_SECRET`, events as above); other events or inactive → fixed via PATCH. Hooks are only created and changed with `GITHUB_MANAGE_WEBHOOKS=1`, not on a local backend (`isLocalDeployment`) and only with `GITHUB_WEBHOOK_SECRET`; otherwise only checked (`missing`/`outdated`). If the token lacks the "Webhooks" permission, the check stops after the first repo with a message. Result in `opsStatus.githubConnection`.
+**Webhooks in all repos** (`githubPr.ensureWebhooks`, cron `github-webhooks`): checks all non-archived repos owned by the token's user (`/user/repos?affiliation=owner`, up to 300; optionally filtered with `GITHUB_REPOS` = "owner/name" or "owner/*", comma-separated) for a hook pointing to `<CONVEX_SITE_URL>/github` (or `<SELFBOUND_PUBLIC_SITE_URL>/github`). If missing, creates it (`content_type: json`, secret = `GITHUB_WEBHOOK_SECRET`, events as above); other events or inactive → fixed via PATCH. Hooks are only created and changed with `GITHUB_MANAGE_WEBHOOKS=1`, not on a local backend (`isLocalDeployment`) and only with `GITHUB_WEBHOOK_SECRET`; otherwise only checked (`missing`/`outdated`). If the token lacks the "Webhooks" permission, the check stops after the first repo with a message. Result in `opsStatus.githubConnection`.
 
 ### Linear import (`importer.ts`, `ops/import.ts`)
 
@@ -519,7 +521,7 @@ Rules: matching via `linearLinks` (kind + Linear ID → Selfbound ID + checksum)
 
 ### Notifications (`push.ts`, `ops/notify.ts`, `lib/webpush.ts`)
 
-Web Push without an extra package: `lib/webpush.ts` encrypts per RFC 8291 (aes128gcm) and signs the VAPID JWT (RFC 8292, ES256) with WebCrypto; this runs in the normal Convex runtime (no `"use node"`). Keys: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`tooling/vapid.mjs`). Notification texts are English by default and German when the Convex env var `XLR8_LOCALE=de` is set.
+Web Push without an extra package: `lib/webpush.ts` encrypts per RFC 8291 (aes128gcm) and signs the VAPID JWT (RFC 8292, ES256) with WebCrypto; this runs in the normal Convex runtime (no `"use node"`). Keys: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`tooling/vapid.mjs`). Notification texts are English by default and German when the Convex env var `SELFBOUND_LOCALE=de` is set.
 
 Tables: `pushSubscriptions` (one device per endpoint), `pushSettings` (one row, only deviations from the defaults), `pushEvents` (outbox, unique `key`, 7 days), `pushPresence` (devices with the app visibly open and in use).
 
@@ -576,6 +578,6 @@ pnpm --filter @selfbound/backend typecheck   # tsc 7 for convex/ and for scripts
 pnpm --filter @selfbound/backend test:integration   # fresh backend on 13490: import, MCP, concurrency
 ```
 
-`local.mjs` sets `XLR8_DEV_JWKS`, `XLR8_OWNER_IDS`, `XLR8_ALLOW_SEED=1` and `XLR8_TEST_SWITCHES=1` in the local backend and writes `app/.env.local` with the URL and a local token. On start, Convex regenerates `convex/_generated` (it is checked in). The seed skips if the same data set is already complete, and refuses any non-local URL. Rough timings (on a busy machine, order of magnitude only): `small` on an empty backend under 1 s, `large` 27–75 s; clearing after `large` (`seed.reset`, 2000 documents per call because of the read limits) takes one to one and a half minutes.
+`local.mjs` sets `SELFBOUND_DEV_JWKS`, `SELFBOUND_OWNER_IDS`, `SELFBOUND_ALLOW_SEED=1` and `SELFBOUND_TEST_SWITCHES=1` in the local backend and writes `app/.env.local` with the URL and a local token. On start, Convex regenerates `convex/_generated` (it is checked in). The seed skips if the same data set is already complete, and refuses any non-local URL. Rough timings (on a busy machine, order of magnitude only): `small` on an empty backend under 1 s, `large` 27–75 s; clearing after `large` (`seed.reset`, 2000 documents per call because of the read limits) takes one to one and a half minutes.
 
 Tests (`backend/test/`): regression tests from an earlier backend review (`regressions.test.ts`, one block per finding), MCP over HTTP (`mcp.test.ts`), GitHub webhook (`github.test.ts`), pull requests in Selfbound with a mocked GitHub (`githubPr.test.ts`: scheduling and debouncing fetches, reconciling entries, trimming, merge transition, actions, media proxy, webhooks in all repos; building blocks in `lib/githubApi.test.ts`), import with retry, collision and update (`import.test.ts`), sign-in sweep over all modules, issues (create, numbering with batches of 50 and parallel calls, update, compare-and-set with label sets, undo, parent cycles, budget, rank), idempotency, description versioning, trash and permanent deletion, relations, comments, search, identifiers, test switches, sprints (start/add/close rules, one active sprint, invariant after every operation, capacity, nightly audit), teams and team permissions, logo validation, images (type check, serving, references in several places, cleanup after the grace period and after permanent deletion, `files.test.ts`), agent keys and rate limit, recurrences (month boundaries, DST, idempotency), calendar days in several zones including clock changes (`timeZone.test.ts`), generator and seed.

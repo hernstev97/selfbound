@@ -151,7 +151,7 @@ type SendResult = { id: Id<'pushSubscriptions'>; ok: boolean; gone: boolean; err
 
 async function send(target: PushTarget & { id: Id<'pushSubscriptions'> }, message: PushMessage, vapid: VapidKeys): Promise<SendResult> {
   try {
-    // `lang` tells the service worker the language of the texts (XLR8_LOCALE).
+    // `lang` tells the service worker the language of the texts (SELFBOUND_LOCALE).
     const req = await buildPushRequest(target, JSON.stringify({ ...message, lang: pushLocale() }), vapid, {
       ttl: message.test ? 600 : 24 * 3600,
       urgency: 'high',

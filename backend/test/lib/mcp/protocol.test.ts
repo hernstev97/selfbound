@@ -241,9 +241,9 @@ describe('transport and JSON-RPC errors', () => {
   });
 
   test('bearerToken', () => {
-    expect(bearerToken({ Authorization: 'Bearer xlr8_abc' })).toBe('xlr8_abc');
-    expect(bearerToken({ authorization: 'bearer   xlr8_abc ' })).toBe('xlr8_abc');
-    expect(bearerToken(new Headers({ authorization: 'Bearer xlr8_x' }))).toBe('xlr8_x');
+    expect(bearerToken({ Authorization: 'Bearer selfbound_abc' })).toBe('selfbound_abc');
+    expect(bearerToken({ authorization: 'bearer   selfbound_abc ' })).toBe('selfbound_abc');
+    expect(bearerToken(new Headers({ authorization: 'Bearer selfbound_x' }))).toBe('selfbound_x');
     expect(bearerToken({ authorization: 'Basic abc' })).toBeUndefined();
     expect(bearerToken({})).toBeUndefined();
   });

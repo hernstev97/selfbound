@@ -75,10 +75,10 @@ export interface WikiState {
 const NO_FILTER: WikiFilter = { projectId: null, topicId: null };
 const EMPTY: WikiState = { team: null, enabled: false, rows: null, total: 0, recent: [], articleId: null, article: undefined, trash: false, topics: [], projects: [], filter: NO_FILTER };
 
-const draftKey = (id: string) => `xlr8:article:${id}`;
+const draftKey = (id: string) => `selfbound:article:${id}`;
 /** This many pages stay subscribed (back, and back and forth in the tree without waiting). */
 const CACHE_SIZE = 8;
-const EXPANDED_KEY = 'xlr8:wikiExpanded';
+const EXPANDED_KEY = 'selfbound:wikiExpanded';
 
 export class WikiController {
   readonly state = new Slice<WikiState>(EMPTY);

@@ -72,7 +72,7 @@ const cardStack = (page: Parameters<typeof open>[0], title: string) => page.getB
 
 for (const fontSize of ['normal', 'large']) {
   test(`List row, five labels (${fontSize} font): three chips overlap, "+2" names the rest`, async ({ page }) => {
-    await page.addInitScript((size) => localStorage.setItem('xlr8:prefs', JSON.stringify({ fontSize: size })), fontSize);
+    await page.addInitScript((size) => localStorage.setItem('selfbound:prefs', JSON.stringify({ fontSize: size })), fontSize);
     await open(page);
     const stack = rowStack(page, many);
     await expect(stack).toBeVisible();

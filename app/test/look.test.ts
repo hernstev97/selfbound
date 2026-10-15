@@ -5,7 +5,7 @@ import { contrast, ensureContrast, parseHex, toHex } from '../src/lib/look/color
 import { fontCss, FONTS } from '../src/lib/look/fonts.ts';
 import { mapTheme, MIN_SYNTAX, MIN_TEXT, MIN_UI, SYNTAX_SCOPES, tokenColor, VARS } from '../src/lib/look/map.ts';
 import { compactSource, parseJsonc, readTheme, stripJsonc, ThemeError, type VsTheme } from '../src/lib/look/vscode.ts';
-import { Look } from '../src/lib/look/index.ts';
+import { canonicalRef, DEFAULT_LOOK, Look, sameLook } from '../src/lib/look/index.ts';
 import { selfboundSyntax, syntaxTheme } from '../src/lib/look/syntax.ts';
 import { SWATCHES } from '../src/themes/swatches.ts';
 
@@ -231,5 +231,24 @@ describe('syntax themes for code blocks', () => {
     // A dark theme in the light slot gives the Selfbound colors, like the CSS.
     expect(set.light.theme.name).toBe('Selfbound Light');
     expect(await look.syntaxThemes()).toBe(set);
+  });
+});
+
+describe('built-in theme reference', () => {
+  it('the stored old reference means the same as the current one', () => {
+    expect(DEFAULT_LOOK.dark).toBe('selfbound');
+    expect(canonicalRef('xlr8')).toBe('selfbound'); // legacy-xlr8
+    expect(canonicalRef('selfbound')).toBe('selfbound');
+    expect(canonicalRef('nord')).toBe('nord');
+    expect(canonicalRef('custom:abc')).toBe('custom:abc');
+    // legacy-xlr8: a server or cache that still holds the old reference is the default, not a change.
+    expect(sameLook({ ...DEFAULT_LOOK, dark: 'xlr8', light: 'xlr8' }, DEFAULT_LOOK)).toBe(true);
+    expect(sameLook({ ...DEFAULT_LOOK, dark: 'nord' }, DEFAULT_LOOK)).toBe(false);
+  });
+
+  it('the Selfbound reference loads as "no theme"', async () => {
+    const look = new Look();
+    expect(await look.theme('selfbound')).toBeNull();
+    expect(await look.theme('xlr8')).toBeNull(); // legacy-xlr8
   });
 });

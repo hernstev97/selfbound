@@ -474,8 +474,9 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   },
   get_issue: {
     title: 'Get issue',
+    // legacy-xlr8: the description names the deprecated field reviewedBySteven
     description:
-      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (blocks, related, duplicate), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries.',
+      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (blocks, related, duplicate), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries. `reviewedByOwner` is true unless an unread inbox entry waits for the owner; `reviewedBySteven` is a deprecated copy of it and will be removed.',
     annotations: READ,
   },
   create_issues: {

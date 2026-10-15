@@ -9,6 +9,7 @@
   import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
+  import { hasIssueDrag, issueDragPayload } from '../lib/issueDrag.ts';
   import { clearKeyWidths, keyColumnWidth } from '../lib/ui.ts';
   import { columnPlan, groupColsHtml, stageOf } from '../lib/columns.ts';
   import { listMotion } from '../lib/listMotion.ts';
@@ -179,7 +180,7 @@
   }
 
   function onDragOver(e: DragEvent & { currentTarget: HTMLElement }) {
-    if (!drop || !e.dataTransfer?.types.includes('application/x-xlr8-issues')) return;
+    if (!drop || !e.dataTransfer || !hasIssueDrag(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     dropAt = indexAt(e, e.currentTarget);
@@ -187,7 +188,7 @@
 
   function onDrop(e: DragEvent & { currentTarget: HTMLElement }) {
     if (!drop) return;
-    const raw = e.dataTransfer?.getData('application/x-xlr8-issues');
+    const raw = issueDragPayload(e.dataTransfer);
     dropAt = null;
     if (!raw) return;
     e.preventDefault();

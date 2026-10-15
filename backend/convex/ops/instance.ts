@@ -3,7 +3,7 @@ import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { canonicalTimeZone, dayInZone, DEFAULT_TIME_ZONE, type Day } from '../lib/dates';
 import { fail, invalid } from '../lib/errors';
-import { OWNER_KIND } from '../shared/constants';
+import { isOwnerKind } from '../shared/constants';
 
 // Instance settings (one row in `instanceSettings`). For now the time zone in which calendar days
 // are counted: due dates, snooze, sprints, recurrences, the morning notification, MCP filters.
@@ -38,7 +38,7 @@ export async function writeTimeZone(ctx: MutationCtx, timeZone: string, now = Da
 }
 
 export async function setTimeZone(ctx: MutationCtx, actor: Actor, args: { timeZone: string; ifUnset?: boolean }) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', 'Only the owner can change the time zone.');
+  if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can change the time zone.');
   const stored = await storedTimeZone(ctx);
   if (args.ifUnset && stored !== null) return { timeZone: stored };
   return await writeTimeZone(ctx, args.timeZone);

@@ -88,7 +88,7 @@ describe('MCP over HTTP', () => {
     // No tool changes teams or logos.
     expect(JSON.stringify(tools.body.result.tools)).not.toMatch(/logo|create_team|update_team/i);
 
-    const wrong = await client(t, 'xlr8_wrong').rpc('tools/list');
+    const wrong = await client(t, 'selfbound_wrong').rpc('tools/list');
     expect(wrong.status).toBe(401);
     const noKey = await t.fetch('/mcp', { method: 'POST', body: '{"jsonrpc":"2.0","id":1,"method":"ping"}' });
     expect(noKey.status).toBe(401);
@@ -414,22 +414,22 @@ describe('MCP over HTTP', () => {
       createdBy: 'Owner',
     });
     expect(issue.comments).toEqual([expect.objectContaining({ author: 'Owner', body: 'First comment' })]);
-    // The fallback for the owner's display name is XLR8_OWNER_NAME.
-    process.env.XLR8_OWNER_NAME = 'Sam';
+    // The fallback for the owner's display name is SELFBOUND_OWNER_NAME.
+    process.env.SELFBOUND_OWNER_NAME = 'Sam';
     try {
       expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Sam', comments: [{ author: 'Sam' }] });
     } finally {
-      delete process.env.XLR8_OWNER_NAME;
+      delete process.env.SELFBOUND_OWNER_NAME;
     }
     // A name in the profile wins over the environment; clearing it brings the fallback back.
-    process.env.XLR8_OWNER_NAME = 'Sam';
+    process.env.SELFBOUND_OWNER_NAME = 'Sam';
     try {
       await owner.mutation(api.profile.setName, { name: 'Jane Doe' });
       expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Jane Doe', comments: [{ author: 'Jane Doe' }] });
       await owner.mutation(api.profile.setName, { name: null });
       expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ createdBy: 'Sam' });
     } finally {
-      delete process.env.XLR8_OWNER_NAME;
+      delete process.env.SELFBOUND_OWNER_NAME;
     }
     expect(issue.recentHistory.length).toBeGreaterThan(0);
     expect((await mcp.call('get_issue', { id: String(a.id) })).value.identifier).toBe('ORB-1');
@@ -666,14 +666,15 @@ describe('MCP: knowledge', () => {
     expect(await rateCount(t, agentId)).toBeGreaterThan(10);
   });
 
-  test('list_inbox: agent changes as entries, grouped per issue; reviewedBySteven follows the entry', async () => {
+  test('list_inbox: agent changes as entries, grouped per issue; reviewedByOwner follows the entry (and its deprecated copy)', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     const { id, identifier } = await createOne(owner, f.orb, { title: 'Mine' });
     const { key } = await agent(owner, 'Aleister');
     const mcp = client(t, key);
     expect((await mcp.call('list_inbox')).value).toEqual({ count: 0, unread: 0, entries: [] });
-    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(true);
+    // legacy-xlr8: reviewedBySteven is the deprecated copy of reviewedByOwner
+    expect((await mcp.call('get_issue', { identifier })).value).toMatchObject({ reviewedByOwner: true, reviewedBySteven: true });
 
     expect((await mcp.call('set_status', { requestId: 'inbox-0001', identifiers: [identifier], status: 'done' })).ok).toBe(true);
     await mcp.call('add_comment', { requestId: 'inbox-0002', identifier, body: 'Merged.' });
@@ -685,13 +686,15 @@ describe('MCP: knowledge', () => {
       ['status', 'Aleister (agent)'],
     ]);
     expect(inbox.entries[0].changes.find((c: Json) => c.field === 'status').to).toBe('Done');
-    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(false);
+    // legacy-xlr8
+    expect((await mcp.call('get_issue', { identifier })).value).toMatchObject({ reviewedByOwner: false, reviewedBySteven: false });
 
     // The owner reads it: no longer unread; removing it empties the list again.
     await owner.mutation(api.issues.markRead, { ids: [id], read: true });
     expect((await mcp.call('list_inbox', { unreadOnly: true })).value).toMatchObject({ count: 0, unread: 0 });
     expect((await mcp.call('list_inbox')).value).toMatchObject({ count: 1, unread: 0 });
-    expect((await mcp.call('get_issue', { identifier })).value.reviewedBySteven).toBe(true);
+    // legacy-xlr8
+    expect((await mcp.call('get_issue', { identifier })).value).toMatchObject({ reviewedByOwner: true, reviewedBySteven: true });
     await owner.mutation(api.issues.markReviewed, { ids: [id] });
     expect((await mcp.call('list_inbox')).value.entries).toEqual([]);
   });

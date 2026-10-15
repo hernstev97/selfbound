@@ -423,7 +423,7 @@ export class ListController {
     const mark = closed ? `b+:${key}` : `b-:${key}`;
     if (set.has(mark)) set.delete(mark);
     else set.add(mark);
-    writeJson(`xlr8:collapsed:${viewKey(route)}`, [...set]);
+    writeJson(`selfbound:collapsed:${viewKey(route)}`, [...set]);
     this.recompute();
   }
 
@@ -685,7 +685,7 @@ export class ListController {
   displayFor(route: ViewRoute): Display {
     const def = VIEWS[route.kind];
     const base = def.display(route);
-    const saved = readJson<Partial<Display>>(`xlr8:display:${viewKey(route)}`);
+    const saved = readJson<Partial<Display>>(`selfbound:display:${viewKey(route)}`);
     if (!saved) return base;
     return {
       grouping: saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping,
@@ -735,7 +735,7 @@ export class ListController {
     const view = this.view.get();
     const display = { ...view.display, ...patch };
     this.view.set({ ...view, display });
-    writeJson(`xlr8:display:${viewKey(view.route)}`, display);
+    writeJson(`selfbound:display:${viewKey(view.route)}`, display);
     this.recompute();
     this.#syncUrl();
     // Changing grouping/ordering keeps the focused issue in view.
@@ -744,7 +744,7 @@ export class ListController {
 
   resetDisplay() {
     const view = this.view.get();
-    writeJson(`xlr8:display:${viewKey(view.route)}`, null);
+    writeJson(`selfbound:display:${viewKey(view.route)}`, null);
     this.view.set({ ...view, display: VIEWS[view.route.kind].display(view.route) });
     this.recompute();
     this.#syncUrl();
@@ -813,7 +813,7 @@ export class ListController {
     const key = viewKey(route);
     let set = this.#collapsed.get(key);
     if (!set) {
-      set = new Set(readJson<string[]>(`xlr8:collapsed:${key}`) ?? []);
+      set = new Set(readJson<string[]>(`selfbound:collapsed:${key}`) ?? []);
       this.#collapsed.set(key, set);
     }
     return set;
@@ -825,7 +825,7 @@ export class ListController {
     const open = set.has(groupKey);
     if (open) set.delete(groupKey);
     else set.add(groupKey);
-    writeJson(`xlr8:collapsed:${viewKey(route)}`, [...set]);
+    writeJson(`selfbound:collapsed:${viewKey(route)}`, [...set]);
     this.recompute();
     const rows = this.list.get().rows;
     const index = rows.findIndex((row) => row.kind === 'group' && row.key === groupKey);
@@ -858,7 +858,7 @@ export class ListController {
       const set = this.#collapsedFor(route);
       if (set.size === 0) return;
       set.clear();
-      writeJson(`xlr8:collapsed:${viewKey(route)}`, []);
+      writeJson(`selfbound:collapsed:${viewKey(route)}`, []);
       this.recompute();
       return;
     }

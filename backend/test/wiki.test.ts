@@ -26,7 +26,7 @@ async function page(owner: Client, teamId: Id<'teams'>, title: string, extra: { 
 
 async function agentActor(t: T): Promise<Actor> {
   const agentId = await t.run(
-    async (ctx) => await ctx.db.insert('agents', { name: 'Claude Code', keyHash: 'c'.repeat(64), keyPrefix: 'xlr8_ccccc', createdAt: 0 }),
+    async (ctx) => await ctx.db.insert('agents', { name: 'Claude Code', keyHash: 'c'.repeat(64), keyPrefix: 'selfbound_ccccc', createdAt: 0 }),
   );
   return { kind: 'agent', agentId };
 }

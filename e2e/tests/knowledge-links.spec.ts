@@ -58,6 +58,6 @@ test('"[[" in the editor: search a page, Enter inserts the link and saves', asyn
   await page.keyboard.type(`Reference page ${stamp}`);
   await expect(page.getByTestId('palette').getByText(`Reference page ${stamp}`)).toBeVisible();
   await page.keyboard.press('Enter');
-  await expectMarkdown(editor, new RegExp(`\\[Reference page ${stamp}\\]\\(${APP_URL.replace(/[.:/]/g, '\\$&')}/wiki/[a-z0-9]+\\)`));
+  await expectMarkdown(editor, new RegExp(`\\[Reference page ${stamp}\\]\\(${APP_URL.replace(/[\\^$.*+?()[\]{}|/:]/g, '\\$&')}/wiki/[a-z0-9]+\\)`));
   await expect.poll(async () => (await backend().query(api.wiki.get, { id: articleId }))!.body.markdown, { timeout: 8000 }).toContain(`[Reference page ${stamp}]`);
 });

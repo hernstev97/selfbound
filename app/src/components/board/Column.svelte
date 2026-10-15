@@ -5,6 +5,7 @@
   import { t } from '@selfbound/core/i18n';
   import { computeWindow, statusIcon, type BoardColumn, type IssueId } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
+  import { issueDragPayload } from '../../lib/issueDrag.ts';
   import Card from './Card.svelte';
   import { drag } from './drag.svelte.ts';
 
@@ -44,7 +45,7 @@
 
   function onDrop(e: DragEvent) {
     over.on = false;
-    const raw = e.dataTransfer?.getData('application/x-xlr8-issues');
+    const raw = issueDragPayload(e.dataTransfer);
     const ids = raw ? (JSON.parse(raw) as IssueId[]) : drag.ids;
     drag.end();
     if (!ids) return;

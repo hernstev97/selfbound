@@ -43,7 +43,7 @@ export interface ItemSet {
 }
 
 const MAX_ITEMS = 50;
-const RECENT = 'xlr8:recent';
+const RECENT = 'selfbound:recent';
 
 export const PICKER_KINDS: PaletteKind[] = ['status', 'priority', 'labels', 'project', 'sprint', 'estimate', 'due', 'parent', 'team'];
 

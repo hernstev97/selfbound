@@ -60,7 +60,7 @@ Details: [Step 3: Process](#step-3-process).
 
 ## Step 1: Fetch
 
-- **API key:** `~/.config/xlr8/linear-api-key`, readable only by you (mode 600). If the mode is different, the file is a symlink, empty or missing, the script stops and explains what to do. `--key-file <path>` uses another file.
+- **API key:** `~/.config/selfbound/linear-api-key`, readable only by you (mode 600). If the mode is different, the file is a symlink, empty or missing, the script stops and explains what to do. `--key-file <path>` uses another file.
 - **Read-only guard** (`client.ts`, `assertReadOnly`): every document is parsed with `graphql.parse` before it is sent. Exactly one named `OperationDefinition` with `operation === 'query'` is allowed. Mutations, subscriptions, fragments, type definitions and multiple operations in one document are rejected without sending anything.
 - **Audit trail:** `operations.jsonl` logs every request sent (operation name, type `query`, time, HTTP status, attempt). `summary.json` counts the requests per operation.
 - **Pagination:** `first`/`after`/`pageInfo`. Issues come in pages of 20, with labels, attachments, relations and comments at 25 each. If that is not enough, the script fetches the rest per issue (`XlrIssueCommentsMore` etc.). This keeps every request under Linear's complexity limit.
@@ -70,7 +70,7 @@ Details: [Step 3: Process](#step-3-process).
 - `--map-status "Name=status"` maps a Linear status by hand (repeatable).
 - `--out <dir>` changes the output root.
 
-Output in `~/.local/share/xlr8/import/<run>/` (directory 700, files 600; `run` is a timestamp such as `2026-10-08T21-30-00Z`):
+Output in `~/.local/share/selfbound/import/<run>/` (directory 700, files 600; `run` is a timestamp such as `2026-10-08T21-30-00Z`):
 
 | File | Content |
 |---|---|
@@ -84,7 +84,7 @@ If the output directory is inside the repository, the script stops before the fi
 ## Step 2: Upload and start (`push`)
 
 ```sh
-node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<run>    # asks, then uploads + processes
+node tooling/linear-import/index.ts push ~/.local/share/selfbound/import/<run>    # asks, then uploads + processes
 node tooling/linear-import/index.ts push <dir> --yes                          # no prompt (tests only)
 node tooling/linear-import/index.ts push <dir> --backend-dir <dir>            # another local backend (tests)
 node tooling/linear-import/index.ts push <dir> --prod                         # production, always asks
@@ -94,7 +94,7 @@ node tooling/linear-import/index.ts push <dir> --prod                         # 
 
 1. reads `staging.jsonl` (exactly one run) and `summary.json` (notes from fetching),
 2. shows the target and the number of records per kind and asks you to type `import`. Locally the target comes from `backend/.env.local` and must be `local:…` or `anonymous:…`, otherwise it stops. With `--prod` it shows "PRODUCTION <deployment> (….convex.cloud, app <app URL>)"; `--yes` and `--backend-dir` are not allowed then, and the prompt always appears. The production deployment and app URL come from the instance settings (`convexDeployment`, `appUrl` in `deploy/instance.json`, see `tooling/instance.mjs`); without them `--prod` stops,
-3. runs `convex run importer:stage '{"rows": […]}'` in batches of up to 90 KB and 500 rows (a single argument may be at most 128 KiB on Linux; a single larger row stops with its kind and Linear ID). Locally this goes through `tooling/convex.mjs`, with `--prod` through `tooling/cloud.mjs` (deploy key from `~/.config/xlr8/convex-deploy-key`; a key for another deployment stops). `convex import --append` is not used because in production it needs backup permissions (`deployment:backups:view`) that a deploy key does not have,
+3. runs `convex run importer:stage '{"rows": […]}'` in batches of up to 90 KB and 500 rows (a single argument may be at most 128 KiB on Linux; a single larger row stops with its kind and Linear ID). Locally this goes through `tooling/convex.mjs`, with `--prod` through `tooling/cloud.mjs` (deploy key from `~/.config/selfbound/convex-deploy-key`; a key for another deployment stops). `convex import --append` is not used because in production it needs backup permissions (`deployment:backups:view`) that a deploy key does not have,
 4. runs `convex run importer:process '{"run": …, "notes": […]}'`. The action waits up to 8 minutes for the run to finish. If it is still running, it returns `status: 'running'` with `runId`, and `push` polls `convex run importer:summary '{"runId": …}'` every 5 s until the run is `done` or `failed`,
 5. prints the counts per step (read, new, changed, unchanged, skipped), plus conflicts and deviations. Exit code 0 only on success.
 
@@ -207,7 +207,7 @@ Names are compared case-insensitively. Statuses with names other than Linear's d
 
 Each Selfbound team has its own statuses (`workflowStates`). The table gives the **status kind** (`issue.status`); the backend then picks the team's status with the same name if its kind matches, otherwise the status for that kind (`stateForStatus`: the default status with that kind first). Custom Linear statuses are not created as new Selfbound statuses.
 
-For Linear's default names this means (test "state per team" in `backend/test/import.test.ts`): Triage, Backlog, Todo and In Review hit the Selfbound status of the same name; In Progress, Done, Canceled and Duplicate match the Selfbound default status of that name too (default names in `DEFAULT_STATES`, `backend/convex/shared/workflow.ts`); on a deployment with `XLR8_LOCALE=de` the default names are German, and these four go to the team's default status of their kind. A custom status like "Testing" lands in the default in-progress status.
+For Linear's default names this means (test "state per team" in `backend/test/import.test.ts`): Triage, Backlog, Todo and In Review hit the Selfbound status of the same name; In Progress, Done, Canceled and Duplicate match the Selfbound default status of that name too (default names in `DEFAULT_STATES`, `backend/convex/shared/workflow.ts`); on a deployment with `SELFBOUND_LOCALE=de` the default names are German, and these four go to the team's default status of their kind. A custom status like "Testing" lands in the default in-progress status.
 
 ## Verified field names and open questions
 
@@ -234,9 +234,9 @@ node tooling/linear-import/index.ts files upload   --prod [--substitute <sha256>
 node tooling/linear-import/index.ts files rewrite  --prod [--link <sha256>=<https-url> …]
 ```
 
-- **Working directory:** `~/.local/share/xlr8/linear-files/prod/` (locally `…/local/`, or `--dir`), directory 700, files 600, never inside the repository. For `download`, `--prod` only selects this directory.
+- **Working directory:** `~/.local/share/selfbound/linear-files/prod/` (locally `…/local/`, or `--dir`), directory 700, files 600, never inside the repository. For `download`, `--prod` only selects this directory.
 - **scan:** `linearFiles:scan` reads `issueBodies`, `comments`, `bodyRevisions` and `recurrences` page by page. A file is identified by its URL without `?…` and `#…` (`shared/linearFiles.ts`).
-- **download:** one `GET` per file with the key from `~/.config/xlr8/linear-api-key` (mode 600, as for fetching), only to `uploads.linear.app`. Stored under the SHA-256 of the content. Files already downloaded are skipped.
+- **download:** one `GET` per file with the key from `~/.config/selfbound/linear-api-key` (mode 600, as for fetching), only to `uploads.linear.app`. Stored under the SHA-256 of the content. Files already downloaded are skipped.
 - **upload:** the same check as when pasting an image (PNG, JPEG, WebP, GIF up to 5 MB). `linearFiles:uploadUrl` and `linearFiles:register` are internal functions (actor `import`), reachable only with the deploy key. The mapping lives in `linearLinks` (`kind: 'file'`, `linearId` = Linear URL, `localId` = image token); identical content under two URLs is uploaded once. Non-images and oversized files are left out. `--substitute` uploads an edited version instead of the Linear file (for example a smaller GIF).
 - **rewrite:** `linearFiles:rewrite` replaces every reference that has a target with `/img/<token>` or with the URL given via `--link` (for example videos hosted elsewhere; a Google Drive link alone on a line is embedded). First a dry run with counts, then the confirmation `rewrite` (always typed in production), then a check with `scan`. Descriptions get a new version and a history line (actor `import`), comments a `comment_edited` line, without `editedAt`. Removed comments are not touched. Image references (`fileRefs`) are created on write; without a reference, the cron deletes a copied image after 7 days like any fresh upload.
 - **Later imports:** `linearLinks.base` keeps the old description checksum. A new import therefore sees the description as "changed in Selfbound" and leaves it alone.

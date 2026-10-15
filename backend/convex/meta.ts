@@ -41,7 +41,7 @@ export const get = ownerQuery({
         .query('sprints')
         .withIndex('by_state', (q) => q.eq('state', 'active'))
         .take(10),
-      recentClosedSprints(ctx, 'xlr8', RECENT_CLOSED),
+      recentClosedSprints(ctx, 'selfbound', RECENT_CLOSED),
     ]);
     // The most recently closed sprints by close time, Selfbound sprints first. Imported Linear cycles
     // only fill up while there are fewer than RECENT_CLOSED Selfbound sprints.

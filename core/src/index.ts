@@ -8,7 +8,7 @@ export type { WikiState, ArticleView, TrashEntry, WikiFilter, SourceInput } from
 export type { BodyEdit } from './bodyEdit.ts';
 export type { PerfState } from './app/perf.ts';
 export { INBOX_SPLIT_DEFAULT, SOUND_VOLUME_DEFAULT, type Theme, type FontSize, type PrefsState, type SidebarTeamSize } from './app/prefs.ts';
-export { Auth, SIGNED_IN_COOKIE, signInPath, type AuthConfig, type AuthStatus } from './auth.ts';
+export { Auth, LEGACY_SIGNED_IN_COOKIE, SIGNED_IN_COOKIE, signInPath, type AuthConfig, type AuthStatus } from './auth.ts';
 export { Slice, SliceFamily } from './observable.ts';
 export { STATUS_ICON, PRIORITY_ICON, CHECK_ICON, ICON, rowIconCss, statusIcon, type IconName } from './icons.ts';
 export { movePlan, moveLines, hasLoss, type MovePlan } from './move.ts';
@@ -19,7 +19,7 @@ export { computeWindow, sameRange, revealIndex, ROW_HEIGHT, ROW_HEIGHT_MOBILE, I
 export { inInbox, unread } from './inbox.ts';
 export { VIEWS, GROUPING_LABEL, ORDERING_LABEL, PROP_LABEL, viewKey } from './views.ts';
 export { CONSENT_PATH, DEFAULT_SETTINGS_SECTION, isConsentPath, pagePath, parsePath, viewPath, type Page } from './route.ts';
-/** Actor kind of the instance owner: legacy stored value for the instance owner. */
-export { DISPLAY_PROPS, OWNER_KIND, PATCH_FIELDS } from './types.ts';
+/** Domain constants; actor kind of the instance owner (`isOwnerKind` accepts the legacy value too). */
+export { DISPLAY_PROPS, isOwnerKind, LEGACY_OWNER_KIND, OWNER_KIND, PATCH_FIELDS } from './types.ts';
 export type * from './types.ts';
 export { AVATAR_ZOOM_MAX, clampCrop, cropRect, cropScale, zoomCrop, type CropState } from './avatar.ts';

@@ -18,31 +18,31 @@ import { KEY_FORMAT } from '../../convex/lib/mcp/endpoint';
 
 // OAuth for connectors, pure logic (lib/oauth/core.ts).
 
-const cfg = oauthConfig({ CONVEX_SITE_URL: 'https://happy-otter-123.convex.site/', XLR8_APP_URL: 'https://selfbound.example.com' })!;
+const cfg = oauthConfig({ CONVEX_SITE_URL: 'https://happy-otter-123.convex.site/', SELFBOUND_APP_URL: 'https://selfbound.example.com' })!;
 const CLAUDE = 'https://claude.ai/api/mcp/auth_callback';
 const CHATGPT = 'https://chatgpt.com/connector_platform_oauth_redirect';
 const CHALLENGE = 'A'.repeat(43);
 
 describe('configuration and metadata', () => {
-  test('off without XLR8_APP_URL; a custom address wins over the Convex site URL', () => {
+  test('off without SELFBOUND_APP_URL; a custom address wins over the Convex site URL', () => {
     expect(oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site' })).toBeNull();
-    expect(oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', XLR8_APP_URL: 'broken' })).toBeNull();
+    expect(oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', SELFBOUND_APP_URL: 'broken' })).toBeNull();
     expect(cfg).toEqual({
       issuer: 'https://happy-otter-123.convex.site',
       resource: 'https://happy-otter-123.convex.site/mcp',
       appUrl: 'https://selfbound.example.com',
     });
     expect(
-      oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: 'https://mcp.selfbound.example.com', XLR8_APP_URL: 'https://selfbound.example.com' })
+      oauthConfig({ CONVEX_SITE_URL: 'https://a.convex.site', SELFBOUND_PUBLIC_SITE_URL: 'https://mcp.selfbound.example.com', SELFBOUND_APP_URL: 'https://selfbound.example.com' })
         ?.resource,
     ).toBe('https://mcp.selfbound.example.com/mcp');
   });
 
-  test('XLR8_PUBLIC_SITE_URL is one address; without a valid one the Convex site URL applies', () => {
-    const env = { CONVEX_SITE_URL: 'https://a.convex.site', XLR8_PUBLIC_SITE_URL: ' https://mcp.selfbound.example.com/ ', XLR8_APP_URL: 'https://selfbound.example.com' };
+  test('SELFBOUND_PUBLIC_SITE_URL is one address; without a valid one the Convex site URL applies', () => {
+    const env = { CONVEX_SITE_URL: 'https://a.convex.site', SELFBOUND_PUBLIC_SITE_URL: ' https://mcp.selfbound.example.com/ ', SELFBOUND_APP_URL: 'https://selfbound.example.com' };
     expect(oauthConfig(env)).toMatchObject({ issuer: 'https://mcp.selfbound.example.com', resource: 'https://mcp.selfbound.example.com/mcp' });
-    expect(oauthConfig({ ...env, XLR8_PUBLIC_SITE_URL: 'broken' })?.issuer).toBe('https://a.convex.site');
-    expect(oauthConfig({ XLR8_APP_URL: 'https://selfbound.example.com' })).toBeNull();
+    expect(oauthConfig({ ...env, SELFBOUND_PUBLIC_SITE_URL: 'broken' })?.issuer).toBe('https://a.convex.site');
+    expect(oauthConfig({ SELFBOUND_APP_URL: 'https://selfbound.example.com' })).toBeNull();
   });
 
   test('issuer = authorization_servers[0], iss parameter, S256 only, resource = MCP URL', () => {
@@ -58,17 +58,20 @@ describe('configuration and metadata', () => {
     });
     expect(as).not.toHaveProperty('client_id_metadata_document_supported');
     expect(wwwAuthenticate(cfg)).toBe(
-      'Bearer resource_metadata="https://happy-otter-123.convex.site/.well-known/oauth-protected-resource/mcp", scope="xlr8"',
+      'Bearer resource_metadata="https://happy-otter-123.convex.site/.well-known/oauth-protected-resource/mcp", scope="selfbound"',
     );
     expect(wwwAuthenticate(cfg, 'invalid_token')).toMatch(/, error="invalid_token"$/);
   });
 
   test('access tokens and agent keys cannot be confused', () => {
-    const access = `xlr8_at_${'x'.repeat(43)}`;
-    const key = `xlr8_${'x'.repeat(43)}`;
-    expect(ACCESS_FORMAT.test(access)).toBe(true);
-    expect(KEY_FORMAT.test(access)).toBe(false);
-    expect(ACCESS_FORMAT.test(key)).toBe(false);
+    // legacy-xlr8: tokens issued before the rename
+    for (const prefix of ['selfbound', 'xlr8']) {
+      const access = `${prefix}_at_${'x'.repeat(43)}`;
+      const key = `${prefix}_${'x'.repeat(43)}`;
+      expect(ACCESS_FORMAT.test(access)).toBe(true);
+      expect(KEY_FORMAT.test(access)).toBe(false);
+      expect(ACCESS_FORMAT.test(key)).toBe(false);
+    }
   });
 });
 
@@ -171,8 +174,8 @@ describe('token endpoint', () => {
     expect(parseForm('grant_type=refresh_token&a=1&a=2', 'application/x-www-form-urlencoded')).toEqual({ grant_type: 'refresh_token', a: '1' });
     expect(parseForm('{"grant_type":"x","n":1}', 'application/json')).toEqual({ grant_type: 'x' });
     expect(parseForm('{broken', 'application/json')).toBeNull();
-    const basic = `Basic ${btoa('xlr8-claude-1:sec%3Aret')}`;
-    expect(clientCredentials(basic, {})).toEqual({ clientId: 'xlr8-claude-1', secret: 'sec:ret', basic: true });
+    const basic = `Basic ${btoa('selfbound-claude-1:sec%3Aret')}`;
+    expect(clientCredentials(basic, {})).toEqual({ clientId: 'selfbound-claude-1', secret: 'sec:ret', basic: true });
     expect(clientCredentials(null, { client_id: 'c', client_secret: 's' })).toEqual({ clientId: 'c', secret: 's', basic: false });
     expect(clientCredentials('Basic !!!', {})).toBeNull();
   });

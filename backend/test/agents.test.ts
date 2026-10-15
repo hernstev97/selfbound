@@ -13,8 +13,8 @@ describe('agent keys', () => {
   test('key returned only once, only hash and prefix stored; list without hash', async () => {
     const { t, owner } = setup();
     const created = await owner.action(api.agents.create, { name: 'Assistant' });
-    expect(created.key).toMatch(/^xlr8_[A-Za-z0-9_-]{43}$/);
-    expect(created.keyPrefix).toBe(created.key.slice(0, 10));
+    expect(created.key).toMatch(/^selfbound_[A-Za-z0-9_-]{43}$/);
+    expect(created.keyPrefix).toBe(created.key.slice(0, 14));
     const stored = await t.run(async (ctx) => await ctx.db.get('agents', created.agentId));
     expect(stored?.keyHash).toBe(await sha256(created.key));
     // The plain-text key is nowhere in the database.
@@ -37,7 +37,7 @@ describe('agent keys', () => {
       name: 'Claude Code',
       actor: { kind: 'agent', agentId },
     });
-    await expectCode(t.query(internal.agents.authenticate, { keyHash: await sha256('xlr8_wrong') }), 'access_denied');
+    await expectCode(t.query(internal.agents.authenticate, { keyHash: await sha256('selfbound_wrong') }), 'access_denied');
     await owner.mutation(api.agents.revoke, { agentId });
     await expectCode(t.query(internal.agents.authenticate, { keyHash: hash }), 'access_denied');
     await expectCode(t.mutation(internal.agents.consumeRate, { agentId }), 'access_denied');

@@ -20,8 +20,12 @@ export type StateDoc = Doc<'workflowStates'>;
 export type StateId = Id<'workflowStates'>;
 export type SprintDoc = Doc<'sprints'>;
 export type Actor = IssueDoc['createdBy'];
-/** Actor kind of the instance owner: legacy stored value for the instance owner (do not change). */
-export const OWNER_KIND = 'steven' as const;
+/** Actor kind of the instance owner. */
+export const OWNER_KIND = 'owner' as const;
+/** Stored value before the rename; still present in data that has not been migrated (legacy-xlr8). */
+export const LEGACY_OWNER_KIND = 'steven' as const;
+/** Does this actor kind belong to the owner? Never compare with OWNER_KIND directly. */
+export const isOwnerKind = (kind: string): kind is typeof OWNER_KIND | typeof LEGACY_OWNER_KIND => kind === OWNER_KIND || kind === LEGACY_OWNER_KIND;
 
 /** Team from `meta.get`, with logo URLs. */
 export type TeamDoc = Doc<'teams'> & { logoUrl: string | null; logoDarkUrl: string | null };

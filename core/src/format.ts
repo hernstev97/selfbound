@@ -1,6 +1,6 @@
 // Labels, orders and date formats. Labels translate on read (translated()), dates follow the UI language.
 import { intlLocale, locale, t, tn, translated } from './i18n.ts';
-import { OWNER_KIND, type Actor, type Priority, type Status } from './types.ts';
+import { isOwnerKind, OWNER_KIND, type Actor, type Priority, type Status } from './types.ts';
 
 /** Order in the status picker (workflow). */
 export const STATUS_ORDER: Status[] = ['triage', 'backlog', 'todo', 'in_progress', 'in_review', 'done', 'canceled', 'duplicate'];
@@ -300,10 +300,9 @@ function validDay(y: number, m: number, d: number) {
 
 /** Display name of an actor; the instance owner shows with the profile name, else as "You". */
 export function actorName(actor: Actor, agents: ReadonlyMap<string, string>, fallback?: string): string {
+  // `agents` also holds the owner's display name once the profile has one (always under OWNER_KIND).
+  if (isOwnerKind(actor.kind)) return fallback ?? agents.get(OWNER_KIND) ?? t('You');
   switch (actor.kind) {
-    case OWNER_KIND:
-      // `agents` also holds the owner's display name once the profile has one.
-      return fallback ?? agents.get(OWNER_KIND) ?? t('You');
     case 'agent':
       return (actor.agentId && agents.get(actor.agentId)) || t('Agent');
     case 'github':
@@ -332,7 +331,7 @@ export function nameHue(name: string): number {
 
 /**
  * Suggested git branch name: `kiu-106-title-slug`, with an optional prefix `prefix/kiu-106-title-slug`
- * (the app passes VITE_XLR8_BRANCH_PREFIX). Umlauts are transliterated (ä → ae).
+ * (the app passes VITE_SELFBOUND_BRANCH_PREFIX). Umlauts are transliterated (ä → ae).
  */
 export function branchName(identifier: string, title: string, prefix?: string) {
   const slug = title
