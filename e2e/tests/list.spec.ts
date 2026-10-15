@@ -332,3 +332,54 @@ test('Filtered view + open issue, reload, Esc: back to the same view with the fi
   await expect(page).toHaveURL(/\/team\/ORB\/all\?prio=2/);
   await expect(page.getByTestId('filter-chip')).toContainText('Priority: High');
 });
+
+test('Grouping by label, estimate and due date; second level; order and empty groups survive a reload', async ({ page }) => {
+  await open(page, '/team/ORB/all');
+  await page.keyboard.press('Shift+V');
+  const headers = page.getByTestId('group-header');
+
+  await page.getByTestId('display-grouping').selectOption('label');
+  await expect(headers.first()).toBeVisible();
+  // An issue with several labels is listed under each; the header count is per group, the view count per issue.
+  const counted = await headers.evaluateAll((els) => els.map((el) => Number(el.querySelector('.group-count')?.textContent)));
+  expect(counted.length).toBeGreaterThan(1);
+
+  await page.getByTestId('display-grouping').selectOption('estimate');
+  await expect(headers.last()).toContainText(/No estimate|point/);
+  await page.getByTestId('display-grouping').selectOption('due');
+  await expect(page.locator('[data-testid="group-header"]', { hasText: /Overdue|Today|This week|Next week|Later|No due date/ }).first()).toBeVisible();
+
+  // Second level: priority inside each due-date group; collapsing a sub-group keeps the group open.
+  await page.getByTestId('display-subgrouping').selectOption('priority');
+  await expect(page).toHaveURL(/group=due/);
+  await expect(page).toHaveURL(/sub=priority/);
+  await expect(page.locator('.group-row.sub').first()).toBeVisible();
+  await page.locator('.group-row.sub').first().click();
+  await expect(page.locator('.group-row.sub').first().locator('.group-chevron')).toHaveClass(/closed/);
+  await expect(page.locator('.group-row:not(.sub)').first().locator('.group-chevron')).not.toHaveClass(/closed/);
+
+  // Clicking the list closed the popover.
+  await page.keyboard.press('Shift+V');
+  await page.getByTestId('display-grouping').selectOption('priority');
+  await page.getByTestId('display-subgrouping').selectOption('none');
+  // The list is windowed (and scrolls to the focused issue), so read the group rows from the app state.
+  const names = () =>
+    page.evaluate(() => {
+      const app = (window as unknown as { __selfbound: { app: { main: { list: { get(): { rows: { kind: string; group?: { label: string } }[] } } } } } }).__selfbound.app;
+      return app.main.list.get().rows.filter((r) => r.kind === 'group').map((r) => r.group!.label);
+    });
+  await expect.poll(async () => (await names()).includes('Urgent') || (await names()).includes('High')).toBe(true);
+  const natural = await names();
+  await page.getByTestId('display-grouporder').selectOption('desc');
+  await expect.poll(names).toEqual([...natural].reverse());
+  await page.getByTestId('display-emptygroups').click();
+  await expect.poll(async () => (await names()).length).toBe(5);
+
+  await page.goto('/inbox');
+  await page.goto('/team/ORB/all');
+  await expect.poll(async () => (await names()).length).toBe(5);
+  const reversed = await names();
+  expect(reversed[reversed.length - 1]).toBe('Urgent');
+  await page.keyboard.press('Shift+V');
+  await page.getByText('Restore defaults').click();
+});

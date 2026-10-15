@@ -542,6 +542,47 @@ describe('a change to an issue recomputes only its row', () => {
     expect(groupOf('i1')).toBe('started:in progress');
   });
 
+  test('grouping by label: an issue under two labels is one entry for focus, selection and paging', async () => {
+    const { client, app } = await setup(63);
+    app.nav.goView({ kind: 'all', team: null }, { group: 'label', order: 'created' });
+    client.push('issues:bucket', { bucket: 0 }, [doc(1, { labelIds: ['l1', 'l3'] as never, createdAt: 3 }), doc(2, { labelIds: ['l3'] as never, createdAt: 2 }), doc(4, { createdAt: 1 })]);
+    await flush();
+    const rows = app.main.list.get().rows;
+    expect(rows.filter((r) => r.kind === 'issue').map((r) => r.id)).toEqual(['i1', 'i1', 'i2', 'i4']);
+    expect(app.main.list.get().count).toBe(3);
+    expect(app.main.order()).toEqual(['i1', 'i2', 'i4']);
+    app.main.selectAll();
+    expect(app.main.selection().sort()).toEqual(['i1', 'i2', 'i4']);
+    // A change that does not move a group is still applied through the full path (no in-place shortcut for labels).
+    client.push('issues:bucket', { bucket: 0 }, [doc(1, { labelIds: ['l1'] as never, createdAt: 3 }), doc(2, { labelIds: ['l3'] as never, createdAt: 2 }), doc(4, { createdAt: 1 })]);
+    await flush();
+    expect(app.main.list.get().rows.filter((r) => r.kind === 'issue').map((r) => r.id)).toEqual(['i1', 'i2', 'i4']);
+  });
+
+  test('grouping options are saved per view and restored, and a second level needs a first one', async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal('localStorage', { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.delete(k) });
+    const { app } = await setup(63);
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    app.main.setDisplay({ subGrouping: 'estimate' });
+    expect(app.main.view.get().display.subGrouping).toBeUndefined();
+    app.main.setDisplay({ grouping: 'priority', subGrouping: 'estimate', groupOrder: 'desc', emptyGroups: true });
+    app.main.setDisplay({ grouping: 'estimate' });
+    expect(app.main.view.get().display).toMatchObject({ grouping: 'estimate', groupOrder: 'desc', emptyGroups: true });
+    app.main.setDisplay({ grouping: 'priority', subGrouping: 'estimate' });
+    expect(app.main.displayFor({ kind: 'all', team: null })).toMatchObject({ grouping: 'priority', subGrouping: 'estimate', groupOrder: 'desc', emptyGroups: true });
+    // Back to the defaults: nothing stays in the stored display.
+    app.main.setDisplay({ subGrouping: undefined, groupOrder: 'asc', emptyGroups: false });
+    const stored = app.main.displayFor({ kind: 'all', team: null });
+    expect(stored.subGrouping).toBeUndefined();
+    expect(stored.groupOrder).toBeUndefined();
+    expect(stored.emptyGroups).toBeUndefined();
+    // A saved second level that is not allowed (same as the first) is dropped.
+    storage.set('xlr8:display:all:*', JSON.stringify({ grouping: 'priority', subGrouping: 'priority' }));
+    expect(app.main.displayFor({ kind: 'all', team: null }).subGrouping).toBeUndefined();
+    vi.unstubAllGlobals();
+  });
+
   test('rows without subscribers are dropped instead of recomputed', async () => {
     const { client, app } = await setup(63);
     app.nav.goView({ kind: 'all', team: null }, { group: 'none', order: 'created' });

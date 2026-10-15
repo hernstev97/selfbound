@@ -68,11 +68,11 @@
   type GroupListRow = Extract<(typeof list.rows)[number], { kind: 'group' }>;
   const split = $derived.by(() => {
     const groups: { row: GroupListRow; top: number }[] = [];
-    const issues: { id: IssueId; top: number }[] = [];
+    const issues: { id: IssueId; key: string; top: number }[] = [];
     for (let i = start; i < end; i++) {
       const row = list.rows[i];
       if (row.kind === 'group') groups.push({ row, top: i * rowHeight });
-      else issues.push({ id: row.id, top: i * rowHeight });
+      else issues.push({ id: row.id, key: row.key, top: i * rowHeight });
     }
     return { groups, issues };
   });
@@ -237,9 +237,9 @@
       <!-- Group headers and rows separately: no {#if} (comment node) per row. -->
       {#each groups as g (g.row.key)}<GroupRow row={g.row} top={g.top} list={controller} cols={headCols} />{/each}
       {#if list.style === 'inbox'}
-        {#each issues as it (it.id)}<InboxRow id={it.id} top={it.top} />{/each}
+        {#each issues as it (it.key)}<InboxRow id={it.id} top={it.top} />{/each}
       {:else}
-        {#each issues as it (it.id)}<IssueRow id={it.id} top={it.top} trash={list.style === 'trash'} list={controller} draggable={!!drop} props={shownProps} />{/each}
+        {#each issues as it (it.key)}<IssueRow id={it.id} top={it.top} trash={list.style === 'trash'} list={controller} draggable={!!drop} props={shownProps} />{/each}
       {/if}
       {#if dropAt !== null}
         <div class="drop-line" data-testid="drop-line" style:transform="translateY({dropAt * rowHeight}px)"></div>

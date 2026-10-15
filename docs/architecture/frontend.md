@@ -95,6 +95,26 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 - **Settings:** Team → “Workflow” section (`pages/settings/Workflow.svelte`, operations in `core/src/app/admin.ts`).
 - Mirror (`MIRROR_SCHEMA` 5): older mirrors without status IDs are discarded.
 
+### Grouping (`query.ts`, `GroupRow.svelte`, `DisplayPopover.svelte`)
+
+`Display` (saved per view in `xlr8:display:<view>`, so saved views can store it later) holds `grouping`, the optional `subGrouping` (second level), `groupOrder` (`asc` default, `desc`, `size`) and `emptyGroups`. Defaults are not stored. `setDisplay` drops a second level that is no longer allowed (`subGroupings(def, grouping)`: the view's groupings without `none`, `scope` and the first level). The URL carries `group` and `sub`.
+
+| Grouping | Groups |
+|---|---|
+| `status`, `priority`, `team`, `project`, `sprint` | as before; empty groups: all statuses of the view's teams, all priorities, active teams, projects of those teams that are not done or canceled, sprints that are not closed |
+| `label` | one group per label, **an issue appears under each of its labels**, then “No label”; label color on the header |
+| `estimate` | one group per point value, numeric, then “No estimate” |
+| `due` | Overdue, Today, This week (rest, Monday start like “next week” in the due date input), Next week, Later, “Closed, was due earlier” (closed issues are never overdue), No due date |
+| `created`, `updated` | Today, Yesterday, Last 7 days, Last 30 days, Older |
+| `parent` | one group per parent issue (named “KEY title” through `ListExtras.issueOf`), in the order of its first sub-issue in the list, then “No parent issue” |
+
+- **One pass, no extra sort:** `computeList` receives the already sorted issues and `bucket` splits them into groups in that order, so every group keeps the view's ordering. Date buckets compare strings (`dueDate`) or numbers (boundaries computed once from `today()`, `addDays`, `parseDay`), no date object per issue. Groups the spec does not know (e.g. a deleted label) are appended as “Unknown” so no issue disappears.
+- **Several groups per issue** (`GroupSpec.keys`, only `label`): the row keys of repeats get the group key as a prefix (`g:label:x|<id>`), the first row keeps the plain id. The rest of the list sees one entry per issue: `order()`, `#rowIndex`, selection, J/K and the count use the first row; a focused issue is highlighted in every group it appears in. `reuseList` and the windowing work on the rows as before.
+- **Second level:** after each group header come sub-group headers (`GroupInfo.parent` set, class `sub`, indented), collapse keys `g:<by>:<value>/<by2>:<value2>` so the same sub-group collapses separately in each group. Collapsing the outer group hides its sub-groups. Empty groups apply to the first level only.
+- **Quick path:** `#tryInPlace` skips the full recompute for single-valued groupings with one level; it falls back for `team`, `scope`, `label` and any second level.
+- **Not here:** the board keeps its status columns (dragging a card means “set the status”; other fields would need their own drop rules).
+- The date groups are computed with the device's days (`today()`); once the configured time zone lands (XLR8-53) they follow the same helpers.
+
 ### Board (`board.ts`, `components/board/`)
 
 The board is a **layout** of every list view that has `boardTypes` (All, Active, Backlog, Sprint, Project): `display.layout = 'board'`, `?layout=board` in the URL, remembered per view. **Ctrl B** (`layout.toggle`, also the button in the view bar) switches and keeps the focus.

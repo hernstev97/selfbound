@@ -5,11 +5,11 @@ import { t, tn, translated } from '../i18n.ts';
 import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
-import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
+import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, multiGrouping, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
 import { CARD_SLOT, computeBoard, reuseBoard } from '../board.ts';
 import { stateGroupKey } from '../workflow.ts';
 
-import { VIEWS, planSprint, viewKey, viewTitle, type ViewContext } from '../views.ts';
+import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext } from '../views.ts';
 import { revealIndex } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
@@ -258,8 +258,9 @@ export class ListController {
     if (this.idle || ids.size > 200 || this.#rowIndex.size === 0) return false;
     const view = this.view.get();
     const grouping = view.display.grouping;
-    // Groups that do not depend on the issue alone: budget (team) and sprint scope.
-    if (grouping === 'team' || grouping === 'scope') return false;
+    // Groups that do not depend on the issue alone: budget (team) and sprint scope; several groups per issue (labels); two levels.
+    if (grouping === 'team' || grouping === 'scope' || multiGrouping(grouping)) return false;
+    if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
     const store = this.app.store;
     const matches = visibleFilter(view, store.meta.get(), this.context());
     const compare = viewComparator(view);
@@ -322,6 +323,7 @@ export class ListController {
     const extras: ListExtras = {};
     if (view.display.grouping === 'scope') extras.kinds = this.app.store.sprintKinds.get();
     if (view.display.grouping === 'team') extras.budget = this.app.budgetLabels();
+    if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent') extras.issueOf = (id) => this.app.store.get(id);
     const next = reuseList(this.list.get(), computeList(visible, view, meta, this.#collapsedFor(view.route), this.app.prefs.dark.get(), extras));
     if (next !== this.list.get()) {
       const keep = anchor ? this.#scrollAnchor() : null;
@@ -332,7 +334,8 @@ export class ListController {
       this.#groupStarts = [];
       next.rows.forEach((row, index) => {
         if (row.kind === 'group') this.#groupStarts.push(index);
-        if (row.kind === 'issue') {
+        // An issue listed under several groups (labels) counts once: first row wins.
+        if (row.kind === 'issue' && !this.#rowIndex.has(row.id)) {
           this.#order.push(row.id);
           this.#rowIndex.set(row.id, index);
         }
@@ -655,7 +658,7 @@ export class ListController {
       tabs,
       chips: this.#chips(view.filters, meta),
       filterCount: filterCount(view.filters),
-      displayChanged: view.display.grouping !== defaults.grouping || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
+      displayChanged: view.display.grouping !== defaults.grouping || (view.display.subGrouping ?? 'none') !== (defaults.subGrouping ?? 'none') || (view.display.groupOrder ?? 'asc') !== (defaults.groupOrder ?? 'asc') || (view.display.emptyGroups ?? false) !== (defaults.emptyGroups ?? false) || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
       quick: view.quick,
       quickOpen: view.quickOpen,
     };
@@ -687,8 +690,12 @@ export class ListController {
     const base = def.display(route);
     const saved = readJson<Partial<Display>>(`xlr8:display:${viewKey(route)}`);
     if (!saved) return base;
+    const grouping = saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping;
     return {
-      grouping: saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping,
+      grouping,
+      ...(saved.subGrouping && grouping !== 'none' && subGroupings(def, grouping).includes(saved.subGrouping) ? { subGrouping: saved.subGrouping } : {}),
+      ...(saved.groupOrder === 'desc' || saved.groupOrder === 'size' ? { groupOrder: saved.groupOrder } : {}),
+      ...(saved.emptyGroups === true ? { emptyGroups: true } : {}),
       ordering: saved.ordering && def.orderings.includes(saved.ordering) ? saved.ordering : base.ordering,
       props: Array.isArray(saved.props) ? saved.props : base.props,
       showClosed: typeof saved.showClosed === 'boolean' ? saved.showClosed : base.showClosed,
@@ -700,7 +707,7 @@ export class ListController {
    * Switch to a view. Without given values, the filters last set there apply; with given values
    * (URL), those.
    */
-  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
+  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; sub?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
     const prev = this.view.get();
     const prevKey = viewKey(prev.route);
     const key = viewKey(route);
@@ -709,6 +716,7 @@ export class ListController {
     const remembered = this.#memory.get(key);
     const display = { ...this.displayFor(route) };
     if (given?.group && VIEWS[route.kind].groupings.includes(given.group)) display.grouping = given.group;
+    if (given?.sub && display.grouping !== 'none' && subGroupings(VIEWS[route.kind], display.grouping).includes(given.sub)) display.subGrouping = given.sub;
     if (given?.order && VIEWS[route.kind].orderings.includes(given.order)) display.ordering = given.order;
     if (given?.layout === 'board' && VIEWS[route.kind].boardTypes) display.layout = 'board';
     const filters = given?.filters && filterCount(given.filters) > 0 ? given.filters : (remembered?.filters ?? emptyFilters());
@@ -734,6 +742,10 @@ export class ListController {
   setDisplay(patch: Partial<Display>) {
     const view = this.view.get();
     const display = { ...view.display, ...patch };
+    // Grouping options that go back to their default are not stored; a second level needs a first one it differs from.
+    if (!display.subGrouping || display.grouping === 'none' || !subGroupings(VIEWS[view.route.kind], display.grouping).includes(display.subGrouping)) delete display.subGrouping;
+    if (display.groupOrder === 'asc') delete display.groupOrder;
+    if (!display.emptyGroups) delete display.emptyGroups;
     this.view.set({ ...view, display });
     writeJson(`xlr8:display:${viewKey(view.route)}`, display);
     this.recompute();

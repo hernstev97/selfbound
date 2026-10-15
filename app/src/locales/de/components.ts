@@ -77,6 +77,9 @@ export default {
   // DisplayPopover.svelte
   'Display options': 'Anzeigeoptionen',
   Grouping: 'Gruppierung',
+  'Then group by': 'Danach gruppieren nach',
+  'Group order': 'Reihenfolge der Gruppen',
+  'Show empty groups': 'Leere Gruppen zeigen',
   Ordering: 'Sortierung',
   'Show completed': 'Erledigte zeigen',
   Properties: 'Eigenschaften',
