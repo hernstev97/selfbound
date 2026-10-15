@@ -30,6 +30,7 @@ import type { ConvexHttpClient } from 'convex/browser';
 import { api } from '@selfbound/backend/api';
 import type { Id } from '@selfbound/backend/dataModel';
 import { startBundleBytes } from './bundle.ts';
+import { constant, contextArg } from './context.ts';
 import { installProbe } from './probe.ts';
 import { buildReport } from './report.ts';
 import { appBase, CPU_RATE, DELAY_MS, here, mcpAgent, PORTS, root, startStack, stopBackend, type Dataset, type Profile, type Stack } from './stack.ts';
@@ -156,7 +157,7 @@ type Result = { start: number; matched: Record<string, number>; painted: Record<
 
 async function measure(page: Page, m: Measured): Promise<Result> {
   const predSources = Object.fromEntries(Object.entries(m.preds).map(([k, f]) => [k, f.toString()]));
-  const ctx = await page.evaluate(([preds, ctxSrc, manual]) => (window as any).__bench.arm(preds, ctxSrc, manual), [predSources, m.ctx ? m.ctx.toString() : null, !!m.manualStart] as const);
+  const ctx = await page.evaluate(([preds, context, manual]) => (window as any).__bench.arm(preds, context, manual), [predSources, contextArg(m.ctx), !!m.manualStart] as const);
   // Random position in the 16.7 ms frame grid, otherwise the key order determines the wait for the frame.
   await page.waitForTimeout(Math.random() * 17);
   await m.act(page);
@@ -183,8 +184,6 @@ function store(base: Omit<Sample, 'metric' | 'value' | 'extra'>, metric: string,
   if (res.timedOut && Object.keys(res.painted).length === 0) record({ ...base, metric, value: null, extra: { timedOut: true } });
 }
 
-/** Pass a value into the page as context (a function returning it). */
-const constant = (value: unknown) => Object.assign(() => value, { toString: () => `() => (${JSON.stringify(value)})` });
 
 // Predicates (run in the page, must not use anything from outside)
 const focusedId = () => (document.querySelector('[data-testid="issue-row"].focused') as HTMLElement | null)?.dataset.id ?? null;
