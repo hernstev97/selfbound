@@ -7,7 +7,7 @@ import { checkLogo } from './lib/logo';
 import { assertWritable } from './lib/testSwitches';
 import { logoVariantValidator } from './lib/validators';
 import * as ops from './ops/teams';
-import { actorValidator } from './schema';
+import { actorValidator, modelChoiceValidator } from './schema';
 import { LIMITS } from './shared/constants';
 
 // Teams and team logos. Only the owner (see isOwnerKind) changes teams and logos; the check
@@ -28,6 +28,7 @@ export const create = ownerWriteMutation({
  * The key can only change while the team has no issues. `dormant` = inactive team.
  * `wiki`: 'on' = knowledge base next to the issues, 'only' = knowledge base only (only without open
  * issues and active recurrences), null = none (only without pages).
+ * `defaultModel`: the model for issues that set none (XLR8-93), null = none.
  */
 export const update = ownerWriteMutation({
   args: {
@@ -37,6 +38,7 @@ export const update = ownerWriteMutation({
     hue: v.optional(v.number()),
     dormant: v.optional(v.boolean()),
     wiki: v.optional(v.union(v.literal('on'), v.literal('only'), v.null())),
+    defaultModel: v.optional(v.union(modelChoiceValidator, v.null())),
   },
   handler: async (ctx, args) => await ops.updateTeam(ctx, ctx.actor, args),
 });

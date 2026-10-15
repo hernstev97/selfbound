@@ -6,6 +6,7 @@
 // exactly these values.
 
 import { LIMITS, PARTIAL_DATE_RE, WIKI } from '../../shared/constants';
+import { MODEL_LIMITS } from '../../shared/models';
 import { STATE_NAME_MAX } from '../../shared/workflow';
 import type { Priority } from '../../shared/constants';
 import {
@@ -135,6 +136,30 @@ const labelNames = () =>
   });
 const estimate = () => number({ description: 'Estimate in points.', min: 0, max: 100 });
 
+/** Desired model (XLR8-93): one of the enabled models of list_models, with its valid effort and speed. */
+const modelChoice = (description: string) =>
+  object(
+    {
+      provider: string({ description: 'Provider ID from list_models, e.g. "anthropic".', min: 1, max: MODEL_LIMITS.provider, transform: (s) => s.trim() }),
+      modelId: string({ description: 'Model ID from list_models, e.g. "claude-opus-5-5".', min: 1, max: MODEL_LIMITS.modelId, transform: (s) => s.trim() }),
+      effort: optional(
+        string({ description: 'One of the model\'s `efforts` (list_models). Omit to leave the effort to whoever runs the issue.', min: 1, max: MODEL_LIMITS.value }),
+      ),
+      speed: optional(string({ description: '"standard" (the default) or one of the model\'s `speeds` (list_models), e.g. "fast".', min: 1, max: MODEL_LIMITS.value })),
+    },
+    { description },
+  );
+const MODEL_INPUT =
+  'Desired model for the issue: provider and model ID of an enabled model (list_models), optionally effort and speed valid for that model. Invalid combinations are rejected. Without it the issue inherits its parent\'s model, else the team default, else none (whoever runs it decides).';
+const modelFilter = () =>
+  string({
+    description:
+      'Only issues whose effective model (own, else the parent\'s, else the team default) is this: "provider/modelId" (e.g. "anthropic/claude-opus-5-5"), a model ID, a provider ID (e.g. "anthropic"), or "none" for issues without a model. See list_models.',
+    min: 1,
+    max: MODEL_LIMITS.provider + MODEL_LIMITS.modelId + 1,
+    transform: (s) => s.trim(),
+  });
+
 // ---------------------------------------------------------------------------
 // Input schemas
 
@@ -142,6 +167,7 @@ const searchIssues = object({
   q: string({ description: 'Search text (title and description).', min: 1, max: 200, transform: (s) => s.trim() }),
   team: optional(teamKey('Only issues of this team.')),
   includeClosed: optional(boolean({ description: 'Also return done, canceled and duplicate issues.' }), true),
+  model: optional(modelFilter()),
   limit: optional(integer({ description: 'Maximum number of results.', min: 1, max: 50 }), 20),
 });
 
@@ -178,6 +204,7 @@ const listIssues = object({
   ),
   label: optional(string({ description: 'Only issues with this label (name, case-insensitive).', min: 1, max: 100 })),
   project: optional(string({ description: 'Only issues in this project (name, case-insensitive).', min: 1, max: 200 })),
+  model: optional(modelFilter()),
   dueWithinDays: optional(integer({ description: 'Window for the "due" filter, in days.', min: 0, max: 60 }), 7),
   snoozed: optional(
     boolean({
@@ -211,6 +238,7 @@ const newIssue = object({
   estimate: optional(estimate()),
   dueDate: optional(realDay('Due date, YYYY-MM-DD.')),
   parent: optional(identifier('Parent issue identifier, e.g. "ACME-100".')),
+  model: optional(modelChoice(MODEL_INPUT)),
 });
 
 const createIssues = object({
@@ -233,6 +261,7 @@ const expected = object(
     dueDate: optional(nullable(realDay('YYYY-MM-DD'))),
     snoozedUntil: optional(nullable(realDay('YYYY-MM-DD'))),
     parent: optional(nullable(identifier())),
+    model: optional(nullable(modelChoice('The issue\'s own model as you saw it (`model` in get_issue), or null for none.'))),
   },
   {
     description:
@@ -240,7 +269,7 @@ const expected = object(
   },
 );
 
-const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'snoozedUntil', 'parent', 'description'] as const;
+const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'snoozedUntil', 'parent', 'model', 'description'] as const;
 
 // For update_issue and set_status the requestId is optional: setting the same values again
 // changes nothing. With a requestId, though, a retry returns the original result instead of a
@@ -271,6 +300,7 @@ const updateIssue = object(
       ),
     ),
     parent: optional(nullable(identifier('Parent identifier, or null to remove.'))),
+    model: optional(nullable(modelChoice(`${MODEL_INPUT} null removes the issue's own model (it then inherits again).`))),
     description: optional(
       string({
         description: 'New Markdown description (replaces the old one). Requires expectedDescriptionVersion.',
@@ -331,6 +361,10 @@ const listLabels = object({
 
 const listStatuses = object({
   team: optional(teamKey('Only the statuses of this team.')),
+});
+
+const listModels = object({
+  provider: optional(string({ description: 'Only models of this provider (ID, e.g. "anthropic").', min: 1, max: MODEL_LIMITS.provider, transform: (s) => s.trim() })),
 });
 
 const listInbox = object({
@@ -448,6 +482,7 @@ const SCHEMAS = {
   list_projects: listProjects,
   list_labels: listLabels,
   list_statuses: listStatuses,
+  list_models: listModels,
   list_inbox: listInbox,
   search_articles: searchArticles,
   list_articles: listArticles,
@@ -469,14 +504,14 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   list_issues: {
     title: 'List issues',
     description:
-      'List issues with a preset filter (assigned, due, overdue, in_progress, done_today, triage, sprint) and/or by team, status, label and project. Filters combine with AND; without filter or status you get all open issues (triage up to the started statuses). Deleted issues are never returned. Sorted by priority (urgent first, none last), then due date.',
+      'List issues with a preset filter (assigned, due, overdue, in_progress, done_today, triage, sprint) and/or by team, status, label, project and model. Filters combine with AND; without filter or status you get all open issues (triage up to the started statuses). Deleted issues are never returned. Sorted by priority (urgent first, none last), then due date.',
     annotations: READ,
   },
   get_issue: {
     title: 'Get issue',
     // legacy-xlr8: the description names the deprecated field reviewedBySteven
     description:
-      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (blocks, related, duplicate), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries. `reviewedByOwner` is true unless an unread inbox entry waits for the owner; `reviewedBySteven` is a deprecated copy of it and will be removed.',
+      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (blocks, related, duplicate), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries. `model` is the issue\'s own desired model; `effectiveModel` the one that applies, with its `source` (issue, parent or team default). `reviewedByOwner` is true unless an unread inbox entry waits for the owner; `reviewedBySteven` is a deprecated copy of it and will be removed.',
     annotations: READ,
   },
   create_issues: {
@@ -488,7 +523,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   update_issue: {
     title: 'Update issue',
     description:
-      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date, snooze or parent. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. Set `snoozedUntil` to a future day to snooze an issue (hidden from the owner\'s lists, back in the inbox with a push that morning) and null to unsnooze it. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it.',
+      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date, snooze, parent or model. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. Set `snoozedUntil` to a future day to snooze an issue (hidden from the owner\'s lists, back in the inbox with a push that morning) and null to unsnooze it. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   set_status: {
@@ -530,6 +565,12 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
     title: 'List statuses',
     description:
       'List the workflow statuses of each team in workflow order: name, type (triage, backlog, unstarted, started, completed, canceled) and key. Teams define their own statuses; use the names in set_status, update_issue and list_issues. A team with strictOrder only allows moving to the next status, canceling, and the listed exceptions; get_issue then returns allowedStatuses, and a disallowed change fails with invalid_transition and the allowed targets.',
+    annotations: READ,
+  },
+  list_models: {
+    title: 'List models',
+    description:
+      'List the models the owner enabled for issues (Settings → Models, from the models.dev catalog): provider, model ID, name, the valid `efforts` (empty = no effort setting) and `speeds` ("standard" plus modes such as "fast"), context window and output limit in tokens. Only these models, efforts and speeds can be set as an issue\'s `model`. Also lists the team defaults. An issue\'s effective model is its own, else its parent\'s, else its team\'s default, else none: then whoever runs the issue decides.',
     annotations: READ,
   },
   list_inbox: {

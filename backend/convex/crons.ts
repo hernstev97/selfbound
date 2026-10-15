@@ -16,5 +16,7 @@ crons.hourly('push-morning', { minuteUTC: 0 }, internal.push.morning, {});
 crons.hourly('cleanup-oauth', { minuteUTC: 35 }, internal.oauth.cleanup, {});
 // GitHub: check the webhooks in all repos of the token and create missing ones (never locally).
 crons.daily('github-webhooks', { hourUTC: 3, minuteUTC: 30 }, internal.githubPr.ensureWebhooksDaily, {});
+// The models.dev catalog for the desired model per issue (If-None-Match; a failure keeps the last state).
+crons.daily('sync-models', { hourUTC: 4, minuteUTC: 10 }, internal.models.sync, {});
 
 export default crons;

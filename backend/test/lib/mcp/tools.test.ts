@@ -33,6 +33,7 @@ describe('tool definitions', () => {
       list_teams: true,
       list_projects: true,
       list_labels: true,
+      list_models: true,
       create_issues: false,
       update_issue: false,
       set_status: false,
@@ -124,7 +125,7 @@ describe('argument validation', () => {
       }),
     );
     expect(bad).toEqual([
-      'issues[0].assignee: unknown field (allowed: team, title, description, status, priority, labels, project, estimate, dueDate, parent)',
+      'issues[0].assignee: unknown field (allowed: team, title, description, status, priority, labels, project, estimate, dueDate, parent, model)',
       'issues[0].team: "K" is not a team key like "ACME"',
       'issues[0].title: must be at least 1 character long',
       'issues[0].priority: "critical" is not a priority (0-4 or none/urgent/high/medium/low)',
@@ -132,6 +133,19 @@ describe('argument validation', () => {
     ]);
     expect(errors(checkToolArguments('create_issues', { requestId: 'short', issues: [{ team: 'ACME', title: 'x' }] }))).toEqual([
       'requestId: must be at least 8 characters long',
+    ]);
+  });
+
+  test('model: object with provider and model ID, null removes it in update_issue', () => {
+    const ok = checkToolArguments('update_issue', { identifier: 'acme-1', model: { provider: ' anthropic ', modelId: 'claude-opus-5-5', effort: 'xhigh' } });
+    expect(ok.ok && ok.value.model).toEqual({ provider: 'anthropic', modelId: 'claude-opus-5-5', effort: 'xhigh' });
+    const cleared = checkToolArguments('update_issue', { identifier: 'acme-1', model: null });
+    expect(cleared.ok && cleared.value.model).toBeNull();
+    expect(errors(checkToolArguments('update_issue', { identifier: 'acme-1', model: 'anthropic/claude-opus-5-5' }))).toEqual([
+      'model: expected an object, got string',
+    ]);
+    expect(errors(checkToolArguments('create_issues', { requestId: 'req-00001', issues: [{ team: 'ACME', title: 'x', model: { provider: 'anthropic' } }] }))).toEqual([
+      'issues[0].model.modelId: required',
     ]);
   });
 

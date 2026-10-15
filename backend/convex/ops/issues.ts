@@ -36,6 +36,7 @@ import {
   checkDescription,
   checkEstimate,
   checkLabels,
+  checkModel,
   checkParent,
   checkProject,
   checkTitle,
@@ -179,6 +180,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       estimate: item.estimate === undefined ? undefined : checkEstimate(item.estimate),
       dueDate: item.dueDate === undefined ? undefined : checkDay(item.dueDate, 'The due date'),
       parentId: item.parentId ? (await checkParent(ctx, null, item.parentId))._id : undefined,
+      model: item.model ? await checkModel(ctx, item.model) : undefined,
     });
   }
 
@@ -209,6 +211,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       ...(p.estimate !== undefined ? { estimate: p.estimate } : {}),
       ...(p.dueDate ? { dueDate: p.dueDate } : {}),
       ...(p.parentId ? { parentId: p.parentId } : {}),
+      ...(p.model ? { model: p.model } : {}),
       rank: ranks[i],
       createdBy: actor,
       // Legacy marker (see schema): lets the inbox migration tell issues apart that never had an entry.
@@ -346,6 +349,9 @@ export async function applyPatch(
   }
   if (patch.parentId !== undefined) {
     set('parentId', patch.parentId === null ? undefined : (await checkParent(ctx, issue._id, patch.parentId))._id);
+  }
+  if (patch.model !== undefined) {
+    set('model', patch.model === null ? undefined : await checkModel(ctx, patch.model, { keep: issue.model, undo: opts.undo }));
   }
 
   if (changes.status !== undefined) Object.assign(changes, statusTimestamps(issue, changes.status, now));

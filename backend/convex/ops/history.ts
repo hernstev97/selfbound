@@ -8,7 +8,7 @@ import { noteChange } from './inboxChanges';
 //
 // Field names: 'created' (exactly one row on creation), the issue fields
 // (title, status, priority, labelIds, projectId, estimate, dueDate, parentId,
-// rank), 'sprint', 'description' (version and preview only), 'comment',
+// model, rank), 'sprint', 'description' (version and preview only), 'comment',
 // 'comment_edited', 'comment_removed', 'relation', 'relation_removed',
 // 'deleted', 'restored', 'reviewed', 'unreviewed'.
 

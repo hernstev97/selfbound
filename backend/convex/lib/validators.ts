@@ -1,5 +1,5 @@
 import { v, type Infer } from 'convex/values';
-import { priorityValidator, projectStateValidator, sprintOutcomeValidator, statusValidator } from '../schema';
+import { modelChoiceValidator, priorityValidator, projectStateValidator, sprintOutcomeValidator, statusValidator } from '../schema';
 
 // Shared argument validators for UI mutations and MCP.
 // For optional fields, `null` means "clear".
@@ -19,6 +19,7 @@ export const newIssueValidator = v.object({
   dueDate: v.optional(v.string()), // YYYY-MM-DD
   parentId: v.optional(v.id('issues')),
   sprintId: v.optional(v.id('sprints')),
+  model: v.optional(modelChoiceValidator),
 });
 export type NewIssue = Infer<typeof newIssueValidator>;
 
@@ -34,6 +35,7 @@ export const issuePatchValidator = v.object({
   snoozedUntil: v.optional(v.union(v.string(), v.null())), // day after today; hides the issue until then
   parentId: v.optional(v.union(v.id('issues'), v.null())),
   sprintId: v.optional(v.union(v.id('sprints'), v.null())),
+  model: v.optional(v.union(modelChoiceValidator, v.null())), // desired model (XLR8-93)
 });
 export type IssuePatch = Infer<typeof issuePatchValidator>;
 export type PatchField = keyof IssuePatch;
@@ -49,6 +51,7 @@ export const PATCH_FIELDS: PatchField[] = [
   'snoozedUntil',
   'parentId',
   'sprintId',
+  'model',
 ];
 
 export const revertItemValidator = v.object({
