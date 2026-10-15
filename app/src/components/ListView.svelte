@@ -141,6 +141,84 @@
     };
   }
 
+  // Checkbox Shift+click and click+drag: one set of listeners for the whole list (no per-row cost).
+  // The first press toggles the row (its state decides select or deselect for the drag), moving over
+  // other rows selects the range from there. Touch has no checkbox (hidden on phones): not covered.
+  function rangeSelect(el: HTMLElement) {
+    const rowAt = (x: number, y: number) =>
+      document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+    let dragging = false;
+    let swallowClick = false;
+    let last: IssueId | undefined;
+    let pointer = { x: 0, y: 0 };
+    let frame = 0;
+    const over = () => {
+      const id = rowAt(pointer.x, pointer.y);
+      if (id && id !== last) {
+        last = id;
+        controller.selectRange(id);
+      }
+    };
+    // Near the top or bottom edge the list scrolls on its own while the button is held.
+    const tick = () => {
+      if (!dragging) return;
+      const box = el.getBoundingClientRect();
+      const edge = 48;
+      const speed = pointer.y < box.top + edge ? pointer.y - box.top - edge : pointer.y > box.bottom - edge ? pointer.y - box.bottom + edge : 0;
+      if (speed) {
+        el.scrollTop += Math.max(-24, Math.min(24, speed / 2));
+        over();
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      if (!dragging) return;
+      dragging = false;
+      cancelAnimationFrame(frame);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      // The click after pointerup still arrives; later it must work normally again (keyboard activation).
+      setTimeout(() => (swallowClick = false), 0);
+    };
+    const move = (e: PointerEvent) => {
+      pointer = { x: e.clientX, y: e.clientY };
+      over();
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || e.button !== 0 || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement;
+      if (target.dataset.cell !== 'check') return;
+      const id = target.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+      if (!id) return;
+      app.setPane(controller === app.side ? 'side' : 'main');
+      // No text selection and no native row drag (sprint planning) from the checkbox.
+      e.preventDefault();
+      if (e.shiftKey) controller.selectRange(id);
+      else controller.toggleSelect(id);
+      swallowClick = true;
+      dragging = true;
+      last = id;
+      pointer = { x: e.clientX, y: e.clientY };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
+      frame = requestAnimationFrame(tick);
+    };
+    const click = (e: MouseEvent) => {
+      if (!swallowClick) return;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('click', click, true);
+    return () => {
+      stop();
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('click', click, true);
+    };
+  }
+
   function scroller(el: HTMLDivElement) {
     controller.registerScroller(el);
     scrollTop = el.scrollTop;
@@ -228,6 +306,7 @@
     ondrop={onDrop}
     {@attach scroller}
     {@attach longpress}
+    {@attach rangeSelect}
     {@attach listMotion(controller, () => rowHeight)}
   >
     {#if list.empty}

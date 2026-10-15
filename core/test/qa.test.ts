@@ -533,3 +533,45 @@ describe('move to team', () => {
     expect(calls(client, 'issues:moveTeam')).toHaveLength(0);
   });
 });
+
+describe('range selection (checkbox Shift+click and drag)', () => {
+  const five = () => [doc(0), doc(1), doc(2), doc(3), doc(4)];
+  const sel = (app: App) => app.list.selection().sort();
+
+  test('Shift+click selects from the anchor, again it extends and shrinks', async () => {
+    const { app } = await setup(five());
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    const order = app.list.order();
+    app.list.toggleSelect(order[1]);
+    app.list.selectRange(order[3]);
+    expect(sel(app)).toEqual([order[1], order[2], order[3]].sort());
+    app.list.selectRange(order[4]);
+    expect(sel(app)).toEqual([order[1], order[2], order[3], order[4]].sort());
+    app.list.selectRange(order[2]);
+    expect(sel(app)).toEqual([order[1], order[2]].sort());
+    app.list.selectRange(order[0]);
+    expect(sel(app)).toEqual([order[0], order[1]].sort());
+  });
+
+  test('the anchor state decides: starting on a selected row deselects the range', async () => {
+    const { app } = await setup(five());
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    const order = app.list.order();
+    app.list.selectAll();
+    app.list.toggleSelect(order[1]);
+    app.list.selectRange(order[3]);
+    expect(sel(app)).toEqual([order[0], order[4]].sort());
+  });
+
+  test('without an anchor it toggles; other selection changes start a new base', async () => {
+    const { app } = await setup(five());
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    const order = app.list.order();
+    app.list.selectRange(order[2]);
+    expect(sel(app)).toEqual([order[2]]);
+    app.list.selectRange(order[3]);
+    app.list.toggleSelect(order[0]);
+    app.list.selectRange(order[1]);
+    expect(sel(app)).toEqual([order[0], order[1], order[2], order[3]].sort());
+  });
+});
