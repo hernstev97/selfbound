@@ -173,23 +173,33 @@ async function syncLogos(ctx: ActionCtx, providers: string[], changed: ReadonlyS
   const known: Record<string, { etag?: string }> = await ctx.runQuery(internal.models.logoStateQuery, {});
   const targets = providers.filter((p) => !known[p] || changed.has(p));
   for (let i = 0; i < targets.length; i += LOGOS_PARALLEL) {
-    await Promise.all(
-      targets.slice(i, i + LOGOS_PARALLEL).map(async (provider) => {
-        let stored: Id<'_storage'> | undefined;
+    // Fetched in parallel, stored one after the other (parallel storage writes collide in the test runtime).
+    const batch = targets.slice(i, i + LOGOS_PARALLEL);
+    const results = await Promise.all(
+      batch.map(async (provider) => {
         try {
-          const res = await fetchLogo(provider, known[provider]?.etag);
-          if (res.status === 'not_modified') return;
-          // Checked like a team logo (no scripts, no external references …), any aspect ratio; else none.
-          if (res.status === 'ok' && checkLogo(res.svg, 'image/svg+xml', { square: false }).ok) {
-            stored = await ctx.storage.store(new Blob([res.svg as BlobPart], { type: 'image/svg+xml' }));
-          }
-          await ctx.runMutation(internal.models.setLogo, { provider, ...(stored ? { storageId: stored } : {}), ...(res.etag ? { etag: res.etag } : {}) });
+          return { provider, res: await fetchLogo(provider, known[provider]?.etag) };
         } catch (error) {
-          if (stored) await ctx.storage.delete(stored);
           console.warn('models.dev logo failed:', provider, error instanceof Error ? error.message : String(error));
+          return null;
         }
       }),
     );
+    for (const result of results) {
+      if (!result || result.res.status === 'not_modified') continue;
+      const { provider, res } = result;
+      let stored: Id<'_storage'> | undefined;
+      try {
+        // Checked like a team logo (no scripts, no external references …), any aspect ratio; else none.
+        if (res.status === 'ok' && checkLogo(res.svg, 'image/svg+xml', { square: false }).ok) {
+          stored = await ctx.storage.store(new Blob([res.svg as BlobPart], { type: 'image/svg+xml' }));
+        }
+        await ctx.runMutation(internal.models.setLogo, { provider, ...(stored ? { storageId: stored } : {}), ...(res.etag ? { etag: res.etag } : {}) });
+      } catch (error) {
+        if (stored) await ctx.storage.delete(stored);
+        console.warn('models.dev logo not stored:', provider, error instanceof Error ? error.message : String(error));
+      }
+    }
   }
 }
 
