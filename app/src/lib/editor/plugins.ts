@@ -29,6 +29,7 @@ import {
   toggle,
   toggleList,
 } from './commands.ts';
+import { mentionStatus, type EditorMentions } from './mentions.ts';
 import { schema } from './schema.ts';
 import { nextCellOrRow, tableCommands, tableShape } from './table.ts';
 
@@ -406,6 +407,8 @@ export function closeSlash(view: EditorView) {
 export interface PluginOptions extends KeyHooks {
   placeholder: () => string;
   slashKey: (event: KeyboardEvent) => boolean;
+  /** Status icons next to issue identifiers (optional: tests and standalone use go without). */
+  mentions?: EditorMentions;
 }
 
 export function plugins(options: PluginOptions): Plugin[] {
@@ -422,5 +425,6 @@ export function plugins(options: PluginOptions): Plugin[] {
     tableShape(),
     placeholder(options.placeholder),
     highlight(),
+    ...(options.mentions ? [mentionStatus(options.mentions)] : []),
   ];
 }
