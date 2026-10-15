@@ -126,7 +126,7 @@ test('Triage 2: duplicate with a typed identifier, suggestions without input; Ct
   const client = backend();
   const detail = async () => (await client.query(api.issues.detail, { id: id as never }))!;
   await expect.poll(async () => (await detail()).relations.map((r) => r.type)).toEqual(['duplicate']);
-  const statusOf = async () => (await Promise.all([0, 1, 2, 3, 4, 5, 6, 7].map((bucket) => client.query(api.issues.bucket, { bucket })))).flat().find((i) => i._id === id)?.status;
+  const statusOf = async () => (await Promise.all(Array.from({ length: 32 }, (_, bucket) => bucket).map((bucket) => client.query(api.issues.bucket, { bucket })))).flat().find((i) => i._id === id)?.status;
   await expect.poll(statusOf).toBe('duplicate');
   await page.keyboard.press('Control+z');
   await settled(page);

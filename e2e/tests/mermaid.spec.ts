@@ -25,7 +25,8 @@ const SEQUENCE = '```mermaid\nsequenceDiagram\n  participant U as User\n  partic
 
 test('A diagram is drawn in the description, light and dark; the chunk loads only for texts with a diagram', async ({ page }, testInfo) => {
   const chunks: string[] = [];
-  page.on('request', (r) => /mermaid|beautiful|elk/i.test(r.url()) && r.url().endsWith('.js') && chunks.push(r.url()));
+  // The lazy chunk is named after the renderer (a hash may contain any letters, so match the name part only)
+  page.on('request', (r) => /\/assets\/mermaid-[\w-]+\.js$/.test(new URL(r.url()).pathname) && chunks.push(r.url()));
   await freshIssue(page, 'Plain text without a diagram.');
   await expect(page.getByTestId('detail-description')).toContainText('Plain text');
   await page.waitForTimeout(500);
