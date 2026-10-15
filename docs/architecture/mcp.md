@@ -26,7 +26,7 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 1. HTTP action: read the key or access token, check the format, hash with SHA-256, call `internal.agents.authenticate` (one query; looks among keys first, then among access tokens, and checks their expiry). Failure → 401. All further internal functions only receive this hash.
 2. `handleMcpHttp` validates JSON-RPC and the arguments against the tool's schema (English error messages with the path). If that fails, `internal.mcp.countFailedCall` still counts the call.
-3. **Read tool** (`readOnlyHint`): first `internal.mcp.countCall` (small mutation: check revocation and expiry, count the call), then `internal.mcp.read` (a **query**: check the key again, run the tool). The action passes the calendar day (Europe/Berlin) as the argument `today`, so the query doesn't depend on the clock. For the same reason `read` does not check access token expiry; `countCall` did that right before.
+3. **Read tool** (`readOnlyHint`): first `internal.mcp.countCall` (small mutation: check revocation and expiry, count the call), then `internal.mcp.read` (a **query**: check the key again, run the tool). The action passes the calendar day in the instance time zone (`internal.instance.timeZone`) as the argument `today`, so the query doesn't depend on the clock. For the same reason `read` does not check access token expiry; `countCall` did that right before.
 4. **Write tool:** **one** internal mutation `internal.mcp.call` does everything in one transaction: check key and revocation again, count the call, idempotency (requestId), run the operation with actor `{kind: 'agent', agentId}`, store the result. If it fails for a business reason, everything is rolled back; `countFailedCall` then counts the call.
 5. If a mutation fails because of write conflicts (many concurrent changes to the same issue), the action retries up to six times. That is safe because a failed mutation wrote nothing.
 
@@ -105,7 +105,7 @@ All filters run over indexes, not over all issues. Deleted issues never appear. 
 | `due` | open and due by today + `dueWithinDays`, overdue included | `by_status_due` (extended), open statuses only |
 | `overdue` | open and due before today | `by_status_due` (extended), open statuses only |
 | `in_progress` | in progress or in review | `by_team_priority` |
-| `done_today` | completed today (calendar day in Europe/Berlin) | `by_status_completed` (extended) |
+| `done_today` | completed today (calendar day in the instance time zone) | `by_status_completed` (extended) |
 | `triage` | triage | `by_team_priority` |
 | `sprint` | in the active sprint | `by_sprint` |
 | `project` (argument) | issues of a project | `by_project` (extended) |
@@ -133,7 +133,7 @@ On the Convex free plan (1 GB database I/O per month) that is roughly 10,000 typ
 ### `update_issue`: compare-and-set per field
 
 - Only the fields passed change. `null` removes project, estimate, due date, snooze or parent.
-- `snoozedUntil` (YYYY-MM-DD, after today in Europe/Berlin) snoozes an open issue: the owner's lists no longer show it, and on that day, in the morning, it returns to the inbox with a push notification. `null` unsnoozes. Moving the issue to done, canceled or duplicate ends the snooze (`changed` then includes `snoozedUntil`). `list_issues` and `get_issue` show `snoozedUntil`; `snoozed: true` lists only snoozed issues, `false` only the others (without it, snoozed issues are listed like any other).
+- `snoozedUntil` (YYYY-MM-DD, after today in the instance time zone) snoozes an open issue: the owner's lists no longer show it, and on that day, in the morning, it returns to the inbox with a push notification. `null` unsnoozes. Moving the issue to done, canceled or duplicate ends the snooze (`changed` then includes `snoozedUntil`). `list_issues` and `get_issue` show `snoozedUntil`; `snoozed: true` lists only snoozed issues, `false` only the others (without it, snoozed issues are listed like any other).
 - `expected` holds the values the agent last saw (labels as a set, case-insensitive). If a field has changed in the meantime, **that field is not written**; the others are. The result lists it under `conflicts` with expected and current value and a message.
 - The description changes only with `expectedDescriptionVersion` (from `get_issue`). If the version doesn't match, `description` is listed under `conflicts` and nothing is overwritten.
 - `changed` lists the fields that actually changed, `warnings` the priority budget warning.

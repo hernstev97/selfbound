@@ -156,7 +156,7 @@ export const prItemFields = {
 export const prItemValidator = v.object(prItemFields);
 export const prReviewSummaryValidator = v.union(v.literal('approved'), v.literal('changes_requested'));
 
-/** Calendar day as a string "YYYY-MM-DD" (Europe/Berlin). */
+/** Calendar day as a string "YYYY-MM-DD" in the instance time zone (instanceSettings). */
 const day = v.string();
 
 export default defineSchema({
@@ -245,7 +245,7 @@ export default defineSchema({
     projectId: v.optional(v.id('projects')),
     estimate: v.optional(v.number()),
     dueDate: v.optional(day),
-    // Snoozed: hidden from the lists until this day (Europe/Berlin). The morning job clears it and
+    // Snoozed: hidden from the lists until this day (instance time zone). The morning job clears it and
     // puts the issue back into the inbox. Missing = not snoozed (no migration needed).
     snoozedUntil: v.optional(day),
     parentId: v.optional(v.id('issues')),
@@ -717,6 +717,13 @@ export default defineSchema({
     at: v.number(),
   }).index('by_key', ['key']),
 
+  // Instance settings (one row; missing = defaults). `timeZone` is an IANA name; it decides where a
+  // calendar day begins (ops/instance.ts). Missing = Europe/Berlin, as before the setting existed.
+  instanceSettings: defineTable({
+    timeZone: v.string(),
+    updatedAt: v.number(),
+  }),
+
   // Test switches (only effective with XLR8_TEST_SWITCHES=1), e.g. "server rejects writes".
   settings: defineTable({
     key: v.string(),
@@ -741,7 +748,7 @@ export default defineSchema({
   // Notification settings (one row). If missing, the defaults from shared/notifyEvents.ts apply.
   pushSettings: defineTable({
     events: v.record(v.string(), v.boolean()), // only deviations from the default
-    morningHour: v.optional(v.number()), // Berlin hour of the morning notification
+    morningHour: v.optional(v.number()), // hour of the morning notification in the instance time zone
   }),
 
   // Events that lead to a notification (outbox). `key` is unique: the same event reported twice

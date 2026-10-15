@@ -2,7 +2,7 @@ import { httpRouter } from 'convex/server';
 import { internal } from './_generated/api';
 import { httpAction, type ActionCtx } from './_generated/server';
 import { healthStatus } from './health';
-import { berlinDay } from './lib/dates';
+import { dayInZone } from './lib/dates';
 import { resolveMediaLocation } from './githubPr';
 import { githubHeaders, verifySignature } from './lib/github';
 import { MEDIA_PATH } from './lib/githubMedia';
@@ -46,7 +46,7 @@ const mcp = httpAction(async (ctx, request) => {
     await fromFetchRequest(request),
     {
       sha256: sha256Hex,
-      today: () => berlinDay(Date.now()),
+      today: async () => dayInZone(Date.now(), await ctx.runQuery(internal.instance.timeZone, {})),
       authenticate: (keyHash, now) => ctx.runQuery(internal.agents.authenticate, { keyHash, now }),
       countCall: (keyHash) => ctx.runMutation(internal.mcp.countCall, { keyHash }),
       read: (keyHash, tool, args, today) => ctx.runQuery(internal.mcp.read, { keyHash, tool, args: plain(args), today }),

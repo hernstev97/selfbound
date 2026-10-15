@@ -4,9 +4,13 @@ import { expect } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import schema from '../convex/schema';
+import { dayInZone, DEFAULT_TIME_ZONE } from '../convex/lib/dates';
 import { auditSprints } from '../convex/ops/sprints';
 import type { Status } from '../convex/shared/constants';
 import { stateForStatus } from '../convex/shared/workflow';
+
+/** Calendar day in Europe/Berlin, the zone every test instance has unless a test sets another. */
+export const berlinDay = (ms: number) => dayInZone(ms, DEFAULT_TIME_ZONE);
 
 export const modules = import.meta.glob('../convex/**/*.*s');
 

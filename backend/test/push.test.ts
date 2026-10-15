@@ -6,7 +6,8 @@ import { pushLocale, pushText, PUSH_DE } from '../convex/lib/pushText';
 import { generateVapidKeys } from '../convex/lib/webpush';
 import { addComment } from '../convex/ops/comments';
 import { createIssues } from '../convex/ops/issues';
-import { berlinHour, bundleMessages, plainPreview, vapidForSending } from '../convex/ops/notify';
+import { hourInZone } from '../convex/lib/dates';
+import { bundleMessages, plainPreview, vapidForSending } from '../convex/ops/notify';
 import { OWNER_KIND } from '../convex/shared/constants';
 import { createOne, fixture, getIssue, setup, type Client, type T } from './helpers';
 import { decryptPush, fakeBrowser, type FakeBrowser } from './lib/pushBrowser';
@@ -280,7 +281,7 @@ describe('morning notification', () => {
     await createOne(owner, f.orb, { title: 'Done', dueDate: '2026-10-01', status: 'done' });
     await createOne(owner, f.nova, { title: 'Dormant', dueDate: '2026-10-01' });
     await owner.mutation(api.teams.update, { teamId: f.nova, dormant: true });
-    expect(berlinHour(at(5))).toBe(7);
+    expect(hourInZone(at(5), 'Europe/Berlin')).toBe(7);
 
     vi.setSystemTime(at(5));
     expect((await t.mutation(internal.push.morning, {})).sent).toEqual([]);

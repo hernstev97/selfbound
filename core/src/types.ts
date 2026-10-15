@@ -38,6 +38,8 @@ export interface Meta {
   rejectWrites: boolean;
   /** The owner's profile; missing in a cache written before the profile existed */
   owner?: OwnerProfile;
+  /** Instance time zone (IANA name); null = not set yet, missing in an older cache */
+  timeZone?: string | null;
 }
 
 /** Display name and picture URL of the owner (null = not set). */

@@ -2,13 +2,14 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { SPRINT, takeCounter } from '../lib/counters';
-import { addDays, berlinDay, daysBetween, nextMonday } from '../lib/dates';
+import { addDays, daysBetween, nextMonday } from '../lib/dates';
 import { fail, invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
 import { teamKeys } from '../lib/identifiers';
 import type { SprintDecision, SprintOutcome } from '../lib/validators';
 import { isOpen, type SprintItemKind } from '../shared/constants';
 import { record } from './history';
+import { todayOf } from './instance';
 import { applyPatch } from './issues';
 import { checkDay, checkName, getIssue } from './validate';
 
@@ -165,7 +166,7 @@ async function insertSprint(
   now: number,
 ) {
   const number = await takeCounter(ctx, SPRINT);
-  const startDate = fields.startDate ? checkDay(fields.startDate, 'The start date') : suggestedStart(await openSprints(ctx), berlinDay(now));
+  const startDate = fields.startDate ? checkDay(fields.startDate, 'The start date') : suggestedStart(await openSprints(ctx), await todayOf(ctx, now));
   const endDate = fields.endDate ? checkDay(fields.endDate, 'The end date') : addDays(startDate, DEFAULT_SPRINT_DAYS - 1);
   if (daysBetween(startDate, endDate) < 0) invalid('The end date is before the start date.');
   if (fields.capacity !== undefined && (!Number.isFinite(fields.capacity) || fields.capacity < 0)) {
@@ -297,7 +298,7 @@ export async function startSprint(ctx: MutationCtx, _actor: Actor, args: { sprin
     });
   }
   const now = Date.now();
-  const today = berlinDay(now);
+  const today = await todayOf(ctx, now);
   const early = sprint.startDate > today;
   const overdue = sprint.endDate < today;
   const range = early
@@ -334,7 +335,7 @@ export async function closeSprint(ctx: MutationCtx, actor: Actor, args: CloseSpr
       );
     }
     const now = Date.now();
-    const today = berlinDay(now);
+    const today = await todayOf(ctx, now);
     // Closed early: end today (before creating a follow-up sprint, so that one starts after it).
     const endedEarly = sprint.endDate > today && sprint.startDate <= today ? today : null;
     if (endedEarly) await ctx.db.patch('sprints', sprint._id, { endDate: endedEarly });

@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import type { Actor } from '../convex/lib/actor';
-import { addDays, berlinDay, nextMonday, weekdayOf } from '../convex/lib/dates';
+import { addDays, nextMonday, weekdayOf } from '../convex/lib/dates';
 import { createIssues } from '../convex/ops/issues';
 import { addToSprint, suggestedStart } from '../convex/ops/sprints';
-import { createOne, expectCode, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
+import { berlinDay, createOne, expectCode, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
 async function items(owner: Client, sprintId: Id<'sprints'>) {
   return await owner.query(api.sprints.items, { sprintId });

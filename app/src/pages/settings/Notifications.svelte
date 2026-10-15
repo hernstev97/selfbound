@@ -27,6 +27,7 @@
   const on = $derived(here !== null && permission === 'granted');
   const configured = $derived(config.current?.publicKey != null);
   const hour = $derived(config.current?.morningHour ?? 8);
+  const zone = $derived(config.current?.timeZone ?? null);
 
   async function setOn(value: boolean) {
     if (busy || value === on) return;
@@ -123,7 +124,7 @@
   {#each NOTIFY_EVENTS as event (event.id)}
     {@const enabled = config.current?.events[event.id] ?? event.default}
     <div class="card-row" data-testid="push-event" data-kind={event.id}>
-      <span class="t">{t(event.label)}<div class="sub">{event.id === 'due' || event.id === 'sprint_end' || event.id === 'snooze' ? `${t(event.hint)} ${t('At {hour}:00.', { hour })}` : t(event.hint)}</div></span>
+      <span class="t">{t(event.label)}<div class="sub">{event.id === 'due' || event.id === 'sprint_end' || event.id === 'snooze' ? `${t(event.hint)} ${zone ? t('At {hour}:00 ({zone}).', { hour, zone: zone.replaceAll('_', ' ') }) : t('At {hour}:00.', { hour })}` : t(event.hint)}</div></span>
       <span class="seg">
         <button class={[enabled && 'on']} disabled={config.current === undefined} onclick={() => setEvent(event.id, true)}>{t('On')}</button><button class={[!enabled && 'on']} disabled={config.current === undefined} onclick={() => setEvent(event.id, false)}>{t('Off')}</button>
       </span>

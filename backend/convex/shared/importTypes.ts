@@ -81,8 +81,8 @@ export interface ImportSprint {
   linearNumber: number; // cycle number in Linear (per team)
   name: string; // name from Linear or "KIU Cycle 12"
   description?: string;
-  startDate: string; // YYYY-MM-DD (Europe/Berlin)
-  endDate: string; // YYYY-MM-DD (Europe/Berlin), last day
+  startDate: string; // YYYY-MM-DD (time zone chosen at import)
+  endDate: string; // YYYY-MM-DD (same time zone), last day
   startsAt: number;
   endsAt: number;
   completedAt?: number;

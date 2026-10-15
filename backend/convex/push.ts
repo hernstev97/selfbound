@@ -6,6 +6,7 @@ import { ownerAction, ownerMutation, ownerQuery, ownerWriteMutation } from './li
 import { invalid } from './lib/errors';
 import { pushLocale, pushText } from './lib/pushText';
 import { buildPushRequest, pushTopic, type PushTarget, type VapidKeys } from './lib/webpush';
+import { timeZoneOf } from './ops/instance';
 import { claimPending, confirmInApp as runConfirm, finishDelivery, markSeen, morning as runMorning, PRESENCE_MS, readPushSettings, recordResults, vapidForSending, vapidFromEnv } from './ops/notify';
 import { NOTIFY_KINDS, type NotifyKind, type PushMessage } from './shared/notifyEvents';
 
@@ -24,6 +25,7 @@ export const config = ownerQuery({
       publicKey: vapidFromEnv()?.publicKey ?? null,
       events: settings.events,
       morningHour: settings.morningHour,
+      timeZone: await timeZoneOf(ctx),
       devices: devices.map((d) => ({
         id: d._id,
         endpoint: d.endpoint,
