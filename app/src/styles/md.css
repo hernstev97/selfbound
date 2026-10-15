@@ -55,6 +55,76 @@
 .md a.xlink:hover {
   background: color-mix(in oklch, var(--accent) 22%, transparent);
 }
+/* Issue mention with live status (mentions.ts): icon, then identifier; title on hover and focus. */
+.md a.mention {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: baseline;
+}
+.md a.mention .mention-icon {
+  width: 14px;
+  height: 14px;
+}
+.md a.mention .mention-icon svg {
+  width: 14px;
+  height: 14px;
+}
+/* Done and canceled recede: muted, canceled also struck through. */
+.md a.mention-done,
+.md a.mention-canceled {
+  color: var(--text-muted);
+  background: color-mix(in oklch, var(--text-muted) 10%, transparent);
+}
+.md a.mention-canceled {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.md a.mention-canceled .mention-icon {
+  text-decoration: none;
+}
+.md a.mention::after {
+  content: attr(data-title);
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 4px);
+  z-index: 20;
+  width: max-content;
+  max-width: min(360px, 80vw);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  box-shadow: 0 0 0 1px var(--border-strong), 0 4px 12px rgb(0 0 0 / 0.25);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+  text-decoration: none;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s;
+}
+.md a.mention:hover::after,
+.md a.mention:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0.4s;
+}
+.md a.mention:focus-visible::after {
+  transition-delay: 0s;
+}
+/* A typed identifier no issue has stays text. */
+.md a.mention-unknown {
+  padding: 0;
+  background: none;
+  color: inherit;
+  font-weight: inherit;
+  cursor: text;
+  pointer-events: none;
+}
 .md a.xlink-wiki::before {
   content: '';
   display: inline-block;
@@ -671,4 +741,25 @@
 .md th {
   border: 1px solid var(--line);
   padding: 4px 8px;
+}
+
+/* Editor: status icon widget and text of a mention (decorations, mentions.ts in lib/editor). */
+.ProseMirror .mention-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  display: inline-flex;
+}
+.ProseMirror .mention-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.ProseMirror .mention-text.mention-done {
+  color: var(--text-muted);
+}
+.ProseMirror .mention-text.mention-canceled {
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
 }

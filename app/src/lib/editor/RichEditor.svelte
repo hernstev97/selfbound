@@ -27,6 +27,8 @@
   import { markdownFragment, parseMarkdown, type Source } from './parse.ts';
   import { closeSlash, plugins, slashKey } from './plugins.ts';
   import { app } from '../../app-instance.ts';
+  import { mentionInfo } from '../mentions.ts';
+  import type { EditorMentions } from './mentions.ts';
   import { t } from '@selfbound/core/i18n';
   import { schema } from './schema.ts';
   import { serializeMarkdown } from './serialize.ts';
@@ -488,6 +490,21 @@
     onchange(markdown);
   }
 
+  // Status icons next to issue identifiers: the same store lookups as the rendered view.
+  let teamKeys: { meta: unknown; keys: ReadonlySet<string> } | null = null;
+  const mentions: EditorMentions = {
+    teamKeys() {
+      const meta = app.store.meta.get();
+      if (teamKeys?.meta !== meta) teamKeys = { meta, keys: new Set(meta?.teams.map((team) => team.key) ?? []) };
+      return teamKeys.keys;
+    },
+    info: (key) => mentionInfo(app.store, key),
+    subscribe(listener) {
+      const stops = [app.store.onChange(listener), app.store.meta.subscribe(() => listener())];
+      return () => stops.forEach((stop) => stop());
+    },
+  };
+
   function createState(markdown: string) {
     const parsed = parseMarkdown(markdown);
     source = parsed.source;
@@ -508,6 +525,7 @@
         },
         submit: () => onsubmit?.() === true,
         link: openLink,
+        mentions,
       }),
     });
   }
