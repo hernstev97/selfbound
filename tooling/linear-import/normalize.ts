@@ -120,15 +120,12 @@ const ms = (iso: string) => {
 const msOpt = (iso: string | null | undefined) => (iso ? ms(iso) : undefined);
 const opt = <T>(v: T | null | undefined): T | undefined => (v === null || v === undefined || v === '' ? undefined : v);
 
-const berlinDay = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'Europe/Berlin',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-/** Calendar day in Europe/Berlin, "YYYY-MM-DD". */
-export function dayInBerlin(t: number) {
-  return berlinDay.format(new Date(t));
+/** Zone for the calendar days of cycles unless the import is told otherwise. */
+export const DEFAULT_TIME_ZONE = 'Europe/Berlin';
+
+/** Calendar day in an IANA time zone, "YYYY-MM-DD". */
+export function dayInTimeZone(t: number, timeZone: string) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(t));
 }
 
 const PR_URL_RE = /^https?:\/\/github\.com\/([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)\/pull\/(\d+)(?:[/?#].*)?$/;
@@ -166,10 +163,14 @@ export interface NormalizeOptions {
   run: string;
   fetchedAt: number;
   statusOverrides?: Record<string, ImportStatus>;
+  /** Time zone of the target instance (Settings → Time zone); cycle days are counted in it. Default Europe/Berlin. */
+  timeZone?: string;
 }
 
 export function normalize(raw: RawLinearData, options: NormalizeOptions): ImportSnapshot {
   const notes: string[] = [];
+  const timeZone = options.timeZone ?? DEFAULT_TIME_ZONE;
+  new Intl.DateTimeFormat('en-CA', { timeZone }); // throws on an unknown zone, before anything is fetched
   const teamKeyById = new Map(raw.teams.map((t) => [t.id, t.key]));
 
   // ---- Teams
@@ -292,9 +293,9 @@ export function normalize(raw: RawLinearData, options: NormalizeOptions): Import
         linearNumber: c.number,
         name: opt(c.name) ?? `${teamKey} Cycle ${c.number}`,
         description: opt(c.description),
-        startDate: dayInBerlin(startsAt),
+        startDate: dayInTimeZone(startsAt, timeZone),
         // endsAt is the moment the cycle ends; its last day lies before that.
-        endDate: dayInBerlin(Math.max(startsAt, endsAt - 1)),
+        endDate: dayInTimeZone(Math.max(startsAt, endsAt - 1), timeZone),
         startsAt,
         endsAt,
         completedAt: msOpt(c.completedAt),

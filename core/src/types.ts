@@ -20,8 +20,12 @@ export type StateDoc = Doc<'workflowStates'>;
 export type StateId = Id<'workflowStates'>;
 export type SprintDoc = Doc<'sprints'>;
 export type Actor = IssueDoc['createdBy'];
-/** Actor kind of the instance owner: legacy stored value for the instance owner (do not change). */
-export const OWNER_KIND = 'steven' as const;
+/** Actor kind of the instance owner. */
+export const OWNER_KIND = 'owner' as const;
+/** Stored value before the rename; still present in data that has not been migrated (legacy-xlr8). */
+export const LEGACY_OWNER_KIND = 'steven' as const;
+/** Does this actor kind belong to the owner? Never compare with OWNER_KIND directly. */
+export const isOwnerKind = (kind: string): kind is typeof OWNER_KIND | typeof LEGACY_OWNER_KIND => kind === OWNER_KIND || kind === LEGACY_OWNER_KIND;
 
 /** Team from `meta.get`, with logo URLs. */
 export type TeamDoc = Doc<'teams'> & { logoUrl: string | null; logoDarkUrl: string | null };
@@ -38,6 +42,8 @@ export interface Meta {
   rejectWrites: boolean;
   /** The owner's profile; missing in a cache written before the profile existed */
   owner?: OwnerProfile;
+  /** Instance time zone (IANA name); null = not set yet, missing in an older cache */
+  timeZone?: string | null;
 }
 
 /** Display name and picture URL of the owner (null = not set). */
@@ -170,14 +176,24 @@ export interface NewIssue {
  */
 export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
-/** scope = planned / added later (active sprint) */
-export type Grouping = 'status' | 'team' | 'priority' | 'project' | 'sprint' | 'scope' | 'none';
+/** scope = planned / added later (active sprint); due, created, updated = date buckets */
+export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
+/** Order of the groups: the natural order, reversed, or the biggest group first */
+export type GroupOrder = 'asc' | 'desc' | 'size';
 export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status' | 'snoozed';
 export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'estimate' | 'due' | 'snoozed' | 'created' | 'updated' | 'team';
 export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'estimate', 'due', 'snoozed', 'created', 'updated'];
 
 export interface Display {
   grouping: Grouping;
+  /** Second level inside each group; missing = none */
+  subGrouping?: Grouping;
+  /** Missing = natural order */
+  groupOrder?: GroupOrder;
+  /** Also show groups without issues; missing = hide them */
+  emptyGroups?: boolean;
+  /** Board only: one column per priority instead of per status; missing = status */
+  boardColumns?: 'priority';
   ordering: Ordering;
   props: DisplayProp[];
   /** Show done, canceled and duplicate issues */
@@ -190,12 +206,14 @@ export type Layout = 'list' | 'board';
 
 /** Board column: one status (same type and name across teams). */
 export interface BoardColumn {
-  /** Group key `<type>:<name>` */
+  /** Group key `<type>:<name>`, or `p:<priority>` in a priority column */
   key: string;
   label: string;
   status: Status;
   type: import('@selfbound/backend/shared/workflow').StateType;
   color: string | null;
+  /** Priority board: the column's priority (`status` and `type` are then placeholders) */
+  priority?: Priority;
   /** The column's issues in the view's order (even when collapsed) */
   ids: IssueId[];
   /** Collapsed: header with count only (done and canceled by default) */
@@ -295,6 +313,8 @@ export type ListRow =
 
 export interface GroupInfo {
   by: Grouping;
+  /** Sub-group: the group it sits in */
+  parent?: GroupInfo;
   /** The group's value (status, team id, priority …) as text */
   value: string;
   label: string;
@@ -303,6 +323,7 @@ export interface GroupInfo {
   color?: string | null;
   priority?: Priority;
   team?: TeamBadge;
+  /** Label groups: the label's color */
   hue?: number;
   /** Team groups: priority budget "Urgent 1/1 · High 3/3" */
   budget?: string;

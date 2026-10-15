@@ -12,7 +12,7 @@ import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate,
 import { setDictionary } from '../src/i18n.ts';
 import de from '../src/locales/de.ts';
 import { eventCombo, formatShortcut } from '../src/keyboard.ts';
-import { OWNER_KIND, type Issue, type IssueDoc, type ViewRoute, type ViewState } from '../src/types.ts';
+import { isOwnerKind, LEGACY_OWNER_KIND, OWNER_KIND, type Issue, type IssueDoc, type ViewRoute, type ViewState } from '../src/types.ts';
 import { doc, entry, meta } from './helpers.ts';
 
 const keyOf = (d: IssueDoc) => `${d.teamId === 't1' ? 'ACME' : 'PX'}-${d.number}`;
@@ -237,10 +237,10 @@ describe('routing by path', () => {
     ['/sprint/close', { name: 'view', view: { kind: 'close', team: null } }],
     ['/sprints', { name: 'sprints' }],
     ['/new', { name: 'new' }],
-    ['/pr/acme/xlr8/57', { name: 'pr', repo: 'acme/xlr8', number: 57 }],
+    ['/pr/acme/widgets/57', { name: 'pr', repo: 'acme/widgets', number: 57 }],
     ['/pr/acme/acme.dev/3', { name: 'pr', repo: 'acme/acme.dev', number: 3 }],
-    ['/pr/acme/xlr8', { name: 'home' }],
-    ['/pr/acme/xlr8/abc', { name: 'home' }],
+    ['/pr/acme/widgets', { name: 'home' }],
+    ['/pr/acme/widgets/abc', { name: 'home' }],
     ['/does/not/exist', { name: 'home' }],
   ])('%s', (path, page) => {
     expect(at(path).page).toEqual(page);
@@ -278,6 +278,14 @@ describe('routing by path', () => {
     expect(isConsentPath('/oauth/freigabe')).toBe(true);
     expect(isConsentPath('/oauth')).toBe(false);
     expect(isConsentPath('/oauth/consent/x')).toBe(false);
+    expect(isConsentPath('/oauth/consent///')).toBe(true);
+    expect(isConsentPath('///')).toBe(false);
+  });
+
+  test('a long run of slashes does not stall the consent check', () => {
+    const start = performance.now();
+    expect(isConsentPath(`${'/'.repeat(200_000)}x`)).toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 
   test('filters and display survive the trip through the URL, other parameters stay', () => {
@@ -291,10 +299,24 @@ describe('routing by path', () => {
     expect(back.group).toBe('priority');
   });
 
+  test('the second grouping level has its own parameter; unknown values are ignored', () => {
+    const url = writeLocation(new URL('http://x/'), { page: { name: 'view', view: { kind: 'all', team: null } }, filters: emptyFilters(), quick: '', group: 'label', sub: 'due', order: null });
+    expect(url.search).toBe('?group=label&sub=due');
+    expect(readLocation(url)).toMatchObject({ group: 'label', sub: 'due' });
+    expect(readLocation(new URL('http://x/all?sub=bogus')).sub).toBeNull();
+  });
+
   test('/new with prefilled values', () => {
     const loc = at('/new?title=Test&priority=high&team=ACME');
     expect(loc.page).toEqual({ name: 'new' });
     expect(loc.params).toEqual({ title: 'Test', priority: 'high', team: 'ACME' });
+  });
+
+  test('/new keeps only the known parameters, names from the URL never become properties', () => {
+    const loc = at('/new?title=Test&__proto__=x&constructor=y&toString=z&other=1');
+    expect(loc.params).toEqual({ title: 'Test' });
+    expect(Object.getPrototypeOf(loc.params)).toBe(Object.prototype);
+    expect(at('/issue/ACME-1?title=Test').params).toEqual({});
   });
 });
 
@@ -369,6 +391,15 @@ describe('odds and ends', () => {
     setDictionary('de', de);
     expect(actorName({ kind: OWNER_KIND }, agents)).toBe('Du');
     setDictionary('en', null);
+  });
+
+  test('legacy owner kind is the owner too, with the profile name from the same map key', () => {
+    // legacy-xlr8: data not yet migrated still says "steven"
+    const legacy = { kind: LEGACY_OWNER_KIND } as const;
+    expect(isOwnerKind(OWNER_KIND) && isOwnerKind(LEGACY_OWNER_KIND) && !isOwnerKind('agent')).toBe(true);
+    expect(actorName(legacy, new Map())).toBe('You');
+    expect(actorName(legacy, new Map([[OWNER_KIND, 'Jane Doe']]))).toBe('Jane Doe');
+    expect(actorName(legacy, new Map(), 'Jane')).toBe('Jane');
   });
 
   test('suggested branch name: no prefix by default, optional prefix', () => {

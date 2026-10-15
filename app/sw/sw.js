@@ -32,7 +32,7 @@ sw.addEventListener('push', (event) => {
       const windows = await sw.clients.matchAll({ type: 'window', includeUncontrolled: true });
       const front = windows.find((c) => c.visibilityState === 'visible' && c.focused && isApp(c.url));
       if (front && !message.test) {
-        front.postMessage({ type: 'xlr8-push', message });
+        front.postMessage({ type: 'selfbound-push', message });
         return;
       }
       await sw.registration.showNotification(message.title || 'Selfbound', {
@@ -42,7 +42,7 @@ sw.addEventListener('push', (event) => {
         renotify: Boolean(message.tag),
         icon: '/icon-192.png',
         badge: '/badge-96.png',
-        // Language of the text, if the backend sends it (push texts follow XLR8_LOCALE).
+        // Language of the text, if the backend sends it (push texts follow SELFBOUND_LOCALE).
         lang: message.lang || undefined,
         timestamp: message.at,
         data: { url: message.url || '/', issueId: message.issueId ?? null, at: message.at ?? Date.now() },
@@ -67,7 +67,7 @@ sw.addEventListener('notificationclick', (event) => {
       const app = windows.find((c) => isApp(c.url));
       if (app) {
         await app.focus();
-        app.postMessage({ type: 'xlr8-open', url: url.pathname + url.search });
+        app.postMessage({ type: 'selfbound-open', url: url.pathname + url.search });
         return;
       }
       await sw.clients.openWindow(url.href);

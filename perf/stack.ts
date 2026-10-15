@@ -17,22 +17,24 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ConvexHttpClient } from 'convex/browser';
 import { api } from '@selfbound/backend/api';
+import { envVar } from '../tooling/lib/env.mjs';
 import { startProxy, type ProxyHandle } from './latency-proxy.ts';
 
 export const here = dirname(fileURLToPath(import.meta.url));
 export const root = join(here, '..');
 
 // Other ports (e.g. parallel worktrees) via the environment:
-//   XLR8_PERF_CONVEX_PORT (HTTP actions one higher), XLR8_PERF_PREVIEW_PORT,
-//   XLR8_PERF_PROXY_CONVEX_PORT, XLR8_PERF_PROXY_PAGE_PORT.
-const envPort = (name: string, fallback: number) => Number(process.env[name] || fallback);
-const convexPort = envPort('XLR8_PERF_CONVEX_PORT', 13520);
+//   SELFBOUND_PERF_CONVEX_PORT (HTTP actions one higher), SELFBOUND_PERF_PREVIEW_PORT,
+//   SELFBOUND_PERF_PROXY_CONVEX_PORT, SELFBOUND_PERF_PROXY_PAGE_PORT.
+// `name` without prefix; the old XLR8_ prefix (legacy-xlr8) still works (tooling/lib/env.mjs).
+const envPort = (name: string, fallback: number) => Number(envVar(name) || fallback);
+const convexPort = envPort('PERF_CONVEX_PORT', 13520);
 export const PORTS = {
   convex: convexPort,
   site: convexPort + 1,
-  preview: envPort('XLR8_PERF_PREVIEW_PORT', 5522),
-  proxyConvex: envPort('XLR8_PERF_PROXY_CONVEX_PORT', 13590),
-  proxyPage: envPort('XLR8_PERF_PROXY_PAGE_PORT', 5592),
+  preview: envPort('PERF_PREVIEW_PORT', 5522),
+  proxyConvex: envPort('PERF_PROXY_CONVEX_PORT', 13590),
+  proxyPage: envPort('PERF_PROXY_PAGE_PORT', 5592),
 } as const;
 export const DELAY_MS = 50;
 export type Profile = 'P1' | 'P2';
@@ -81,7 +83,8 @@ function describeOwner(port: number) {
 // Two runs at the same time distort each other, even on separate ports; parallel worktrees sharing
 // ports and backends used to be the most common cause of aborted runs. The lock is machine-wide,
 // for run.ts, mobile.ts and record.ts.
-const LOCK = join(process.env.XDG_RUNTIME_DIR || os.tmpdir(), 'xlr8-perf.lock');
+// Own directory of the user, never the shared /tmp: another user could put a symlink there.
+const LOCK = join(process.env.XDG_RUNTIME_DIR || join(os.homedir(), '.cache'), 'selfbound-perf.lock');
 
 function alive(pid: number) {
   try {
@@ -93,9 +96,10 @@ function alive(pid: number) {
 }
 
 export function acquireLock() {
+  mkdirSync(dirname(LOCK), { recursive: true });
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      writeFileSync(LOCK, JSON.stringify({ pid: process.pid, dir: root, cmd: process.argv.slice(1).join(' '), started: new Date().toISOString() }), { flag: 'wx' });
+      writeFileSync(LOCK, JSON.stringify({ pid: process.pid, dir: root, cmd: process.argv.slice(1).join(' '), started: new Date().toISOString() }), { flag: 'wx', mode: 0o600 });
       process.on('exit', releaseLock);
       return;
     } catch {
@@ -197,13 +201,13 @@ export async function startStack(opts: StackOptions): Promise<Stack> {
       // occasionally hits Convex limits, and no leftovers can distort anything.
       stopBackend();
       await waitFor(async () => !(await reachable(`${convexUrl('P1')}/version`)), 'Old backend to stop', 20_000).catch(() => {
-        throw new Error(`Port ${PORTS.convex} is in use, but not by this run's backend (${describeOwner(PORTS.convex)}). Wait for the other run or set other ports (XLR8_PERF_CONVEX_PORT etc., perf/README.md).`);
+        throw new Error(`Port ${PORTS.convex} is in use, but not by this run's backend (${describeOwner(PORTS.convex)}). Wait for the other run or set other ports (SELFBOUND_PERF_CONVEX_PORT etc., perf/README.md).`);
       });
       for (const entry of ['.convex', '.env.local']) rmSync(join(root, BACKEND_DIR, entry), { recursive: true, force: true });
       // If anything still listens on the ports afterwards (even a process that is not Convex), the
       // backend would not come up and the run would hang until local.mjs times out.
       for (const port of [PORTS.convex, PORTS.site]) {
-        if (portOwner(port)) throw new Error(`Port ${port} is in use (${describeOwner(port)}). Wait for the other run or set other ports (XLR8_PERF_CONVEX_PORT etc., perf/README.md).`);
+        if (portOwner(port)) throw new Error(`Port ${port} is in use (${describeOwner(port)}). Wait for the other run or set other ports (SELFBOUND_PERF_CONVEX_PORT etc., perf/README.md).`);
       }
     } else {
       // Reuse only if the backend on the port comes from this folder. Otherwise the run would seed
@@ -234,7 +238,7 @@ export async function startStack(opts: StackOptions): Promise<Stack> {
   for (const profile of ['P1', 'P2'] as const) {
     if (!opts.build && existsSync(join(distDir(profile), 'index.html'))) continue;
     log(`Building the app for ${profile} (Convex ${convexUrl(profile)}) …`);
-    const env = { ...process.env, VITE_CONVEX_URL: convexUrl(profile), VITE_DEV_TOKEN: token, VITE_XLR8_TEST: '1' };
+    const env = { ...process.env, VITE_CONVEX_URL: convexUrl(profile), VITE_DEV_TOKEN: token, VITE_SELFBOUND_TEST: '1' };
     const out = `../perf/.dist/${profile.toLowerCase()}`;
     const b = spawnSync('pnpm', ['--filter', '@selfbound/app', 'exec', 'vite', 'build', '--outDir', out, '--emptyOutDir', '--logLevel', 'warn'], { cwd: root, env, stdio: 'inherit' });
     if (b.status !== 0) throw new Error(`Build for ${profile} failed`);

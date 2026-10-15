@@ -21,7 +21,8 @@
         var d = document.documentElement;
         var dark = matchMedia('(prefers-color-scheme: dark)').matches;
         try {
-          var t = JSON.parse(localStorage.getItem('xlr8:prefs') || '{}').theme || 'system';
+          // legacy-xlr8: the old key is read until the app has moved it.
+          var t = JSON.parse(localStorage.getItem('selfbound:prefs') || localStorage.getItem('xlr8:prefs') || '{}').theme || 'system';
           if (t !== 'system') dark = t === 'dark';
         } catch (e) {}
         d.dataset.theme = dark ? 'dark' : 'light';

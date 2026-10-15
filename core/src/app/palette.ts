@@ -9,7 +9,6 @@ import {
   PRIORITY_ORDER,
   STATUS_KEYWORDS,
   addDays,
-  berlinToday,
   dayLabel,
   dayOf,
   parseDay,
@@ -44,7 +43,7 @@ export interface ItemSet {
 }
 
 const MAX_ITEMS = 50;
-const RECENT = 'xlr8:recent';
+const RECENT = 'selfbound:recent';
 
 export const PICKER_KINDS: PaletteKind[] = ['status', 'priority', 'labels', 'project', 'sprint', 'estimate', 'due', 'parent', 'team'];
 
@@ -219,7 +218,7 @@ export class PaletteController {
       }
       if (s.kind === 'snooze') {
         // Only a day after today makes sense: "today" and past days are not offered.
-        const base = berlinToday();
+        const base = today();
         const day = parseDueInput(q, undefined, base);
         if (day && day > base) {
           const id = `snooze:${day}`;
@@ -570,8 +569,7 @@ export class PaletteController {
       }
       case 'snooze': {
         const current = values((i) => i.snoozedUntil ?? null, () => null);
-        // The server counts days in Europe/Berlin.
-        const now = berlinToday();
+        const now = today();
         const monday = addDays(now, ((1 - parseDay(now).getDay() + 7) % 7) || 7);
         const month = parseDay(now);
         month.setMonth(month.getMonth() + 1);
@@ -1014,7 +1012,7 @@ export class PaletteController {
       selected = days.length && days.every((d) => d === days[0]) ? days[0] : null;
     }
     const month = this.#calendarMonth ?? (selected ?? today()).slice(0, 7);
-    return kind === 'snooze' ? { month, selected, min: addDays(berlinToday(), 1) } : { month, selected };
+    return kind === 'snooze' ? { month, selected, min: addDays(today(), 1) } : { month, selected };
   }
 
   shiftMonth(delta: number) {
@@ -1029,7 +1027,7 @@ export class PaletteController {
   pickDay(day: string) {
     const target = this.#target;
     const snooze = this.state.get()?.kind === 'snooze';
-    if (snooze && day <= berlinToday()) return;
+    if (snooze && day <= today()) return;
     this.close();
     if (snooze) this.app.edit.snooze(target.kind === 'issues' ? target.ids : [], day);
     else this.apply({ dueDate: day }, target);

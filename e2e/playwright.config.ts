@@ -21,6 +21,8 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     trace: 'retain-on-failure',
     colorScheme: 'dark',
+    // The first sign-in saves the browser's time zone as the instance's; fixed, so days do not depend on the machine.
+    timezoneId: 'Europe/Berlin',
     // The service worker only in pwa.spec.ts; elsewhere it would disturb counts of loaded files.
     serviceWorkers: 'block',
   },

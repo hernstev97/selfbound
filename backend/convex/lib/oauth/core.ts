@@ -5,9 +5,26 @@
 // Flow, endpoints and security model: docs/architecture/mcp.md, section "OAuth".
 // The endpoints live in lib/oauth/http.ts, the database side in ops/oauth.ts.
 
-import { base64url } from '../keys';
+import { ANY_PREFIX, base64url } from '../keys';
+import { envVar } from '../legacyEnv';
 
-export const SCOPE = 'xlr8';
+export const SCOPE = 'selfbound';
+// legacy-xlr8: scope of connectors authorized before the rename; still accepted and advertised
+export const LEGACY_SCOPE = 'xlr8';
+
+/**
+ * Scope in a token response. The scope is not stored per grant (there is only one, everything an
+ * agent may do), so it follows the request: a client that asks for the legacy scope only keeps
+ * seeing it. A client registered before the rename (client id `xlr8-…`) that names no scope (the
+ * code and refresh grants usually do not) keeps seeing it too; everyone else gets `selfbound`.
+ */
+export function issuedScope(requested: string | undefined, clientId?: string): string {
+  const scopes = (requested ?? '').split(/\s+/).filter(Boolean);
+  if (scopes.includes(SCOPE)) return SCOPE;
+  if (scopes.includes(LEGACY_SCOPE)) return LEGACY_SCOPE;
+  // legacy-xlr8: the client id prefix of connectors registered before the rename
+  return !scopes.length && clientId?.startsWith('xlr8-') ? LEGACY_SCOPE : SCOPE;
+}
 export const ACCESS_TTL_MS = 60 * 60_000;
 export const REFRESH_TTL_MS = 30 * 24 * 60 * 60_000;
 /** An already redeemed refresh token stays valid this long (retries, several devices). */
@@ -17,16 +34,17 @@ export const REQUEST_TTL_MS = 15 * 60_000;
 /** How long Selfbound accepts new connectors after "Connect connector". */
 export const ARM_TTL_MS = 15 * 60_000;
 
-// Secret prefixes. Agent keys are "xlr8_" + 43 characters (48 in total), these are
-// 51 characters: they cannot be mistaken for each other.
-export const ACCESS_PREFIX = 'xlr8_at_';
-export const REFRESH_PREFIX = 'xlr8_rt_';
-export const CODE_PREFIX = 'xlr8_ac_';
-export const SECRET_PREFIX = 'xlr8_cs_';
-export const ACCESS_FORMAT = /^xlr8_at_[A-Za-z0-9_-]{43}$/;
-export const REFRESH_FORMAT = /^xlr8_rt_[A-Za-z0-9_-]{43}$/;
-export const CODE_FORMAT = /^xlr8_ac_[A-Za-z0-9_-]{43}$/;
-export const SECRET_FORMAT = /^xlr8_cs_[A-Za-z0-9_-]{43}$/;
+// Secret prefixes for everything newly issued. Agent keys are "selfbound_" + 43 characters, these
+// carry 3 more: they cannot be mistaken for each other.
+export const ACCESS_PREFIX = 'selfbound_at_';
+export const REFRESH_PREFIX = 'selfbound_rt_';
+export const CODE_PREFIX = 'selfbound_ac_';
+export const SECRET_PREFIX = 'selfbound_cs_';
+// Secrets issued before the rename stay valid, so the formats accept the old prefix too.
+export const ACCESS_FORMAT = new RegExp(`^${ANY_PREFIX}_at_[A-Za-z0-9_-]{43}$`);
+export const REFRESH_FORMAT = new RegExp(`^${ANY_PREFIX}_rt_[A-Za-z0-9_-]{43}$`);
+export const CODE_FORMAT = new RegExp(`^${ANY_PREFIX}_ac_[A-Za-z0-9_-]{43}$`);
+export const SECRET_FORMAT = new RegExp(`^${ANY_PREFIX}_cs_[A-Za-z0-9_-]{43}$`);
 
 const CHALLENGE_FORMAT = /^[A-Za-z0-9_-]{43,128}$/;
 const VERIFIER_FORMAT = /^[A-Za-z0-9._~-]{43,128}$/;
@@ -92,18 +110,18 @@ function originOf(value: string | undefined): string | null {
   }
 }
 
-/** The address from XLR8_PUBLIC_SITE_URL (a custom address in front of Convex), else CONVEX_SITE_URL. */
+/** The address from SELFBOUND_PUBLIC_SITE_URL (a custom address in front of Convex), else CONVEX_SITE_URL. */
 function oauthBase(env: Record<string, string | undefined>): string | null {
-  return originOf(env.XLR8_PUBLIC_SITE_URL) ?? originOf(env.CONVEX_SITE_URL);
+  return originOf(envVar('PUBLIC_SITE_URL', env)) ?? originOf(env.CONVEX_SITE_URL);
 }
 
 /**
- * OAuth is on as soon as XLR8_APP_URL is set. The base is XLR8_PUBLIC_SITE_URL (a custom
+ * OAuth is on as soon as SELFBOUND_APP_URL is set. The base is SELFBOUND_PUBLIC_SITE_URL (a custom
  * address, e.g. https://mcp.selfbound.example.com rewriting to Convex), else CONVEX_SITE_URL. The
  * issuer must be fixed: it never comes from the request.
  */
 export function oauthConfig(env: Record<string, string | undefined> = process.env): OAuthConfig | null {
-  const appUrl = originOf(env.XLR8_APP_URL);
+  const appUrl = originOf(envVar('APP_URL', env));
   const base = oauthBase(env);
   if (!appUrl || !base) return null;
   return { issuer: base, resource: `${base}/mcp`, appUrl };
@@ -122,7 +140,7 @@ export function protectedResourceMetadata(cfg: OAuthConfig) {
     resource: cfg.resource,
     authorization_servers: [cfg.issuer],
     bearer_methods_supported: ['header'],
-    scopes_supported: [SCOPE],
+    scopes_supported: [SCOPE, LEGACY_SCOPE],
     resource_name: 'Selfbound',
   };
 }
@@ -146,7 +164,7 @@ export function authorizationServerMetadata(cfg: OAuthConfig) {
     code_challenge_methods_supported: ['S256'],
     token_endpoint_auth_methods_supported: AUTH_METHODS,
     revocation_endpoint_auth_methods_supported: AUTH_METHODS,
-    scopes_supported: [SCOPE, 'offline_access'],
+    scopes_supported: [SCOPE, LEGACY_SCOPE, 'offline_access'],
     authorization_response_iss_parameter_supported: true,
   };
 }
@@ -239,8 +257,8 @@ export function checkAuthorize(
   if (params.getAll('resource').some((r) => !sameResource(r, cfg.resource))) {
     return fail('invalid_target', `Unknown resource, expected ${cfg.resource}.`);
   }
-  // scope: there is only "xlr8" (everything an agent may do). Other values such as
-  // offline_access are ignored; the issued scope is always "xlr8".
+  // scope: there is only "selfbound" (everything an agent may do; legacy-xlr8: "xlr8" is its old name).
+  // Other values such as offline_access are ignored.
   return { kind: 'ok', redirectUri, redirectGiven, state, codeChallenge: challenge };
 }
 

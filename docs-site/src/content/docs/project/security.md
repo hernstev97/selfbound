@@ -23,7 +23,7 @@ Every Selfbound instance belongs to one person. There are no user accounts to ma
 
 ### Sign-in: one owner
 
-You sign in through Clerk. Convex checks the sign-in token, and then Selfbound checks the account against an allowlist: only the accounts in the `XLR8_OWNER_IDS` environment variable get in. If the list is empty, nobody gets in. Every public backend function goes through this check, except the health status, which returns no data.
+You sign in through Clerk. Convex checks the sign-in token, and then Selfbound checks the account against an allowlist: only the accounts in the `SELFBOUND_OWNER_IDS` environment variable get in. If the list is empty, nobody gets in. Every public backend function goes through this check, except the health status, which returns no data.
 
 Also set the sign-up mode of your Clerk application to **Restricted**, so strangers cannot even create an account. [Set up Clerk](/start/self-hosting/clerk/) walks you through it.
 
@@ -49,7 +49,7 @@ Images in descriptions and comments are served under addresses that contain a lo
 
 ### Settings that must stay off in production
 
-`XLR8_ALLOW_SEED` (sample data) and `XLR8_TEST_SWITCHES` (test switches such as "server rejects changes") are for local development only. **Never set them on a production backend.** **Settings → Ops** shows whether test switches are available on your instance.
+`SELFBOUND_ALLOW_SEED` (sample data) and `SELFBOUND_TEST_SWITCHES` (test switches such as "server rejects changes") are for local development only. **Never set them on a production backend.** **Settings → Ops** shows whether test switches are available on your instance.
 
 Keep deploy keys, `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET` and the VAPID private key for push notifications in your Convex environment or your CI secrets, never in the repository.
 

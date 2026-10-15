@@ -6,9 +6,9 @@
 // then, in a second shell:
 //   node docs-site/scripts/capture-screenshots.mjs [app-url] [--only list,board,...] [--out <dir>]
 //
-// app-url defaults to XLR8_APP_URL or http://127.0.0.1:5412. The script adds a few knowledge pages
-// to team ORB (once) through the local backend; URL and token come from XLR8_CONVEX_URL /
-// XLR8_TOKEN or else from app/.env.local, which tooling/local.mjs writes. Only use it against a local
+// app-url defaults to SELFBOUND_APP_URL or http://127.0.0.1:5412. The script adds a few knowledge pages
+// to team ORB (once) through the local backend; URL and token come from SELFBOUND_CONVEX_URL /
+// SELFBOUND_TOKEN or else from app/.env.local, which tooling/local.mjs writes. Only use it against a local
 // backend with sample data: whatever the app shows ends up in the public docs.
 //
 // Viewport 1440x900 at 2x, PNGs reduced to a palette with sharp (a docs-site dependency).
@@ -18,6 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { envVar } from '../../tooling/lib/env.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 // Playwright and Convex come from the e2e package, sharp from the docs site.
@@ -32,18 +33,18 @@ const opt = (name) => {
   const i = argv.indexOf(`--${name}`);
   return i >= 0 ? argv[i + 1] : undefined;
 };
-const base = (argv.find((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--')) ?? process.env.XLR8_APP_URL ?? 'http://127.0.0.1:5412').replace(/\/$/, '');
+const base = (argv.find((a, i) => !a.startsWith('--') && !argv[i - 1]?.startsWith('--')) ?? envVar('APP_URL') ?? 'http://127.0.0.1:5412').replace(/\/$/, '');
 const out = opt('out') ?? join(root, 'docs-site', 'src', 'assets', 'screenshots');
 const only = opt('only')?.split(',');
 mkdirSync(out, { recursive: true });
 
-const DEFAULT_LOOK = { dark: 'xlr8', light: 'xlr8', sans: 'inter', mono: 'system', overrides: [] };
+const DEFAULT_LOOK = { dark: 'selfbound', light: 'selfbound', sans: 'inter', mono: 'system', overrides: [] };
 
 function backend() {
   const env = existsSync(join(root, 'app', '.env.local')) ? readFileSync(join(root, 'app', '.env.local'), 'utf8') : '';
-  const url = process.env.XLR8_CONVEX_URL ?? /^VITE_CONVEX_URL=(.*)$/m.exec(env)?.[1]?.trim();
-  const token = process.env.XLR8_TOKEN ?? /^VITE_DEV_TOKEN=(.*)$/m.exec(env)?.[1]?.trim();
-  if (!url || !token) throw new Error('No local backend: set XLR8_CONVEX_URL and XLR8_TOKEN or run tooling/local.mjs first.');
+  const url = envVar('CONVEX_URL') ?? /^VITE_CONVEX_URL=(.*)$/m.exec(env)?.[1]?.trim();
+  const token = envVar('TOKEN') ?? /^VITE_DEV_TOKEN=(.*)$/m.exec(env)?.[1]?.trim();
+  if (!url || !token) throw new Error('No local backend: set SELFBOUND_CONVEX_URL and SELFBOUND_TOKEN or run tooling/local.mjs first.');
   if (!/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(url)) throw new Error(`Refusing a non-local backend: ${url}`);
   const client = new ConvexHttpClient(url);
   client.setAuth(token);

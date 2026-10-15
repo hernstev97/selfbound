@@ -17,7 +17,7 @@ const IDLE_MS = 3 * 60_000;
 const HEARTBEAT_MS = 60_000;
 /** Check for a new version at most this often (when returning to the app). */
 const VERSION_CHECK_MS = 10 * 60_000;
-const DEVICE_KEY = 'xlr8:device';
+const DEVICE_KEY = 'selfbound:device';
 
 export const BUILD: string = typeof __SELFBOUND_BUILD__ === 'string' ? __SELFBOUND_BUILD__ : 'dev';
 
@@ -35,8 +35,9 @@ export function startPwa(app: App, opts: { serviceWorker: boolean }) {
     void navigator.serviceWorker.getRegistration('/').then((old) => old?.scope === `${location.origin}/` && old.unregister());
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
       const data = event.data as { type?: string; url?: string; message?: PushMessage } | null;
-      if (data?.type === 'xlr8-open' && data.url) app.nav.open(data.url);
-      if (data?.type === 'xlr8-push' && data.message) showInApp(app, data.message);
+      // legacy-xlr8: a service worker of the old build may still be active and sends the old names.
+      if ((data?.type === 'selfbound-open' || data?.type === 'xlr8-open') && data.url) app.nav.open(data.url); // legacy-xlr8
+      if ((data?.type === 'selfbound-push' || data?.type === 'xlr8-push') && data.message) showInApp(app, data.message); // legacy-xlr8
     });
   }
   startPresence(app);

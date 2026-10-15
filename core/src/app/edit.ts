@@ -8,7 +8,7 @@ import type { Page } from '../route.ts';
 import { applyPatch, sameValue } from '../store.ts';
 import { budgetCheck } from '../budget.ts';
 import { inInbox } from '../inbox.ts';
-import { OWNER_KIND, type Filters, type Issue, type IssueId, type IssuePatch, type LabelId, type NewIssue, type PatchField, type Priority, type RelationType, type StateId, type Status } from '../types.ts';
+import { isOwnerKind, type Filters, type Issue, type IssueId, type IssuePatch, type LabelId, type NewIssue, type PatchField, type Priority, type RelationType, type StateId, type Status } from '../types.ts';
 import { workflowsOf } from '../workflow.ts';
 import type { App } from './index.ts';
 import { errorCode } from './toasts.ts';
@@ -612,7 +612,7 @@ export class Editor {
         if (row) {
           this.app.store.watchAgents();
           who = actorName(row.actor, this.app.store.agents.get());
-          byOwner = row.actor.kind === OWNER_KIND;
+          byOwner = isOwnerKind(row.actor.kind);
         }
       } catch {
         // name stays unknown

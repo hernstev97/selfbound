@@ -39,7 +39,7 @@ async function pillProblems(page: Page) {
 
 test('Pills at 1024 px with a large font: never clipped, never over the title; "+n" for dropped labels', async ({ page }) => {
   await page.setViewportSize({ width: 1024, height: 800 });
-  await page.addInitScript(() => localStorage.setItem('xlr8:prefs', JSON.stringify({ fontSize: 'large' })));
+  await page.addInitScript(() => localStorage.setItem('selfbound:prefs', JSON.stringify({ fontSize: 'large' })));
   await open(page, '/all');
   expect(await pillProblems(page)).toEqual([]);
   // Somewhere it is tight enough for labels to drop: then the remaining "+n" shows.

@@ -26,17 +26,19 @@ low priority). Do not start full performance runs unless asked.
   `branch-name` fails otherwise; rename with `git branch -m`.
 - Outside contributions are issue-first (`CONTRIBUTING.md`): a pull request from a non-collaborator must
   refer to an issue the maintainer labeled `accepted`, or it is closed automatically.
-- Naming: the product is called Selfbound (formerly XLR8). Legacy names stay until they are migrated: env vars
-  `XLR8_*`, storage keys and prefixes (`xlr8:*`, `xlr8_signed_in`, `xlr8_rt_`), the team key `XLR8` with its issue
-  ids, the instance URL `xlr8.kiumu.app` and the Vercel project `xlr8`. The repository is `hernstev97/selfbound`;
-  packages are `@selfbound/*`.
+- Naming: the product is called Selfbound. `XLR8` survives only as the team key with its issue ids (`XLR8-48`), the
+  instance URL `xlr8.kiumu.app` and MCP URL of the maintainer's instance, and the Vercel project `xlr8`. The few
+  remaining old names (`XLR8_*` env vars, `xlr8:*` storage, `xlr8_` key prefixes, actor kind `steven`) are accepted
+  fallbacks, each marked `legacy-xlr8` in code, until the follow-up removes them (`docs/operations.md`, "Moving from
+  the XLR8 names"). New code uses only the new names. The repository is `hernstev97/selfbound`; packages are `@selfbound/*`.
 - Everything in English: code, comments, identifiers, tests, docs, commit messages, PR texts.
 - UI text through `t()`, `tn()`, `tc()` or `translated()` from `core/src/i18n.ts`, with the German
   entry in `app/src/locales/de/*.ts` or `core/src/locales/de.ts`. Never call `t()` at module level.
 - Speed: 100 ms p95 per interaction with 10,000 issues; start bundle at most 5 % above
   `perf/baseline.json`. Load rarely used code with dynamic `import()`. Avoid per-row work in list rendering.
 - Production data depends on stored names: do not rename Convex tables, fields, stored enum values,
-  function names, HTTP routes, MCP tool names or parameters, or browser storage keys without a migration.
+  function names, HTTP routes, MCP tool names or parameters, or browser storage keys without a migration. Renames also keep
+  reading the old name as a marked `legacy-xlr8` fallback.
 - Business errors in the backend use `fail()` / `invalid()` from `backend/convex/lib/errors.ts` with an
   error code; UI and MCP share the operations in `backend/convex/ops/`.
 - Every new action gets a command menu entry (`core/src/app/actions.ts`) and, where it fits, a shortcut.

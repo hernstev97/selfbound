@@ -5,6 +5,7 @@
   import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
+  import { ISSUES_MIME } from '../../lib/issueDrag.ts';
   import { anchorOf, cellOf, tip } from '../../lib/ui.ts';
   import { labelStackHtml, teamLogoHtml } from '../../lib/rowHtml.ts';
   import { drag } from './drag.svelte.ts';
@@ -38,7 +39,7 @@
   function dragStart(e: DragEvent) {
     if (!e.dataTransfer) return;
     const ids = list.isSelected(id) ? list.selection() : [id];
-    e.dataTransfer.setData('application/x-xlr8-issues', JSON.stringify(ids));
+    e.dataTransfer.setData(ISSUES_MIME, JSON.stringify(ids));
     e.dataTransfer.setData('text/plain', r?.key ?? '');
     e.dataTransfer.effectAllowed = 'move';
     drag.start(ids);

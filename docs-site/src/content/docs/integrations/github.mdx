@@ -45,7 +45,7 @@ The issue's history shows each link and each status change with GitHub as the so
 
 The name is the identifier in lower case plus the title as a slug: lower case, accents removed, German umlauts written out (`ä` becomes `ae`), anything else turned into hyphens, at most 60 characters for the title part. Because the identifier is in the branch name, the pull request closes the issue on merge without any keyword.
 
-If you prefer branches like `jane/acme-42-fix-login-on-safari`, whoever builds the web app sets `VITE_XLR8_BRANCH_PREFIX=jane`. It is read when the app is built, so it takes effect with the next deploy.
+If you prefer branches like `jane/acme-42-fix-login-on-safari`, whoever builds the web app sets `VITE_SELFBOUND_BRANCH_PREFIX=jane`. It is read when the app is built, so it takes effect with the next deploy.
 
 ## Pull requests on an issue
 
@@ -111,7 +111,7 @@ This part is for whoever runs the Selfbound instance. You need a webhook secret,
    - Actions: read
    - Metadata: read
 
-   Fine-grained tokens have no permission for checks; check results from other apps arrive through the webhook instead. Set the token as `GITHUB_TOKEN` without typing it on the command line, for example `node tooling/cloud.mjs env set GITHUB_TOKEN < ~/.config/xlr8/github-token`.
+   Fine-grained tokens have no permission for checks; check results from other apps arrive through the webhook instead. Set the token as `GITHUB_TOKEN` without typing it on the command line, for example `node tooling/cloud.mjs env set GITHUB_TOKEN < ~/.config/selfbound/github-token`.
 
 3. **Install the webhook.** Either let Selfbound do it: set `GITHUB_MANAGE_WEBHOOKS=1`, open **Settings → GitHub** and click **Check now**. Or add it by hand (next section).
 

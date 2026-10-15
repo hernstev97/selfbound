@@ -74,3 +74,39 @@ built from them, the instance `xlr8.kiumu.app`, the MCP address `mcp.xlr8.kiumu.
 `xlr8` of the app. The repository was renamed to `hernstev97/selfbound` the same day (GitHub redirects the old
 address). Historical reports under `docs/reports/` and
 `docs/brand.md` describe the past and stay as they are.
+
+Superseded in part on 2026-10-15: see the next entry.
+
+## The remaining XLR8 names move to Selfbound, with fallbacks
+
+**Decided (2026-10-15):** Everything an operator or user can see that still said XLR8 gets the Selfbound name:
+the environment variables (`XLR8_*` to `SELFBOUND_*`, `VITE_XLR8_*` to `VITE_SELFBOUND_*`), the per-user directories
+(`~/.config/xlr8` and the data, state and cache directories), the systemd units and backup artifacts, the browser storage
+(`xlr8:*` keys, IndexedDB name, the cookie `xlr8_signed_in`, service worker messages, drag type, `history.state` key), the
+token and key prefixes (`xlr8_`, `xlr8_at_`, `xlr8_rt_`, `xlr8_ac_`, `xlr8_cs_`), the OAuth client id prefix and scope, the stored
+actor kind `steven` (now `owner`), the sprint source `xlr8` (now `selfbound`) and the MCP field `reviewedBySteven` (now
+`reviewedByOwner`). Table names, field names, function names, HTTP routes, MCP tool names and parameters stay as they are.
+Intentional exceptions: the team key `XLR8` with its issue identifiers, the maintainer's instance address and MCP address, and the
+Vercel project name `xlr8`.
+
+**Why:** The first rename (above) left names behind that new operators meet on day one: every setup guide told them to set
+`XLR8_OWNER_IDS`. Waiting longer would make the public documentation and the running instances drift further apart.
+
+**What is accepted as fallback (marked `legacy-xlr8` in the code):** old environment variable names (one warning per variable
+and process, never the value), the old directories (used while only they exist, with a warning), old key, token and client id
+prefixes and the old scope, the stored values `steven` and `xlr8` and the field `reviewedBySteven`, the old browser names (storage
+keys are copied once at startup, the cookie, message types, drag type and `history.state` key are accepted), and old backup names.
+Existing agent keys, connectors, signed-in browsers and the running instance keep working without any change. New writes use only
+the new names. Why not rewrite keys and tokens: only their hash is stored, and a changed prefix would lock every connected agent out.
+
+**How an instance moves:** deploy the code, run `tooling/migrate-legacy-names.mjs` (settings and files) and
+`tooling/migrate-legacy-data.mjs` (stored values), then do the manual steps outside the repository. Steps and tables:
+[Moving from the XLR8 names](operations.md#moving-from-the-xlr8-names).
+
+**Removal plan:** a follow-up issue removes the fallbacks after the data check reports zero legacy rows and the Convex log has
+shown no deprecation warning for two weeks. Key and token prefixes go last, after old keys were replaced. Until then every
+fallback carries the word `legacy-xlr8` in the code, so `grep -ri legacy-xlr8` finds all of them.
+
+**Shows up as:** `backend/convex/lib/legacyEnv.ts`, `tooling/lib/env.mjs`, `core/src/legacyStorage.ts`,
+`backend/convex/legacyNames.ts`, the two migration scripts, and the upgrade guide in the docs site
+(`start/self-hosting/upgrade-from-xlr8`).

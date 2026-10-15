@@ -85,7 +85,7 @@ for (const size of ['small', 'large'] as const) {
     await page.addInitScript((size) => {
       if (sessionStorage.getItem('size-set')) return;
       sessionStorage.setItem('size-set', '1');
-      localStorage.setItem('xlr8:prefs', JSON.stringify({ ...JSON.parse(localStorage.getItem('xlr8:prefs') ?? '{}'), sidebarTeams: size }));
+      localStorage.setItem('selfbound:prefs', JSON.stringify({ ...JSON.parse(localStorage.getItem('selfbound:prefs') ?? '{}'), sidebarTeams: size }));
     }, size);
     await open(page);
     const result = await page.evaluate(async () => {

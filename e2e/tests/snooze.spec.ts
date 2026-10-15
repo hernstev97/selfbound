@@ -10,7 +10,8 @@ async function fresh(title: string, status: 'todo' | 'backlog' = 'todo') {
   return issues[0];
 }
 
-// The server counts days in Europe/Berlin, whatever the time zone of the machine running the test.
+// The instance time zone is the browser's at the first sign-in (Europe/Berlin, see playwright.config.ts),
+// whatever the time zone of the machine running the test.
 const dayAfter = (n: number) => {
   const berlin = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
   const d = new Date(`${berlin}T12:00:00Z`);

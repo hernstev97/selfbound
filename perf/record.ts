@@ -3,19 +3,21 @@
 // for measuring.
 //
 // Usage: node perf/record.ts [--out=<file.mp4>] [--reuse-data] [--skip-build] [--keep] [--encode-only]
-// Output: raw files in /tmp/selfbound-media/ (walkthrough-desktop.webm, walkthrough-mobile.webm) and
+// Output: raw files in perf/.media/ (walkthrough-desktop.webm, walkthrough-mobile.webm) and
 // walkthrough.mp4 with captions (H.264), copied to --out if given. Needs ffmpeg and fontconfig.
 
 import { execFileSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { chromium, type Page } from '@playwright/test';
 import { appBase, startStack } from './stack.ts';
 
 const argv = process.argv.slice(2);
 const args = new Set(argv);
 const out = argv.find((a) => a.startsWith('--out='))?.slice(6);
-const RAW = '/tmp/selfbound-media';
+// In the checkout (gitignored), not in /tmp: a fixed path in a shared directory can be taken over by another user.
+const RAW = join(dirname(fileURLToPath(import.meta.url)), '.media');
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };
 const FPS = 25;

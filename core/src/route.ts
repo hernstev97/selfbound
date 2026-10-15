@@ -43,6 +43,8 @@ export interface Location {
   filters: Filters;
   quick: string;
   group: Grouping | null;
+  /** Second grouping level (`?sub=`) */
+  sub?: Grouping | null;
   order: Ordering | null;
   /** Board instead of list (`?layout=board`) */
   layout: 'board' | null;
@@ -52,7 +54,7 @@ export interface Location {
 
 const GLOBAL: Record<string, ViewKind> = { inbox: 'inbox', snoozed: 'snoozed', triage: 'triage', all: 'all', active: 'active', backlog: 'backlog', sprint: 'sprint', trash: 'trash' };
 const TEAM_TABS: Record<string, ViewKind> = { '': 'active', all: 'all', active: 'active', backlog: 'backlog', triage: 'triage', sprint: 'sprint', snoozed: 'snoozed' };
-const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'project', 'sprint', 'scope', 'none'];
+const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'scope', 'none'];
 const ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due', 'status', 'snoozed'];
 /** Settings section shown for /settings */
 export const DEFAULT_SETTINGS_SECTION = 'general';
@@ -81,7 +83,10 @@ export const CONSENT_PATH = '/oauth/consent';
 /** Older address of the consent page, still accepted */
 const CONSENT_PATH_OLD = '/oauth/freigabe';
 export const isConsentPath = (pathname: string) => {
-  const path = pathname.replace(/\/+$/, '');
+  // No /\/+$/ here: on a long run of slashes that regex backtracks quadratically.
+  let end = pathname.length;
+  while (end > 0 && pathname.charCodeAt(end - 1) === 47) end--;
+  const path = pathname.slice(0, end);
   return path === CONSENT_PATH || path === CONSENT_PATH_OLD;
 };
 
@@ -151,6 +156,8 @@ export function pagePath(page: Page): string {
   }
 }
 
+const NEW_PARAMS = ['title', 'description', 'status', 'priority', 'team', 'label', 'project', 'estimate', 'due'];
+
 export function readLocation(url: URL): Location {
   const p = url.searchParams;
   const page = parsePath(url.pathname);
@@ -169,14 +176,17 @@ export function readLocation(url: URL): Location {
     snoozed: p.get('snoozed') === '1',
   };
   const group = p.get('group') as Grouping | null;
+  const sub = p.get('sub') as Grouping | null;
   const order = p.get('order') as Ordering | null;
-  const params: Record<string, string> = {};
-  if (page.name === 'new') for (const [k, v] of p) params[k] = v;
+  // Only the keys `openFromParams` (core/src/app/create.ts) reads, so a name from the URL never becomes a property name.
+  const params: Record<string, string> =
+    page.name === 'new' ? Object.fromEntries([...p].filter(([k]) => NEW_PARAMS.includes(k))) : {};
   return {
     page,
     filters: page.name === 'new' ? emptyFilters() : filters,
     quick: page.name === 'new' ? '' : (p.get('q') ?? ''),
     group: group && GROUPINGS.includes(group) ? group : null,
+    sub: sub && GROUPINGS.includes(sub) ? sub : null,
     order: order && ORDERINGS.includes(order) ? order : null,
     layout: p.get('layout') === 'board' ? 'board' : null,
     params,
@@ -205,11 +215,11 @@ export function labelIdsFrom(values: readonly string[], labels: readonly { _id: 
 }
 
 /** URL for a page; filters and display options only for lists. Other parameters (e.g. perf) stay. */
-export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' | 'quick' | 'group' | 'order'> & { layout?: 'board' | null }, labels: readonly { _id: string; name: string }[] = []): URL {
+export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' | 'quick' | 'group' | 'sub' | 'order'> & { layout?: 'board' | null }, labels: readonly { _id: string; name: string }[] = []): URL {
   const url = new URL(base);
   url.pathname = pagePath(loc.page);
   const p = url.searchParams;
-  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'unreviewed', 'snoozed', 'q', 'group', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
+  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'unreviewed', 'snoozed', 'q', 'group', 'sub', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
   if (loc.page.name === 'view') {
     const set = (key: string, value: string | null | undefined) => (value ? p.set(key, value) : p.delete(key));
     const f = loc.filters;
@@ -223,6 +233,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
     set('snoozed', f.snoozed ? '1' : null);
     set('q', loc.quick);
     set('group', loc.group);
+    set('sub', loc.sub);
     set('order', loc.order);
     set('layout', loc.layout);
   }
