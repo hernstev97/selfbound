@@ -99,6 +99,10 @@
             data-id={item.id}
             data-index={i}
             onpointermove={() => app.palette.hover(i)}
+            onmousedown={(e) => {
+              // Keep the focus in the search field: a step that replaces the list (filter, model) keeps filtering as you type.
+              if (!coarse) e.preventDefault();
+            }}
             onclick={() => app.palette.choose(i)}
           >
             {#if item.checkbox}

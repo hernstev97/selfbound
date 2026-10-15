@@ -33,6 +33,7 @@ and the old one keeps working as a link and in search.
 | Project | At most one project of the issue's team, see [Projects](/concepts/projects/) | <Kbd keys="shift+p" /> |
 | Sprint | At most one open sprint, see [Sprints](/concepts/sprints/) | <Kbd keys="shift+c" /> |
 | Estimate | Points; the picker offers 1, 2, 3, 5 and 8, or type another number | <Kbd keys="shift+e" /> |
+| Model | The model an agent should use: provider, model, effort and speed, see [Model](#model) | <Kbd keys="shift+m" /> |
 | Due date | A calendar day | <Kbd keys="shift+d" /> |
 | Parent | Another issue this one is a sub-issue of | <Kbd keys="mod+shift+p" /> |
 
@@ -51,6 +52,32 @@ change with <Kbd keys="mod+z" />, status and priority both return.
 **Priority budget.** Each team should have at most 1 open Urgent and 3 open High issues. If a change goes
 beyond that, Selfbound shows a hint listing the team's other Urgent or High issues, with **Downgrade …** to lower one
 of them. It is only a hint; your change is saved either way.
+
+### Model
+
+The model says which AI model should work on the issue, for example **Claude Opus 5.5 · xhigh**. It is optional:
+without one, the agent (or whoever starts the work) decides. An agent reads it with `get_issue` and
+`list_issues` over [MCP](/agents/tools/).
+
+- **Choosing.** Press <Kbd keys="shift+m" /> or click **Model** on the issue page. The picker goes step by step:
+  provider, then model, then effort, then speed. Each step only offers what the model before it supports, so an
+  invalid combination cannot be picked. Type to filter a step, <Kbd keys="escape" /> goes back one step. The
+  context window shows as information (for example "1M context"); it is not a choice.
+- **Which models.** Only the models you enabled under [Settings → Models](/reference/settings/#models) are
+  offered. The list of models, their effort levels and speeds comes from the free [models.dev](https://models.dev)
+  catalog, which the server updates daily.
+- **Inheritance.** An issue without its own model uses its parent issue's model, otherwise the
+  [team's default model](/concepts/teams/#team-settings), otherwise none. An inherited model is shown dimmed,
+  with where it comes from ("From parent ACME-12", "Default of Acme"). Choose **No model** to remove the
+  issue's own model; it then inherits again.
+- **Speed** is "standard" unless the model offers more, such as "fast". The chip only shows the speed when it is
+  not standard.
+- **Models that change.** If you disable a model, or it disappears from the catalog, issues keep it; the issue
+  page then says "Not enabled in the settings" or "No longer in the catalog". New issues cannot pick it.
+
+<Screenshot name="model-picker" width={416} alt="The model picker on an issue: after choosing GPT-6 Sol it offers the model's effort levels, default effort first, with the context window below" />
+
+<Screenshot name="settings-models" alt="Settings → Models: the enabled models with effort levels, speeds and context window, the catalog state with Update now, and the models of Anthropic, newest first, each with a switch" />
 
 ### Description
 

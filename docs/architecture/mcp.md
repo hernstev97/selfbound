@@ -42,17 +42,18 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 ## Tools
 
-Responses are lean: identifier, title, status (name within the team) and `statusType` (triage, backlog, unstarted, started, completed, canceled), priority (word), team, and only when set: labels, project, estimate, due date, `snoozedUntil`, sprint, parent.
+Responses are lean: identifier, title, status (name within the team) and `statusType` (triage, backlog, unstarted, started, completed, canceled), priority (word), team, and only when set: labels, project, estimate, due date, `snoozedUntil`, sprint, parent, `model` (the issue's own) and `effectiveModel` (the one that applies, with `source` `issue`/`parent`/`team` and `from`: the parent's identifier or the team key). A model reads `{ provider, modelId, name, effort?, speed, inCatalog? }` (`speed` is `standard` unless set; `inCatalog: false` once the model left models.dev).
 
 | Tool | Kind | Purpose | Key arguments |
 |---|---|---|---|
-| `search_issues` | read | Full text over title and description (search indexes). Descriptions only if title matches are not enough, and only their beginning (8000 characters, table `bodySearch`) | `q`, `team?`, `includeClosed?` (default true), `limit?` ≤ 50 |
-| `list_issues` | read | Lists with filters, sorted by priority, then due date | `filter?`, `team?`, `status?[]`, `label?`, `project?`, `dueWithinDays?` (7), `snoozed?`, `limit?` ≤ 100 |
+| `search_issues` | read | Full text over title and description (search indexes). Descriptions only if title matches are not enough, and only their beginning (8000 characters, table `bodySearch`) | `q`, `team?`, `includeClosed?` (default true), `model?`, `limit?` ≤ 50 |
+| `list_issues` | read | Lists with filters, sorted by priority, then due date | `filter?`, `team?`, `status?[]`, `label?`, `project?`, `model?`, `dueWithinDays?` (7), `snoozed?`, `limit?` ≤ 100 |
 | `get_issue` | read | One issue with description (and its version), comments, relations, sub-issues, PRs, last 20 history entries; `reviewedByOwner` and the deprecated `reviewedBySteven` (see Permissions) | `identifier` (old identifiers work too) or `id` |
-| `create_issues` | write | 1–50 issues in one transaction | `requestId`, `issues[]: { team, title, description?, status?, priority?, labels?, project?, estimate?, dueDate?, parent? }` |
+| `create_issues` | write | 1–50 issues in one transaction | `requestId`, `issues[]: { team, title, description?, status?, priority?, labels?, project?, estimate?, dueDate?, parent?, model? }` |
 | `update_issue` | write | Change fields of one issue | `identifier`, fields, `expected?`, `description` + `expectedDescriptionVersion`, `requestId?` |
 | `set_status` | write | Status for 1–50 issues | `identifiers[]`, `status`, `requestId?` |
 | `list_statuses` | read | Statuses per team in workflow order: name, type, key, default | `team?` |
+| `list_models` | read | The enabled models with `efforts`, `speeds` (`standard` first), `context`, `output`, `releaseDate`; the team defaults; a note on the resolution order | `provider?` |
 | `list_inbox` | read | The owner's open inbox entries, newest first: issue brief, `kind` (`created`/`changed`/`snoozed`), `unread`, who created it, and the latest change per field (`field`, `to`, `by`, `at`). Agents cannot read or remove entries | `unreadOnly?`, `limit?` (default 50, max 100) |
 | `move_issues` | write | Move 1–50 issues to another team (one transaction) | `identifiers[]` (old identifiers work too), `team`, `requestId?` |
 | `add_comment` | write | Comment (Markdown) | `requestId`, `identifier`, `body` |
@@ -130,9 +131,13 @@ Estimated with the test datasets (`backend/data/generate.ts`: `small` 440 issues
 
 On the Convex free plan (1 GB database I/O per month) that is roughly 10,000 typical read calls of 100 KB each. Repeated identical calls with no change in between are served from the query cache and read nothing.
 
+### Desired model
+
+Same operations and rules as the UI ([backend.md](backend.md#models-desired-model-per-issue)). `create_issues` and `update_issue` take `model: { provider, modelId, effort?, speed? }`; `update_issue` also takes `null` (remove the issue's own model; it inherits again) and `expected.model` (the own model as read, or `null`). Only enabled models, and only their efforts and speeds: anything else fails with `invalid` and names the valid values; `list_models` lists them. `speed: "standard"` is accepted and not stored. The `model` filter of `list_issues` and `search_issues` checks the **effective** model: `"provider/modelId"`, a model ID, a provider ID or `"none"` (case-insensitive); an unknown value fails with `not_found`. It is a check after reading like `label` (an issue without its own model costs one read of its parent). History and inbox show model changes as `provider/modelId?effort=…&speed=…`.
+
 ### `update_issue`: compare-and-set per field
 
-- Only the fields passed change. `null` removes project, estimate, due date, snooze or parent.
+- Only the fields passed change. `null` removes project, estimate, due date, snooze, parent or model.
 - `snoozedUntil` (YYYY-MM-DD, after today in the instance time zone) snoozes an open issue: the owner's lists no longer show it, and on that day, in the morning, it returns to the inbox with a push notification. `null` unsnoozes. Moving the issue to done, canceled or duplicate ends the snooze (`changed` then includes `snoozedUntil`). `list_issues` and `get_issue` show `snoozedUntil`; `snoozed: true` lists only snoozed issues, `false` only the others (without it, snoozed issues are listed like any other).
 - `expected` holds the values the agent last saw (labels as a set, case-insensitive). If a field has changed in the meantime, **that field is not written**; the others are. The result lists it under `conflicts` with expected and current value and a message.
 - The description changes only with `expectedDescriptionVersion` (from `get_issue`). If the version doesn't match, `description` is listed under `conflicts` and nothing is overwritten.

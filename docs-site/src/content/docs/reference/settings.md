@@ -71,7 +71,7 @@ Details: [Notifications](/using/notifications/).
 
 All teams in sidebar order, with a button to move each one up or down, and **New team** to add one. Each team has its own page, listed at the bottom of the settings navigation:
 
-- **General**: name, key, color, **Dormant**, and **Knowledge** (Off, Alongside issues, or Knowledge only). The key can only change while the team has no issues, so identifiers stay stable.
+- **General**: name, key, color, **Dormant**, **Knowledge** (Off, Alongside issues, or Knowledge only) and the **Default model** for the team's issues (see [Model](/concepts/issues/#model)). The key can only change while the team has no issues, so identifiers stay stable.
 - **Workflow**: the team's statuses, grouped by type, the default status for new issues, and **Fixed order** if issues should move through the statuses in order.
 - **Logo**: a logo for light and, optionally, one for dark backgrounds.
 
@@ -98,6 +98,19 @@ Issues that come back every week or every month. On the due day, Selfbound creat
 API keys for coding agents such as Claude Code or Codex, and connectors for claude.ai and ChatGPT. The list shows when each one was created and last used, and how many calls it made today. You can revoke any of them here.
 
 Details: [Connect an agent](/agents/connect/).
+
+### Models
+
+The models you use for issues: only these appear in the [model picker](/concepts/issues/#model), and agents
+see them with the MCP tool `list_models`.
+
+- **Enabled**: your models with their effort levels, speeds and context window. The switch removes a model
+  from the picker; issues that already use it keep it.
+- **Catalog**: the list comes from [models.dev](https://models.dev), a free, open catalog. The server fetches it
+  once a day (only when it changed) and keeps a small copy; your browser never contacts models.dev. **Update
+  now** fetches it right away. If models.dev cannot be reached, the last copy stays in use.
+- **Finding a model**: choose a provider to see its models, newest first, and filter them; or type at least two
+  letters to search all providers.
 
 ### GitHub
 

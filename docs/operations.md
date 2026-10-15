@@ -305,6 +305,18 @@ Revoked keys cannot be restored; create a new key for the same agent.
   [architecture/mcp.md](architecture/mcp.md).
 - The ops page (Settings → Ops) shows each agent's calls today and when it was last seen.
 
+### Models catalog
+
+The desired model per issue (Settings → Models, MCP `list_models`) comes from `https://models.dev/api.json`
+(free, no key). The cron `sync-models` fetches it daily at 04:10 UTC with `If-None-Match`, so an unchanged catalog
+costs one request and no writes; **Update now** in the settings does the same at once (at most once a minute). An
+instance with an outgoing firewall must allow `models.dev`. The file is about 6 MB; the backend keeps only the
+fields it needs (tables `models`, `modelProviders`, about 9,000 small rows) and rewrites only providers whose
+content changed. If models.dev is down or answers nonsense, the last copy stays in use and the settings show the
+error; nothing else breaks. A new instance has no catalog until the first run: open Settings → Models and press
+**Update now**, or run `node tooling/cloud.mjs run models:sync`. The local test data (`pnpm dev`) brings a small
+sample catalog with three models enabled and needs no network.
+
 ## Connectors in claude.ai and ChatGPT
 
 Claude (web, desktop, mobile) and ChatGPT connect as a **connector** with OAuth instead of a key. Each

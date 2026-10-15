@@ -60,6 +60,8 @@ in the sidebar. There you change:
 - **Name**, **Key** (only while the team has no issues) and **Color**.
 - **Dormant**: see below.
 - **Knowledge**: **Off**, **Alongside issues** or **Knowledge only**.
+- **Default model**: the model for the team's issues that set none themselves and whose parent sets none,
+  with effort and speed. See [Model](/concepts/issues/#model).
 - **Logo** and **Logo for dark backgrounds**.
 - **Workflow** and **Fixed order**: the team's statuses, see [Statuses and workflow](/concepts/workflow/).
 
@@ -100,7 +102,8 @@ When an issue moves:
   [fixed order](/concepts/workflow/#fixed-order) does not apply to moves.
 - **Its project is removed**, because a project belongs to exactly one team.
 - **Labels of the old team are removed.** Workspace labels stay.
-- Everything else stays: priority, estimate, due date, sprint, parent, description, comments and history.
+- Everything else stays: priority, estimate, model, due date, sprint, parent, description, comments and
+  history. An issue without its own model then inherits the default model of the new team.
 
 If the move would remove a project or labels, Selfbound lists what changes and asks you to confirm first.
 Afterwards a message such as "OPS-24 is now ACME-120" appears with **Undo**.
