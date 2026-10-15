@@ -3,16 +3,15 @@ import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import {
   addDays,
-  berlinDay,
-  berlinOffsetMinutes,
   isDay,
   nextMonday,
   nextMonthDay,
   nextWeekday,
   weekdayOf,
+  zoneOffsetMinutes,
 } from '../convex/lib/dates';
 import { runDueRecurrences } from '../convex/ops/recurrences';
-import { expectCode, fixture, historyOf, setup, type T } from './helpers';
+import { berlinDay, expectCode, fixture, historyOf, setup, type T } from './helpers';
 
 describe('Calendar days in Europe/Berlin', () => {
   test('matches Intl over several years (including DST changes)', () => {
@@ -24,10 +23,10 @@ describe('Calendar days in Europe/Berlin', () => {
   });
 
   test('DST transitions 2026', () => {
-    expect(berlinOffsetMinutes(Date.UTC(2026, 2, 29, 0, 59))).toBe(60);
-    expect(berlinOffsetMinutes(Date.UTC(2026, 2, 29, 1, 0))).toBe(120);
-    expect(berlinOffsetMinutes(Date.UTC(2026, 9, 25, 0, 59))).toBe(120);
-    expect(berlinOffsetMinutes(Date.UTC(2026, 9, 25, 1, 0))).toBe(60);
+    expect(zoneOffsetMinutes(Date.UTC(2026, 2, 29, 0, 59), 'Europe/Berlin')).toBe(60);
+    expect(zoneOffsetMinutes(Date.UTC(2026, 2, 29, 1, 0), 'Europe/Berlin')).toBe(120);
+    expect(zoneOffsetMinutes(Date.UTC(2026, 9, 25, 0, 59), 'Europe/Berlin')).toBe(120);
+    expect(zoneOffsetMinutes(Date.UTC(2026, 9, 25, 1, 0), 'Europe/Berlin')).toBe(60);
     expect(berlinDay(Date.UTC(2026, 2, 28, 22, 59))).toBe('2026-03-28');
     expect(berlinDay(Date.UTC(2026, 2, 28, 23, 0))).toBe('2026-03-29');
     expect(berlinDay(Date.UTC(2026, 9, 24, 21, 59))).toBe('2026-10-24');

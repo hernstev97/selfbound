@@ -2,13 +2,14 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { SPRINT, takeCounter } from '../lib/counters';
-import { addDays, berlinDay, daysBetween, nextMonday } from '../lib/dates';
+import { addDays, daysBetween, nextMonday } from '../lib/dates';
 import { fail, invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
 import { teamKeys } from '../lib/identifiers';
 import type { SprintDecision, SprintOutcome } from '../lib/validators';
-import { isOpen, type SprintItemKind } from '../shared/constants';
+import { isOpen, LEGACY_SPRINT_SOURCE, SPRINT_SOURCE, type SprintItemKind } from '../shared/constants';
 import { record } from './history';
+import { todayOf } from './instance';
 import { applyPatch } from './issues';
 import { checkDay, checkName, getIssue } from './validate';
 
@@ -165,7 +166,7 @@ async function insertSprint(
   now: number,
 ) {
   const number = await takeCounter(ctx, SPRINT);
-  const startDate = fields.startDate ? checkDay(fields.startDate, 'The start date') : suggestedStart(await openSprints(ctx), berlinDay(now));
+  const startDate = fields.startDate ? checkDay(fields.startDate, 'The start date') : suggestedStart(await openSprints(ctx), await todayOf(ctx, now));
   const endDate = fields.endDate ? checkDay(fields.endDate, 'The end date') : addDays(startDate, DEFAULT_SPRINT_DAYS - 1);
   if (daysBetween(startDate, endDate) < 0) invalid('The end date is before the start date.');
   if (fields.capacity !== undefined && (!Number.isFinite(fields.capacity) || fields.capacity < 0)) {
@@ -179,7 +180,7 @@ async function insertSprint(
     endDate,
     state: 'planning',
     ...(fields.capacity !== undefined ? { capacity: fields.capacity } : {}),
-    source: 'xlr8',
+    source: SPRINT_SOURCE,
     updatedAt: now,
   });
   return { id, number };
@@ -297,7 +298,7 @@ export async function startSprint(ctx: MutationCtx, _actor: Actor, args: { sprin
     });
   }
   const now = Date.now();
-  const today = berlinDay(now);
+  const today = await todayOf(ctx, now);
   const early = sprint.startDate > today;
   const overdue = sprint.endDate < today;
   const range = early
@@ -334,7 +335,7 @@ export async function closeSprint(ctx: MutationCtx, actor: Actor, args: CloseSpr
       );
     }
     const now = Date.now();
-    const today = berlinDay(now);
+    const today = await todayOf(ctx, now);
     // Closed early: end today (before creating a follow-up sprint, so that one starts after it).
     const endedEarly = sprint.endDate > today && sprint.startDate <= today ? today : null;
     if (endedEarly) await ctx.db.patch('sprints', sprint._id, { endDate: endedEarly });
@@ -416,14 +417,21 @@ export async function closeSprint(ctx: MutationCtx, actor: Actor, args: CloseSpr
   });
 }
 
-/** Most recently closed sprints of a source, newest first (by closedAt). */
-export async function recentClosedSprints(ctx: QueryCtx, source: 'xlr8' | 'linear', count: number) {
+/**
+ * Most recently closed sprints of a source, newest first (by closedAt). 'selfbound' also reads the
+ * legacy source value, so the result is the same before and after the data migration.
+ */
+export async function recentClosedSprints(ctx: QueryCtx, source: 'selfbound' | 'linear', count: number) {
   if (count <= 0) return [];
-  return await ctx.db
-    .query('sprints')
-    .withIndex('by_source_state_closed', (q) => q.eq('source', source).eq('state', 'closed'))
-    .order('desc')
-    .take(count);
+  const recent = async (value: Doc<'sprints'>['source']) =>
+    await ctx.db
+      .query('sprints')
+      .withIndex('by_source_state_closed', (q) => q.eq('source', value).eq('state', 'closed'))
+      .order('desc')
+      .take(count);
+  if (source === 'linear') return await recent('linear');
+  const both = [...(await recent(SPRINT_SOURCE)), ...(await recent(LEGACY_SPRINT_SOURCE))];
+  return both.sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0)).slice(0, count);
 }
 
 /**
@@ -432,7 +440,7 @@ export async function recentClosedSprints(ctx: QueryCtx, source: 'xlr8' | 'linea
  * entries without `points`: the current estimate).
  */
 export async function capacitySuggestion(ctx: QueryCtx) {
-  const recent = await recentClosedSprints(ctx, 'xlr8', 3);
+  const recent = await recentClosedSprints(ctx, 'selfbound', 3);
   const basis = [];
   for (const sprint of recent) {
     const entries = await ctx.db

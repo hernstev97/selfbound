@@ -1,7 +1,7 @@
 <script lang="ts">
   // Sources of a knowledge page: list with URL or title, author, publication and access date, note.
   // Add, edit, move up/down, remove.
-  import { ICON, type ArticleView, type SourceInput } from '@selfbound/core';
+  import { ICON, today, type ArticleView, type SourceInput } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
 
@@ -19,7 +19,7 @@
       title: source?.title ?? '',
       author: source?.author ?? '',
       publishedAt: source?.publishedAt ?? '',
-      accessedAt: source?.accessedAt ?? new Date().toLocaleDateString('sv-SE'),
+      accessedAt: source?.accessedAt ?? today(),
       note: source?.note ?? '',
     };
   }

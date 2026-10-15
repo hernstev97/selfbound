@@ -1,7 +1,7 @@
 // Starting offline: Clerk is simulated, time and "online" events are driven by the test.
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { App } from '../src/app/index.ts';
-import { Auth, CLERK_TIMEOUT } from '../src/auth.ts';
+import { Auth, CLERK_TIMEOUT, LEGACY_SIGNED_IN_COOKIE, SIGNED_IN_COOKIE } from '../src/auth.ts';
 import { callName, doc, fakeClient, meta } from './helpers.ts';
 
 type FetchToken = (args: { forceRefreshToken: boolean }) => Promise<string | null>;
@@ -10,11 +10,23 @@ type FetchToken = (args: { forceRefreshToken: boolean }) => Promise<string | nul
 function browser(cookie: string) {
   const listeners = new Set<() => void>();
   const g = globalThis as Record<string, unknown>;
-  g.document = { cookie };
+  // A cookie jar: writing "name=value; ..." sets one cookie, an empty value or max-age=0 removes it.
+  const jar = new Map<string, string>(cookie.split('; ').filter(Boolean).map((c) => c.split('=') as [string, string]));
+  g.document = {
+    get cookie() {
+      return [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
+    },
+    set cookie(line: string) {
+      const [pair, ...attrs] = line.split('; ');
+      const [name, value] = pair.split('=');
+      if (value === '' || attrs.includes('max-age=0')) jar.delete(name);
+      else jar.set(name, value);
+    },
+  };
   g.location = { protocol: 'https:' };
   g.addEventListener = (type: string, cb: () => void) => type === 'online' && listeners.add(cb);
   g.removeEventListener = (_type: string, cb: () => void) => listeners.delete(cb);
-  return { online: () => listeners.forEach((cb) => cb()) };
+  return { online: () => listeners.forEach((cb) => cb()), cookies: () => [...jar.keys()].sort() };
 }
 
 function client() {
@@ -65,7 +77,7 @@ afterEach(() => {
 
 describe('starting offline', () => {
   test('signed in last time: "cached" right away, Convex waits for the token until Clerk is there', async () => {
-    browser('xlr8_signed_in=1');
+    browser(`${SIGNED_IN_COOKIE}=1`);
     let finish!: () => void;
     const fake = clerk(() => new Promise<void>((r) => (finish = r)));
     const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: fake.loadClerk });
@@ -109,7 +121,7 @@ describe('starting offline', () => {
   });
 
   test('if Clerk hangs without rejecting, "online" replaces the attempt', async () => {
-    const env = browser('xlr8_signed_in=1');
+    const env = browser(`${SIGNED_IN_COOKIE}=1`);
     const fake = clerk(never);
     const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: fake.loadClerk });
     void auth.start(client() as never);
@@ -126,7 +138,7 @@ describe('starting offline', () => {
   });
 
   test('token offline: wait instead of "No access", it arrives once online again', async () => {
-    const env = browser('xlr8_signed_in=1');
+    const env = browser(`${SIGNED_IN_COOKIE}=1`);
     let offline = true;
     const fake = clerk(async () => {}, {
       token: async () => {
@@ -153,7 +165,7 @@ describe('starting offline', () => {
   });
 
   test('Clerk without server (loaded, but without user) is not a sign-out', async () => {
-    browser('xlr8_signed_in=1');
+    browser(`${SIGNED_IN_COOKIE}=1`);
     const fake = clerk(async () => {}, { user: false, server: false });
     const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: fake.loadClerk });
     const c = client();
@@ -171,7 +183,7 @@ describe('starting offline', () => {
   });
 
   test('token error with network (session revoked) does not wait, Convex gets the rejection', async () => {
-    browser('xlr8_signed_in=1');
+    browser(`${SIGNED_IN_COOKIE}=1`);
     const fake = clerk(async () => {}, {
       token: async () => {
         throw Object.assign(new Error('revoked'), { code: 'session_revoked' });
@@ -184,13 +196,34 @@ describe('starting offline', () => {
   });
 
   test('Clerk reports signed out: Convex gets no token', async () => {
-    browser('xlr8_signed_in=1');
+    browser(`${SIGNED_IN_COOKIE}=1`);
     const fake = clerk(async () => {}, { user: false });
     const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: fake.loadClerk });
     const c = client();
     await auth.start(c as never);
     expect(auth.status.get()).toBe('signed-out');
     expect(await c.calls.at(-1)!.fetchToken({ forceRefreshToken: false })).toBeNull();
+  });
+});
+
+describe('signed-in cookie', () => {
+  test('the old cookie alone still counts as signed in, and signing in replaces it with the new one', async () => {
+    const env = browser(`${LEGACY_SIGNED_IN_COOKIE}=1`);
+    const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: clerk(async () => {}).loadClerk });
+    void auth.start(client() as never);
+    expect(auth.status.get()).toBe('cached');
+    await settle();
+    expect(auth.status.get()).toBe('signed-in');
+    expect(env.cookies()).toEqual([SIGNED_IN_COOKIE]);
+  });
+
+  test('no cookie: not signed in before, and a fresh sign-in sets only the new name', async () => {
+    const env = browser('');
+    const auth = new Auth({ clerkPublishableKey: 'pk_test_x', loadClerk: clerk(async () => {}).loadClerk });
+    void auth.start(client() as never);
+    expect(auth.status.get()).toBe('loading');
+    await settle();
+    expect(env.cookies()).toEqual([SIGNED_IN_COOKIE]);
   });
 });
 

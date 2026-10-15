@@ -29,7 +29,8 @@
       // language that is English or German, otherwise English. Same rule as resolveLocale in
       // core/src/i18n.ts; app/src/lib/i18n.ts sets it again at startup.
       try {
-        var p = JSON.parse(localStorage.getItem('xlr8:prefs') || '{}');
+        // legacy-xlr8: the xlr8:* keys are read on the first load after the rename (main.ts moves them).
+        var p = JSON.parse(localStorage.getItem('selfbound:prefs') || localStorage.getItem('xlr8:prefs') || '{}');
       } catch (e) {
         p = {};
       }
@@ -50,7 +51,8 @@
         if (!dark) document.querySelector('meta[name=theme-color]').content = '#fcfcfd';
         if (p.fontSize) document.documentElement.dataset.font = p.fontSize;
         // Chosen themes and fonts (app/src/lib/look): ready-made CSS from the last run.
-        var l = JSON.parse(localStorage.getItem('xlr8:look') || 'null');
+        // legacy-xlr8: see above
+        var l = JSON.parse(localStorage.getItem('selfbound:look') || localStorage.getItem('xlr8:look') || 'null');
         if (l && l.css) {
           var s = document.createElement('style');
           s.id = 'selfbound-look';

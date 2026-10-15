@@ -5,27 +5,28 @@ import { DEV_ISSUER } from '../auth.config';
 import { OWNER_KIND } from '../shared/constants';
 import type { Actor } from './actor';
 import { assertWritable } from './testSwitches';
+import { envVar } from './legacyEnv';
 
-/** The instance owner, the only signed-in user. Stored as actor kind OWNER_KIND ('steven', legacy value). */
+/** The instance owner, the only signed-in user. Stored as actor kind OWNER_KIND. */
 export const OWNER_ACTOR: Actor = { kind: OWNER_KIND };
 
 /**
  * Checks that the signed-in identity is the owner.
  *
  * Convex has already verified the token's signature, expiry, issuer and audience.
- * This adds the allowlist: XLR8_OWNER_IDS holds the allowed `tokenIdentifier`s
+ * This adds the allowlist: SELFBOUND_OWNER_IDS holds the allowed `tokenIdentifier`s
  * ("<issuer>|<subject>"), comma-separated.
  */
 export async function requireOwner(ctx: Pick<QueryCtx, 'auth'>): Promise<Actor> {
   const identity = await ctx.auth.getUserIdentity();
-  const allowed = (process.env.XLR8_OWNER_IDS ?? '')
+  const allowed = (envVar('OWNER_IDS') ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean);
   if (!identity || allowed.length === 0 || !allowed.includes(identity.tokenIdentifier)) {
     throw new ConvexError({ code: 'access_denied', message: 'Not signed in or not allowed.' });
   }
-  // The local test sign-in only works on a local deployment. If XLR8_DEV_JWKS is set in
+  // The local test sign-in only works on a local deployment. If SELFBOUND_DEV_JWKS is set in
   // production by mistake, these tokens still get nobody in.
   if (identity.issuer === DEV_ISSUER && !isLocalDeployment()) {
     throw new ConvexError({ code: 'access_denied', message: 'The local test sign-in only works on a local backend.' });
@@ -59,7 +60,7 @@ export const ownerMutation = customMutation(
 );
 /**
  * Like ownerMutation, then also checks the "reject writes" test switch
- * (only active with XLR8_TEST_SWITCHES=1). Used for all UI writes.
+ * (only active with SELFBOUND_TEST_SWITCHES=1). Used for all UI writes.
  */
 export const ownerWriteMutation = customMutation(
   mutation,

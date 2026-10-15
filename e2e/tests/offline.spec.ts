@@ -23,7 +23,7 @@ async function mirrorWritten(page: Page) {
     .poll(
       () =>
         page.evaluate(async () => {
-          const names = (await indexedDB.databases()).map((d) => d.name!).filter((n) => n.startsWith('xlr8:'));
+          const names = (await indexedDB.databases()).map((d) => d.name!).filter((n) => n.startsWith('selfbound:'));
           let count = 0;
           for (const name of names) {
             const db = await new Promise<IDBDatabase>((resolve, reject) => {
@@ -46,24 +46,29 @@ async function mirrorWritten(page: Page) {
     .toBeGreaterThan(0);
 }
 
-async function asClerk(page: Page, signedInBefore: boolean) {
-  await page.evaluate((key) => localStorage.setItem('xlr8:testClerk', key), FAKE_KEY);
+const COOKIE = 'selfbound_signed_in';
+// legacy-xlr8: the cookie of the old name still counts as signed in
+const LEGACY_COOKIE = 'xlr8_signed_in';
+
+async function asClerk(page: Page, signedInBefore: boolean, cookie = COOKIE) {
+  await page.evaluate((key) => localStorage.setItem('selfbound:testClerk', key), FAKE_KEY);
   const url = new URL(page.url());
-  if (signedInBefore) await page.context().addCookies([{ name: 'xlr8_signed_in', value: '1', domain: url.hostname, path: '/' }]);
-  else await page.context().clearCookies({ name: 'xlr8_signed_in' });
+  if (signedInBefore) await page.context().addCookies([{ name: cookie, value: '1', domain: url.hostname, path: '/' }]);
+  else await page.context().clearCookies({ name: cookie });
 }
 
 test.afterEach(async ({ page }) => {
   if (page.isClosed()) return;
-  await page.evaluate(() => localStorage.removeItem('xlr8:testClerk')).catch(() => undefined);
-  await page.context().clearCookies({ name: 'xlr8_signed_in' });
+  await page.evaluate(() => localStorage.removeItem('selfbound:testClerk')).catch(() => undefined);
+  await page.context().clearCookies({ name: COOKIE });
+  await page.context().clearCookies({ name: LEGACY_COOKIE });
 });
 
-test('Signed in last time, no network: list from the cache, "Offline" notice', async ({ page }) => {
+for (const cookie of [COOKIE, LEGACY_COOKIE]) test(`Signed in last time (${cookie}), no network: list from the cache, "Offline" notice`, async ({ page }) => {
   await open(page, '/all?group=none&order=created');
   const titles = await page.locator('[data-testid="issue-row"] [data-testid="row-title"]').allTextContents();
   await mirrorWritten(page);
-  await asClerk(page, true);
+  await asClerk(page, true, cookie);
   await cutNetwork(page);
   await page.reload();
   // The list from this device right away, not just the logo.

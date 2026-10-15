@@ -5,14 +5,14 @@ import { IssueSearch, identifierCandidates, loadFuzzy, scoreText } from '../src/
 
 // The app loads uFuzzy lazily; the tests load it up front.
 await loadFuzzy();
-import { computeWindow, revealIndex } from '../src/window.ts';
+import { buildOffsets, computeVariableWindow, computeWindow, indexAt, revealIndex, revealSpan } from '../src/window.ts';
 import { isConsentPath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import { VIEWS, type ViewContext } from '../src/views.ts';
 import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
 import { setDictionary } from '../src/i18n.ts';
 import de from '../src/locales/de.ts';
 import { eventCombo, formatShortcut } from '../src/keyboard.ts';
-import { OWNER_KIND, type Issue, type IssueDoc, type ViewRoute, type ViewState } from '../src/types.ts';
+import { isOwnerKind, LEGACY_OWNER_KIND, OWNER_KIND, type Issue, type IssueDoc, type ViewRoute, type ViewState } from '../src/types.ts';
 import { doc, entry, meta } from './helpers.ts';
 
 const keyOf = (d: IssueDoc) => `${d.teamId === 't1' ? 'ACME' : 'PX'}-${d.number}`;
@@ -157,6 +157,35 @@ describe('search (identifiers with 2–6 characters)', () => {
   });
 });
 
+describe('windowing with entries of different heights (board cards)', () => {
+  const ids = Array.from({ length: 1000 }, (_, i) => `c${i}`);
+  test('offsets use measured heights, the estimate for the rest, and the gap below each entry', () => {
+    const o = buildOffsets(['a', 'b', 'c'], new Map([['b', 200]]), 100, 8);
+    expect([...o]).toEqual([0, 108, 316, 424]);
+  });
+  test('indexAt finds the entry at a position, clamped', () => {
+    const o = buildOffsets(['a', 'b', 'c'], new Map([['b', 200]]), 100, 8);
+    expect([indexAt(o, -5), indexAt(o, 0), indexAt(o, 107), indexAt(o, 108), indexAt(o, 315), indexAt(o, 316), indexAt(o, 9999)]).toEqual([0, 0, 0, 1, 1, 2, 2]);
+    expect(indexAt(buildOffsets([], new Map(), 100, 8), 10)).toBe(0);
+  });
+  test('window around the scroll position with overscan, not the whole column', () => {
+    const o = buildOffsets(ids, new Map(), 100, 0);
+    expect(computeVariableWindow(o, 0, 450, 2)).toEqual({ start: 0, end: 7 });
+    expect(computeVariableWindow(o, 5000, 450, 2)).toEqual({ start: 48, end: 57 });
+    expect(computeVariableWindow(o, 1e9, 450, 2).end).toBe(1000);
+    expect(computeVariableWindow(buildOffsets([], new Map(), 100, 0), 0, 450)).toEqual({ start: 0, end: 0 });
+  });
+  test('revealSpan scrolls just enough, in both directions', () => {
+    const el = { scrollTop: 100, clientHeight: 300 };
+    revealSpan(el, 150, 250);
+    expect(el.scrollTop).toBe(100);
+    revealSpan(el, 350, 480);
+    expect(el.scrollTop).toBe(180);
+    revealSpan(el, 20, 90);
+    expect(el.scrollTop).toBe(20);
+  });
+});
+
 describe('windowing', () => {
   test('fixed row height of 44 px', () => {
     expect(computeWindow(0, 440, 44, 10_000, 6)).toEqual({ start: 0, end: 17 });
@@ -208,10 +237,10 @@ describe('routing by path', () => {
     ['/sprint/close', { name: 'view', view: { kind: 'close', team: null } }],
     ['/sprints', { name: 'sprints' }],
     ['/new', { name: 'new' }],
-    ['/pr/acme/xlr8/57', { name: 'pr', repo: 'acme/xlr8', number: 57 }],
+    ['/pr/acme/widgets/57', { name: 'pr', repo: 'acme/widgets', number: 57 }],
     ['/pr/acme/acme.dev/3', { name: 'pr', repo: 'acme/acme.dev', number: 3 }],
-    ['/pr/acme/xlr8', { name: 'home' }],
-    ['/pr/acme/xlr8/abc', { name: 'home' }],
+    ['/pr/acme/widgets', { name: 'home' }],
+    ['/pr/acme/widgets/abc', { name: 'home' }],
     ['/does/not/exist', { name: 'home' }],
   ])('%s', (path, page) => {
     expect(at(path).page).toEqual(page);
@@ -249,6 +278,14 @@ describe('routing by path', () => {
     expect(isConsentPath('/oauth/freigabe')).toBe(true);
     expect(isConsentPath('/oauth')).toBe(false);
     expect(isConsentPath('/oauth/consent/x')).toBe(false);
+    expect(isConsentPath('/oauth/consent///')).toBe(true);
+    expect(isConsentPath('///')).toBe(false);
+  });
+
+  test('a long run of slashes does not stall the consent check', () => {
+    const start = performance.now();
+    expect(isConsentPath(`${'/'.repeat(200_000)}x`)).toBe(false);
+    expect(performance.now() - start).toBeLessThan(500);
   });
 
   test('filters and display survive the trip through the URL, other parameters stay', () => {
@@ -262,10 +299,24 @@ describe('routing by path', () => {
     expect(back.group).toBe('priority');
   });
 
+  test('the second grouping level has its own parameter; unknown values are ignored', () => {
+    const url = writeLocation(new URL('http://x/'), { page: { name: 'view', view: { kind: 'all', team: null } }, filters: emptyFilters(), quick: '', group: 'label', sub: 'due', order: null });
+    expect(url.search).toBe('?group=label&sub=due');
+    expect(readLocation(url)).toMatchObject({ group: 'label', sub: 'due' });
+    expect(readLocation(new URL('http://x/all?sub=bogus')).sub).toBeNull();
+  });
+
   test('/new with prefilled values', () => {
     const loc = at('/new?title=Test&priority=high&team=ACME');
     expect(loc.page).toEqual({ name: 'new' });
     expect(loc.params).toEqual({ title: 'Test', priority: 'high', team: 'ACME' });
+  });
+
+  test('/new keeps only the known parameters, names from the URL never become properties', () => {
+    const loc = at('/new?title=Test&__proto__=x&constructor=y&toString=z&other=1');
+    expect(loc.params).toEqual({ title: 'Test' });
+    expect(Object.getPrototypeOf(loc.params)).toBe(Object.prototype);
+    expect(at('/issue/ACME-1?title=Test').params).toEqual({});
   });
 });
 
@@ -340,6 +391,15 @@ describe('odds and ends', () => {
     setDictionary('de', de);
     expect(actorName({ kind: OWNER_KIND }, agents)).toBe('Du');
     setDictionary('en', null);
+  });
+
+  test('legacy owner kind is the owner too, with the profile name from the same map key', () => {
+    // legacy-xlr8: data not yet migrated still says "steven"
+    const legacy = { kind: LEGACY_OWNER_KIND } as const;
+    expect(isOwnerKind(OWNER_KIND) && isOwnerKind(LEGACY_OWNER_KIND) && !isOwnerKind('agent')).toBe(true);
+    expect(actorName(legacy, new Map())).toBe('You');
+    expect(actorName(legacy, new Map([[OWNER_KIND, 'Jane Doe']]))).toBe('Jane Doe');
+    expect(actorName(legacy, new Map(), 'Jane')).toBe('Jane');
   });
 
   test('suggested branch name: no prefix by default, optional prefix', () => {

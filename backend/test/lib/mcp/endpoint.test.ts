@@ -5,7 +5,9 @@ import { post } from './fake';
 // POST /mcp without Convex: dispatch to count/read/write, errors → responses, including
 // counting, the key format and a key revoked between sign-in and call (→ 401).
 
-const KEY = `xlr8_${'A'.repeat(43)}`;
+const KEY = `selfbound_${'A'.repeat(43)}`;
+// legacy-xlr8: keys issued before the rename
+const LEGACY_KEY = `xlr8_${'A'.repeat(43)}`;
 const denied = () => Object.assign(new Error('access_denied'), { data: { code: 'access_denied', message: 'revoked' } });
 
 function backend(overrides: Partial<McpBackend> = {}) {
@@ -41,8 +43,10 @@ const toolCall = (name: string, args: unknown, key = KEY) =>
 describe('MCP endpoint', () => {
   test('the key format is checked before any lookup', async () => {
     expect(KEY_FORMAT.test(KEY)).toBe(true);
+    expect(KEY_FORMAT.test(LEGACY_KEY)).toBe(true);
     const { b, log } = backend();
-    for (const key of ['xlr8_short', `xlr8_${'A'.repeat(44)}`, `sk_${'A'.repeat(43)}`, `xlr8_${'A'.repeat(42)}!`]) {
+    // legacy-xlr8: the old prefix is held to the same format
+    for (const key of ['selfbound_short', `selfbound_${'A'.repeat(44)}`, `sk_${'A'.repeat(43)}`, `selfbound_${'A'.repeat(42)}!`, 'xlr8_short', `xlr8_${'A'.repeat(44)}`, `xlr8_${'A'.repeat(42)}!`]) {
       const r = await mcpEndpoint(toolCall('list_teams', {}, key), b, 't');
       expect(r.status).toBe(401);
     }
@@ -92,7 +96,9 @@ describe('MCP endpoint', () => {
   });
 
   describe('OAuth (connectors)', () => {
-    const ACCESS = `xlr8_at_${'B'.repeat(43)}`;
+    const ACCESS = `selfbound_at_${'B'.repeat(43)}`;
+    // legacy-xlr8: access tokens issued before the rename
+    const LEGACY_ACCESS = `xlr8_at_${'B'.repeat(43)}`;
     const challenge = (error?: 'invalid_token') => `Bearer resource_metadata="https://x/.well-known/oauth-protected-resource/mcp"${error ? `, error="${error}"` : ''}`;
     const raw = (headers: Record<string, string> = {}) =>
       post({ jsonrpc: '2.0', id: 7, method: 'ping' }, { 'mcp-protocol-version': '2025-11-25', ...headers });
@@ -110,7 +116,8 @@ describe('MCP endpoint', () => {
 
     test('agent keys keep the plain behaviour: 401 without WWW-Authenticate', async () => {
       const { b } = backend({ challenge, authenticate: async () => Promise.reject(denied()) });
-      for (const key of ['xlr8_wrong', KEY]) {
+      // legacy-xlr8: old keys behave like new ones
+      for (const key of ['selfbound_wrong', 'xlr8_wrong', KEY, LEGACY_KEY]) {
         const r = await mcpEndpoint(toolCall('list_teams', {}, key), b, 't');
         expect(r.status).toBe(401);
         expect(r.headers['WWW-Authenticate']).toBeUndefined();
@@ -129,6 +136,8 @@ describe('MCP endpoint', () => {
       });
       expect((await mcpEndpoint(toolCall('list_teams', {}, ACCESS), ok.b, 't')).status).toBe(200);
       expect(seen).toEqual([`hash:${ACCESS}`, 'number']);
+      expect((await mcpEndpoint(toolCall('list_teams', {}, LEGACY_ACCESS), ok.b, 't')).status).toBe(200);
+      expect(seen.slice(2)).toEqual([`hash:${LEGACY_ACCESS}`, 'number']);
       const bad = backend({ challenge, authenticate: async () => Promise.reject(denied()) });
       const r = await mcpEndpoint(toolCall('list_teams', {}, ACCESS), bad.b, 't');
       expect(r.status).toBe(401);

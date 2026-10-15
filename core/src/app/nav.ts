@@ -6,15 +6,19 @@ import type { Filters, Grouping, Ordering, ViewRoute } from '../types.ts';
 import { VIEWS } from '../views.ts';
 import type { App } from './index.ts';
 
-const LAST_VIEW = 'xlr8:lastView';
+const LAST_VIEW = 'selfbound:lastView';
 /** URL of the last list including filters: Back after a reload lands there. */
-const LAST_VIEW_URL = 'xlr8:lastViewUrl';
+const LAST_VIEW_URL = 'selfbound:lastViewUrl';
 /** Marker in history.state: history entry of an open overlay. */
-const OVERLAY = 'xlr8Overlay';
+const OVERLAY = 'selfboundOverlay';
 const OVERLAY_STATE = { [OVERLAY]: true };
+// legacy-xlr8: history entries written by the old build survive a reload.
+const LEGACY_OVERLAY = 'xlr8Overlay';
 
 function isOverlayState(state: unknown) {
-  return typeof state === 'object' && state !== null && (state as Record<string, unknown>)[OVERLAY] === true;
+  if (typeof state !== 'object' || state === null) return false;
+  const s = state as Record<string, unknown>;
+  return s[OVERLAY] === true || s[LEGACY_OVERLAY] === true;
 }
 
 export interface GoOptions {
@@ -22,6 +26,7 @@ export interface GoOptions {
   filters?: Filters;
   quick?: string;
   group?: Grouping | null;
+  sub?: Grouping | null;
   order?: Ordering | null;
   layout?: 'board' | null;
 }
@@ -75,7 +80,7 @@ export class Navigator {
       return;
     }
     if (fromHistory) this.#depth = Math.max(0, this.#depth - 1);
-    this.#show(page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, order: loc.order, layout: loc.layout });
+    this.#show(page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, sub: loc.sub, order: loc.order, layout: loc.layout });
     if (!fromHistory) this.syncUrl('replace');
   }
 
@@ -169,7 +174,7 @@ export class Navigator {
     const loc = readLocation(new URL(href, 'https://app.invalid'));
     if (loc.page.name === 'home') return this.#goLastView(false);
     if (loc.page.name === 'new') return this.app.create.openFromParams(loc.params);
-    this.go(loc.page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, order: loc.order, layout: loc.layout });
+    this.go(loc.page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, sub: loc.sub, order: loc.order, layout: loc.layout });
   }
 
   /** To the last list (with filters), e.g. "Back to app" from settings. */
@@ -187,7 +192,7 @@ export class Navigator {
     if (saved && this.win) {
       const loc = readLocation(new URL(saved, this.win.location.origin));
       if (loc.page.name === 'view') {
-        this.go(loc.page, { replace, filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, order: loc.order, layout: loc.layout });
+        this.go(loc.page, { replace, filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, sub: loc.sub, order: loc.order, layout: loc.layout });
         return;
       }
     }
@@ -206,6 +211,7 @@ export class Navigator {
       filters: view.filters,
       quick: view.quick,
       group: def && view.display.grouping !== def.grouping ? view.display.grouping : null,
+      sub: def && view.display.grouping !== 'none' && view.display.subGrouping && view.display.subGrouping !== 'none' ? view.display.subGrouping : null,
       order: def && view.display.ordering !== def.ordering ? view.display.ordering : null,
       layout: view.display.layout === 'board' ? 'board' : null,
     }, this.app.store.meta.get()?.labels ?? []);

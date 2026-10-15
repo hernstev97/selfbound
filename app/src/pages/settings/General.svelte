@@ -1,11 +1,12 @@
 <script lang="ts">
-  // General: language, teams in the sidebar, sounds, local cache, sign out.
+  // General: language, time zone (the whole instance), teams in the sidebar, sounds, local cache, sign out.
   // Color scheme, font size, themes and fonts: Appearance (Appearance.svelte).
   import type { SidebarTeamSize } from '@selfbound/core';
   import { ICON } from '@selfbound/core';
   import { LOCALES, LOCALE_NAMES, t, type LocalePref } from '@selfbound/core/i18n';
   import { app, auth } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
+  import { admin } from './admin.ts';
 
   const prefsSlice = fromSlice(app.prefs.state);
   const prefs = $derived(prefsSlice.current);
@@ -15,6 +16,19 @@
   ];
   // Language names stay in their own language, so everyone finds theirs.
   const LANGUAGES: [LocalePref, string][] = [['auto', t('Automatic (browser language)')], ...LOCALES.map((l): [LocalePref, string] => [l, LOCALE_NAMES[l]])];
+
+  // Time zone of the instance (meta.get). Names from the browser, plus UTC and the stored one if the list lacks them.
+  const metaSlice = fromSlice(app.store.meta);
+  const instanceZone = $derived(metaSlice.current?.timeZone ?? null);
+  const browserZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const zones = $derived.by(() => {
+    const names = new Set<string>(typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []);
+    names.add('UTC');
+    if (instanceZone) names.add(instanceZone);
+    else if (browserZone) names.add(browserZone);
+    return [...names].sort();
+  });
+  const zoneName = (zone: string) => zone.replaceAll('_', ' ');
 
   /** The language is chosen at startup (app/src/lib/i18n.ts), so a change reloads the page. */
   function setLocale(locale: LocalePref) {
@@ -37,6 +51,24 @@
       <span class="icon">{@html ICON.chevronDown}</span>
     </span>
   </div>
+</div>
+<h2 class="section-title">{t('Time zone')}</h2>
+<div class="card-list">
+  <div class="card-row">
+    <span class="t">{t('Time zone')}<div class="sub">{t('Decides where a day begins for due dates, snoozing, sprints, recurring issues, the morning notifications and what agents see as “today”. It applies to the whole instance, not just this device. Saved days do not change.')}</div></span>
+    <span class="dp-select">
+      <select aria-label={t('Time zone of the instance')} data-testid="settings-timezone" value={instanceZone ?? browserZone} onchange={(e) => void admin.setTimeZone(e.currentTarget.value)}>
+        {#each zones as zone (zone)}<option value={zone}>{zoneName(zone)}</option>{/each}
+      </select>
+      <span class="icon">{@html ICON.chevronDown}</span>
+    </span>
+  </div>
+  {#if instanceZone && browserZone && browserZone !== instanceZone}
+    <div class="card-row">
+      <span class="t">{t('This browser is in {zone}.', { zone: zoneName(browserZone) })}</span>
+      <button class="btn small" data-testid="settings-timezone-browser" onclick={() => void admin.setTimeZone(browserZone)}>{t('Use {zone}', { zone: zoneName(browserZone) })}</button>
+    </div>
+  {/if}
 </div>
 <h2 class="section-title">{t('Sidebar')}</h2>
 <div class="card-list">

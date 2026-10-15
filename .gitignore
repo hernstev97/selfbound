@@ -20,6 +20,7 @@ e2e/.dist/
 # perf: own backend, own builds, results of performance runs
 perf/.backend/
 perf/.dist/
+perf/.media/
 perf/results/
 .convex-cloud-home/
 

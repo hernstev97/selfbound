@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { api, backend, focusedRow, open, resolve, settled } from '../support/helpers.ts';
 
-const DEFAULT = { dark: 'xlr8', light: 'xlr8', sans: 'inter', mono: 'system', overrides: [] };
+const DEFAULT = { dark: 'selfbound', light: 'selfbound', sans: 'inter', mono: 'system', overrides: [] };
 
 /** Other specs run on the same data: back to the default appearance. */
 const reset = () => backend().mutation(api.appearance.save, DEFAULT);

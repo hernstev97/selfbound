@@ -6,7 +6,8 @@
 // and a sticky toast offers a retry.
 import { api } from '@selfbound/backend/api';
 import type { Id } from '@selfbound/backend/dataModel';
-import { IMAGE_TYPES, LIMITS, OWNER_KIND } from '@selfbound/backend/constants';
+import { IMAGE_TYPES, LIMITS } from '@selfbound/backend/constants';
+import { isOwnerKind } from '@selfbound/core/types';
 import type { IssueId } from '@selfbound/core';
 import { intlLocale, t } from '@selfbound/core/i18n';
 import { app } from '../app-instance.ts';
@@ -137,7 +138,7 @@ async function replaceElsewhere(job: Job, next: string) {
   if (re.test(draft)) app.detail.setCommentDraft(id, swap(draft));
   // Locally kept description that is not saved yet.
   try {
-    const key = `xlr8:desc:${id}`;
+    const key = `selfbound:desc:${id}`;
     const local = JSON.parse(localStorage.getItem(key) ?? 'null') as { text: string; base: number } | null;
     if (local && re.test(local.text)) localStorage.setItem(key, JSON.stringify({ ...local, text: swap(local.text) }));
   } catch {
@@ -149,7 +150,7 @@ async function replaceElsewhere(job: Job, next: string) {
   try {
     if (re.test(doc.body.markdown)) await app.store.setDescription(id, swap(doc.body.markdown), doc.body.version);
     for (const c of doc.comments) {
-      if (c.author.kind === OWNER_KIND && re.test(c.body)) await app.store.editComment(id, c._id, swap(c.body));
+      if (isOwnerKind(c.author.kind) && re.test(c.body)) await app.store.editComment(id, c._id, swap(c.body));
     }
   } catch (error) {
     app.toasts.error(t('Image not added to the text'), error);
@@ -165,7 +166,7 @@ async function replaceInArticle(id: string, re: RegExp, swap: (text: string) => 
     return;
   }
   try {
-    const key = `xlr8:article:${id}`;
+    const key = `selfbound:article:${id}`;
     const local = JSON.parse(localStorage.getItem(key) ?? 'null') as { text: string; base: number } | null;
     if (local && re.test(local.text)) localStorage.setItem(key, JSON.stringify({ ...local, text: swap(local.text) }));
   } catch {

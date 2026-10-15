@@ -45,7 +45,7 @@ describe('MCP SDK client against handleMcpHttp', () => {
   });
 
   test('wrong key: 401, the client does not start an OAuth flow', async () => {
-    await expect(runMcpSmoke({ url: server.url, key: 'xlr8_wrong' })).rejects.toMatchObject({
+    await expect(runMcpSmoke({ url: server.url, key: 'selfbound_wrong' })).rejects.toMatchObject({
       code: 401,
       message: expect.stringContaining('API key'),
     });

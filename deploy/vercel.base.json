@@ -4,7 +4,9 @@
   "trailingSlash": false,
   "redirects": [],
   "rewrites": [
-    { "source": "/", "missing": [{ "type": "cookie", "key": "xlr8_signed_in" }], "destination": "/welcome.html" },
+    { "source": "/", "has": [{ "type": "cookie", "key": "selfbound_signed_in" }], "destination": "/app.html" },
+    { "source": "/", "has": [{ "type": "cookie", "key": "xlr8_signed_in" }], "destination": "/app.html" },
+    { "source": "/", "destination": "/welcome.html" },
     { "source": "/sign-in", "destination": "/welcome.html" },
     { "source": "/((?!assets/).*)", "destination": "/app.html" }
   ],

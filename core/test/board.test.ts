@@ -107,4 +107,25 @@ describe('Board', () => {
     // An uninvolved column stays the same object (no re-render).
     expect(after.columns.find((c) => c.label === 'In Progress')).toBe(before.columns.find((c) => c.label === 'In Progress'));
   });
+  test('columns by priority: five columns, a drop sets the priority, closed issues carry none', async () => {
+    const docs = [doc(0, { priority: 1 }), doc(2, { priority: 3 }), doc(4, { priority: 0 }), doc(6, { status: 'done', priority: 0 })];
+    const { client, app } = await setup(docs);
+    app.nav.goView({ kind: 'all', team: 'ACME' }, { order: 'created' });
+    app.list.toggleLayout();
+    app.list.setDisplay({ boardColumns: 'priority' });
+    expect(columns(app)).toEqual(['Urgent:1', 'High:0', 'Medium:1', 'Low:0', 'No priority:2']);
+    const board = app.main.board.get()!;
+    const key = (label: string) => board.columns.find((c) => c.label === label)!.key;
+    // Dropping sets the priority, nothing else.
+    expect(app.list.dropOnColumn(['i4' as IssueId], key('High'))).toBe(true);
+    expect(calls(client, 'issues:update').at(-1)?.[1]).toMatchObject({ ids: ['i4'], patch: { priority: 2 } });
+    // A closed issue cannot get a priority; "No priority" is fine.
+    expect(app.list.dropProblem(['i6' as IssueId], key('High'))).toMatch(/closed/);
+    expect(app.list.dropOnColumn(['i6' as IssueId], key('High'))).toBe(false);
+    expect(app.list.dropProblem(['i6' as IssueId], key('No priority'))).toBeNull();
+    // Back to the status columns; the choice is not kept in the default display.
+    app.list.setDisplay({ boardColumns: undefined });
+    expect(columns(app)[0]).toBe('Backlog:0');
+    expect(app.main.view.get().display.boardColumns).toBeUndefined();
+  });
 });

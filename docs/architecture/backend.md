@@ -16,6 +16,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/crons.ts` | Scheduled jobs |
 | `convex/http.ts` | HTTP endpoints `/mcp`, `/github`, `/logo/<id>`, `/img/<token>`, `/health` ([below](#http-endpoints-convexhttpts)) |
 | `convex/profile.ts`, `convex/ops/profile.ts` | The owner's profile: display name and profile picture ([below](#profile)) |
+| `convex/instance.ts`, `convex/ops/instance.ts` | Instance settings: the time zone ([below](#instance-time-zone)) |
 | `convex/files.ts`, `convex/ops/files.ts`, `convex/lib/image.ts` | Images in descriptions and comments: validated upload, references, cleanup ([below](#files-images)) |
 | `convex/wiki.ts`, `convex/ops/wiki.ts`, `convex/lib/wikiText.ts` | Knowledge base: pages per team as a tree, text with revisions, sources, topics, search, trash ([below](#wiki-knowledge-base)) |
 | `convex/lib/search.ts` | Search terms, "contains all words" matching and snippets for `issues.search` and `wiki.search` |
@@ -53,7 +54,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `relations` | `fromId`, `toId`, `type` (blocks: from blocks to; duplicate: from is a duplicate of to; related) | `by_from`, `by_to` |
 | `history` | One row per change: `field`, `from`, `to`, `actor`, `at`, `requestId` | `by_issue` |
 | `inboxEntries` | The owner's inbox: `issueId`, `kind` (`created` \| `changed` \| `snoozed`), `actor` (latest), `changes` (latest change per field: `field`, `actor`, `at`, `value?`, `from?`), `createdAt`, `updatedAt`, `readAt?`, `removedAt?`. At most one open entry (no `removedAt`) per issue | `by_issue` (`issueId`, `removedAt`), `by_removed` (`removedAt`, `updatedAt`) |
-| `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`xlr8`/`linear`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
+| `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`selfbound`/`linear`; the old value `xlr8` is still accepted and counts as `selfbound`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
 | `sprintItems` | Sprint, issue, `kind` (planned/late/imported), `carriedFrom`, `addedAt`, `addedBy`, `removedAt`, `outcome`, `points` (estimate at close) | `by_sprint`, `by_issue` |
 | `agents` | Name, `keyHash` (SHA-256 hex), `keyPrefix` (both only for keys), `connector` (`{ app, clientId }` for connectors), `revokedAt`, `revokedReason`, `lastUsedAt` | `by_hash` |
 | `oauthClients`, `oauthRequests`, `oauthTokens` | OAuth for connectors: registered clients, authorization requests until the code is redeemed, access and refresh tokens (hashes only). See [`mcp.md`](mcp.md#oauth-for-connectors) | `by_client`, `by_approved_created`; `by_public`, `by_code`, `by_client_status`, `by_expires`; `by_hash`, `by_agent`, `by_expires` |
@@ -77,6 +78,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `opsStatus` | Operational state: `backup`, `auditSprints`, `seed` | `by_key` |
 | `settings` | Test switches (`rejectWrites`) | `by_key` |
 | `profile` | The owner's profile, one row: `name?`, `avatarToken?` (token of an image in `files`), `updatedAt`. A missing row or field means "not set"; no migration was needed | |
+| `instanceSettings` | Instance settings, one row: `timeZone` (IANA name), `updatedAt`. No row = Europe/Berlin (`DEFAULT_TIME_ZONE`), which is what every instance did before the setting existed. |
 
 **Index notes:**
 
@@ -103,16 +105,18 @@ This document is the contract between the backend and the UI. It describes the t
 9. **Status:** `issue.stateId` belongs to the issue's team, and `issue.status === statusOfState(state)`. Only `ops/issues.ts` (create, `applyPatch`), `ops/move.ts`, the import, the seed and the migration write both fields. Checked by `migrations.workflowVerify`.
 10. **Priority belongs to open work:** when an issue moves into a status of kind `done`, `canceled` or `duplicate`, `applyPatch` sets the priority to 0, even if the same patch sends a different one. This applies to every path through `applyPatch` (UI, bulk edit, undo/redo, MCP, GitHub merge, sprint close with "cancel", "duplicate of", moving issues when a status is archived) and to creating an issue in a final status (`createIssues`; `ops/workflow.ts` also applies it to issues in the trash). History: a separate `priority` row (old → 0) with the same actor, `requestId` and timestamp as the status row; on create only the `created` row. Reopening does not change the priority. The UI puts the priority into the same undo step (`before`/`after`), so Ctrl Z restores both; `issues.revert` itself only knows fields and restores nothing on its own. Not affected: the Linear import and moving to another team (the status kind stays the same).
 11. **Knowledge base:** pages exist only in teams with `wiki`. The parent page belongs to the same team, is not in the trash, no cycle is created, at most 20 levels. Project and topics belong to the page's team; archived topics cannot be newly assigned. Only `ops/wiki.ts` writes text, search text, revisions and image references. A delete gives all pages of the subtree the same `deletedAt` (unique per team); restore brings back exactly those pages. `teams.wiki` can only be turned off while no page exists outside the trash. **Knowledge only** (`wiki: 'only'`): the team gets no new issues (`createIssuesCore`, so also MCP, recurrences and sharing), no issues can be moved into it (`ops/move.ts`) and no recurrences can be created (`assertIssuesAllowed` in `ops/validate.ts`). Switching to "knowledge only" requires no open issues (triage through in review, counted via `by_team_priority`) and no active recurrences; completed issues stay. Switching back to `'on'` always works.
-12. **Snooze:** `snoozedUntil` (calendar day) hides an open issue from the owner's lists until that day; it is a plain field, so the calendar feed or other readers only need this one value. It is set only through `applyPatch` (UI, bulk edit, undo, MCP `update_issue`), never earlier than the day after today in Europe/Berlin, and only on open issues (not done, canceled or duplicate). When an issue moves into such a status, `applyPatch` clears the snooze with its own `snoozedUntil` history row (same actor, `requestId` and timestamp as the status row, like the priority in rule 10), even if the same patch sets a day. Undo may put back a day that has passed (the next morning job returns the issue). The morning job (`returnSnoozed` in `ops/notify.ts`, called from `push.morning`) clears the field for every issue with `snoozedUntil <= today`, also for days it missed, and bumps `updatedAt` so clients see it, and opens an inbox `snoozed` entry (rule 13). Open issues also lose their `reviewedAt` and `readAt`, so they are back in the inbox as unread (history `snoozedUntil` and `unreviewed`, actor `system`), and one push per issue is recorded (bundled). Closed and deleted issues only lose the snooze. The due summary does not list snoozed issues. Existing data needs no migration: a missing field means not snoozed.
+12. **Snooze:** `snoozedUntil` (calendar day) hides an open issue from the owner's lists until that day; it is a plain field, so the calendar feed or other readers only need this one value. It is set only through `applyPatch` (UI, bulk edit, undo, MCP `update_issue`), never earlier than the day after today in the instance time zone, and only on open issues (not done, canceled or duplicate). When an issue moves into such a status, `applyPatch` clears the snooze with its own `snoozedUntil` history row (same actor, `requestId` and timestamp as the status row, like the priority in rule 10), even if the same patch sets a day. Undo may put back a day that has passed (the next morning job returns the issue). The morning job (`returnSnoozed` in `ops/notify.ts`, called from `push.morning`) clears the field for every issue with `snoozedUntil <= today`, also for days it missed, and bumps `updatedAt` so clients see it, and opens an inbox `snoozed` entry (rule 13). Open issues also lose their `reviewedAt` and `readAt`, so they are back in the inbox as unread (history `snoozedUntil` and `unreviewed`, actor `system`), and one push per issue is recorded (bundled). Closed and deleted issues only lose the snooze. The due summary does not list snoozed issues. Existing data needs no migration: a missing field means not snoozed.
 13. **Inbox:** an issue has at most one open `inboxEntries` row. Every history row with an agent as actor adds to it or opens one (`record` → `noteChange`, except `created`, `rank`, `deleted`, `reviewed`, `unreviewed`); creating an issue as an agent, or sharing it into the inbox, opens a `created` entry; the morning job that returns a snoozed issue opens (or refreshes) a `snoozed` entry. Entries never change the issue document. Permanently deleting an issue deletes its entries.
 
 ## Actors
 
-`actor = { kind: 'steven' | 'agent' | 'github' | 'import' | 'system', agentId? }`. `'steven'` is the legacy stored value for the instance owner. The actor always comes from the verified identity, never as an argument from the client:
+`actor = { kind: 'owner' | 'agent' | 'github' | 'import' | 'system', agentId? }`. `'owner'` is the instance owner. Rows written before 2026-10-15 store the old kind `'steven'` (`legacy-xlr8`): the schema accepts both, every owner check goes through `isOwnerKind` (true for both), new writes use `'owner'`, and `legacyNames:step` rewrites the old rows (see [Moving from the XLR8 names](../operations.md#moving-from-the-xlr8-names)). The actor always comes from the verified identity, never as an argument from the client:
 
-- UI: `requireOwner` checks the token (Convex) and the allowlist `XLR8_OWNER_IDS` (`tokenIdentifier`, comma-separated) → `steven` (owner). Tokens from the local test sign-in (issuer `https://dev.xlr8.local`) are only accepted when `CONVEX_CLOUD_URL` (set by Convex in every function) points to `127.0.0.1` or `localhost`; otherwise `access_denied`, even if `XLR8_DEV_JWKS` is set by mistake.
-- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from the profile ([below](#profile)); without one, `XLR8_OWNER_NAME`, else "Owner".
+- UI: `requireOwner` checks the token (Convex) and the allowlist `SELFBOUND_OWNER_IDS` (`tokenIdentifier`, comma-separated) → `owner`. Tokens from the local test sign-in (issuer `https://dev.selfbound.local`) are only accepted when `CONVEX_CLOUD_URL` (set by Convex in every function) points to `127.0.0.1` or `localhost`; otherwise `access_denied`, even if `SELFBOUND_DEV_JWKS` is set by mistake.
+- MCP: agent key → `{ kind: 'agent', agentId }` (checked in the HTTP action and again in the mutation). MCP output shows the owner under the name from the profile ([below](#profile)); without one, `SELFBOUND_OWNER_NAME`, else "Owner".
 - Crons: `system`. GitHub webhook: `github`. Import: `import`.
+
+**Environment variables with the old prefix.** `lib/legacyEnv.ts` (`envVar('OWNER_IDS')`) reads `SELFBOUND_<NAME>` first and falls back to `XLR8_<NAME>` (`legacy-xlr8`), with one `console.warn` per variable and process (never the value). All backend code reads its settings through it. The fallbacks, the old actor kind, the old sprint source, the `xlr8_…` token prefixes and the `xlr8` OAuth scope are removed in a follow-up once the instance has migrated; see [Moving from the XLR8 names](../operations.md#moving-from-the-xlr8-names).
 
 Permissions that depend on the actor:
 
@@ -153,7 +157,7 @@ If the operation fails, nothing is stored and a retry runs it again. Each actor 
 
 ## Test switches
 
-Only effective with `XLR8_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect. `embeds.seedForTest` (action) puts an embed card with base64 PNGs into the cache so end-to-end tests need no network; without the variable it answers `access_denied`.
+Only effective with `SELFBOUND_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect. `embeds.seedForTest` (action) puts an embed card with base64 PNGs into the cache so end-to-end tests need no network; without the variable it answers `access_denied`.
 
 ## Public functions
 
@@ -163,8 +167,8 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `health.status` (query, no sign-in) | – | `{ ok, local, devAuth, devAuthConfigured, clerk, testSwitches }`: `local` = local deployment (`CONVEX_CLOUD_URL`), `devAuth` = local test sign-in configured **and** effective (local only), `devAuthConfigured` = `XLR8_DEV_JWKS` set. `devAuth` must be `false` before a production deploy ([`operations.md`](../operations.md)) |
-| `health.whoami` (query) | – | actor `{ kind: 'steven' }` (owner) |
+| `health.status` (query, no sign-in) | – | `{ ok, local, devAuth, devAuthConfigured, clerk, testSwitches }`: `local` = local deployment (`CONVEX_CLOUD_URL`), `devAuth` = local test sign-in configured **and** effective (local only), `devAuthConfigured` = `SELFBOUND_DEV_JWKS` set. `devAuth` must be `false` before a production deploy ([`operations.md`](../operations.md)) |
+| `health.whoami` (query) | – | actor `{ kind: 'owner' }` |
 
 ### meta
 
@@ -203,7 +207,7 @@ Rules for changes:
 - A field is only written if its value changes (value equality; `labelIds` as a set, order irrelevant). Equal values create no history and don't change `updatedAt`.
 - **Compare-and-set:** every value in `expect[i]` must match the current value (`null` = not set), otherwise `conflict` for the whole call. Undo sends `issues.revert` with `expect` = the value it set itself.
 - **Status** (`stateId` or status kind `status`, see [Statuses per team](#statuses-per-team)). The status kind sets the timestamps: `in_progress`/`in_review` → `startedAt` (if empty); `done` → `completedAt`; `canceled`/`duplicate` → `canceledAt`; `triage`/`backlog`/`todo` → all three cleared. The history row is `field: 'stateId'` with the old and new status ID (older rows: `field: 'status'` with the old key).
-- `snoozedUntil` (`null` = unsnooze): see invariant 12. A day that is not after today (Berlin) or an issue that is not open → `invalid`; undo is exempt from both checks.
+- `snoozedUntil` (`null` = unsnooze): see invariant 12. A day that is not after today (instance time zone) or an issue that is not open → `invalid`; undo is exempt from both checks.
 - `sprintId` in the patch is passed on to the sprint operations (rules below).
 - Issues in the trash cannot be changed (`invalid`), only restored.
 - **Description:** `baseVersion` must match the current `version` (new issues: 1), otherwise `conflict` with `{ version, updatedAt, updatedBy }`. Afterwards `version + 1`. Same text: no change. The history only records `{ version }` and a 120-character preview.
@@ -226,7 +230,7 @@ Rules for changes:
 
 ### Statuses per team
 
-Each team has its own statuses (`workflowStates`), each with a type: triage, backlog, unstarted (planned), started, completed, canceled. Order: by type, then by `position` within the type (`compareStates`). A new team gets the eight default statuses (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), each with a `legacyKey`. The names are stored per team; with `XLR8_LOCALE=de` new teams get German names (`defaultStateName` in `shared/workflow.ts`). Statuses are never deleted, only archived.
+Each team has its own statuses (`workflowStates`), each with a type: triage, backlog, unstarted (planned), started, completed, canceled. Order: by type, then by `position` within the type (`compareStates`). A new team gets the eight default statuses (Triage, Backlog, Todo, In Progress, In Review, Done, Canceled, Duplicate), each with a `legacyKey`. The names are stored per team; with `SELFBOUND_LOCALE=de` new teams get German names (`defaultStateName` in `shared/workflow.ts`). Statuses are never deleted, only archived.
 
 **Status kind** (`issue.status`): the eight legacy keys, derived from the status (`statusOfState`: `isDuplicate` → `duplicate`, otherwise `legacyKey`, otherwise the key of the type, e.g. "Testing" of type started → `in_progress`). It backs the indexes (`by_status…`, `by_team_priority`, `by_project`), the open/closed sets, sprint close, priority budget, timestamps and the MCP filters. That is why custom statuses change none of these rules.
 
@@ -280,7 +284,7 @@ Relations: no self-reference, no second relation of the same type between the sa
 
 **Sprint rules:**
 
-- Sprints span all teams, on purpose (one person, one week, one capacity; [decisions](../decisions.md#one-sprint-for-all-teams)). A new sprint is in state `planning`, by default 14 days from the next Monday (Europe/Berlin), named "Sprint <number>", numbered sequentially.
+- Sprints span all teams, on purpose (one person, one week, one capacity; [decisions](../decisions.md#one-sprint-for-all-teams)). A new sprint is in state `planning`, by default 14 days from the next Monday (instance time zone), named "Sprint <number>", numbered sequentially.
 - **Start:** only `sprints.start` makes a sprint active, and only from `planning`. If one is already running → `conflict`. Without a start there is no running sprint.
 - **Adding:** in `planning` → `kind: 'planned'`, in `active` → `'late'` (whether the owner or an agent adds it), `closed` → `invalid`. An issue belongs to at most one sprint that is not closed; moving it closes the old entry (`removedAt`), unless the old sprint is closed: then its entry stays unchanged. Deleted issues cannot be added.
 - **Reopened:** an issue that still points to a closed sprint can be detached with `issues.update` `{ sprintId: null }` or put into a new sprint via `sprints.add`. The entry in the closed sprint (`outcome`, `points`) stays as it is in both cases. `sprints.remove` on a closed sprint stays `invalid`.
@@ -289,7 +293,7 @@ Relations: no self-reference, no second relation of the same type between the sa
   - `backlog` → out of the sprint, status unchanged.
   - `canceled` → out of the sprint, status `canceled`.
   - Nothing is moved automatically.
-- **Capacity:** suggestion = average of the completed points of the last 3 closed sprints with `source: 'xlr8'` (by `closedAt`), rounded to one decimal. Every entry with `outcome: 'done'` counts with the `points` recorded at close (older entries without `points`: the issue's current estimate). Later changes to the issue (reopened, new estimate, permanently deleted) don't change the value. Imported Linear cycles don't count.
+- **Capacity:** suggestion = average of the completed points of the last 3 closed sprints with `source: 'selfbound'` or the old `'xlr8'` (by `closedAt`), rounded to one decimal. Every entry with `outcome: 'done'` counts with the `points` recorded at close (older entries without `points`: the issue's current estimate). Later changes to the issue (reopened, new estimate, permanently deleted) don't change the value. Imported Linear cycles don't count.
 - The client classifies planned/late via `sprints.items`; the issue buckets only carry `sprintId`.
 
 ### teams, projects, labels, labelGroups
@@ -339,7 +343,20 @@ The owner's display name and picture. Read through `meta.get` (`owner`), so ther
 
 **Picture:** upload as for [images](#files-images) (`files.generateUploadUrl` → POST → `files.register`), then `profile.setAvatar`. The UI crops in the browser to a 256 × 256 square (WebP, so camera metadata is gone); the circle is drawn by CSS. The profile references the image under the owner id `profile` in `fileRefs` (`syncFileRefs`), so a replaced or removed picture loses its reference and the cron `sweep-files` deletes it after the usual one-day grace period. Served via `GET /img/<token>` like any image.
 
-**Names in the UI and MCP:** the store puts the name into `store.agents` under `OWNER_KIND`, so `actorName` shows it instead of "You" everywhere (history, comments, inbox text, version labels). MCP (`Lookup.actorName`) uses the profile name, then `XLR8_OWNER_NAME`, then "Owner". Agents keep `"<name> (agent)"`. The stored actor kind `steven` is unchanged.
+**Names in the UI and MCP:** the store puts the name into `store.agents` under `OWNER_KIND`, so `actorName` shows it instead of "You" everywhere (history, comments, inbox text, version labels). MCP (`Lookup.actorName`) uses the profile name, then `SELFBOUND_OWNER_NAME`, then "Owner". Agents keep `"<name> (agent)"`. Old rows keep the actor kind `steven` until the data migration has run; it is treated like `owner`.
+
+### Instance time zone
+
+Where a calendar day begins is a setting of the instance, stored in `instanceSettings` (one row), so crons and MCP know it without a browser. `ops/instance.ts` has the readers (`timeZoneOf`, `todayOf`, `storedTimeZone`) and `lib/dates.ts` the zone-aware helpers on top of `Intl.DateTimeFormat` (`dayInZone`, `hourInZone`, `zoneOffsetMinutes`, `dayStartInZone`, `canonicalTimeZone`); the day arithmetic (`addDays`, `nextWeekday` …) works on plain `YYYY-MM-DD` strings and needs no zone. Stored days stay strings and timestamps stay UTC milliseconds, so **changing the zone converts nothing**: it only moves the boundary from then on.
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `instance.setTimeZone` | `{ timeZone: string, ifUnset?: boolean }` | `{ timeZone }`: only the owner. An IANA name the runtime knows (`Intl`), otherwise `invalid`; the case is fixed ("europe/berlin" → "Europe/Berlin"), aliases such as `Asia/Kolkata` keep their spelling. With `ifUnset` a stored zone is never overwritten (the store sends the browser's zone once at the first sign-in, also from a stale cache). |
+| `instance.timeZone` (internal query) | – | the zone in effect; the MCP endpoint (an HTTP action) computes `today` with it |
+
+`meta.get` returns `timeZone` (`null` = not set yet; the client treats a missing field in an old cache the same). The client keeps the zone in `core/src/format.ts` (`setTimeZone`), where `today()` uses it, so "today", overdue and the snooze picker agree with the server; without a zone `today()` is the device's day. Users: snooze check (`applyPatch`), sprints (default dates, start, close), recurrences, morning job (`hourInZone`, key `due:<day>`), rate-limit day window, wiki source access date, MCP `list_issues` (`overdue`, `due`, `done_today` via `dayStartInZone`). `migrations:setInstanceTimeZone` pins the zone of an existing instance before the first sign-in ([operations](../operations.md)).
+
+Zones with clock changes at midnight or half-hour shifts (Havana, Lord Howe) are covered by `backend/test/timeZone.test.ts`; `dayStartInZone` returns the first moment of the day that exists.
 
 ### embeds (video and post cards)
 
@@ -361,7 +378,7 @@ A YouTube or X link alone on a line becomes a card in the app (XLR8-73, frontend
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `agents.create` (action) | `{ name }` | `{ agentId, key, keyPrefix }`: `key` = `xlr8_` + 32 random bytes base64url, only appears in this response |
+| `agents.create` (action) | `{ name }` | `{ agentId, key, keyPrefix }`: `key` = `selfbound_` + 32 random bytes base64url, only appears in this response |
 | `agents.revoke` | `{ agentId }` | `{ agentId }`; for connectors all tokens are deleted as well |
 | `agents.list` (query) | – | `[{ _id, name, keyPrefix, connector, createdAt, revokedAt, revokedReason, lastUsedAt }]` (never the hash; newest first) |
 | `oauth.arm` | `{ on }` | `{ armedUntil }`: accept new connectors for 15 minutes, or switch off immediately |
@@ -381,7 +398,7 @@ Internal, for MCP: `internal.agents.authenticate({ keyHash, now? })` → `{ agen
 | `recurrences.update` | `{ recurrenceId, title?, description? | null, priority?, labelIds?, projectId? | null, estimate? | null, cadence?, weekday? | null, monthDay? | null, active? }` | `{ recurrenceId }` |
 | `recurrences.remove` | `{ recurrenceId }` | `{ recurrenceId }` |
 
-The hourly cron creates exactly one issue for each active template with `nextDate ≤ today` (calendar day in Europe/Berlin): status `todo`, `dueDate` = due date, `recurrenceId`, actor `system`. Uniqueness via `recurrenceRuns` (template, due date). Then `nextDate` moves to the next due date. Missed due dates are not all caught up; at most one is. If creating the issue fails on a business rule (e.g. an archived label), the template is paused (`active: false`).
+The hourly cron creates exactly one issue for each active template with `nextDate ≤ today` (calendar day in the instance time zone): status `todo`, `dueDate` = due date, `recurrenceId`, actor `system`. Uniqueness via `recurrenceRuns` (template, due date). Then `nextDate` moves to the next due date. Missed due dates are not all caught up; at most one is. If creating the issue fails on a business rule (e.g. an archived label), the template is paused (`active: false`).
 
 ### wiki (knowledge base)
 
@@ -453,8 +470,8 @@ Action errors: `ConvexError { code, message, status }` with an English message; 
 | Function | Arguments | Returns |
 |---|---|---|
 | `ops.status` (query) | – | `{ backup: { value: { ok, at, bytes, sha256, tables, documents, files, run }, at } | null, lastImport` ({ run, status, phase, startedAt, finishedAt, counts, deviations, error })`, agents: [Agent & { callsToday }]` (Agent: `keyPrefix`, or `null` for connectors, `connector: { app } | null`, `revokedReason`)`, connectors: { enabled, url }, connectorsArmedUntil, github: { event, receivedAt } | null` (last accepted delivery)`, sprintAudit: { value: { ok, problems, sprints, items, startedAt, error? }, at } | null, seed, storage` (file storage, see [images](#files-images))`, testSwitches, rejectWrites }` |
-| `admin.setRejectWrites` | `{ value }` | `{ rejectWrites }` (only with `XLR8_TEST_SWITCHES=1`) |
-| `seed.status`, `seed.reset`, `seed.insertBase`, `seed.insertIssues`, `seed.insertLinks`, `seed.finish` | see `convex/seed.ts` | owner only AND only with `XLR8_ALLOW_SEED=1` |
+| `admin.setRejectWrites` | `{ value }` | `{ rejectWrites }` (only with `SELFBOUND_TEST_SWITCHES=1`) |
+| `seed.status`, `seed.reset`, `seed.insertBase`, `seed.insertIssues`, `seed.insertLinks`, `seed.finish` | see `convex/seed.ts` | owner only AND only with `SELFBOUND_ALLOW_SEED=1` |
 
 ## HTTP endpoints (`convex/http.ts`)
 
@@ -462,10 +479,10 @@ Served under the site URL (locally the backend port + 1, in the cloud `https://<
 
 | Path | Behaviour |
 |---|---|
-| `POST /mcp` | Bearer key (format `xlr8_` + 43 characters, otherwise 401 immediately) or OAuth access token (`xlr8_at_…`) → SHA-256 → `internal.agents.authenticate` (failure → 401; for keys without `WWW-Authenticate`, for a missing bearer and for access tokens with it, if OAuth is on), then `handleMcpHttp` (`lib/mcp/endpoint.ts`). Read tools: `internal.mcp.countCall` (mutation, rate limit), then `internal.mcp.read` (query, cacheable). Write tools: **one** mutation `internal.mcp.call` (key, rate limit, idempotency, operation, result). Revoked between authentication and call → 401. Details: [`mcp.md`](mcp.md) |
+| `POST /mcp` | Bearer key (format `selfbound_` + 43 characters, otherwise 401 immediately) or OAuth access token (`selfbound_at_…`) → SHA-256 → `internal.agents.authenticate` (failure → 401; for keys without `WWW-Authenticate`, for a missing bearer and for access tokens with it, if OAuth is on), then `handleMcpHttp` (`lib/mcp/endpoint.ts`). Read tools: `internal.mcp.countCall` (mutation, rate limit), then `internal.mcp.read` (query, cacheable). Write tools: **one** mutation `internal.mcp.call` (key, rate limit, idempotency, operation, result). Revoked between authentication and call → 401. Details: [`mcp.md`](mcp.md) |
 | `GET`/`DELETE /mcp` | 405 |
-| `GET /.well-known/oauth-protected-resource[/mcp]`, `GET /.well-known/oauth-authorization-server` | OAuth metadata for connectors (only with `XLR8_APP_URL`, otherwise 404). Other `/.well-known/*` → 404 |
-| `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `XLR8_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
+| `GET /.well-known/oauth-protected-resource[/mcp]`, `GET /.well-known/oauth-authorization-server` | OAuth metadata for connectors (only with `SELFBOUND_APP_URL`, otherwise 404). Other `/.well-known/*` → 404 |
+| `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `SELFBOUND_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
 | `POST /github` | Read the raw body, verify `X-Hub-Signature-256` with `GITHUB_WEBHOOK_SECRET` (during rotation also `GITHUB_WEBHOOK_SECRET_PREVIOUS`) → otherwise 401. `ping` → 200. Otherwise `internal.github.applyDelivery` |
 | `GET /logo/<storageId>` | Team logo, no sign-in (like a storage URL; `<img>` sends no token). Only files a team uses as its logo and that pass the logo check, otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
 | `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches) |
@@ -489,7 +506,7 @@ If a mutation fails on write conflicts (Convex retried several times and gave up
 
 Returns `{ duplicate, kind: 'pull_request'|'ping'|'ignored'|'refresh', pr?, linked[], closed[], refresh? }` (`refresh`: PRs for which a fetch is scheduled or pending). The cron `requests-aufraeumen` deletes deliveries and `githubCheckRuns` after 30 days.
 
-**Webhooks in all repos** (`githubPr.ensureWebhooks`, cron `github-webhooks`): checks all non-archived repos owned by the token's user (`/user/repos?affiliation=owner`, up to 300; optionally filtered with `GITHUB_REPOS` = "owner/name" or "owner/*", comma-separated) for a hook pointing to `<CONVEX_SITE_URL>/github` (or `<XLR8_PUBLIC_SITE_URL>/github`). If missing, creates it (`content_type: json`, secret = `GITHUB_WEBHOOK_SECRET`, events as above); other events or inactive → fixed via PATCH. Hooks are only created and changed with `GITHUB_MANAGE_WEBHOOKS=1`, not on a local backend (`isLocalDeployment`) and only with `GITHUB_WEBHOOK_SECRET`; otherwise only checked (`missing`/`outdated`). If the token lacks the "Webhooks" permission, the check stops after the first repo with a message. Result in `opsStatus.githubConnection`.
+**Webhooks in all repos** (`githubPr.ensureWebhooks`, cron `github-webhooks`): checks all non-archived repos owned by the token's user (`/user/repos?affiliation=owner`, up to 300; optionally filtered with `GITHUB_REPOS` = "owner/name" or "owner/*", comma-separated) for a hook pointing to `<CONVEX_SITE_URL>/github` (or `<SELFBOUND_PUBLIC_SITE_URL>/github`). If missing, creates it (`content_type: json`, secret = `GITHUB_WEBHOOK_SECRET`, events as above); other events or inactive → fixed via PATCH. Hooks are only created and changed with `GITHUB_MANAGE_WEBHOOKS=1`, not on a local backend (`isLocalDeployment`) and only with `GITHUB_WEBHOOK_SECRET`; otherwise only checked (`missing`/`outdated`). If the token lacks the "Webhooks" permission, the check stops after the first repo with a message. Result in `opsStatus.githubConnection`.
 
 ### Linear import (`importer.ts`, `ops/import.ts`)
 
@@ -504,11 +521,11 @@ Rules: matching via `linearLinks` (kind + Linear ID → Selfbound ID + checksum)
 
 ### Notifications (`push.ts`, `ops/notify.ts`, `lib/webpush.ts`)
 
-Web Push without an extra package: `lib/webpush.ts` encrypts per RFC 8291 (aes128gcm) and signs the VAPID JWT (RFC 8292, ES256) with WebCrypto; this runs in the normal Convex runtime (no `"use node"`). Keys: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`tooling/vapid.mjs`). Notification texts are English by default and German when the Convex env var `XLR8_LOCALE=de` is set.
+Web Push without an extra package: `lib/webpush.ts` encrypts per RFC 8291 (aes128gcm) and signs the VAPID JWT (RFC 8292, ES256) with WebCrypto; this runs in the normal Convex runtime (no `"use node"`). Keys: `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`tooling/vapid.mjs`). Notification texts are English by default and German when the Convex env var `SELFBOUND_LOCALE=de` is set.
 
 Tables: `pushSubscriptions` (one device per endpoint), `pushSettings` (one row, only deviations from the defaults), `pushEvents` (outbox, unique `key`, 7 days), `pushPresence` (devices with the app visibly open and in use).
 
-1. **Event:** `notify(ctx, { kind, key, title, body, url, group?, tag?, issueId?, bundle? })` in the same transaction as the change. Disabled or `key` already present → nothing. Otherwise an entry `pending` and `push.deliver` in 10 s (only if none is already waiting). Callers: `createIssuesCore` and `addCommentCore` (only actor `agent`), `applyGithubDelivery` (`pr_linked` for new links, `pr_merged` on the transition to merged), cron `push-morning` (`due`, `sprint_end`, `snooze`; Berlin hour ≥ `morningHour`, once a day via a `key` containing the day; dormant teams don't count). The `snooze` event is one per returned issue (`key` = issue and day, `group` = the day, so several arrive as one message "N snoozed issues are back"); switching it off keeps the inbox return. The import, migrations and the owner's own changes send nothing.
+1. **Event:** `notify(ctx, { kind, key, title, body, url, group?, tag?, issueId?, bundle? })` in the same transaction as the change. Disabled or `key` already present → nothing. Otherwise an entry `pending` and `push.deliver` in 10 s (only if none is already waiting). Callers: `createIssuesCore` and `addCommentCore` (only actor `agent`), `applyGithubDelivery` (`pr_linked` for new links, `pr_merged` on the transition to merged), cron `push-morning` (`due`, `sprint_end`, `snooze`; local hour in the instance time zone ≥ `morningHour`, once a day via a `key` containing the day; dormant teams don't count). The `snooze` event is one per returned issue (`key` = issue and day, `group` = the day, so several arrive as one message "N snoozed issues are back"); switching it off keeps the inbox return. The import, migrations and the owner's own changes send nothing.
 2. **Delivery:** `push.claim` takes over all waiting entries in one mutation (never twice). If a device is active (`pushPresence.activeUntil` > now), they become `in_app` (the app shows them via `push.recent`) and `push.confirmInApp` checks after 45 s: if no app has confirmed them with `push.seen`, they go out as push after all (`retry`). Otherwise `bundleMessages`: the same `group` in the same delivery = one message (`bundle.title` with `{n}`), the same `tag` replaces on the device. `push.deliver` sends each message to each device (`Urgency: high`, `Topic` from the tag, TTL 24 h), `push.finish` records results: 404/410 removes the subscription, other errors count `failures`.
 3. **Public** (owner only): `push.config`, `subscribe`, `unsubscribe`, `removeDevice`, `setEvent`, `presence`, `recent`, `seen`, `sendTest` (action, immediately to this device, no presence check). Plus `issues.share` (share target: issue in the inbox, team's triage status).
 
@@ -529,7 +546,7 @@ New event: add an entry to `shared/notifyEvents.ts` (label, hint, default) and a
 | `sweep-files` | daily 03:00 | `files.sweep`: delete unreferenced images once `deleteAfter` has passed (100 per run, reschedules itself) |
 | `purge-embeds` | daily 03:10 | `embeds.purge`: delete embed cache entries (and their pictures) not fetched for 30 days (50 per run, reschedules itself) |
 | `fail-stale-imports` | hourly :20 | `importer.failStale`: import runs without progress for 15 minutes → `failed` |
-| `push-morning` | hourly :00 | `push.morning`: from the configured Berlin hour (default 8), once a day a combined "due/overdue" and "sprint ends tomorrow/today" notification; also returns snoozed issues whose day has come (inbox entry, push `snooze`) |
+| `push-morning` | hourly :00 | `push.morning`: from the configured hour in the instance time zone (default 8), once a day a combined "due/overdue" and "sprint ends tomorrow/today" notification; also returns snoozed issues whose day has come (inbox entry, push `snooze`) |
 | `github-webhooks` | daily 03:30 | `githubPr.ensureWebhooksDaily`: check webhooks in all repos owned by the token's user, create missing ones (only with `GITHUB_MANAGE_WEBHOOKS=1` and the secret, never locally; nothing without `GITHUB_TOKEN`) |
 | `cleanup-oauth` | hourly :35 | `oauth.cleanup`: expired tokens, OAuth requests one day after expiry, never-approved clients after one hour (500 per run, reschedules itself) |
 
@@ -561,6 +578,6 @@ pnpm --filter @selfbound/backend typecheck   # tsc 7 for convex/ and for scripts
 pnpm --filter @selfbound/backend test:integration   # fresh backend on 13490: import, MCP, concurrency
 ```
 
-`local.mjs` sets `XLR8_DEV_JWKS`, `XLR8_OWNER_IDS`, `XLR8_ALLOW_SEED=1` and `XLR8_TEST_SWITCHES=1` in the local backend and writes `app/.env.local` with the URL and a local token. On start, Convex regenerates `convex/_generated` (it is checked in). The seed skips if the same data set is already complete, and refuses any non-local URL. Rough timings (on a busy machine, order of magnitude only): `small` on an empty backend under 1 s, `large` 27–75 s; clearing after `large` (`seed.reset`, 2000 documents per call because of the read limits) takes one to one and a half minutes.
+`local.mjs` sets `SELFBOUND_DEV_JWKS`, `SELFBOUND_OWNER_IDS`, `SELFBOUND_ALLOW_SEED=1` and `SELFBOUND_TEST_SWITCHES=1` in the local backend and writes `app/.env.local` with the URL and a local token. On start, Convex regenerates `convex/_generated` (it is checked in). The seed skips if the same data set is already complete, and refuses any non-local URL. Rough timings (on a busy machine, order of magnitude only): `small` on an empty backend under 1 s, `large` 27–75 s; clearing after `large` (`seed.reset`, 2000 documents per call because of the read limits) takes one to one and a half minutes.
 
-Tests (`backend/test/`): regression tests from an earlier backend review (`regressions.test.ts`, one block per finding), MCP over HTTP (`mcp.test.ts`), GitHub webhook (`github.test.ts`), pull requests in Selfbound with a mocked GitHub (`githubPr.test.ts`: scheduling and debouncing fetches, reconciling entries, trimming, merge transition, actions, media proxy, webhooks in all repos; building blocks in `lib/githubApi.test.ts`), import with retry, collision and update (`import.test.ts`), sign-in sweep over all modules, issues (create, numbering with batches of 50 and parallel calls, update, compare-and-set with label sets, undo, parent cycles, budget, rank), idempotency, description versioning, trash and permanent deletion, relations, comments, search, identifiers, test switches, sprints (start/add/close rules, one active sprint, invariant after every operation, capacity, nightly audit), teams and team permissions, logo validation, images (type check, serving, references in several places, cleanup after the grace period and after permanent deletion, `files.test.ts`), agent keys and rate limit, recurrences (month boundaries, DST, idempotency), calendar days against `Intl`, generator and seed.
+Tests (`backend/test/`): regression tests from an earlier backend review (`regressions.test.ts`, one block per finding), MCP over HTTP (`mcp.test.ts`), GitHub webhook (`github.test.ts`), pull requests in Selfbound with a mocked GitHub (`githubPr.test.ts`: scheduling and debouncing fetches, reconciling entries, trimming, merge transition, actions, media proxy, webhooks in all repos; building blocks in `lib/githubApi.test.ts`), import with retry, collision and update (`import.test.ts`), sign-in sweep over all modules, issues (create, numbering with batches of 50 and parallel calls, update, compare-and-set with label sets, undo, parent cycles, budget, rank), idempotency, description versioning, trash and permanent deletion, relations, comments, search, identifiers, test switches, sprints (start/add/close rules, one active sprint, invariant after every operation, capacity, nightly audit), teams and team permissions, logo validation, images (type check, serving, references in several places, cleanup after the grace period and after permanent deletion, `files.test.ts`), agent keys and rate limit, recurrences (month boundaries, DST, idempotency), calendar days in several zones including clock changes (`timeZone.test.ts`), generator and seed.

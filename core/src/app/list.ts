@@ -2,19 +2,25 @@
 // Computes outside the components and passes unchanged results through (reuseList), so Svelte
 // only redraws changed rows.
 import { t, tn, translated } from '../i18n.ts';
-import { OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
+import { CLOSED, OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
-import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
-import { CARD_SLOT, computeBoard, reuseBoard } from '../board.ts';
+import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, multiGrouping, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
+import { boardKeyOf, computeBoard, reuseBoard } from '../board.ts';
 import { stateGroupKey } from '../workflow.ts';
 
-import { VIEWS, planSprint, viewKey, viewTitle, type ViewContext } from '../views.ts';
-import { revealIndex } from '../window.ts';
+import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext } from '../views.ts';
+import { revealIndex, revealSpan } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
-import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
+import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
+
+/** A board column's scroll container; `span` is the position of a card (estimated while it is not measured). */
+export interface ColumnScroller {
+  el: HTMLElement;
+  span(index: number): { top: number; bottom: number; measured: boolean };
+}
 
 export interface HeaderState {
   title: string;
@@ -70,6 +76,21 @@ function writeJson(key: string, value: unknown) {
   }
 }
 
+/** Rows below a group header up to the next header of the same or a higher level (issues and sub-group headers). */
+function groupSpan(rows: readonly ListRow[], key: string): number {
+  const index = rows.findIndex((row) => row.kind === 'group' && row.key === key);
+  const head = rows[index];
+  if (head?.kind !== 'group') return 0;
+  const depth = head.group.parent ? 1 : 0;
+  let n = 0;
+  for (let i = index + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (row.kind === 'group' && (row.group.parent ? 1 : 0) <= depth) break;
+    n++;
+  }
+  return n;
+}
+
 export class ListController {
   readonly view: Slice<ViewState>;
   readonly list = new Slice<ListState>({ rows: [], count: 0, empty: null, style: 'issue', keyChars: 0, keySamples: [] });
@@ -84,6 +105,10 @@ export class ListController {
   #focus: IssueId | null = null;
   #selection = new Set<IssueId>();
   #anchor: IssueId | null = null;
+  /** Selection before the first range from the anchor, so Shift+click again can shrink the range. */
+  #rangeBase: Set<IssueId> | null = null;
+  /** Whether the anchor was selected by its toggle: a range then selects, otherwise deselects. */
+  #anchorOn = true;
   #order: IssueId[] = [];
   #rowIndex = new Map<IssueId, number>();
   /** Issues of the view (also in collapsed groups) */
@@ -104,7 +129,7 @@ export class ListController {
   #badges = new Map<string, TeamBadge>();
   /** Board: column and position per issue (also in collapsed columns) */
   #boardPos = new Map<IssueId, { col: number; index: number }>();
-  #columnScrollers = new Map<string, HTMLElement>();
+  #columnScrollers = new Map<string, ColumnScroller>();
 
   /**
    * Second list (right column of sprint planning): writes no URL and only computes while it is
@@ -208,6 +233,7 @@ export class ListController {
       if (real !== id && !store.isPending(id)) {
         this.#selection.delete(id);
         this.#selection.add(real);
+        this.#rangeBase = null;
         this.rows.refresh(real);
       }
     }
@@ -258,8 +284,9 @@ export class ListController {
     if (this.idle || ids.size > 200 || this.#rowIndex.size === 0) return false;
     const view = this.view.get();
     const grouping = view.display.grouping;
-    // Groups that do not depend on the issue alone: budget (team) and sprint scope.
-    if (grouping === 'team' || grouping === 'scope') return false;
+    // Groups that do not depend on the issue alone: budget (team), sprint scope and the parent's title in its header; several groups per issue (labels); two levels.
+    if (grouping === 'team' || grouping === 'scope' || grouping === 'parent' || multiGrouping(grouping)) return false;
+    if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
     const store = this.app.store;
     const matches = visibleFilter(view, store.meta.get(), this.context());
     const compare = viewComparator(view);
@@ -322,6 +349,8 @@ export class ListController {
     const extras: ListExtras = {};
     if (view.display.grouping === 'scope') extras.kinds = this.app.store.sprintKinds.get();
     if (view.display.grouping === 'team') extras.budget = this.app.budgetLabels();
+    if (view.display.grouping === 'creator' || view.display.subGrouping === 'creator') extras.actors = this.app.store.agents.get();
+    if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent') extras.issueOf = (id) => this.app.store.get(id);
     const next = reuseList(this.list.get(), computeList(visible, view, meta, this.#collapsedFor(view.route), this.app.prefs.dark.get(), extras));
     if (next !== this.list.get()) {
       const keep = anchor ? this.#scrollAnchor() : null;
@@ -332,7 +361,8 @@ export class ListController {
       this.#groupStarts = [];
       next.rows.forEach((row, index) => {
         if (row.kind === 'group') this.#groupStarts.push(index);
-        if (row.kind === 'issue') {
+        // An issue listed under several groups (labels) counts once: first row wins.
+        if (row.kind === 'issue' && !this.#rowIndex.has(row.id)) {
           this.#order.push(row.id);
           this.#rowIndex.set(row.id, index);
         }
@@ -391,7 +421,6 @@ export class ListController {
     const meta = store.meta.get();
     const matches = visibleFilter(view, meta, this.context());
     const compare = viewComparator(view);
-    const workflows = workflowsOf(meta);
     for (const id of ids) {
       const next = store.get(id);
       const shown = next !== undefined && store.resolvedId(id) === id && matches(next);
@@ -402,7 +431,7 @@ export class ListController {
       }
       if (!next || !shown) return false;
       const column = board.columns[pos.col];
-      if (stateGroupKey(workflows.of(next)) !== column.key) return false;
+      if (boardKeyOf(next, view, meta) !== column.key) return false;
       const before = column.ids[pos.index - 1];
       const after = column.ids[pos.index + 1];
       const b = before ? store.get(before) : undefined;
@@ -423,12 +452,12 @@ export class ListController {
     const mark = closed ? `b+:${key}` : `b-:${key}`;
     if (set.has(mark)) set.delete(mark);
     else set.add(mark);
-    writeJson(`xlr8:collapsed:${viewKey(route)}`, [...set]);
+    writeJson(`selfbound:collapsed:${viewKey(route)}`, [...set]);
     this.recompute();
   }
 
-  registerColumnScroller(key: string, el: HTMLElement | null) {
-    if (el) this.#columnScrollers.set(key, el);
+  registerColumnScroller(key: string, scroller: ColumnScroller | null) {
+    if (scroller) this.#columnScrollers.set(key, scroller);
     else this.#columnScrollers.delete(key);
   }
 
@@ -465,6 +494,14 @@ export class ListController {
   dropProblem(ids: readonly IssueId[], key: string): string | null {
     const column = this.board.get()?.columns.find((c) => c.key === key);
     if (!column) return t('Column does not exist');
+    if (column.priority !== undefined) {
+      // Done, canceled and duplicate issues carry no priority (backend).
+      for (const id of ids) {
+        const issue = this.app.store.get(id);
+        if (issue && column.priority !== 0 && CLOSED.has(issue.status)) return t('{key} is closed and carries no priority', { key: issue.key });
+      }
+      return null;
+    }
     const workflows = workflowsOf(this.app.store.meta.get());
     for (const id of ids) {
       const issue = this.app.store.get(id);
@@ -490,7 +527,8 @@ export class ListController {
       this.app.toasts.show(problem, undefined, 'error');
       return false;
     }
-    this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
+    if (column.priority !== undefined) this.app.edit.patch([...ids], { priority: column.priority });
+    else this.app.edit.setState([...ids], (issue) => this.#stateFor(issue, column));
     return true;
   }
 
@@ -528,22 +566,24 @@ export class ListController {
   }
 
   /** Topmost (fully or partly) visible issue and its distance from the top edge. */
-  #scrollAnchor(): { id: IssueId; offset: number } | null {
+  #scrollAnchor(): { key: string; offset: number } | null {
     const el = this.#scroller;
     if (!el || el.scrollTop <= 0) return null;
     const h = this.app.rowHeight();
     const rows = this.list.get().rows;
     for (let i = Math.floor(el.scrollTop / h); i < rows.length; i++) {
       const row = rows[i];
-      if (row.kind === 'issue') return { id: row.id, offset: i * h - el.scrollTop };
+      if (row.kind === 'issue') return { key: row.key, offset: i * h - el.scrollTop };
     }
     return null;
   }
 
-  #restoreAnchor(anchor: { id: IssueId; offset: number }) {
+  #restoreAnchor(anchor: { key: string; offset: number }) {
     const el = this.#scroller;
-    const index = this.#rowIndex.get(anchor.id);
-    if (!el || index === undefined) return;
+    if (!el) return;
+    // By row key: an issue listed under several groups (labels) must not jump to its first row.
+    const index = this.list.get().rows.findIndex((row) => row.key === anchor.key);
+    if (index < 0) return;
     const top = index * this.app.rowHeight() - anchor.offset;
     if (Math.abs(top - el.scrollTop) >= 1) {
       el.scrollTop = top;
@@ -573,6 +613,7 @@ export class ListController {
     for (const id of this.#selection) {
       if (!this.#visibleSet.has(id)) {
         this.#selection.delete(id);
+        this.#rangeBase = null;
         this.rows.refresh(id);
         changed = true;
       }
@@ -655,7 +696,7 @@ export class ListController {
       tabs,
       chips: this.#chips(view.filters, meta),
       filterCount: filterCount(view.filters),
-      displayChanged: view.display.grouping !== defaults.grouping || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
+      displayChanged: view.display.grouping !== defaults.grouping || (view.display.subGrouping ?? 'none') !== (defaults.subGrouping ?? 'none') || (view.display.groupOrder ?? 'asc') !== (defaults.groupOrder ?? 'asc') || (view.display.emptyGroups ?? false) !== (defaults.emptyGroups ?? false) || view.display.ordering !== defaults.ordering || view.display.showClosed !== defaults.showClosed || view.display.props.join() !== defaults.props.join(),
       quick: view.quick,
       quickOpen: view.quickOpen,
     };
@@ -685,10 +726,15 @@ export class ListController {
   displayFor(route: ViewRoute): Display {
     const def = VIEWS[route.kind];
     const base = def.display(route);
-    const saved = readJson<Partial<Display>>(`xlr8:display:${viewKey(route)}`);
+    const saved = readJson<Partial<Display>>(`selfbound:display:${viewKey(route)}`);
     if (!saved) return base;
+    const grouping = saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping;
     return {
-      grouping: saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping,
+      grouping,
+      ...(saved.subGrouping && grouping !== 'none' && subGroupings(def, grouping).includes(saved.subGrouping) ? { subGrouping: saved.subGrouping } : {}),
+      ...(saved.groupOrder === 'desc' || saved.groupOrder === 'size' ? { groupOrder: saved.groupOrder } : {}),
+      ...(saved.emptyGroups === true ? { emptyGroups: true } : {}),
+      ...(saved.boardColumns === 'priority' && def.boardTypes ? { boardColumns: 'priority' as const } : {}),
       ordering: saved.ordering && def.orderings.includes(saved.ordering) ? saved.ordering : base.ordering,
       props: Array.isArray(saved.props) ? saved.props : base.props,
       showClosed: typeof saved.showClosed === 'boolean' ? saved.showClosed : base.showClosed,
@@ -700,7 +746,7 @@ export class ListController {
    * Switch to a view. Without given values, the filters last set there apply; with given values
    * (URL), those.
    */
-  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
+  setRoute(route: ViewRoute, given?: { filters?: Filters; quick?: string; group?: Grouping | null; sub?: Grouping | null; order?: Ordering | null; layout?: 'board' | null }) {
     const prev = this.view.get();
     const prevKey = viewKey(prev.route);
     const key = viewKey(route);
@@ -709,6 +755,7 @@ export class ListController {
     const remembered = this.#memory.get(key);
     const display = { ...this.displayFor(route) };
     if (given?.group && VIEWS[route.kind].groupings.includes(given.group)) display.grouping = given.group;
+    if (given?.sub && display.grouping !== 'none' && subGroupings(VIEWS[route.kind], display.grouping).includes(given.sub)) display.subGrouping = given.sub;
     if (given?.order && VIEWS[route.kind].orderings.includes(given.order)) display.ordering = given.order;
     if (given?.layout === 'board' && VIEWS[route.kind].boardTypes) display.layout = 'board';
     const filters = given?.filters && filterCount(given.filters) > 0 ? given.filters : (remembered?.filters ?? emptyFilters());
@@ -734,8 +781,13 @@ export class ListController {
   setDisplay(patch: Partial<Display>) {
     const view = this.view.get();
     const display = { ...view.display, ...patch };
+    // Grouping options that go back to their default are not stored; a second level needs a first one it differs from.
+    if (!display.subGrouping || display.grouping === 'none' || !subGroupings(VIEWS[view.route.kind], display.grouping).includes(display.subGrouping)) delete display.subGrouping;
+    if (display.groupOrder === 'asc' || display.grouping === 'none') delete display.groupOrder;
+    if (!display.emptyGroups || display.grouping === 'none') delete display.emptyGroups;
+    if (display.boardColumns !== 'priority') delete display.boardColumns;
     this.view.set({ ...view, display });
-    writeJson(`xlr8:display:${viewKey(view.route)}`, display);
+    writeJson(`selfbound:display:${viewKey(view.route)}`, display);
     this.recompute();
     this.#syncUrl();
     // Changing grouping/ordering keeps the focused issue in view.
@@ -744,7 +796,7 @@ export class ListController {
 
   resetDisplay() {
     const view = this.view.get();
-    writeJson(`xlr8:display:${viewKey(view.route)}`, null);
+    writeJson(`selfbound:display:${viewKey(view.route)}`, null);
     this.view.set({ ...view, display: VIEWS[view.route.kind].display(view.route) });
     this.recompute();
     this.#syncUrl();
@@ -813,7 +865,7 @@ export class ListController {
     const key = viewKey(route);
     let set = this.#collapsed.get(key);
     if (!set) {
-      set = new Set(readJson<string[]>(`xlr8:collapsed:${key}`) ?? []);
+      set = new Set(readJson<string[]>(`selfbound:collapsed:${key}`) ?? []);
       this.#collapsed.set(key, set);
     }
     return set;
@@ -823,14 +875,17 @@ export class ListController {
     const route = this.view.get().route;
     const set = this.#collapsedFor(route);
     const open = set.has(groupKey);
+    // Closing: the rows that disappear are the old ones. They include sub-group headers.
+    const before = open ? 0 : groupSpan(this.list.get().rows, groupKey);
     if (open) set.delete(groupKey);
     else set.add(groupKey);
-    writeJson(`xlr8:collapsed:${viewKey(route)}`, [...set]);
+    writeJson(`selfbound:collapsed:${viewKey(route)}`, [...set]);
     this.recompute();
     const rows = this.list.get().rows;
     const index = rows.findIndex((row) => row.kind === 'group' && row.key === groupKey);
     const head = rows[index];
-    if (head?.kind === 'group' && head.count > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: head.count, open });
+    const span = open ? groupSpan(rows, groupKey) : before;
+    if (head?.kind === 'group' && span > 0) this.motion.set({ kind: 'toggle', key: groupKey, index, rows: span, open });
   }
 
   /** T: collapse/expand the focused issue's group. A second T right after expands it again. */
@@ -858,7 +913,7 @@ export class ListController {
       const set = this.#collapsedFor(route);
       if (set.size === 0) return;
       set.clear();
-      writeJson(`xlr8:collapsed:${viewKey(route)}`, []);
+      writeJson(`selfbound:collapsed:${viewKey(route)}`, []);
       this.recompute();
       return;
     }
@@ -896,10 +951,17 @@ export class ListController {
     if (board) {
       const pos = id ? this.#boardPos.get(id) : undefined;
       const column = pos ? board.columns[pos.col] : undefined;
-      const el = column ? this.#columnScrollers.get(column.key) : undefined;
-      if (pos && el) {
-        revealIndex(el, pos.index, CARD_SLOT);
+      const scroller = column ? this.#columnScrollers.get(column.key) : undefined;
+      if (pos && scroller) {
+        const { el } = scroller;
+        const reveal = () => {
+          const { top, bottom } = scroller.span(pos.index);
+          revealSpan(el, top, bottom);
+        };
+        reveal();
         el.parentElement?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+        // A card that was not measured yet is taller or shorter than its estimate once it is drawn.
+        if (!scroller.span(pos.index).measured) requestAnimationFrame(() => requestAnimationFrame(() => this.#focus === id && reveal()));
       }
       return;
     }
@@ -929,7 +991,8 @@ export class ListController {
     if (this.#order.length) this.#setFocus(this.#order[end ? this.#order.length - 1 : 0]);
   }
 
-  #setSelection(next: Set<IssueId>) {
+  #setSelection(next: Set<IssueId>, keepRange = false) {
+    if (!keepRange) this.#rangeBase = null;
     const changed = new Set([...this.#selection, ...next].filter((id) => this.#selection.has(id) !== next.has(id)));
     this.#selection = next;
     for (const id of changed) this.#refreshFlags(id);
@@ -946,7 +1009,29 @@ export class ListController {
     if (next.has(id)) next.delete(id);
     else next.add(id);
     this.#anchor = id;
+    this.#anchorOn = next.has(id);
     this.#setSelection(next);
+  }
+
+  /**
+   * Checkbox Shift+click and drag: select (or deselect, like the anchor) every visible issue between
+   * the anchor and `id`; the selection before the first range stays, so the range can also shrink.
+   * Without a visible anchor it toggles `id` and makes it the anchor.
+   */
+  selectRange(id: IssueId) {
+    const anchor = this.#anchor;
+    const to = this.#order.indexOf(id);
+    const from = anchor ? this.#order.indexOf(anchor) : -1;
+    if (to < 0) return;
+    if (from < 0 || !anchor) return this.toggleSelect(id);
+    const base = (this.#rangeBase ??= new Set(this.#selection));
+    const on = this.#anchorOn;
+    const next = new Set(base);
+    for (const rangeId of this.#order.slice(Math.min(from, to), Math.max(from, to) + 1)) {
+      if (on) next.add(rangeId);
+      else next.delete(rangeId);
+    }
+    this.#setSelection(next, true);
   }
 
   extendSelection(delta: number) {
@@ -963,6 +1048,7 @@ export class ListController {
   }
 
   clearSelection() {
+    this.#anchor = null;
     this.#setSelection(new Set());
   }
 

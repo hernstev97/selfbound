@@ -39,9 +39,9 @@ export interface CreateState {
   error: string | null;
 }
 
-const CURRENT = 'xlr8:draft:current';
-const SAVED = 'xlr8:drafts';
-const LAST_TEAM = 'xlr8:lastTeam';
+const CURRENT = 'selfbound:draft:current';
+const SAVED = 'selfbound:drafts';
+const LAST_TEAM = 'selfbound:lastTeam';
 
 /**
  * Status and priority names accepted in /new?status=…&priority=… in both UI languages, whatever

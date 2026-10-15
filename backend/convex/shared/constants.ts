@@ -38,14 +38,28 @@ export const PRIORITY_BUDGET: Record<1 | 2, number> = { 1: 1, 2: 3 };
 export const RELATION_TYPES = ['blocks', 'related', 'duplicate'] as const;
 export type RelationType = (typeof RELATION_TYPES)[number];
 
-/**
- * Actor kind of the instance owner. 'steven' is the legacy stored value for the owner: it is in
- * production data (history, comments, sprint items), so it stays. Refer to it through this constant.
- */
-export const OWNER_KIND = 'steven' as const;
+/** Actor kind of the instance owner. New writes store this value. */
+export const OWNER_KIND = 'owner' as const;
+// The owner used to be stored as 'steven', still present in data until the migration (legacyNames.ts)
+// has run and accepted everywhere; a follow-up removes it.
+// legacy-xlr8: old stored actor kind
+export const LEGACY_OWNER_KIND = 'steven' as const;
 
-export const ACTOR_KINDS = [OWNER_KIND, 'agent', 'github', 'import', 'system'] as const;
+/** Is this actor kind the instance owner? Always use this for owner checks, never `=== OWNER_KIND`. */
+export function isOwnerKind(kind: string): boolean {
+  return kind === OWNER_KIND || kind === LEGACY_OWNER_KIND;
+}
+
+export const ACTOR_KINDS = [OWNER_KIND, LEGACY_OWNER_KIND, 'agent', 'github', 'import', 'system'] as const;
 export type ActorKind = (typeof ACTOR_KINDS)[number];
+
+/** `sprints.source` of sprints made in Selfbound (the other value is 'linear', imported cycles). */
+export const SPRINT_SOURCE = 'selfbound' as const;
+// legacy-xlr8: old value of `sprints.source`; present until legacyNames.ts has migrated it, queries cover both
+export const LEGACY_SPRINT_SOURCE = 'xlr8' as const;
+export function isSelfboundSource(source: string): boolean {
+  return source === SPRINT_SOURCE || source === LEGACY_SPRINT_SOURCE;
+}
 
 export const SPRINT_STATES = ['planning', 'active', 'closed'] as const;
 export type SprintState = (typeof SPRINT_STATES)[number];

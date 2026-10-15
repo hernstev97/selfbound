@@ -124,14 +124,20 @@ export interface MediaState {
   source: string;
 }
 
+const ATTR_ENTITIES: Record<string, string> = {
+  '&quot;': '"',
+  '&#39;': "'",
+  '&#x27;': "'",
+  '&lt;': '<',
+  '&gt;': '>',
+  '&#x26;': '&',
+  '&#38;': '&',
+  '&amp;': '&',
+};
+
+/** One pass: `&#x26;amp;` must come out as `&amp;`, not `&` (a second pass would decode twice). */
 function decodeAttr(value: string) {
-  return value
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#x27;/gi, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&#x26;|&#38;/gi, '&')
-    .replace(/&amp;/g, '&');
+  return value.replace(/&(?:quot|lt|gt|amp|#39|#38|#[xX](?:27|26));/g, (m) => ATTR_ENTITIES[m.replace('X', 'x')] ?? m);
 }
 
 /** Proxy URL for a media URL, or null (don't rewrite). */

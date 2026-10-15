@@ -33,12 +33,26 @@ To move an issue to another status on the board:
 <Kbd keys="j" /> and <Kbd keys="k" /> within a column. If a team's workflow does not allow a move, the
 column is marked while you drag and Selfbound tells you why.
 
+### Columns by priority
+
+In the display options, **Board columns** switches the board from one column per status to one column
+per priority (Urgent, High, Medium, Low, No priority). Dragging a card, or <Kbd keys="shift+arrowleft" />
+and <Kbd keys="shift+arrowright" />, then sets the priority instead of the status. Done, canceled and
+duplicate issues carry no priority and can only sit in "No priority". There is also a command in the
+command menu: **Board columns: toggle status / priority**.
+
 ## Display options
 
 Press <Kbd keys="shift+v" /> or click **Display** to open the display options:
 
-- **Grouping**: by Status, Team, Priority, Project, Sprint, or None. The sprint view also offers
-  **Planned / added later**. The available choices depend on the view.
+- **Grouping**: by Status, Team, Priority, Label, Label group, Creator, Estimate, Due date, Project,
+  Sprint, Parent issue, Created, Updated, or None. The sprint view also offers **Planned / added
+  later**. The available choices depend on the view. An issue with several labels appears under each of
+  them (and under each label group it has a label from), and the counts count issues, not rows.
+- **Then group by**: an optional second level inside each group, with its own collapse state.
+- **Group order**: default, reversed, or the biggest group first. **Show empty groups** also lists
+  groups without issues.
+- **Board columns** (board only): by status or by priority, see above.
 - **Ordering**: by Priority, Manual, Last updated, Created, Due date, and in some views Status.
 - **Show completed**: in views where done and canceled issues are relevant (All issues, Sprint,
   projects), this switch shows or hides them.

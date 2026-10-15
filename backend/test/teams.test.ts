@@ -95,7 +95,7 @@ describe('Teams, projects, labels', () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     const agentId = await t.run(
-      async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'c'.repeat(64), keyPrefix: 'xlr8_ccccc', createdAt: 0, canManageTeams: true }),
+      async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'c'.repeat(64), keyPrefix: 'selfbound_ccccc', createdAt: 0, canManageTeams: true }),
     );
     const agent = AGENT(agentId);
     const storageId = await upload(t, SVG_OK, 'image/svg+xml');

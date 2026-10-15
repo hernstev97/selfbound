@@ -37,6 +37,7 @@ import {
 } from './ops/githubPr';
 import { mergeMethodValidator, prItemValidator, prDetailDataValidator, prStateValidator } from './schema';
 import type { GithubConnection, PrSummary, PrView } from './shared/pullRequests';
+import { envVar } from './lib/legacyEnv';
 
 // Pull requests in Selfbound: view, summaries, fetching through the GitHub API, actions (merge,
 // close/reopen, comment) and the webhooks in all repos of the token.
@@ -388,7 +389,7 @@ const repoFilter = () => (process.env.GITHUB_REPOS ?? '').split(',').map((r) => 
 
 /** URLs the webhook arrives at (the first is used when creating it). */
 function hookUrls() {
-  const bases = [process.env.CONVEX_SITE_URL, process.env.XLR8_PUBLIC_SITE_URL]
+  const bases = [process.env.CONVEX_SITE_URL, envVar('PUBLIC_SITE_URL')]
     .map((b) => b?.trim().replace(/\/+$/, ''))
     .filter((b): b is string => !!b);
   return [...new Set(bases)].map((b) => `${b}/github`);

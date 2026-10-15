@@ -2,10 +2,10 @@
 //
 // Creates an RSA key pair once in backend/.dev-auth/ (gitignored), provides the public key as a
 // JWKS data: URI for Convex and issues tokens for the owner. The backend accepts this issuer only
-// when XLR8_DEV_JWKS is set, which happens only in local backends.
+// when SELFBOUND_DEV_JWKS is set, which happens only in local backends.
 
 import { createPrivateKey, createPublicKey, createSign, generateKeyPairSync } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { linkSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,22 +13,35 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dir = join(root, 'backend', '.dev-auth');
 const keyFile = join(dir, 'private.pem');
 
-export const DEV_ISSUER = 'https://dev.xlr8.local';
-export const DEV_AUDIENCE = 'xlr8-dev';
+export const DEV_ISSUER = 'https://dev.selfbound.local';
+export const DEV_AUDIENCE = 'selfbound-dev';
 export const DEV_SUBJECT = 'owner';
 export const DEV_OWNER_ID = `${DEV_ISSUER}|${DEV_SUBJECT}`;
-const KID = 'xlr8-dev-1';
+const KID = 'selfbound-dev-1';
 
 function privateKey() {
-  if (!existsSync(keyFile)) {
-    mkdirSync(dir, { recursive: true });
-    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
-    writeFileSync(keyFile, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600 });
+  // No existsSync between check and use: read first, create on ENOENT with "wx" (a parallel start never overwrites a key).
+  try {
+    return createPrivateKey(readFileSync(keyFile));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  mkdirSync(dir, { recursive: true });
+  const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  // Complete file first, then link it in place: linkSync fails if a parallel start was faster, and nobody reads half a key.
+  const tmp = `${keyFile}.${process.pid}.tmp`;
+  writeFileSync(tmp, privateKey.export({ type: 'pkcs8', format: 'pem' }), { mode: 0o600, flag: 'wx' });
+  try {
+    linkSync(tmp, keyFile);
+  } catch (error) {
+    if (error.code !== 'EEXIST') throw error;
+  } finally {
+    rmSync(tmp, { force: true });
   }
   return createPrivateKey(readFileSync(keyFile));
 }
 
-/** JWKS with the public key as a data: URI (for XLR8_DEV_JWKS). */
+/** JWKS with the public key as a data: URI (for SELFBOUND_DEV_JWKS). */
 export function devJwksDataUri() {
   const jwk = createPublicKey(privateKey()).export({ format: 'jwk' });
   const jwks = JSON.stringify({ keys: [{ ...jwk, kid: KID, alg: 'RS256', use: 'sig' }] });

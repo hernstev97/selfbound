@@ -78,7 +78,7 @@ export const resolve = ownerAction({
 });
 
 /**
- * For end-to-end tests only (needs XLR8_TEST_SWITCHES=1, which a production deployment never has):
+ * For end-to-end tests only (needs SELFBOUND_TEST_SWITCHES=1, which a production deployment never has):
  * puts a card into the cache without contacting a provider. Images come as base64.
  */
 export const seedForTest = ownerAction({

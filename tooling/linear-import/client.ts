@@ -1,6 +1,6 @@
 // Read-only GraphQL client for Linear.
 //
-// - API key from ~/.config/xlr8/linear-api-key (mode 600, otherwise abort).
+// - API key from ~/.config/selfbound/linear-api-key (mode 600, otherwise abort).
 // - Read-only guard: every document is parsed with `graphql.parse` before it is sent.
 //   Exactly one named OperationDefinition with `operation === 'query'` is allowed,
 //   nothing else (no mutation, no subscription, no fragments, no type definitions).
@@ -9,13 +9,13 @@
 // - Waits on rate limits (HTTP 429 or `RATELIMITED`) and on 5xx/network errors.
 // - Logs every operation name sent (proof of "read access only").
 
-import { lstatSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { closeSync, constants, fstatSync, openSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { configFile } from '../lib/env.mjs';
 import { graphql } from './graphql.ts';
 
 export const LINEAR_ENDPOINT = 'https://api.linear.app/graphql';
-export const DEFAULT_KEY_FILE = join(homedir(), '.config', 'xlr8', 'linear-api-key');
+export const DEFAULT_KEY_FILE = configFile('linear-api-key');
 
 export class ReadOnlyViolation extends Error {
   override name = 'ReadOnlyViolation';
@@ -60,26 +60,33 @@ export function assertReadOnly(document: string): string {
 
 /** Reads the API key. Aborts if the file is missing or readable by others. */
 export function readApiKey(file = DEFAULT_KEY_FILE): string {
-  let stat;
+  // One handle for check and read: the file cannot be swapped in between. O_NOFOLLOW refuses symlinks.
+  let fd: number;
   try {
-    stat = lstatSync(file);
-  } catch {
+    fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ELOOP') throw new Error(`${file} is not a regular file (symlinks are not allowed).`);
     throw new Error(
       `No Linear API key at ${file}.\n` +
         'Create a key with read access in Linear under Settings → Security & access → Personal API keys\n' +
         `and store it like this:  install -D -m 600 /dev/stdin ${file}  (paste the key, Ctrl+D)`,
     );
   }
-  if (!stat.isFile()) throw new Error(`${file} is not a regular file (symlinks are not allowed).`);
-  if ((stat.mode & 0o077) !== 0) {
-    throw new Error(
-      `${file} is readable by others (mode ${(stat.mode & 0o777).toString(8)}). ` +
-        `Only you may read the key: chmod 600 ${file}`,
-    );
+  try {
+    const stat = fstatSync(fd);
+    if (!stat.isFile()) throw new Error(`${file} is not a regular file (symlinks are not allowed).`);
+    if ((stat.mode & 0o077) !== 0) {
+      throw new Error(
+        `${file} is readable by others (mode ${(stat.mode & 0o777).toString(8)}). ` +
+          `Only you may read the key: chmod 600 ${file}`,
+      );
+    }
+    const key = readFileSync(fd, 'utf8').trim();
+    if (!key) throw new Error(`${file} is empty.`);
+    return key;
+  } finally {
+    closeSync(fd);
   }
-  const key = readFileSync(file, 'utf8').trim();
-  if (!key) throw new Error(`${file} is empty.`);
-  return key;
 }
 
 export interface OperationLogEntry {

@@ -2,6 +2,38 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 
+const warned = new Set<string>();
+
+/**
+ * A build setting: `SELFBOUND_<name>`, else the deprecated `XLR8_<name>` (legacy-xlr8; one warning,
+ * never the value). Build time only; nothing of this reaches the client.
+ */
+export function buildVar(name: string, env: Record<string, string | undefined>): string | undefined {
+  const current = env[`SELFBOUND_${name}`];
+  if (current) return current;
+  // legacy-xlr8: the old build variable names work until a follow-up removes them.
+  const legacy = env[`XLR8_${name}`];
+  if (legacy && !warned.has(name)) {
+    warned.add(name);
+    console.warn(`XLR8_${name} is deprecated, set SELFBOUND_${name} instead.`); // legacy-xlr8
+  }
+  return legacy || undefined;
+}
+
+/**
+ * The client reads `VITE_SELFBOUND_<name>`. For the deprecated `VITE_XLR8_<name>` (legacy-xlr8) the
+ * value is copied into the process environment, which Vite reads after this config (so the bundle carries no fallback).
+ */
+export function aliasViteVar(name: string, env: Record<string, string | undefined>, target: NodeJS.ProcessEnv = process.env): void {
+  const key = `VITE_SELFBOUND_${name}`;
+  if (env[key] !== undefined) return;
+  // legacy-xlr8: see buildVar
+  const legacy = env[`VITE_XLR8_${name}`];
+  if (legacy === undefined) return;
+  console.warn(`VITE_XLR8_${name} is deprecated, set ${key} instead.`); // legacy-xlr8
+  target[key] = legacy;
+}
+
 /** Preloads the font for the first list (Inter latin) in parallel with JS and CSS. */
 export function preloadFont(): Plugin {
   return {
@@ -49,7 +81,8 @@ export function signedOutGuard(on: boolean): Plugin {
       order: 'pre',
       handler(_html, ctx) {
         if (!on || !ctx.filename.endsWith('index.html')) return [];
-        const code = `if(!/(?:^|; )xlr8_signed_in=1/.test(document.cookie)){var p=location.pathname+location.search+location.hash;location.replace('/sign-in'+(p==='/'?'':'?redirect_url='+encodeURIComponent(p)))}`;
+        // legacy-xlr8: the old cookie name still counts as signed in.
+        const code = `if(!/(?:^|; )(?:selfbound|xlr8)_signed_in=1/.test(document.cookie)){var p=location.pathname+location.search+location.hash;location.replace('/sign-in'+(p==='/'?'':'?redirect_url='+encodeURIComponent(p)))}`;
         return [{ tag: 'script', children: code, injectTo: 'head-prepend' }];
       },
     },
@@ -95,11 +128,11 @@ export function publicUrlHtml(html: string, base: string | undefined): string {
 }
 
 /**
- * Build-time public URL of the instance (`XLR8_PUBLIC_URL`, e.g. https://selfbound.example.com) for the
+ * Build-time public URL of the instance (`SELFBOUND_PUBLIC_URL`, e.g. https://selfbound.example.com) for the
  * absolute URLs in index.html and welcome.html, see publicUrlHtml().
  */
 export function publicUrl(base: string | undefined): Plugin {
-  if (base && !/^https?:\/\/[^/\s]+\/?$/.test(base.trim())) throw new Error(`XLR8_PUBLIC_URL must be an origin like https://selfbound.example.com, got "${base}"`);
+  if (base && !/^https?:\/\/[^/\s]+\/?$/.test(base.trim())) throw new Error(`SELFBOUND_PUBLIC_URL must be an origin like https://selfbound.example.com, got "${base}"`);
   return {
     name: 'selfbound-public-url',
     transformIndexHtml: { order: 'pre', handler: (html) => publicUrlHtml(html, base) },

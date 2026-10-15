@@ -42,7 +42,7 @@ if (!zipPath || !existsSync(zipPath)) {
 
 // Environment variables the function upload needs (auth.config.ts).
 // "none" disables the sign-in providers: the test backend is only there for the comparison.
-const RESTORE_ENV = { CLERK_JWT_ISSUER_DOMAIN: 'none', XLR8_DEV_JWKS: 'none' };
+const RESTORE_ENV = { CLERK_JWT_ISSUER_DOMAIN: 'none', SELFBOUND_DEV_JWKS: 'none' };
 
 async function reachable(url) {
   try {
@@ -85,7 +85,7 @@ async function main() {
     cpSync(join(root, 'backend', 'package.json'), join(work, 'package.json'));
     symlinkSync(join(root, 'backend', 'node_modules'), join(work, 'node_modules'), 'dir');
     writeFileSync(join(work, 'README.txt'), 'Temporary project for tooling/backup/verify-restore.mjs. Safe to delete.\n');
-    process.env.XLR8_BACKEND_DIR = work;
+    process.env.SELFBOUND_BACKEND_DIR = work;
     const { runConvex } = await import('../convex.mjs');
 
     const run = (args, label) =>
