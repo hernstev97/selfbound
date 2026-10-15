@@ -137,6 +137,7 @@ export default {
   'Copy link': 'Link kopieren',
   'Copy branch name': 'Branch-Namen kopieren',
   'Copy ID': 'Kennung kopieren',
+  '{count} ID': ['{count} Kennung', '{count} Kennungen'],
   'Move issue up': 'Nach oben schieben',
   'Move issue down': 'Nach unten schieben',
   'Edit description': 'Beschreibung bearbeiten',

@@ -695,8 +695,12 @@ export class Editor {
     void this.copy(branchName(issue.key, issue.title, this.app.branchPrefix), t('Branch name'));
   }
 
-  copyKey(id: IssueId) {
-    const issue = this.app.store.get(id);
-    if (issue && !issue.pending) void this.copy(issue.key, t('ID'));
+  /** One identifier, or several one per line. */
+  copyKeys(ids: IssueId[]) {
+    const keys = ids.flatMap((id) => {
+      const issue = this.app.store.get(id);
+      return issue && !issue.pending ? [issue.key] : [];
+    });
+    if (keys.length) void this.copy(keys.join('\n'), keys.length === 1 ? t('ID') : tn(keys.length, '{count} ID', '{count} IDs'));
   }
 }
