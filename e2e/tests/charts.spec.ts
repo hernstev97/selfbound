@@ -117,7 +117,8 @@ const COLUMNS = {
 
 test('Charts draw in the shown text, light and dark; the chunk loads only for texts with a chart', async ({ page }, testInfo) => {
   const chunks: string[] = [];
-  page.on('request', (r) => /\/assets\/index-[\w-]+\.js|chart/i.test(r.url()) && /chart/i.test(r.url()) && chunks.push(r.url()));
+  // The lazy chunk is named after the renderer (match the name part only, a hash may contain any letters)
+  page.on('request', (r) => /\/assets\/chart-[\w-]+\.js$/.test(new URL(r.url()).pathname) && chunks.push(r.url()));
   await freshIssue(page, 'No chart here.');
   await expect(page.getByTestId('detail-description')).toContainText('No chart here');
   await page.waitForTimeout(400);
