@@ -13,6 +13,17 @@ export function backend() {
 
 export { api };
 
+/**
+ * Every issue document, read bucket by bucket up to the highest seq. A fixed bucket range breaks
+ * once the specs before it have created enough issues (64 per bucket) to push a new one past it.
+ */
+export async function allIssues() {
+  const client = backend();
+  const { maxSeq } = await client.query(api.meta.counter, {});
+  const buckets = await Promise.all(Array.from({ length: Math.floor(maxSeq / 64) + 1 }, (_, bucket) => client.query(api.issues.bucket, { bucket })));
+  return buckets.flat();
+}
+
 /** Waits until the server has confirmed all changes (otherwise they are lost when the page closes). */
 export async function settled(page: Page) {
   await page.waitForFunction(() => ((window as unknown as { __selfbound?: { saves: { confirmed?: number; failed?: boolean }[] } }).__selfbound?.saves ?? []).every((s) => s.confirmed !== undefined || s.failed));

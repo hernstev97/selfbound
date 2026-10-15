@@ -1,7 +1,7 @@
 // UI regression tests: focus in the create dialog, pickers above the dialog, multi-word search in
 // descriptions, task lists, relations with undo.
 import { expect, test } from '@playwright/test';
-import { api, backend, expectMarkdown, focusedRow, open, resolve, settled } from '../support/helpers.ts';
+import { allIssues, api, backend, expectMarkdown, focusedRow, open, resolve, settled } from '../support/helpers.ts';
 
 test.afterEach(async ({ page }) => {
   if (!page.isClosed()) await settled(page);
@@ -126,7 +126,7 @@ test('Triage 2: duplicate with a typed identifier, suggestions without input; Ct
   const client = backend();
   const detail = async () => (await client.query(api.issues.detail, { id: id as never }))!;
   await expect.poll(async () => (await detail()).relations.map((r) => r.type)).toEqual(['duplicate']);
-  const statusOf = async () => (await Promise.all(Array.from({ length: 32 }, (_, bucket) => bucket).map((bucket) => client.query(api.issues.bucket, { bucket })))).flat().find((i) => i._id === id)?.status;
+  const statusOf = async () => (await allIssues()).find((i) => i._id === id)?.status;
   await expect.poll(statusOf).toBe('duplicate');
   await page.keyboard.press('Control+z');
   await settled(page);

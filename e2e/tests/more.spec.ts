@@ -1,6 +1,6 @@
 // More rules: issues filtered out by your own change, relations, old identifier in search, offline indicator.
 import { expect, test, type WebSocketRoute } from '@playwright/test';
-import { api, backend, focusedRow, open, row, settled } from '../support/helpers.ts';
+import { allIssues, api, backend, focusedRow, open, row, settled } from '../support/helpers.ts';
 import { BACKEND_PORT } from '../support/env.ts';
 
 test.afterEach(async ({ page }) => {
@@ -90,7 +90,7 @@ test('Offline: changes visible at once, indicator "Offline · n pending", saved 
   offline = false;
   await expect(page.getByTestId('sync-state')).toHaveCount(0, { timeout: 20000 });
   await settled(page);
-  const docs = (await Promise.all(Array.from({ length: 32 }, (_, bucket) => bucket).map((bucket) => backend().query(api.issues.bucket, { bucket })))).flat();
+  const docs = await allIssues();
   for (const [id, target] of ids) expect(docs.find((d) => d._id === id)?.priority).toBe(target);
 });
 
