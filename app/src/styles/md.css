@@ -197,7 +197,7 @@
   }
 }
 
-/* Syntax colors (highlight.js classes). Dark and light defined separately, hues around the accent (hue 276). */
+/* Selfbound syntax colors. Dark and light defined separately, hues around the accent (hue 276). */
 [data-theme='dark'] {
   --syn-keyword: oklch(0.76 0.12 300);
   --syn-string: oklch(0.8 0.11 150);
@@ -207,8 +207,6 @@
   --syn-tag: oklch(0.76 0.12 20);
   --syn-add: oklch(0.8 0.11 150);
   --syn-del: oklch(0.76 0.12 20);
-  --syn-add-bg: oklch(0.8 0.11 150 / 0.12);
-  --syn-del-bg: oklch(0.76 0.12 20 / 0.12);
 }
 [data-theme='light'] {
   --syn-keyword: oklch(0.48 0.16 300);
@@ -219,97 +217,46 @@
   --syn-tag: oklch(0.5 0.16 20);
   --syn-add: oklch(0.47 0.11 150);
   --syn-del: oklch(0.5 0.16 20);
-  --syn-add-bg: oklch(0.47 0.11 150 / 0.1);
-  --syn-del-bg: oklch(0.5 0.16 20 / 0.1);
 }
-.md .hljs {
+/* Syntax colors of code blocks and the editor (highlight.ts): a token carries its dark and its light
+   color as --d and --l, the mode picks one. The Selfbound palette (no VS Code theme) arrives as the
+   --sx-* variables, chained like the old highlight.js rules: custom colors only with a VS Code theme. */
+:root {
+  --sx-keyword: var(--syn-keyword);
+  --sx-string: var(--syn-string);
+  --sx-number: var(--syn-number);
+  --sx-literal: var(--syn-literal, var(--syn-keyword));
+  --sx-func: var(--syn-func);
+  --sx-type: var(--syn-type);
+  --sx-tag: var(--syn-tag);
+  --sx-attr: var(--syn-attr, var(--syn-type));
+  --sx-comment: var(--syn-comment, var(--text-muted));
+  --sx-regexp: var(--syn-regexp, var(--syn-string));
+  --sx-builtin: var(--syn-builtin, var(--syn-func));
+  --sx-property: var(--syn-property, var(--syn-attr, var(--syn-type)));
+  --sx-add: var(--syn-add);
+  --sx-del: var(--syn-del);
+}
+.md code.hl {
   color: var(--text);
 }
-.md .hljs-keyword,
-.md .hljs-selector-tag,
-.md .hljs-meta .hljs-keyword,
-.md .hljs-doctag {
-  color: var(--syn-keyword);
+[data-theme='dark'] .md .tk {
+  color: var(--d);
 }
-.md .hljs-string,
-.md .hljs-template-variable,
-.md .hljs-meta .hljs-string,
-.md .hljs-bullet {
-  color: var(--syn-string);
+[data-theme='light'] .md .tk {
+  color: var(--l);
 }
-.md .hljs-number,
-.md .hljs-symbol,
-.md .hljs-link {
-  color: var(--syn-number);
-}
-.md .hljs-title,
-.md .hljs-title.function_,
-.md .hljs-section,
-.md .hljs-selector-id,
-.md .hljs-selector-class {
-  color: var(--syn-func);
-}
-.md .hljs-type,
-.md .hljs-class .hljs-title,
-.md .hljs-title.class_ {
-  color: var(--syn-type);
-}
-/* Custom colors only with a VS Code theme, otherwise the defaults above apply. */
-.md .hljs-literal {
-  color: var(--syn-literal, var(--syn-keyword));
-}
-.md .hljs-regexp {
-  color: var(--syn-regexp, var(--syn-string));
-}
-.md .hljs-built_in {
-  color: var(--syn-builtin, var(--syn-func));
-}
-.md .hljs-attr,
-.md .hljs-attribute,
-.md .hljs-property {
-  color: var(--syn-property, var(--syn-attr, var(--syn-type)));
-}
-.md .hljs-variable,
-.md .hljs-params {
-  color: var(--syn-variable, var(--syn-type));
-}
-.md .hljs-tag,
-.md .hljs-name,
-.md .hljs-selector-attr {
-  color: var(--syn-tag);
-}
-.md .hljs-tag .hljs-attr,
-.md .hljs-tag .hljs-string {
-  color: inherit;
-}
-.md .hljs-tag .hljs-attr {
-  color: var(--syn-attr, var(--syn-type));
-}
-.md .hljs-tag .hljs-string {
-  color: var(--syn-string);
-}
-.md .hljs-comment,
-.md .hljs-quote,
-.md .hljs-meta {
-  color: var(--syn-comment, var(--text-muted));
-}
-.md .hljs-comment,
-.md .hljs-quote {
+[data-theme='dark'] .md .tk-di,
+[data-theme='light'] .md .tk-li {
   font-style: italic;
 }
-.md .hljs-emphasis {
-  font-style: italic;
-}
-.md .hljs-strong {
+[data-theme='dark'] .md .tk-db,
+[data-theme='light'] .md .tk-lb {
   font-weight: 600;
 }
-.md .hljs-addition {
-  color: var(--syn-add);
-  background: var(--syn-add-bg);
-}
-.md .hljs-deletion {
-  color: var(--syn-del);
-  background: var(--syn-del-bg);
+[data-theme='dark'] .md .tk-du,
+[data-theme='light'] .md .tk-lu {
+  text-decoration: underline;
 }
 .md blockquote {
   margin: 0 0 0.75em;

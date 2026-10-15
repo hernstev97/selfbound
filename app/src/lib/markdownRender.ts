@@ -6,7 +6,7 @@ import { t } from '@selfbound/core/i18n';
 import type { Marked as MarkedClass } from 'marked';
 import type DOMPurifyType from 'dompurify';
 import { BARE_IDENTIFIER_RE } from '@selfbound/backend/shared/links';
-import { codeBlockHtml, escapeHtml } from './codeblock.ts';
+import { codeBlockHtml, escapeHtml, fenceClaim, TOKEN_STYLE } from './codeblock.ts';
 import { uploadNote } from './uploadNote.ts';
 
 /** Path in the app if a link points to a wiki page or an issue (otherwise null). */
@@ -97,7 +97,10 @@ export function createRender(
       },
     ],
     renderer: {
-      code: ({ text, lang }) => codeBlockHtml(text, lang, highlight(text, lang)),
+      code: ({ text, lang }) => {
+        const claim = fenceClaim(lang);
+        return claim?.(text, lang!) ?? codeBlockHtml(text, lang, claim ? null : highlight(text, lang));
+      },
       // Images open full size on click (new tab).
       image({ href, title, text }) {
         const alt = escapeHtml(text);
@@ -105,6 +108,10 @@ export function createRender(
         return href.startsWith('#upload-') ? img : `<a class="md-img" href="${escapeHtml(href)}">${img}</a>`;
       },
     },
+  });
+  // Colors of highlighted code: tokens carry them as custom properties (style is forbidden otherwise).
+  DOMPurify.addHook('uponSanitizeAttribute', (node, data) => {
+    if (data.attrName === 'style' && node.tagName === 'SPAN' && node.classList.contains('tk') && TOKEN_STYLE.test(data.attrValue)) data.forceKeepAttr = true;
   });
   DOMPurify.addHook('afterSanitizeAttributes', (node) => {
     if (node.tagName === 'A') {

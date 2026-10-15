@@ -27,12 +27,11 @@
     "@fontsource-variable/roboto-mono": "5.3.0",
     "@fontsource-variable/source-code-pro": "5.3.1",
     "@fontsource-variable/source-sans-3": "5.3.1",
-    "@web-kits/audio": "0.2.0",
     "@selfbound/backend": "workspace:*",
     "@selfbound/core": "workspace:*",
+    "@web-kits/audio": "0.2.0",
     "convex": "1.46.0",
     "dompurify": "3.4.16",
-    "highlight.js": "11.12.0",
     "marked": "18.1.0",
     "prosemirror-commands": "1.7.2",
     "prosemirror-dropcursor": "1.8.4",
@@ -46,6 +45,7 @@
     "prosemirror-tables": "1.8.5",
     "prosemirror-transform": "1.12.2",
     "prosemirror-view": "1.42.6",
+    "shiki": "4.5.0",
     "svelte": "5.57.2"
   },
   "devDependencies": {

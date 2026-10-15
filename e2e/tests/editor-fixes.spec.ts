@@ -126,7 +126,7 @@ test.describe('Codeblock', () => {
     await page.keyboard.press('Enter');
     await expect.poll(() => body(issue.id)).toBe('```sql\nselect 1;\n```\n\nText\n\n```ts\nlet a = 1;\n```');
     await expect(blocks.nth(0).getByTestId('code-lang')).toHaveText('SQL');
-    await expect(blocks.nth(0).locator('.hljs-keyword').first()).toBeVisible();
+    await expect(blocks.nth(0).locator('.tk', { hasText: 'select' }).first()).toBeVisible();
     // Second block: choosing plain text removes the language
     await blocks.nth(1).getByTestId('code-lang').click();
     await page.getByTestId('lang-picker').locator('[data-id=""]').click();
