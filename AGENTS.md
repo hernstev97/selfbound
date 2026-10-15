@@ -28,7 +28,8 @@ low priority). Do not start full performance runs unless asked.
   refer to an issue the maintainer labeled `accepted`, or it is closed automatically.
 - Naming: the product is called Selfbound (formerly XLR8). Legacy names stay until they are migrated: env vars
   `XLR8_*`, storage keys and prefixes (`xlr8:*`, `xlr8_signed_in`, `xlr8_rt_`), the team key `XLR8` with its issue
-  ids, the instance URL `xlr8.kiumu.app` and the repository `hernstev97/xlr8`. Packages are `@selfbound/*`.
+  ids, the instance URL `xlr8.kiumu.app` and the Vercel project `xlr8`. The repository is `hernstev97/selfbound`;
+  packages are `@selfbound/*`.
 - Everything in English: code, comments, identifiers, tests, docs, commit messages, PR texts.
 - UI text through `t()`, `tn()`, `tc()` or `translated()` from `core/src/i18n.ts`, with the German
   entry in `app/src/locales/de/*.ts` or `core/src/locales/de.ts`. Never call `t()` at module level.

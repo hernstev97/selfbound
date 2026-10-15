@@ -5,11 +5,11 @@ sidebar:
   order: 1
 ---
 
-Selfbound is early and maintained by one person, so focused contributions help most. This page gives an overview. The authoritative rules are in [CONTRIBUTING.md](https://github.com/hernstev97/xlr8/blob/main/CONTRIBUTING.md) and, for coding agents, [AGENTS.md](https://github.com/hernstev97/xlr8/blob/main/AGENTS.md) in the repository.
+Selfbound is early and maintained by one person, so focused contributions help most. This page gives an overview. The authoritative rules are in [CONTRIBUTING.md](https://github.com/hernstev97/selfbound/blob/main/CONTRIBUTING.md) and, for coding agents, [AGENTS.md](https://github.com/hernstev97/selfbound/blob/main/AGENTS.md) in the repository.
 
 ## Issue first, then pull request
 
-- **Bugs and ideas:** open an [issue on GitHub](https://github.com/hernstev97/xlr8/issues).
+- **Bugs and ideas:** open an [issue on GitHub](https://github.com/hernstev97/selfbound/issues).
 - **Anything larger than a small fix:** open an issue before you write code, so you and the maintainer can agree on the approach first.
 - **Security problems:** never in a public issue. See [Security](/project/security/).
 
@@ -52,10 +52,10 @@ CI runs the types, the unit and integration tests, the browser tests and a quick
 
 For larger changes, read the internal architecture notes first:
 
-- [Frontend](https://github.com/hernstev97/xlr8/blob/main/docs/architecture/frontend.md): structure, data flow, extension points, translations and the performance rules
-- [Backend](https://github.com/hernstev97/xlr8/blob/main/docs/architecture/backend.md): Convex tables and rules, public functions, error codes and the sprint rules
-- [MCP](https://github.com/hernstev97/xlr8/blob/main/docs/architecture/mcp.md): the MCP endpoint, its tools and OAuth for connectors
-- [Import](https://github.com/hernstev97/xlr8/blob/main/docs/architecture/import.md): the import from Linear, format and processing
+- [Frontend](https://github.com/hernstev97/selfbound/blob/main/docs/architecture/frontend.md): structure, data flow, extension points, translations and the performance rules
+- [Backend](https://github.com/hernstev97/selfbound/blob/main/docs/architecture/backend.md): Convex tables and rules, public functions, error codes and the sprint rules
+- [MCP](https://github.com/hernstev97/selfbound/blob/main/docs/architecture/mcp.md): the MCP endpoint, its tools and OAuth for connectors
+- [Import](https://github.com/hernstev97/selfbound/blob/main/docs/architecture/import.md): the import from Linear, format and processing
 
 ## License of contributions
 

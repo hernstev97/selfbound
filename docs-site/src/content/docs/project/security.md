@@ -9,13 +9,13 @@ If you found a security problem in Selfbound, report it privately. This page als
 
 ## Report a vulnerability
 
-Please do not open a public issue. Report it privately through GitHub instead: on the repository, open **Security → Report a vulnerability** ([direct link](https://github.com/hernstev97/xlr8/security/advisories/new)).
+Please do not open a public issue. Report it privately through GitHub instead: on the repository, open **Security → Report a vulnerability** ([direct link](https://github.com/hernstev97/selfbound/security/advisories/new)).
 
 Include what you found, how to reproduce it, and what an attacker could do with it. You will get an answer within a week. Selfbound is maintained by one person in their spare time, so a fix may take a while; you will be kept informed and credited unless you prefer otherwise.
 
 **In scope:** the code in the repository, including the backend functions and HTTP endpoints (MCP, OAuth, GitHub webhook), the web app, the service worker and the tooling. **Not in scope:** instances run by other people, and the services Selfbound builds on (Convex, Clerk, Vercel, GitHub); report those to the vendor. Only the latest commit on `main` is supported.
 
-The full policy is in [SECURITY.md](https://github.com/hernstev97/xlr8/blob/main/SECURITY.md).
+The full policy is in [SECURITY.md](https://github.com/hernstev97/selfbound/blob/main/SECURITY.md).
 
 ## Security model for self-hosters
 
@@ -59,4 +59,4 @@ When you deploy the web app with the included Vercel configuration (`deploy/verc
 
 ### Backups
 
-The repository includes a nightly backup workflow for GitHub Actions. Once you set it up, it exports the whole database, tests that the export can be restored, and encrypts it with [age](https://age-encryption.org) before storing it. Only the holder of your private age key can open a backup; the unencrypted export never leaves the runner. In a public repository, workflow logs and artifacts are public: the archive stays encrypted, but table names, document counts and sizes are visible, so run the backup from a private copy if that matters to you. Setup and restore are described in [docs/backup.md](https://github.com/hernstev97/xlr8/blob/main/docs/backup.md).
+The repository includes a nightly backup workflow for GitHub Actions. Once you set it up, it exports the whole database, tests that the export can be restored, and encrypts it with [age](https://age-encryption.org) before storing it. Only the holder of your private age key can open a backup; the unencrypted export never leaves the runner. In a public repository, workflow logs and artifacts are public: the archive stays encrypted, but table names, document counts and sizes are visible, so run the backup from a private copy if that matters to you. Setup and restore are described in [docs/backup.md](https://github.com/hernstev97/selfbound/blob/main/docs/backup.md).
