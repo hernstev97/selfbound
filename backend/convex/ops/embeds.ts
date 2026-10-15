@@ -19,6 +19,7 @@ export function embedView(row: Row, siteUrl = (process.env.CONVEX_SITE_URL ?? ''
   const id = row.key.slice(row.provider.length + 1);
   const src = (slot: string) => `${siteUrl}${EMBED_MEDIA_PATH}${row.provider}/${id}/${slot}`;
   const view: EmbedView = { provider: row.provider, id, status: row.status, fetchedAt: row.fetchedAt, media: [] };
+  if (row.incomplete) view.incomplete = true;
   for (const field of ['title', 'author', 'handle', 'authorUrl', 'text', 'createdAt'] as const) {
     if (row[field] !== undefined) Object.assign(view, { [field]: row[field] });
   }
@@ -32,13 +33,21 @@ export function embedView(row: Row, siteUrl = (process.env.CONVEX_SITE_URL ?? ''
 
 export type EmbedFields = Omit<Row, '_id' | '_creationTime'>;
 
-/** Writes the fetch result (replaces an earlier one; files that are no longer used are deleted). */
+/**
+ * Writes the fetch result (replaces an earlier one; files that are no longer used are deleted).
+ * `fields.incomplete`: some pictures could not be fetched this time; pictures stored earlier for those
+ * slots stay (a short outage must not take away a good card's pictures).
+ */
 export async function storeEmbed(ctx: MutationCtx, fields: EmbedFields): Promise<Row> {
   const [provider, ...rest] = fields.key.split(':');
   const existing = await embedRow(ctx, provider as EmbedProvider, rest.join(':'));
   if (!existing) {
     const id = await ctx.db.insert('embeds', fields);
     return (await ctx.db.get('embeds', id))!;
+  }
+  if (fields.incomplete) {
+    const have = new Set(fields.media.map((m) => m.slot));
+    fields = { ...fields, media: [...fields.media, ...existing.media.filter((m) => !have.has(m.slot))] };
   }
   // A concurrent fetch may have finished first; the newer result wins, the other files go.
   const [keep, drop] = fields.fetchedAt >= existing.fetchedAt ? [fields.media, existing.media] : [existing.media, fields.media];

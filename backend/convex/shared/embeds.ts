@@ -88,17 +88,17 @@ const EMBED_HOSTS = new Set(PROVIDERS.flatMap((p) => p.hosts));
 const LINE_LEAD = /^ {0,3}(?:<|\[[^\]\n]*\]\()?$/;
 
 /**
- * Start of the first line in raw Markdown that begins with a link to an embeddable host (bare, in
- * <…> or as [text](…)), or undefined. A cheap scan for `https://` candidates (the Markdown renderer
- * calls this for every paragraph); `parseEmbedUrl` decides afterwards.
+ * Start (>= `from`) of the first line in raw Markdown that begins with a link to an embeddable host
+ * (bare, in <…> or as [text](…)), or undefined. A cheap scan for `https://` candidates, because
+ * the Markdown renderer calls it for every paragraph; the caller checks the whole line.
  */
-export function embedLineStart(src: string): number | undefined {
+export function embedLineStart(src: string, from = 0): number | undefined {
   for (let at = src.indexOf('https://'); at !== -1; at = src.indexOf('https://', at + 8)) {
     const end = src.indexOf('/', at + 8);
     if (end === -1) return undefined;
-    if (!EMBED_HOSTS.has(src.slice(at + 8, end))) continue;
+    if (!EMBED_HOSTS.has(src.slice(at + 8, end).toLowerCase())) continue;
     const lineStart = src.lastIndexOf('\n', at - 1) + 1;
-    if (LINE_LEAD.test(src.slice(lineStart, at))) return lineStart;
+    if (lineStart >= from && LINE_LEAD.test(src.slice(lineStart, at))) return lineStart;
   }
   return undefined;
 }
@@ -110,6 +110,10 @@ export const EMBED_MEDIA_PATH = '/embed/';
 
 /** Cached data is refreshed (on view) after this time, and deleted when nobody has viewed it for PURGE. */
 export const EMBED_TTL_MS: Record<EmbedProvider, number> = { youtube: 7 * 86_400_000, x: 86_400_000 };
+/** Time after which a cached card is fetched again when shown: gone ones after an hour, incomplete ones (pictures missing) after 10 minutes. */
+export function embedTtl(view: Pick<EmbedView, 'provider' | 'status' | 'incomplete'>): number {
+  return view.status !== 'ok' ? 3_600_000 : view.incomplete ? 600_000 : EMBED_TTL_MS[view.provider];
+}
 export const EMBED_PURGE_MS = 30 * 86_400_000;
 
 export interface EmbedMediaView {
@@ -129,6 +133,8 @@ export interface EmbedView {
   /** `unavailable`: deleted, private or not embeddable. The link stays a link. */
   status: 'ok' | 'unavailable';
   fetchedAt: number;
+  /** Some pictures could not be fetched; the card is fetched again soon (`embedTtl`). */
+  incomplete?: boolean;
   title?: string;
   author?: string;
   handle?: string;

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { api, internal } from '../convex/_generated/api';
 import { purgeEmbeds } from '../convex/ops/embeds';
-import { EMBED_PURGE_MS, EMBED_TTL_MS } from '../convex/shared/embeds';
+import { embedTtl, EMBED_PURGE_MS, EMBED_TTL_MS, type EmbedView } from '../convex/shared/embeds';
 import { setup, type T } from './helpers';
 
 // Embeds: resolve fetches and caches, the app reads the cache, media is served from our own
@@ -88,6 +88,42 @@ describe('resolve', () => {
     expect(await owner.action(api.embeds.resolve, { provider: 'youtube', id: VIDEO })).toMatchObject({ title: 'New title' });
     // The replaced thumbnail does not pile up.
     expect(await t.run(async (ctx) => (await ctx.db.system.query('_storage').collect()).length)).toBe(1);
+  });
+
+  test('a picture that fails to load does not make a card stale for a week, and does not take away an earlier one', async () => {
+    const { t, owner } = setup();
+    // First fetch: the thumbnail fails. The card is shown but counts as stale after minutes, not days.
+    provider({ 'youtube.com/oembed': () => jsonRes({ title: 'Demo video' }), 'i.ytimg.com': () => new Response('', { status: 503 }) });
+    const first = await owner.action(api.embeds.resolve, { provider: 'youtube', id: VIDEO });
+    expect(first).toMatchObject({ status: 'ok', title: 'Demo video' });
+    expect((first as { thumbnail?: string }).thumbnail).toBeUndefined();
+    expect(first).toMatchObject({ incomplete: true });
+    expect(embedTtl(first as EmbedView)).toBe(600_000);
+    // Second fetch (after those minutes): the thumbnail comes now, the card is complete.
+    provider(youtubeOk);
+    const second = await owner.action(api.embeds.resolve, { provider: 'youtube', id: VIDEO, refresh: true });
+    expect((second as { incomplete?: boolean }).incomplete).toBeUndefined();
+    expect(embedTtl(second as EmbedView)).toBe(EMBED_TTL_MS.youtube);
+    expect((second as { thumbnail?: string }).thumbnail).toContain('/thumb');
+    // Third fetch (forced): the thumbnail fails again, the stored one stays.
+    provider({ 'youtube.com/oembed': () => jsonRes({ title: 'New title' }), 'i.ytimg.com': () => new Response('', { status: 503 }) });
+    const third = await owner.action(api.embeds.resolve, { provider: 'youtube', id: VIDEO, refresh: true });
+    expect(third).toMatchObject({ title: 'New title' });
+    expect((third as { thumbnail?: string }).thumbnail).toContain('/thumb');
+    expect(await t.run(async (ctx) => (await ctx.db.system.query('_storage').collect()).length)).toBe(1);
+    expect((await t.fetch(`/embed/youtube/${VIDEO}/thumb`, { method: 'GET' })).status).toBe(200);
+  });
+
+  test('X: when only the text fallback answers, the pictures of the earlier card stay', async () => {
+    const { owner } = setup();
+    provider(postOk);
+    await owner.action(api.embeds.resolve, { provider: 'x', id: POST });
+    provider({
+      'cdn.syndication.twimg.com': () => new Response('', { status: 500 }),
+      'publish.x.com': () => jsonRes({ author_name: 'Demo Author', html: '<blockquote><p>Edited text</p>&mdash; Demo Author (@demo_user) <a href="x">March 21, 2006</a></blockquote>' }),
+    });
+    const view = await owner.action(api.embeds.resolve, { provider: 'x', id: POST, refresh: true });
+    expect(view).toMatchObject({ text: 'Edited text', avatar: expect.stringContaining('/avatar'), media: [expect.objectContaining({ slot: 'm0' })] });
   });
 
   test('a missing video is cached as unavailable, an outage stores nothing', async () => {

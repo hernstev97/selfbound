@@ -8,7 +8,7 @@ import { invalid } from './lib/errors';
 import { downloadMedia, EmbedFetchError, fetchEmbedMeta } from './lib/embeds';
 import { assertWritable, testSwitchesEnabled } from './lib/testSwitches';
 import { embedRow, embedView, purgeEmbeds, storeEmbed } from './ops/embeds';
-import { embedKey, EMBED_TTL_MS, ID_PATTERN, type EmbedView } from './shared/embeds';
+import { embedKey, embedTtl, ID_PATTERN, type EmbedView } from './shared/embeds';
 
 // Embeds in descriptions, comments and knowledge pages (XLR8-73): a link to a YouTube video or an
 // X post alone on a line becomes a card. The browser never contacts the provider: the backend
@@ -39,7 +39,7 @@ export const resolve = ownerAction({
     if (!ID_PATTERN[args.provider].test(args.id)) invalid('This link cannot be embedded.');
     const cached: EmbedView | null = await ctx.runQuery(internal.embeds.cached, { provider: args.provider, id: args.id });
     const age = cached ? Date.now() - cached.fetchedAt : Infinity;
-    if (cached && age < (cached.status === 'ok' ? EMBED_TTL_MS[args.provider] : 3_600_000) && !args.refresh) return cached;
+    if (cached && age < embedTtl(cached) && !args.refresh) return cached;
     let meta;
     try {
       meta = await fetchEmbedMeta(args.provider, args.id);
@@ -50,6 +50,7 @@ export const resolve = ownerAction({
     }
     const media = meta.status === 'ok' ? await downloadMedia(args.provider, meta.sources) : [];
     const stored: StoredMedia[] = [];
+    const incomplete = meta.status === 'ok' && (meta.partial === true || media.length < meta.sources.length);
     try {
       for (const m of media) {
         const storageId = await ctx.storage.store(new Blob([m.bytes as BlobPart], { type: m.contentType }));
@@ -60,6 +61,7 @@ export const resolve = ownerAction({
         provider: args.provider,
         status: meta.status,
         fetchedAt: Date.now(),
+        incomplete: incomplete || undefined,
         title: meta.title,
         author: meta.author,
         handle: meta.handle,
@@ -118,6 +120,7 @@ export const store = internalMutation({
     provider: providerValidator,
     status: v.union(v.literal('ok'), v.literal('unavailable')),
     fetchedAt: v.number(),
+    incomplete: v.optional(v.boolean()),
     title: v.optional(v.string()),
     author: v.optional(v.string()),
     handle: v.optional(v.string()),

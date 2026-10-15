@@ -69,7 +69,14 @@ export async function safeGet(url: string, provider: EmbedProvider, fetchImpl: F
     } catch {
       throw new EmbedFetchError('request failed');
     }
+    // Redirects are followed here, host by host. A runtime that followed one by itself (`redirected`)
+    // would have skipped the check: do not trust that answer.
+    if (res.redirected || (res.url && !HOSTS[provider].includes(new URL(res.url).hostname))) {
+      void res.body?.cancel();
+      throw new EmbedFetchError('redirected to an unchecked host');
+    }
     if (res.status >= 300 && res.status < 400) {
+      void res.body?.cancel();
       const location = res.headers.get('location');
       if (!location) throw new EmbedFetchError('redirect without target');
       current = new URL(location, current).toString();
@@ -100,6 +107,8 @@ export interface EmbedMeta {
   text?: string;
   createdAt?: number;
   sources: MediaSource[];
+  /** Less than the provider's full answer (fallback without media): keep pictures stored earlier. */
+  partial?: boolean;
 }
 
 export interface DownloadedMedia extends Omit<MediaSource, 'url'> {
@@ -120,6 +129,8 @@ function parseJson(bytes: Uint8Array): unknown {
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 const str = (v: unknown, max = 500) => (typeof v === 'string' && v ? v.slice(0, max) : undefined);
+const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
+const handleOf = (v: unknown) => (typeof v === 'string' && HANDLE.test(v) ? v : undefined);
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v) : undefined);
 
 const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", mdash: '—', ndash: '–', nbsp: ' ', hellip: '…' };
@@ -150,8 +161,9 @@ export function parseYoutube(json: unknown, id: string): EmbedMeta {
 async function fetchYoutube(id: string, fetchImpl: FetchLike): Promise<EmbedMeta> {
   const url = `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${id}`)}`;
   const res = await safeGet(url, 'youtube', fetchImpl, EMBED_LIMITS.jsonBytes);
-  // 401: embedding disabled, 403/404: private or deleted. In all cases the player would not show either.
-  if (res.status === 401 || res.status === 403 || res.status === 404) return UNAVAILABLE;
+  // 401: embedding disabled, 404: private or deleted. In both cases the player would not show either.
+  // (403 can be throttling: a failure, not an answer.)
+  if (res.status === 401 || res.status === 404) return UNAVAILABLE;
   if (res.status !== 200) throw new EmbedFetchError(`oEmbed answered ${res.status}`);
   return parseYoutube(parseJson(res.bytes), id);
 }
@@ -199,7 +211,7 @@ export function parseSyndication(json: unknown, id: string): EmbedMeta | null {
   if (json.__typename === 'TweetTombstone') return UNAVAILABLE;
   if (json.__typename !== 'Tweet' || json.id_str !== id) return null;
   const user = isRecord(json.user) ? json.user : {};
-  const handle = str(user.screen_name, 15);
+  const handle = handleOf(user.screen_name);
   const sources: MediaSource[] = [];
   const avatar = twimgUrl(typeof user.profile_image_url_https === 'string' ? user.profile_image_url_https.replace('_normal.', '_bigger.') : undefined);
   if (avatar) sources.push({ slot: 'avatar', kind: 'avatar', url: avatar, width: 73, height: 73 });
@@ -229,7 +241,8 @@ export function parseXOembed(json: unknown): EmbedMeta | null {
   const paragraph = /<p[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1];
   if (paragraph === undefined) return null;
   const text = decodeEntities(paragraph.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '')).trim().slice(0, EMBED_LIMITS.textChars);
-  const handle = /\(@([A-Za-z0-9_]{1,15})\)/.exec(html)?.[1];
+  // The handle is in the signature after the text ("— Name (@handle)"), not in the post itself.
+  const handle = /\(@([A-Za-z0-9_]{1,15})\)/.exec(html.slice(html.indexOf('</p>')))?.[1];
   const day = /<a [^>]*>([^<]+)<\/a>\s*<\/blockquote>/.exec(html)?.[1];
   const created = day ? Date.parse(`${decodeEntities(day)} UTC`) : NaN;
   return {
@@ -239,6 +252,7 @@ export function parseXOembed(json: unknown): EmbedMeta | null {
     text: text || undefined,
     createdAt: Number.isFinite(created) ? created : undefined,
     sources: [],
+    partial: true,
   };
 }
 

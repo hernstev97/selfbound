@@ -49,6 +49,7 @@ yours. On a self-hosted instance that is your Convex deployment.
   pictures (thumbnail, avatar, post images) per link. It is public content of those services.
 - YouTube data is refreshed when you view it and it is older than 7 days, X posts after 1 day. A post that was
   deleted later disappears from the card at the next refresh.
+- A post deleted on X stays in the copy until the card is shown again after that day, and at most 30 days if nobody shows it.
 - A copy that nobody viewed for 30 days is deleted together with its pictures by a nightly job.
 - The pictures are served at `<site>/embed/<provider>/<id>/<slot>` without sign-in (like image addresses and
   team logos), because an `<img>` cannot send a token. Only pictures of cached cards are served, and only

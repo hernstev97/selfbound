@@ -40,6 +40,17 @@ describe('embed placeholders in Markdown', () => {
     }
   });
 
+  it('lines that are not embeds are rendered exactly as without the extension', () => {
+    const plain = (md: string) => new Marked({ gfm: true, breaks: true }).parse(md, { async: false }) as string;
+    for (const md of [`<${YT}> text after`, `<${X}>.`, `foo\n   ${X} bar`, `foo\n${YT}!`, `foo\n[a](${YT}) more`, `a\nhttps://example.com/x\nb`, `${YT} is great\nnext`]) {
+      expect(render(md), md).toBe(plain(md));
+    }
+  });
+
+  it('a host in capitals still makes a card after a text line', () => {
+    expect(render('text\nhttps://YouTube.com/watch?v=dQw4w9WgXcQ')).toContain('data-embed="youtube"');
+  });
+
   it('a hostile label cannot add markup', () => {
     const html = render(`["><img src=x onerror=alert(1)>](${YT})`);
     expect(html).not.toMatch(/<img/);

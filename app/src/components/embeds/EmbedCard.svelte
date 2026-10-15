@@ -9,7 +9,7 @@
   // the provider; the YouTube player loads only on click (YoutubeCard). While there is no data, or
   // the link cannot be embedded, the plain link in the Markdown stays visible.
   import { api } from '@selfbound/backend/api';
-  import { EMBED_TTL_MS, type EmbedProvider, type EmbedView } from '@selfbound/backend/shared/embeds';
+  import { embedTtl, type EmbedProvider, type EmbedView } from '@selfbound/backend/shared/embeds';
   import { app } from '../../app-instance.ts';
   import XCard from './XCard.svelte';
   import YoutubeCard from './YoutubeCard.svelte';
@@ -38,12 +38,12 @@
 
   $effect(() => {
     if (view === undefined) return;
-    const ttl = view?.status === 'ok' ? EMBED_TTL_MS[provider] : 3_600_000; // unavailable: ask again after an hour
-    if (view && Date.now() - view.fetchedAt < ttl) return;
+    if (view && Date.now() - view.fetchedAt < embedTtl(view)) return;
     const key = `${provider}:${id}`;
     if (Date.now() - (asked.get(key) ?? 0) < 60_000) return;
     asked.set(key, Date.now());
-    app.store.client.action(api.embeds.resolve, { provider, id }).catch(() => {}); // the card follows through `get`
+    // The card follows through `get`. If this fails (offline, provider down), the link stays until the card is shown again.
+    app.store.client.action(api.embeds.resolve, { provider, id }).catch(() => {});
   });
 
   const shown = $derived(view?.status === 'ok' ? view : null);

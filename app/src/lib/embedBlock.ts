@@ -10,18 +10,28 @@ import { escapeHtml } from './codeblock.ts';
 /** A link alone on a line: bare, in <…> or as [text](link). */
 const EMBED_LINE = /^ {0,3}(?:<(https:\/\/[^\s<>]+)>|(https:\/\/[^\s<>]+)|\[([^\]\n]*)\]\((https:\/\/[^\s()<>]+)\))[ \t]*(?:\n|$)/;
 
+function matchLine(src: string) {
+  const m = EMBED_LINE.exec(src);
+  if (!m) return null;
+  const href = m[1] ?? m[2] ?? m[4]!;
+  const ref = parseEmbedUrl(href);
+  return ref ? { raw: m[0], href, label: m[3] ?? '', ref } : null;
+}
+
 export const embedExtension: TokenizerAndRendererExtension = {
   name: 'embed',
   level: 'block',
+  // marked passes the text after the first character of the paragraph; the offset must be that of a
+  // later line which really is an embed line, otherwise the paragraph is cut in the wrong place.
   start(src: string) {
-    return embedLineStart(src);
+    for (let at = embedLineStart(src, 1); at !== undefined; at = embedLineStart(src, at + 1)) {
+      if (matchLine(src.slice(at))) return at;
+    }
+    return undefined;
   },
   tokenizer(src: string) {
-    const m = EMBED_LINE.exec(src);
-    if (!m) return;
-    const href = m[1] ?? m[2] ?? m[4]!;
-    const ref = parseEmbedUrl(href);
-    if (ref) return { type: 'embed', raw: m[0], href, label: m[3] ?? '', provider: ref.provider, id: ref.id, start: ref.start ?? 0 };
+    const line = matchLine(src);
+    if (line) return { type: 'embed', raw: line.raw, href: line.href, label: line.label, provider: line.ref.provider, id: line.ref.id, start: line.ref.start ?? 0 };
   },
   renderer(token) {
     const href = escapeHtml(String(token.href));

@@ -688,6 +688,7 @@ export default defineSchema({
     provider: v.union(v.literal('youtube'), v.literal('x')),
     status: v.union(v.literal('ok'), v.literal('unavailable')),
     fetchedAt: v.number(),
+    incomplete: v.optional(v.boolean()),
     title: v.optional(v.string()),
     author: v.optional(v.string()),
     handle: v.optional(v.string()),

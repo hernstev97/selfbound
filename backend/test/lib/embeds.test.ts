@@ -76,6 +76,9 @@ describe('recognizing links', () => {
     expect(embedLineStart('https://example.com/')).toBeUndefined();
     expect(embedLineStart('https://youtu.be')).toBeUndefined();
     expect(embedLineStart('nothing here')).toBeUndefined();
+    // case-insensitive host, `from` skips earlier lines
+    expect(embedLineStart('a\nhttps://YouTube.com/watch?v=dQw4w9WgXcQ')).toBe(2);
+    expect(embedLineStart('https://youtu.be/abc\nhttps://youtu.be/def', 1)).toBe(21);
   });
 });
 
@@ -116,6 +119,11 @@ describe('answers of the providers', () => {
     expect(meta.sources[1]).toMatchObject({ width: 1200, height: 800, alt: 'A demo picture' });
   });
 
+  test('X syndication: a handle that is not a handle is dropped', () => {
+    const meta = parseSyndication({ __typename: 'Tweet', id_str: '1', text: 'x', user: { name: 'N', screen_name: '../../evil' } }, '1');
+    expect(meta?.handle).toBeUndefined();
+  });
+
   test('X syndication: tombstone is unavailable, other shapes are no post', () => {
     expect(parseSyndication({ __typename: 'TweetTombstone', tombstone: {} }, '1')).toMatchObject({ status: 'unavailable' });
     expect(parseSyndication({ __typename: 'Tweet', id_str: '2' }, '1')).toBeNull();
@@ -132,7 +140,11 @@ describe('answers of the providers', () => {
       text: 'just setting up\nmy twttr & pic.twitter.com/x',
       createdAt: Date.parse('2006-03-21T00:00:00Z'),
       sources: [],
+      partial: true,
     });
+    // A handle in the text of the post is not the author's.
+    const quoted = '<blockquote><p>Thanks (@bob) for the help</p>&mdash; Demo Author (@demo_user) <a href="x">March 21, 2006</a></blockquote>';
+    expect(parseXOembed({ html: quoted })?.handle).toBe('demo_user');
     expect(parseXOembed({ html: '<div>no quote</div>' })).toBeNull();
   });
 
@@ -159,6 +171,17 @@ describe('outgoing requests', () => {
     // A provider may not use another provider’s hosts.
     await expect(safeGet('https://pbs.twimg.com/a.jpg', 'youtube', async () => json({}), 1000)).rejects.toThrow(/host not allowed/);
     expect(calls).toEqual(['https://www.youtube.com/oembed', 'https://www.youtube.com/oembed']);
+  });
+
+  test('a runtime that followed a redirect by itself is not trusted', async () => {
+    const followed = (props: Record<string, unknown>): FetchLike => async () => {
+      const res = new Response('{}');
+      for (const [key, value] of Object.entries(props)) Object.defineProperty(res, key, { value });
+      return res;
+    };
+    await expect(safeGet('https://www.youtube.com/oembed', 'youtube', followed({ redirected: true, url: 'https://www.youtube.com/x' }), 1000)).rejects.toThrow(/unchecked/);
+    await expect(safeGet('https://www.youtube.com/oembed', 'youtube', followed({ redirected: false, url: 'https://evil.example/' }), 1000)).rejects.toThrow(/unchecked/);
+    expect((await safeGet('https://www.youtube.com/oembed', 'youtube', followed({ url: 'https://www.youtube.com/oembed' }), 1000)).status).toBe(200);
   });
 
   test('follows allowed redirects, but not forever', async () => {
@@ -190,8 +213,9 @@ describe('outgoing requests', () => {
       return json({ title: 'Demo video', author_name: 'Demo channel' });
     });
     expect(ok.title).toBe('Demo video');
-    for (const status of [401, 403, 404]) expect(await fetchEmbedMeta('youtube', 'dQw4w9WgXcQ', async () => json({}, status))).toMatchObject({ status: 'unavailable' });
+    for (const status of [401, 404]) expect(await fetchEmbedMeta('youtube', 'dQw4w9WgXcQ', async () => json({}, status))).toMatchObject({ status: 'unavailable' });
     await expect(fetchEmbedMeta('youtube', 'dQw4w9WgXcQ', async () => json({}, 503))).rejects.toThrow(EmbedFetchError);
+    await expect(fetchEmbedMeta('youtube', 'dQw4w9WgXcQ', async () => json({}, 403))).rejects.toThrow(EmbedFetchError); // maybe throttled
     await expect(fetchEmbedMeta('youtube', 'dQw4w9WgXcQ', async () => Promise.reject(new Error('offline')))).rejects.toThrow(EmbedFetchError);
     await expect(fetchEmbedMeta('youtube', '../etc', async () => json({}))).rejects.toThrow(/invalid id/);
   });
