@@ -6,6 +6,7 @@
 // A renderer module is loaded with a dynamic import, only when a text contains such a block and the
 // block becomes visible, so none of it is in the start bundle. Until then, and whenever drawing
 // fails, the block stays readable as source.
+import { t } from '@selfbound/core/i18n';
 
 export interface BlockContext {
   /** Aborted when the block leaves the page or is drawn again; stop work then. */
@@ -16,9 +17,10 @@ export interface BlockModule {
   /**
    * Replace the content of `host` with the drawing of `source`. Throw an `Error` with a readable
    * message if the text is invalid (it is shown below the source). The output must be safe: build
-   * DOM nodes, or pass markup through `sanitizeSvg` / DOMPurify. `host` is empty and connected.
+   * DOM nodes, or hand markup to `setSvg`. `host` is empty and connected. May return a short text
+   * that describes the drawing (its labels); it becomes the accessible name next to the renderer's label.
    */
-  render(source: string, host: HTMLElement, ctx: BlockContext): void | Promise<void>;
+  render(source: string, host: HTMLElement, ctx: BlockContext): string | void | Promise<string | void>;
 }
 
 export interface BlockRenderer {
@@ -33,7 +35,9 @@ export interface BlockRenderer {
 }
 
 /** Registered renderers. Add one line per renderer. */
-export const BLOCKS: BlockRenderer[] = [];
+export const BLOCKS: BlockRenderer[] = [
+  { id: 'mermaid', langs: ['mermaid', 'mmd'], label: () => t('Diagram'), load: () => import('./mermaid.ts') },
+];
 
 /** Renderer that claims the code block's info string (`mermaid`, `mermaid title=…`), or null. */
 export function blockFor(info: string | undefined, blocks: readonly BlockRenderer[] = BLOCKS): BlockRenderer | null {

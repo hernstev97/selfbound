@@ -194,6 +194,11 @@ export function unwrapCallout(pos: number, toQuote = false): Command {
   };
 }
 
+/** Code block of `lang` with `text` in it (the "/" menu's diagram entry); the cursor lands at the end. */
+export function insertCodeBlock(lang: string, text: string): Command {
+  return (state, dispatch) => setBlock(n.code_block, { lang })(state, dispatch && ((tr) => dispatch(tr.insertText(text).scrollIntoView())));
+}
+
 /** Ctrl Alt P: the panel around the cursor takes the next kind (info → note → success → warning → error). */
 export const cycleCalloutKind: Command = (state, dispatch) => {
   const { $from } = state.selection;

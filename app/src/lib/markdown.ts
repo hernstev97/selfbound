@@ -10,7 +10,8 @@ let highlighterLoading: Promise<void> | null = null;
 /** Does the text contain a fenced code block with a language (```ts)? Only then is loading worth it. */
 export function needsHighlight(markdown: string) {
   // Also fences in quotes and lists (> ```ts, - ```ts).
-  return /^(?:[ \t]*(?:>|[-*+]|\d+[.)]))*[ \t]*(?:`{3,}|~{3,})[ \t]*[^\s`]/m.test(markdown);
+  // Diagram fences (blocks/registry.ts) are drawn, not colored.
+  return /^(?:[ \t]*(?:>|[-*+]|\d+[.)]))*[ \t]*(?:`{3,}|~{3,})[ \t]*(?!(?:mermaid|mmd)\b)[^\s`]/m.test(markdown);
 }
 
 export function highlightReady() {
