@@ -9,6 +9,7 @@ crons.daily('audit-sprints', { hourUTC: 1, minuteUTC: 15 }, internal.maintenance
 crons.daily('purge-trash', { hourUTC: 2, minuteUTC: 30 }, internal.maintenance.purgeTrash, {});
 crons.daily('cleanup-requests', { hourUTC: 2, minuteUTC: 45 }, internal.maintenance.cleanup, {});
 crons.daily('sweep-files', { hourUTC: 3, minuteUTC: 0 }, internal.files.sweep, {});
+crons.daily('purge-embeds', { hourUTC: 3, minuteUTC: 10 }, internal.embeds.purge, {});
 crons.hourly('fail-stale-imports', { minuteUTC: 20 }, internal.importer.failStale, {});
 // Morning notifications (due issues, sprint end): hourly; the function checks the Berlin time itself.
 crons.hourly('push-morning', { minuteUTC: 0 }, internal.push.morning, {});

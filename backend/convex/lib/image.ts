@@ -28,7 +28,7 @@ export const IMAGE_TOO_LARGE = `The image is too large (at most ${LIMITS.imageMa
 export function checkImage(head: Uint8Array, size: number, declaredType?: string | null): ImageCheck {
   if (size === 0) return { ok: false, reason: 'The file is empty.' };
   if (size > LIMITS.imageMaxBytes) return { ok: false, reason: IMAGE_TOO_LARGE };
-  const declared = declaredType?.split(';')[0].trim().toLowerCase() || undefined;
+  const declared = declaredType?.split(';')[0]?.trim().toLowerCase() || undefined;
   if (declared && !(IMAGE_TYPES as readonly string[]).includes(declared)) {
     return { ok: false, reason: `Only images are allowed (${TYPE_NAMES}).` };
   }

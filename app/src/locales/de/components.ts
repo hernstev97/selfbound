@@ -318,6 +318,13 @@ export default {
   // main.ts
   Offline: 'Ohne Verbindung',
   'You are seeing the last saved state on this device. Editing works again once Selfbound is connected.': 'Du siehst den letzten Stand auf diesem Gerät. Ändern geht wieder, sobald Selfbound verbunden ist.',
+  // embeds/YoutubeCard.svelte, embeds/XCard.svelte
+  'YouTube video': 'YouTube-Video',
+  'Play video: {title}': 'Video abspielen: {title}',
+  'Open on YouTube': 'Auf YouTube öffnen',
+  'The player loads from YouTube when you play.': 'Der Player wird erst beim Abspielen von YouTube geladen.',
+  'Post by {name}': 'Beitrag von {name}',
+  'Open on X': 'Auf X öffnen',
   // Properties.svelte, Sidebar.svelte
   'Snoozed until {date}': 'Zurückgestellt bis {date}',
 } satisfies Dictionary;
