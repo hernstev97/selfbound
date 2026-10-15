@@ -92,6 +92,23 @@ export function driveEmbeds(root: HTMLElement): (() => void) | undefined {
   return embeds?.(root);
 }
 
+/** Cards for YouTube and X links (embedCards.ts, own chunk, loaded only for texts that have one). */
+export function cardEmbeds(root: HTMLElement): (() => void) | undefined {
+  if (!root.querySelector('.embed[data-embed]')) return;
+  let stop: (() => void) | undefined;
+  let dead = false;
+  void import('./embedCards.ts').then(
+    (module) => {
+      if (!dead) stop = module.mountEmbeds(root);
+    },
+    () => {}, // the links stay links
+  );
+  return () => {
+    dead = true;
+    stop?.();
+  };
+}
+
 /** Short plain version without Markdown syntax (peek, preview). */
 export function plainText(markdown: string, max = 600) {
   return markdown

@@ -8,7 +8,7 @@
   import { parsePath } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { languageLabel } from '../lib/languages.ts';
-  import { driveEmbeds, highlightReady, loadHighlight, needsHighlight, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
+  import { cardEmbeds, driveEmbeds, highlightReady, loadHighlight, needsHighlight, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';
   import { app } from '../app-instance.ts';
 
@@ -34,11 +34,16 @@
 
   let root = $state<HTMLElement>();
 
-  // After every new HTML (reads `html`, so it runs again afterwards): insert Drive players once
-  // they become visible.
+  // After every new HTML (reads `html`, so it runs again afterwards): insert Drive players and
+  // YouTube/X cards once they become visible.
   const embeds: Attachment<HTMLElement> = (el) => {
     void html;
-    return driveEmbeds(el);
+    const stopDrive = driveEmbeds(el);
+    const stopCards = cardEmbeds(el);
+    return () => {
+      stopDrive?.();
+      stopCards?.();
+    };
   };
 
   // Buttons are added after sanitizing (DOMPurify deliberately drops <button>).

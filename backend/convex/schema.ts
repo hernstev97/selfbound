@@ -679,6 +679,36 @@ export default defineSchema({
     .index('by_owner', ['owner'])
     .index('by_token', ['token']),
 
+  // Cache for embeds (video and post cards, XLR8-73): what the backend fetched from the provider
+  // for a link, plus the media it stored. `key` = "<provider>:<id>". The app refreshes entries
+  // after EMBED_TTL_MS when it shows them; the cron `purge-embeds` deletes entries (and their
+  // files) that nobody refreshed for EMBED_PURGE_MS. Only ops/embeds.ts writes it.
+  embeds: defineTable({
+    key: v.string(),
+    provider: v.union(v.literal('youtube'), v.literal('x')),
+    status: v.union(v.literal('ok'), v.literal('unavailable')),
+    fetchedAt: v.number(),
+    title: v.optional(v.string()),
+    author: v.optional(v.string()),
+    handle: v.optional(v.string()),
+    authorUrl: v.optional(v.string()),
+    text: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    media: v.array(
+      v.object({
+        slot: v.string(),
+        kind: v.union(v.literal('photo'), v.literal('video'), v.literal('gif'), v.literal('avatar'), v.literal('thumb')),
+        storageId: v.id('_storage'),
+        contentType: v.string(),
+        width: v.optional(v.number()),
+        height: v.optional(v.number()),
+        alt: v.optional(v.string()),
+      }),
+    ),
+  })
+    .index('by_key', ['key'])
+    .index('by_fetched', ['fetchedAt']),
+
   // Operational status for the ops page: last backup, audits etc.
   opsStatus: defineTable({
     key: v.string(),

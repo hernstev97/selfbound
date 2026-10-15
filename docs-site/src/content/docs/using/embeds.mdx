@@ -1,0 +1,64 @@
+---
+title: YouTube videos and X posts
+description: Links to YouTube videos and X posts become cards in descriptions, comments and knowledge pages. What they load, and when.
+sidebar:
+  order: 6.5
+---
+import { Aside } from '@astrojs/starlight/components';
+
+A link to a YouTube video or an X (Twitter) post **alone on its line** is shown as a card instead of a bare
+link. This works in issue descriptions, comments and knowledge pages. The text stays plain Markdown: the
+card is only how it is displayed, and agents see the link.
+
+## What becomes a card
+
+| Link | Card |
+|---|---|
+| `https://www.youtube.com/watch?v=…`, `https://youtu.be/…`, `/shorts/…`, `/live/…`, `/embed/…` | Thumbnail, title and channel. A click on the thumbnail starts the player. A start time in the link (`?t=1m30s`) is kept. |
+| `https://x.com/<name>/status/<id>`, `https://twitter.com/…` | Author, text, images and date of the post. Videos and GIFs show their still picture and lead to the post on X. |
+
+The link can stand alone (`https://youtu.be/…`), in angle brackets (`<https://…>`) or as `[any text](https://…)`.
+In the last form the text is what you see while no card is shown. A link inside a sentence stays a link.
+
+If the video is private, deleted or cannot be embedded, or the post is gone, or the server cannot reach the
+provider right now, the link stays a normal link. Nothing breaks.
+
+## What loads, and when
+
+Selfbound is built so that **your browser does not talk to YouTube or X while you read**.
+
+| When | What happens | Who talks to whom |
+|---|---|---|
+| A card comes into view | Your browser asks your Selfbound backend for the card data. If it has none yet (or it is old), the backend fetches the title, text and pictures from YouTube or X and keeps a copy. | Browser ↔ your backend. Backend → YouTube / X (`www.youtube.com`, `i.ytimg.com`, `cdn.syndication.twimg.com`, `publish.x.com`, `pbs.twimg.com`). |
+| The card is shown | Thumbnail, avatar and post images come from your own backend (`<site>/embed/…`). No script, font or tracker from the provider. | Browser ↔ your backend only. |
+| You click the play button of a YouTube card | The player loads from `www.youtube-nocookie.com` (YouTube's privacy-enhanced mode). Only now does your browser contact YouTube, and YouTube sees your address and browser as with any video. | Browser → YouTube. |
+| You click a link on a card (author, date, “Open on X”) | A normal link opens in a new tab. | Browser → X / YouTube. |
+
+So reading a description with an X post or a YouTube video sends nothing to those services from your
+browser. The backend request carries no cookies and no information about you; it only names the video or
+post.
+
+<Aside type="note">
+The first request to a provider comes from your backend, so the provider sees the server's address, not
+yours. On a self-hosted instance that is your Convex deployment.
+</Aside>
+
+## What the backend keeps
+
+- The copy lives in the table `embeds` and in file storage: title, author, post text, date and up to four
+  pictures (thumbnail, avatar, post images) per link. It is public content of those services.
+- YouTube data is refreshed when you view it and it is older than 7 days, X posts after 1 day. A post that was
+  deleted later disappears from the card at the next refresh.
+- A copy that nobody viewed for 30 days is deleted together with its pictures by a nightly job.
+- The pictures are served at `<site>/embed/<provider>/<id>/<slot>` without sign-in (like image addresses and
+  team logos), because an `<img>` cannot send a token. Only pictures of cached cards are served, and only
+  raster images (PNG, JPEG, WebP, GIF) that passed a check when stored.
+
+## Limits
+
+- Only YouTube and X are supported so far. Other providers (Vimeo, Spotify, …) can be added later.
+- X posts show text and images, not videos, replies or quoted posts.
+- X has no official, stable interface for this. Selfbound first uses the public syndication endpoint that X's
+  own embeds use, and falls back to oEmbed (text, author and date, no pictures). If both stop working, links
+  stay links.
+- Pull request texts from GitHub are not changed.

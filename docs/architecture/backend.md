@@ -63,6 +63,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `recurrences`, `recurrenceRuns` | Recurring issues, one run per due date | `by_next`, `by_recurrence_date` |
 | `linearLinks`, `importStaging`, `importRuns`, `importConflicts` | Import. `linearLinks.base`: the last imported Linear values of an issue (three-way merge), `purgedAt`: permanently deleted in Selfbound. `importRuns.phase`/`cursor`/`maxNumbers`/`heartbeatAt`: progress of the run | `by_kind_linear`, `by_local`, `importRuns.by_status` |
 | `files` | Uploaded images: `token` (access protection, appears in the Markdown), `storageId`, validated `contentType`, `size`, `createdAt`, `uploadedBy`, `deleteAfter` (deletion time once unreferenced) | `by_token`, `by_delete_after` |
+| `embeds` | Cache for embed cards (video, post): `key` (`<provider>:<id>`), `provider` (`youtube`, `x`), `status` (`ok`, `unavailable`), `fetchedAt`, `title?`, `author?`, `handle?`, `authorUrl?`, `text?`, `createdAt?`, `media[]` (`slot`, `kind`, `storageId`, `contentType`, size, `alt?`). Only through `ops/embeds.ts` | `by_key`, `by_fetched` |
 | `fileRefs` | Image references: one row per text (`owner` = ID of a description, comment, earlier revision or recurrence) and token. Only through `ops/files.ts` | `by_owner`, `by_token` |
 | `articles` | Knowledge page: `teamId`, `parentId?` (tree), `projectId?` (project docs), title, `rank` (among siblings), `topicIds`, `createdAt`/`createdBy`, `updatedAt`/`updatedBy` (text changes at most once per minute), `deletedAt?` | `by_team_deleted`, `by_team_parent` (`teamId`, `parentId`, `rank`), `by_project`, `by_updated`, `by_deleted`, search `search_title` (filter `teamId`) |
 | `articleBodies` | Text of a page: Markdown (at most 200,000 characters), `version`, `updatedAt` (exact), `updatedBy`, `revisionCount` | `by_article`, `by_updated` |
@@ -150,7 +151,7 @@ If the operation fails, nothing is stored and a retry runs it again. Each actor 
 
 ## Test switches
 
-Only effective with `XLR8_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect.
+Only effective with `XLR8_TEST_SWITCHES=1` (local only). `admin.setRejectWrites({ value })` toggles "server rejects": every UI change then throws `rejected`, including key and logo actions. `meta.get().rejectWrites` shows the state. Without the variable the switch can neither be set (`access_denied`) nor take effect. `embeds.seedForTest` (action) puts an embed card with base64 PNGs into the cache so end-to-end tests need no network; without the variable it answers `access_denied`.
 
 ## Public functions
 
@@ -324,6 +325,22 @@ Relations: no self-reference, no second relation of the same type between the sa
 
 **Storage:** `ops.status().storage` = `{ files, bytes, images, imageBytes, orphaned, capped }` (all files in Convex storage, logos included; counted up to 8000 per table, `capped` beyond that). Convex free plan: 1 GB storage, 1 GB data transfer per month.
 
+### embeds (video and post cards)
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `embeds.get` (query) | `{ provider: 'youtube' \| 'x', id }` | `EmbedView` from the cache or `null`. IDs that do not match `ID_PATTERN` → `null` |
+| `embeds.resolve` (action) | `{ provider, id, refresh? }` | `EmbedView` (cached if younger than `EMBED_TTL_MS` — YouTube 7 days, X 1 day, `unavailable` 1 hour — otherwise fetched and stored), or `{ status: 'error' }` if the provider could not be reached and nothing is cached. A failed refresh returns the stale card. A bad ID → `invalid` |
+
+A YouTube or X link alone on a line becomes a card in the app (XLR8-73, frontend: [`frontend.md`](frontend.md#embeds-youtube-and-x)). The **browser never contacts the provider**: the app asks `embeds.get`, and if nothing fresh is cached it calls `embeds.resolve`, which fetches in the backend (`lib/embeds.ts`) and stores the result in `embeds` and the pictures in file storage. `EmbedView` (shared type in `shared/embeds.ts`) has no storage IDs: pictures are our own URLs `<site>/embed/<provider>/<id>/<slot>` (`thumbnail`, `avatar`, `media[].src`).
+
+- **Providers:** `shared/embeds.ts` recognizes links (`parseEmbedUrl`: https only, fixed hosts, strict ID shape, no port or credentials). YouTube: oEmbed (`www.youtube.com/oembed`) for title and channel, thumbnail `i.ytimg.com/vi/<id>/hqdefault.jpg` built from the ID. X: the syndication endpoint `cdn.syndication.twimg.com/tweet-result` (the one X's own embeds use; the token is derived from the ID, not a secret), then oEmbed (`publish.x.com`, text and author only) if that fails; a tombstone or 404 → `unavailable`. Images only from `pbs.twimg.com` (up to 4 per post, `?name=medium`, plus the avatar). A new provider needs an entry in `shared/embeds.ts`, a fetcher in `lib/embeds.ts` (`FETCHERS`, `HOSTS`) and a card in the app.
+- **Rules for every outgoing request** (`safeGet`): https only, host from the provider's own list (also after each redirect, at most 3, followed manually), no port or credentials, 8 s timeout, JSON at most 256 KB, pictures at most 2 MB (avatars 300 KB), read with a limit. Pictures must be PNG, JPEG, WebP or GIF by their first bytes (`sniffImage`), otherwise they are left out. IDs are validated before any URL is built. Only the owner can trigger a fetch.
+- **Errors:** `EmbedFetchError` (network, status, shape) stores nothing; the app shows the plain link and asks again after a minute at the earliest. Definitive answers (`401/403/404`, tombstone) are stored as `unavailable`.
+- **Concurrency:** two fetches of the same link end in one row (`ops/embeds.ts` `storeEmbed` keeps the newer one and deletes the other's files). Files of a failed store are deleted.
+- **Cleanup:** the cron `purge-embeds` deletes rows older than `EMBED_PURGE_MS` (30 days since the last fetch; viewing refreshes after the TTL, so unused cards expire) with their files.
+- **Privacy:** the backend request names only the video or post and sends no cookies. Texts and pictures are public content of the provider. User documentation: `docs-site/…/using/embeds.mdx`.
+
 ### agents
 
 | Function | Arguments | Returns |
@@ -436,6 +453,7 @@ Served under the site URL (locally the backend port + 1, in the cloud `https://<
 | `POST /github` | Read the raw body, verify `X-Hub-Signature-256` with `GITHUB_WEBHOOK_SECRET` (during rotation also `GITHUB_WEBHOOK_SECRET_PREVIOUS`) → otherwise 401. `ping` → 200. Otherwise `internal.github.applyDelivery` |
 | `GET /logo/<storageId>` | Team logo, no sign-in (like a storage URL; `<img>` sends no token). Only files a team uses as its logo and that pass the logo check, otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
 | `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches) |
+| `GET /embed/<provider>/<id>/<slot>` | Picture of an embed card (`thumb`, `avatar`, `m0`…), stored by `embeds.resolve`. No sign-in (`<img>` sends no token; public content of the provider, only for cached cards). Provider, ID and slot must match their patterns; unknown → 404. `Content-Type` from the check at storing, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: public, max-age=86400` (not immutable: a refresh may replace the file) |
 | `GET /ghmedia/<mediaKey>/<index>` | Media from a PR, no sign-in (the key is the access protection, as with `/img`). Repo file: Contents API → fresh `download_url` (for private repos with a short-lived `token` parameter). Attachment: signed URL from the last fetch if younger than 4 min; otherwise refetch the post (description or comment/review, `source`) with `full+json` and store the fresh URLs of all its attachments (`github.com/user-attachments` cannot be resolved with a fine-grained token). The detail caches the `download_url` for 60 s (`resolved`). While one call is refetching a post (`resigningAt` on all attachments of that post, valid for 10 s), parallel calls wait up to 4 s for its result. Response `302` with `Cache-Control: private, max-age=60` (or the remaining cache time; `private, no-store` if the target is valid for less than 60 s), `Referrer-Policy: no-referrer`; no bytes pass through Convex. Assumption: GitHub's `token` parameter on a `download_url` stays valid for more than 2 minutes. Unknown or error → 404 without details |
 | `GET /health` | `health.status` as JSON, no data |
 
@@ -493,6 +511,7 @@ New event: add an entry to `shared/notifyEvents.ts` (label, hint, default) and a
 | `purge-trash` | daily 02:30 | `maintenance.purgeTrash`: issues and knowledge pages older than 30 days (25 per run, for pages at most 40 revisions; reschedules itself) |
 | `cleanup-requests` | daily 02:45 | `maintenance.cleanup`: `requests`, `githubDeliveries` and `githubCheckRuns` older than 30 days, `rateWindows` older than 2 days, `pushEvents` older than 7 days, `pushPresence` older than one day |
 | `sweep-files` | daily 03:00 | `files.sweep`: delete unreferenced images once `deleteAfter` has passed (100 per run, reschedules itself) |
+| `purge-embeds` | daily 03:10 | `embeds.purge`: delete embed cache entries (and their pictures) not fetched for 30 days (50 per run, reschedules itself) |
 | `fail-stale-imports` | hourly :20 | `importer.failStale`: import runs without progress for 15 minutes → `failed` |
 | `push-morning` | hourly :00 | `push.morning`: from the configured Berlin hour (default 8), once a day a combined "due/overdue" and "sprint ends tomorrow/today" notification; also returns snoozed issues whose day has come (inbox entry, push `snooze`) |
 | `github-webhooks` | daily 03:30 | `githubPr.ensureWebhooksDaily`: check webhooks in all repos owned by the token's user, create missing ones (only with `GITHUB_MANAGE_WEBHOOKS=1` and the secret, never locally; nothing without `GITHUB_TOKEN`) |

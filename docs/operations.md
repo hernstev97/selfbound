@@ -87,6 +87,7 @@ Served by Convex under `https://<deployment>.convex.site` (and any custom MCP ad
 | `/ghmedia/<key>/<n>` | images and videos from PR descriptions of private repos (redirect to a fresh GitHub URL) |
 | `/health` | backend status without data, e.g. `{"ok":true,…}` |
 | `/img/<token>` | images from descriptions and comments |
+| `/embed/<provider>/<id>/<slot>` | pictures of YouTube and X cards (cached copies, see below) |
 | `/logo/<id>` | team logos |
 
 ## Landing page and sign-in
@@ -497,6 +498,14 @@ It sets the priority to none, updates `updatedAt` and writes a `priority` histor
 `apply` it returns a `cursor` for the next call).
 
 ## Images and videos
+
+**YouTube and X cards:** a link alone on a line becomes a card. The backend fetches the data and pictures from
+`www.youtube.com`, `i.ytimg.com`, `cdn.syndication.twimg.com`, `publish.x.com` and `pbs.twimg.com` (an
+instance with an outgoing firewall must allow these), keeps a copy in the table `embeds` and file storage and
+refreshes it when viewed (YouTube after 7 days, X after 1 day). The cron `purge-embeds` deletes copies nobody
+viewed for 30 days. The browser contacts YouTube (`youtube-nocookie.com`) only after a click on the play
+button. If X changes its syndication endpoint, cards for X posts fall back to text only and then to plain
+links; nothing else breaks. User view: `docs-site/…/using/embeds.mdx`.
 
 **Images** go into descriptions and comments by pasting (Ctrl+V), dragging a file in or the image button.
 PNG, JPEG, WebP and GIF up to 5 MB. The browser shrinks large images first (longest side 2560 px, as

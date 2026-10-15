@@ -14,6 +14,7 @@ import { oauthConfig, wwwAuthenticate, type OAuthConfig } from './lib/oauth/core
 import * as oauth from './lib/oauth/http';
 import { reduceGithubPayload } from './ops/github';
 import { IMAGE_PATH } from './shared/constants';
+import { EMBED_MEDIA_PATH, ID_PATTERN } from './shared/embeds';
 import { plain } from './ops/mcp';
 
 // HTTP endpoints (Convex site URL, locally port+1):
@@ -25,6 +26,7 @@ import { plain } from './ops/mcp';
 //   GET  /ghmedia/<key>/<i>  image or video from a PR (private repo): 302 to a fresh GitHub URL
 //   GET  /logo/<id>    team logo with a strict Content-Security-Policy
 //   GET  /img/<token>  image from a description or comment (the token is the access control)
+//   GET  /embed/<provider>/<id>/<slot>  stored media of an embed card (video thumbnail, post image)
 //   GET  /health       status without data
 // All other /.well-known/* return 404.
 
@@ -235,6 +237,38 @@ http.route({
         'Referrer-Policy': 'no-referrer',
         // A token always points to the same file.
         'Cache-Control': 'private, max-age=31536000, immutable',
+        'Cross-Origin-Resource-Policy': 'cross-origin',
+      },
+    });
+  }),
+});
+
+// ---------------------------------------------------------------- Embeds
+
+/**
+ * GET /embed/<provider>/<id>/<slot>: image of an embed card (thumbnail, avatar, post image), stored
+ * by the backend (embeds.resolve). Public content, so no token; only what the cache holds, and only
+ * raster images that passed the check when stored. Same hardening as /img.
+ */
+http.route({
+  pathPrefix: EMBED_MEDIA_PATH,
+  method: 'GET',
+  handler: httpAction(async (ctx, request) => {
+    const m = /^(youtube|x)\/([A-Za-z0-9_-]{1,25})\/([a-z0-9]{1,8})$/.exec(new URL(request.url).pathname.slice(EMBED_MEDIA_PATH.length));
+    const provider = m?.[1] as 'youtube' | 'x' | undefined;
+    const file = m && ID_PATTERN[provider!].test(m[2]!) ? await ctx.runQuery(internal.embeds.mediaFile, { provider: provider!, id: m[2]!, slot: m[3]! }) : null;
+    const blob = file ? await ctx.storage.get(file.storageId) : null;
+    if (!file || !blob) return json(404, { error: 'not found' });
+    return new Response(blob, {
+      status: 200,
+      headers: {
+        'Content-Type': file.contentType,
+        'Content-Security-Policy': "default-src 'none'; sandbox",
+        'X-Content-Type-Options': 'nosniff',
+        'Content-Disposition': 'inline',
+        'Referrer-Policy': 'no-referrer',
+        // A refresh may replace the file, so only one day (not immutable).
+        'Cache-Control': 'public, max-age=86400',
         'Cross-Origin-Resource-Policy': 'cross-origin',
       },
     });

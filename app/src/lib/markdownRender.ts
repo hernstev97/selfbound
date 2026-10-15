@@ -1,12 +1,14 @@
 // Markdown renderer setup: loaded together with `marked` and `DOMPurify` (markdown.ts), so none of
 // it is in the start bundle. Code blocks: codeblock.ts.
 // Images load lazily and open full size on click; upload placeholders (`#upload-…`) show as a note.
-// A Google Drive link alone on a line becomes a player (`driveEmbeds`).
+// A Google Drive link alone on a line becomes a player (`driveEmbeds`); YouTube and X links alone on a
+// line get a card (embedBlock.ts, embedCards.ts).
 import { t } from '@selfbound/core/i18n';
 import type { Marked as MarkedClass } from 'marked';
 import type DOMPurifyType from 'dompurify';
 import { BARE_IDENTIFIER_RE } from '@selfbound/backend/shared/links';
 import { codeBlockHtml, escapeHtml } from './codeblock.ts';
+import { embedExtension } from './embedBlock.ts';
 import { uploadNote } from './uploadNote.ts';
 
 /** Path in the app if a link points to a wiki page or an issue (otherwise null). */
@@ -77,6 +79,7 @@ export function createRender(
   const marked = new Marked({ gfm: true, breaks: true });
   marked.use({
     extensions: [
+      embedExtension,
       {
         name: 'drive',
         level: 'block',
