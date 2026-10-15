@@ -1,5 +1,6 @@
 import type { MutationCtx } from '../_generated/server';
 import type { Actor } from './actor';
+import { LEGACY_OWNER_KIND, OWNER_KIND, isOwnerKind } from '../shared/constants';
 import { hashText, stable } from './equal';
 import { invalid } from './errors';
 
@@ -11,7 +12,14 @@ export const REQUEST_ID_MAX = 200;
 
 /** Owner of a request ID: the actor kind (OWNER_KIND, 'system' …) or the agent ID. */
 export function ownerKey(actor: Actor): string {
-  return actor.kind === 'agent' && actor.agentId ? actor.agentId : actor.kind;
+  if (actor.kind === 'agent' && actor.agentId) return actor.agentId;
+  return isOwnerKind(actor.kind) ? OWNER_KIND : actor.kind;
+}
+
+/** Owner values a stored request may carry for this actor: the owner also under its legacy kind. */
+function ownerKeys(actor: Actor): string[] {
+  const key = ownerKey(actor);
+  return key === OWNER_KIND ? [OWNER_KIND, LEGACY_OWNER_KIND] : [key];
 }
 
 export function argsHash(operation: string, args: unknown): string {
@@ -39,10 +47,15 @@ export async function idempotent<R>(
   const owner = ownerKey(actor);
   const { requestId: _omit, ...rest } = args;
   const hash = argsHash(operation, rest);
-  const existing = await ctx.db
-    .query('requests')
-    .withIndex('by_owner_request', (q) => q.eq('owner', owner).eq('requestId', requestId))
-    .unique();
+  // legacy-xlr8: a retry made before the data migration (stored under the old kind) must still find its request.
+  let existing = null;
+  for (const candidate of ownerKeys(actor)) {
+    existing = await ctx.db
+      .query('requests')
+      .withIndex('by_owner_request', (q) => q.eq('owner', candidate).eq('requestId', requestId))
+      .unique();
+    if (existing) break;
+  }
   if (existing) {
     if (existing.argsHash !== hash || existing.operation !== operation) {
       invalid('requestId was reused with different arguments.', { requestId });

@@ -5,7 +5,7 @@
 // with a file extension, from files without imports of their own.
 
 import { generateNKeysBetween } from 'fractional-indexing';
-import { berlinDay, nextMonthDay, nextWeekday } from '../convex/lib/dates.ts';
+import { dayInZone, DEFAULT_TIME_ZONE, nextMonthDay, nextWeekday } from '../convex/lib/dates.ts';
 import { OWNER_KIND } from '../convex/shared/constants.ts';
 
 export type GenStatus = 'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled' | 'duplicate';
@@ -198,10 +198,10 @@ const LABELS: GenLabel[] = [
 const TYPE_LABELS = ['Bug', 'Feature', 'Improvement', 'Research'];
 const OTHER_LABELS = ['Design', 'Docs', 'Performance', 'Security', 'Data', 'Mobile', 'Agent', 'Tech debt'];
 
-// Keys have the length of real agent keys (48 characters) and work only against a local backend.
+// Keys have the length of real agent keys (53 characters) and work only against a local backend.
 const AGENTS: GenAgent[] = [
-  { name: 'Codex', key: 'xlr8_seed_codex_local_only_000000000000000000000' },
-  { name: 'Claude Code', key: 'xlr8_seed_claudecode_local_only_0000000000000000' },
+  { name: 'Codex', key: 'selfbound_seed_codex_local_only_000000000000000000000' },
+  { name: 'Claude Code', key: 'selfbound_seed_claudecode_local_only_0000000000000000' },
 ];
 
 const PROJECT_WORDS = [
@@ -385,7 +385,7 @@ export function generateDataset(set: DatasetName): GenDataset {
     const teamProjects = projects.filter((p) => p.teamKey === team.key);
     const project = teamProjects.length > 0 && chance(0.5) ? pick(teamProjects).name : undefined;
     const estimate = team.estimates && chance(0.7) ? pick([1, 2, 3, 5, 8]) : undefined;
-    const dueDate = OPEN.includes(status) && chance(0.12) ? berlinDay(NOW + int(-10, 40) * DAY) : undefined;
+    const dueDate = OPEN.includes(status) && chance(0.12) ? dayInZone(NOW + int(-10, 40) * DAY, DEFAULT_TIME_ZONE) : undefined;
 
     // Description: 0.5–3 KB of Markdown with headings.
     const target = 500 + Math.floor(rand() * 2500);
@@ -589,7 +589,7 @@ export function generateDataset(set: DatasetName): GenDataset {
     .slice(0, 5)
     .map((i) => ({ key: `PIX-${i.number}`, seq: i.seq }));
 
-  const today = berlinDay(NOW);
+  const today = dayInZone(NOW, DEFAULT_TIME_ZONE);
   const recurrences: GenRecurrence[] = [
     {
       teamKey: 'ORB',

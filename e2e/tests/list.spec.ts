@@ -383,3 +383,34 @@ test('Grouping by label, estimate and due date; second level; order and empty gr
   await page.keyboard.press('Shift+V');
   await page.getByText('Restore defaults').click();
 });
+
+test('Checkbox: Shift+click selects a range, click+drag selects and deselects', async ({ page }) => {
+  await open(page, '/all?group=none');
+  const checks = page.getByTestId('row-check');
+  const selected = page.locator('[data-testid="issue-row"].selected');
+  await page.getByTestId('issue-row').first().hover();
+  await checks.nth(0).click();
+  await expect(selected).toHaveCount(1);
+  await checks.nth(3).click({ modifiers: ['Shift'] });
+  await expect(selected).toHaveCount(4);
+  // Again from the same anchor: shrinks.
+  await checks.nth(1).click({ modifiers: ['Shift'] });
+  await expect(selected).toHaveCount(2);
+  // Drag from an unselected row selects everything it passes, dragging back releases rows again.
+  const box = async (i: number) => (await page.getByTestId('issue-row').nth(i).boundingBox())!;
+  const start = await box(6);
+  await page.mouse.move(start.x + 12, start.y + start.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 12, (await box(9)).y + 10, { steps: 6 });
+  await expect(selected).toHaveCount(2 + 4);
+  await page.mouse.move(start.x + 12, (await box(8)).y + 10, { steps: 3 });
+  await expect(selected).toHaveCount(2 + 3);
+  await page.mouse.up();
+  // Starting on a selected row deselects.
+  const first = await box(0);
+  await page.mouse.move(first.x + 12, first.y + first.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(first.x + 12, (await box(1)).y + 10, { steps: 3 });
+  await page.mouse.up();
+  await expect(selected).toHaveCount(3);
+});

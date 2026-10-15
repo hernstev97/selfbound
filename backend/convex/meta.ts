@@ -3,6 +3,7 @@ import type { Id } from './_generated/dataModel';
 import { ownerQuery } from './lib/auth';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
+import { storedTimeZone } from './ops/instance';
 import { ownerProfile } from './ops/profile';
 import { recentClosedSprints } from './ops/sprints';
 import { compareStates } from './shared/workflow';
@@ -40,7 +41,7 @@ export const get = ownerQuery({
         .query('sprints')
         .withIndex('by_state', (q) => q.eq('state', 'active'))
         .take(10),
-      recentClosedSprints(ctx, 'xlr8', RECENT_CLOSED),
+      recentClosedSprints(ctx, 'selfbound', RECENT_CLOSED),
     ]);
     // The most recently closed sprints by close time, Selfbound sprints first. Imported Linear cycles
     // only fill up while there are fewer than RECENT_CLOSED Selfbound sprints.
@@ -63,6 +64,8 @@ export const get = ownerQuery({
       rejectWrites: await rejectWritesActive(ctx),
       // The owner's profile (name and picture URL; null = not set)
       owner: await ownerProfile(ctx),
+      // Time zone for calendar days (IANA name); null = not set yet, the app then saves the browser's.
+      timeZone: await storedTimeZone(ctx),
     };
   },
 });

@@ -1,10 +1,11 @@
 // Build-time settings of the landing page. One switch decides whether search engines may list it
-// (`listed` in site.config.json, or XLR8_SITE_LISTED=1 for a single build): off means a robots meta
+// (`listed` in site.config.json, or SELFBOUND_SITE_LISTED=1 for a single build): off means a robots meta
 // tag, an X-Robots-Tag header and a robots.txt that disallows everything. The same switch decides
 // whether Vercel Web Analytics and Speed Insights are loaded, so nothing is collected before launch.
 import type { Plugin } from 'vite';
 // @ts-expect-error plain .mjs without types, shared with docs-site/
 import { fillLegal } from '../tooling/site-legal.mjs';
+import { envVar } from '../tooling/lib/env.mjs';
 
 export interface Legal {
   name: string;
@@ -23,7 +24,7 @@ export interface SiteConfig {
 }
 
 export interface SiteSettings extends SiteConfig {
-  /** Public origin for canonical and link-preview URLs, from XLR8_SITE_URL; without it those tags are left out */
+  /** Public origin for canonical and link-preview URLs, from SELFBOUND_SITE_URL; without it those tags are left out */
   url?: string;
   /** Vercel Web Analytics and Speed Insights: on exactly when the site is listed */
   analytics: boolean;
@@ -34,9 +35,9 @@ export interface SiteSettings extends SiteConfig {
 const NO_LEGAL: Legal = { name: '', street: '', postalCode: '', city: '', country: '', email: '' };
 
 export function siteSettings(config: SiteConfig, env: Record<string, string | undefined>, legal: Legal = NO_LEGAL): SiteSettings {
-  const url = env.XLR8_SITE_URL?.trim().replace(/\/+$/, '');
-  if (url && !/^https?:\/\/[^/\s]+$/.test(url)) throw new Error(`XLR8_SITE_URL must be an origin like https://example.com, got "${url}"`);
-  const flag = env.XLR8_SITE_LISTED?.trim().toLowerCase();
+  const url = envVar('SITE_URL', env)?.trim().replace(/\/+$/, '');
+  if (url && !/^https?:\/\/[^/\s]+$/.test(url)) throw new Error(`SELFBOUND_SITE_URL must be an origin like https://example.com, got "${url}"`);
+  const flag = envVar('SITE_LISTED', env)?.trim().toLowerCase();
   const listed = flag ? ['1', 'true', 'yes'].includes(flag) : config.listed;
   return { ...config, listed, url: url || undefined, analytics: listed, legal };
 }

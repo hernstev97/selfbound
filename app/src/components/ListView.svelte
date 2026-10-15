@@ -9,6 +9,7 @@
   import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
+  import { hasIssueDrag, issueDragPayload } from '../lib/issueDrag.ts';
   import { clearKeyWidths, keyColumnWidth } from '../lib/ui.ts';
   import { columnPlan, groupColsHtml, stageOf } from '../lib/columns.ts';
   import { listMotion } from '../lib/listMotion.ts';
@@ -141,6 +142,95 @@
     };
   }
 
+  // Checkbox Shift+click and click+drag: one set of listeners for the whole list (no per-row cost).
+  // The first press toggles the row (its state decides select or deselect for the drag), moving over
+  // other rows selects the range from there. Touch has no checkbox (hidden on phones): not covered.
+  function rangeSelect(el: HTMLElement) {
+    // Above or below the list the pointer counts as on the first or last visible row.
+    const rowAt = (x: number, y: number) => {
+      const box = el.getBoundingClientRect();
+      const at = document.elementFromPoint(x, Math.max(box.top + 1, Math.min(box.bottom - 1, y)));
+      return at?.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+    };
+    let dragging = false;
+    let swallowClick = false;
+    let last: IssueId | undefined;
+    let pointer = { x: 0, y: 0 };
+    let frame = 0;
+    const over = () => {
+      const id = rowAt(pointer.x, pointer.y);
+      if (id && id !== last) {
+        last = id;
+        controller.selectRange(id);
+      }
+    };
+    // Near the top or bottom edge the list scrolls on its own while the button is held.
+    const tick = () => {
+      if (!dragging) return;
+      const box = el.getBoundingClientRect();
+      const edge = 48;
+      const speed = pointer.y < box.top + edge ? pointer.y - box.top - edge : pointer.y > box.bottom - edge ? pointer.y - box.bottom + edge : 0;
+      if (speed) {
+        el.scrollTop += Math.max(-24, Math.min(24, speed / 2));
+        over();
+      }
+      frame = requestAnimationFrame(tick);
+    };
+    const stop = () => {
+      if (!dragging) return;
+      dragging = false;
+      cancelAnimationFrame(frame);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      // The click after pointerup still arrives; later it must work normally again (keyboard activation).
+      setTimeout(() => (swallowClick = false), 0);
+    };
+    const move = (e: PointerEvent) => {
+      pointer = { x: e.clientX, y: e.clientY };
+      over();
+    };
+    const down = (e: PointerEvent) => {
+      if (e.pointerType === 'touch' || e.button !== 0 || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement;
+      swallowClick = false;
+      if (target.dataset.cell !== 'check') return;
+      const id = target.closest<HTMLElement>('[data-testid="issue-row"]')?.dataset.id as IssueId | undefined;
+      if (!id) return;
+      app.setPane(controller === app.side ? 'side' : 'main');
+      // No text selection and no native row drag (sprint planning) from the checkbox.
+      e.preventDefault();
+      if (e.shiftKey) controller.selectRange(id);
+      else controller.toggleSelect(id);
+      swallowClick = true;
+      dragging = true;
+      last = id;
+      pointer = { x: e.clientX, y: e.clientY };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', stop);
+      window.addEventListener('pointercancel', stop);
+      frame = requestAnimationFrame(tick);
+    };
+    const click = (e: MouseEvent) => {
+      if (!swallowClick) return;
+      e.stopPropagation();
+      e.preventDefault();
+    };
+    // Sprint planning rows are draggable: no native drag from the checkbox.
+    const nativeDrag = (e: DragEvent) => {
+      if (dragging) e.preventDefault();
+    };
+    el.addEventListener('pointerdown', down);
+    el.addEventListener('dragstart', nativeDrag);
+    el.addEventListener('click', click, true);
+    return () => {
+      stop();
+      el.removeEventListener('dragstart', nativeDrag);
+      el.removeEventListener('pointerdown', down);
+      el.removeEventListener('click', click, true);
+    };
+  }
+
   function scroller(el: HTMLDivElement) {
     controller.registerScroller(el);
     scrollTop = el.scrollTop;
@@ -179,7 +269,7 @@
   }
 
   function onDragOver(e: DragEvent & { currentTarget: HTMLElement }) {
-    if (!drop || !e.dataTransfer?.types.includes('application/x-xlr8-issues')) return;
+    if (!drop || !e.dataTransfer || !hasIssueDrag(e.dataTransfer)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     dropAt = indexAt(e, e.currentTarget);
@@ -187,7 +277,7 @@
 
   function onDrop(e: DragEvent & { currentTarget: HTMLElement }) {
     if (!drop) return;
-    const raw = e.dataTransfer?.getData('application/x-xlr8-issues');
+    const raw = issueDragPayload(e.dataTransfer);
     dropAt = null;
     if (!raw) return;
     e.preventDefault();
@@ -228,6 +318,7 @@
     ondrop={onDrop}
     {@attach scroller}
     {@attach longpress}
+    {@attach rangeSelect}
     {@attach listMotion(controller, () => rowHeight)}
   >
     {#if list.empty}

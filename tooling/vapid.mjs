@@ -22,7 +22,7 @@ const subjectIndex = argv.indexOf('--subject');
 
 let run;
 if (local) {
-  process.env.XLR8_BACKEND_DIR = dirIndex >= 0 ? argv[dirIndex + 1] : 'backend';
+  process.env.SELFBOUND_BACKEND_DIR = dirIndex >= 0 ? argv[dirIndex + 1] : 'backend';
   run = (await import('./convex.mjs')).runConvex;
 } else {
   run = (await import('./cloud.mjs')).runCloud;

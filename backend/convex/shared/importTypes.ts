@@ -1,7 +1,7 @@
 // Types of the Linear snapshot (import, copy only).
 //
 // `tooling/linear-import` writes a snapshot in this format to
-// ~/.local/share/xlr8/import/<run>/snapshot.json and the same records as rows
+// ~/.local/share/selfbound/import/<run>/snapshot.json and the same records as rows
 // for the staging table `importStaging` (staging.jsonl). The processing in the
 // backend reads `importStaging` and relies on these types. Format and order:
 // docs/architecture/import.md.
@@ -81,8 +81,8 @@ export interface ImportSprint {
   linearNumber: number; // cycle number in Linear (per team)
   name: string; // name from Linear or "KIU Cycle 12"
   description?: string;
-  startDate: string; // YYYY-MM-DD (Europe/Berlin)
-  endDate: string; // YYYY-MM-DD (Europe/Berlin), last day
+  startDate: string; // YYYY-MM-DD (time zone chosen at import)
+  endDate: string; // YYYY-MM-DD (same time zone), last day
   startsAt: number;
   endsAt: number;
   completedAt?: number;

@@ -1,9 +1,9 @@
 // The "listed" switch and the placeholders of index.html.
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { robotsTxt, siteHtml, siteSettings, sitemapXml, vercelConfig, type Legal, type SiteConfig } from '../site.plugin.ts';
 
-const config: SiteConfig = { listed: false, github: 'https://github.com/example/xlr8', docs: 'https://docs.example.com' };
+const config: SiteConfig = { listed: false, github: 'https://github.com/example/selfbound', docs: 'https://docs.example.com' };
 const page = (name: string) => readFileSync(new URL(`../${name}.html`, import.meta.url), 'utf8');
 const html = page('index');
 const legal: Legal = { name: 'Erika Beispiel', street: 'Musterweg 1', postalCode: '12345', city: 'Musterstadt', country: 'Deutschland', email: 'kontakt@example.com' };
@@ -11,16 +11,28 @@ const ANALYTICS_SCRIPTS = ['/_vercel/insights/script.js', '/_vercel/speed-insigh
 const headerValue = (cfg: ReturnType<typeof vercelConfig>, key: string) => cfg.headers[0]!.headers.find((h) => h.key === key)?.value;
 
 describe('siteSettings', () => {
-  it('is unlisted by default, XLR8_SITE_LISTED overrides the config for one build', () => {
+  it('is unlisted by default, SELFBOUND_SITE_LISTED overrides the config for one build', () => {
     expect(siteSettings(config, {}).listed).toBe(false);
-    expect(siteSettings(config, { XLR8_SITE_LISTED: '1' }).listed).toBe(true);
+    expect(siteSettings(config, { SELFBOUND_SITE_LISTED: '1' }).listed).toBe(true);
     expect(siteSettings({ ...config, listed: true }, {}).listed).toBe(true);
-    expect(siteSettings({ ...config, listed: true }, { XLR8_SITE_LISTED: '0' }).listed).toBe(false);
+    expect(siteSettings({ ...config, listed: true }, { SELFBOUND_SITE_LISTED: '0' }).listed).toBe(false);
   });
   it('takes the public URL as an origin only', () => {
-    expect(siteSettings(config, { XLR8_SITE_URL: 'https://example.com/' }).url).toBe('https://example.com');
-    expect(() => siteSettings(config, { XLR8_SITE_URL: 'example.com' })).toThrow('XLR8_SITE_URL');
-    expect(() => siteSettings(config, { XLR8_SITE_URL: 'https://example.com/x' })).toThrow('XLR8_SITE_URL');
+    expect(siteSettings(config, { SELFBOUND_SITE_URL: 'https://example.com/' }).url).toBe('https://example.com');
+    expect(() => siteSettings(config, { SELFBOUND_SITE_URL: 'example.com' })).toThrow('SELFBOUND_SITE_URL');
+    expect(() => siteSettings(config, { SELFBOUND_SITE_URL: 'https://example.com/x' })).toThrow('SELFBOUND_SITE_URL');
+  });
+});
+
+describe('siteSettings, old variable names', () => {
+  // legacy-xlr8: the old names are read as a fallback until the follow-up removes it
+  const old = { XLR8_SITE_URL: 'https://example.com/', XLR8_SITE_LISTED: '1' };
+  it('still reads them, and the new names win', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    expect(siteSettings(config, old).url).toBe('https://example.com');
+    expect(siteSettings(config, old).listed).toBe(true);
+    expect(siteSettings(config, { ...old, SELFBOUND_SITE_URL: 'https://new.example.com', SELFBOUND_SITE_LISTED: '0' })).toMatchObject({ url: 'https://new.example.com', listed: false });
+    vi.restoreAllMocks();
   });
 });
 
@@ -35,7 +47,7 @@ describe('unlisted (default)', () => {
 });
 
 describe('listed', () => {
-  const s = siteSettings({ ...config, listed: true }, { XLR8_SITE_URL: 'https://example.com' });
+  const s = siteSettings({ ...config, listed: true }, { SELFBOUND_SITE_URL: 'https://example.com' });
   it('lets crawlers in', () => {
     expect(siteHtml(html, s)).not.toContain('noindex');
     expect(robotsTxt(s)).toContain('Allow: /');
@@ -49,13 +61,13 @@ describe('index.html', () => {
   it('leaves link-preview tags out without a public URL, makes them absolute with one', () => {
     const without = siteHtml(html, siteSettings(config, {}));
     expect(without).not.toMatch(/__SITE_URL__|og:image"|og:url|twitter:image|rel="canonical"/);
-    const withUrl = siteHtml(html, siteSettings(config, { XLR8_SITE_URL: 'https://example.com' }));
+    const withUrl = siteHtml(html, siteSettings(config, { SELFBOUND_SITE_URL: 'https://example.com' }));
     expect(withUrl).toContain('<meta property="og:image" content="https://example.com/brand/og.png" />');
     expect(withUrl).toContain('<link rel="canonical" href="https://example.com/" />');
   });
   it('fills in the repository and docs links and leaves no placeholder behind', () => {
-    const out = siteHtml(html, siteSettings(config, { XLR8_SITE_URL: 'https://example.com' }));
-    expect(out).toContain('href="https://github.com/example/xlr8"');
+    const out = siteHtml(html, siteSettings(config, { SELFBOUND_SITE_URL: 'https://example.com' }));
+    expect(out).toContain('href="https://github.com/example/selfbound"');
     expect(out).toContain('href="https://docs.example.com"');
     expect(out).not.toMatch(/__[A-Z_]+__|<!--robots-->/);
   });
@@ -105,7 +117,7 @@ describe('visitor statistics (Vercel Web Analytics and Speed Insights)', () => {
 
 describe('imprint and privacy pages', () => {
   const pages = ['impressum', 'datenschutz'];
-  const s = siteSettings({ ...config, listed: true }, { XLR8_SITE_URL: 'https://example.com' }, legal);
+  const s = siteSettings({ ...config, listed: true }, { SELFBOUND_SITE_URL: 'https://example.com' }, legal);
 
   it('hold no operator details in the source, only placeholders for the build', () => {
     expect(page('impressum')).toContain('__LEGAL_ADDRESS__');

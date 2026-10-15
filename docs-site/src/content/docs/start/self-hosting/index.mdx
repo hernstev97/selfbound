@@ -37,7 +37,7 @@ The examples in these docs use `selfbound.example.com` for the app, `clerk.selfb
   sign-in form is embedded in the page.
 - After sign-in, the app asks Clerk for a token and sends it with every request to Convex.
 - Convex checks that the token comes from your Clerk instance, and Selfbound checks that your account is in
-  the `XLR8_OWNER_IDS` list. Anyone else is turned away.
+  the `SELFBOUND_OWNER_IDS` list. Anyone else is turned away.
 - Agents talk to the Convex HTTP endpoint (`…convex.site/mcp`) directly, with their own key or as an
   OAuth connector.
 
@@ -63,19 +63,19 @@ cp deploy/instance.example.json deploy/instance.json
 ```
 
 `deploy/instance.json` is ignored by Git. If it does not exist, the scripts read
-`~/.config/xlr8/instance.json` instead, which is handy if you work with several checkouts. Every field
+`~/.config/selfbound/instance.json` instead, which is handy if you work with several checkouts. Every field
 can also be overridden with an environment variable.
 
 | Field | Environment variable | Example | Used for |
 |---|---|---|---|
-| `convexDeployment` | `XLR8_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex addresses in the build, deploy key check |
-| `appUrl` | `XLR8_APP_URL` | `https://selfbound.example.com` | absolute links in the build, target of redirects |
-| `clerkPublishableKey` | `XLR8_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Clerk in the browser |
-| `vercelProject` | `XLR8_VERCEL_PROJECT` | `selfbound` | Vercel project to deploy to |
-| `vercelScope` | `XLR8_VERCEL_SCOPE` | your Vercel team slug | Vercel team to deploy to |
-| `mcpHosts` | `XLR8_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | optional custom address for MCP |
-| `redirectHosts` | `XLR8_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
-| `branchPrefix` | `VITE_XLR8_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
+| `convexDeployment` | `SELFBOUND_CONVEX_DEPLOYMENT` | `happy-otter-123` | Convex addresses in the build, deploy key check |
+| `appUrl` | `SELFBOUND_APP_URL` | `https://selfbound.example.com` | absolute links in the build, target of redirects |
+| `clerkPublishableKey` | `SELFBOUND_CLERK_PUBLISHABLE_KEY` | `pk_live_…` | Clerk in the browser |
+| `vercelProject` | `SELFBOUND_VERCEL_PROJECT` | `selfbound` | Vercel project to deploy to |
+| `vercelScope` | `SELFBOUND_VERCEL_SCOPE` | your Vercel team slug | Vercel team to deploy to |
+| `mcpHosts` | `SELFBOUND_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | optional custom address for MCP |
+| `redirectHosts` | `SELFBOUND_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
+| `branchPrefix` | `VITE_SELFBOUND_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
 
 <Aside type="caution">
 The example file contains `mcp.selfbound.example.com` in `mcpHosts`. Set `mcpHosts` to `[]` unless you set up
@@ -114,8 +114,8 @@ To keep your instance current, see [Updating](/start/self-hosting/updating/).
 
 ## Limitations to know
 
-- **One owner per instance.** All accounts in `XLR8_OWNER_IDS` act as the same owner.
-- **Fixed time zone.** Calendar days (due dates, sprints, recurring issues, the morning notifications)
-  are computed in Europe/Berlin. There is no setting for this yet.
-
-<Planned issue="XLR8-53">A configurable time zone per instance is planned.</Planned>
+- **One owner per instance.** All accounts in `SELFBOUND_OWNER_IDS` act as the same owner.
+- **One time zone per instance.** Calendar days (due dates, sprints, recurring issues, the morning
+  notifications, what agents see as "today") are counted in the instance's time zone. The first sign-in
+  saves your browser's zone; change it under **Settings → General → Time zone**. See
+  [Time zone](/reference/settings/#time-zone).

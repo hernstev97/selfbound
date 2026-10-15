@@ -1,9 +1,14 @@
-// Agent keys: "xlr8_" + 32 random bytes (base64url). Only the SHA-256 hash (hex) and a short
+// Agent keys: "selfbound_" + 32 random bytes (base64url). Only the SHA-256 hash (hex) and a short
 // prefix for recognition are stored.
 // Call only in actions: in queries and mutations, randomness is deterministic.
 
-export const KEY_PREFIX = 'xlr8_';
-export const KEY_PREFIX_LENGTH = 10;
+export const KEY_PREFIX = 'selfbound_';
+// legacy-xlr8: keys issued before the rename; still accepted (their stored keyPrefix starts with it)
+export const LEGACY_KEY_PREFIX = 'xlr8_';
+// legacy-xlr8: regex source for the current and the old secret prefix (without the underscore)
+export const ANY_PREFIX = '(?:selfbound|xlr8)';
+/** Characters of a key kept for recognition: the prefix plus four random ones. */
+export const KEY_PREFIX_LENGTH = KEY_PREFIX.length + 4;
 
 const B64URL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 

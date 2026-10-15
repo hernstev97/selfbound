@@ -121,7 +121,7 @@ describe('Import from Linear', () => {
     expect(detail.comments).toHaveLength(31);
     expect(detail.comments.every((c) => c.author.kind === 'import')).toBe(true);
     expect(detail.comments.some((c) => c.authorName === 'Owner (Linear)')).toBe(true);
-    expect(detail.comments.some((c) => c.body.startsWith('**Attachments from Linear**') && c.body.includes('figma.com'))).toBe(true);
+    expect(detail.comments.some((c) => c.body.startsWith('**Attachments from Linear**') && (c.body.match(/https:\/\/\S+/g) ?? []).some((u) => new URL(u).hostname === 'figma.com'))).toBe(true);
     expect(detail.pullRequests).toEqual([expect.objectContaining({ repo: 'acme/app', number: 42, state: 'merged', via: 'import', closes: false })]);
     expect(detail.relations.map((r) => `${r.type}:${r.direction}:${r.other.identifier}`)).toEqual(['blocks:out:KIU-3']);
     expect(detail.sprints).toEqual([expect.objectContaining({ kind: 'imported', outcome: 'backlog', sprint: expect.objectContaining({ state: 'closed' }) })]);
@@ -285,7 +285,7 @@ describe('Import from Linear', () => {
     expect(teamsAfter.map((x) => x.order)).toEqual(teams.map((x) => teams.length - 1 - x.order));
     // Selfbound sprint untouched, Linear sprints unchanged.
     const sprints = await t.run(async (ctx) => await ctx.db.query('sprints').collect());
-    expect(sprints.filter((s) => s.source === 'xlr8')).toEqual([expect.objectContaining({ _id: sprintId, state: 'planning' })]);
+    expect(sprints.filter((s) => s.source === 'selfbound')).toEqual([expect.objectContaining({ _id: sprintId, state: 'planning' })]);
     await expectSprintInvariant(t);
   });
 

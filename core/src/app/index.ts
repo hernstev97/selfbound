@@ -112,7 +112,7 @@ export interface AppOptions {
   debug: boolean;
   perf: boolean;
   cacheName: string;
-  /** Optional prefix for suggested git branch names, e.g. a user name; the app passes VITE_XLR8_BRANCH_PREFIX */
+  /** Optional prefix for suggested git branch names, e.g. a user name; the app passes VITE_SELFBOUND_BRANCH_PREFIX */
   branchPrefix?: string;
 }
 

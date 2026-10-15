@@ -5,7 +5,7 @@ import { expectCode, setup } from './helpers';
 // Appearance: themes and fonts on all devices, custom VS Code themes.
 
 const THEME = JSON.stringify({ name: 'My Theme', type: 'dark', colors: { 'editor.background': '#101010', 'editor.foreground': '#e0e0e0' }, tokenColors: [] });
-const base = { dark: 'catppuccin-mocha', light: 'xlr8', sans: 'geist', mono: 'local:Berkeley Mono', overrides: [] };
+const base = { dark: 'catppuccin-mocha', light: 'selfbound', sans: 'geist', mono: 'local:Berkeley Mono', overrides: [] };
 
 describe('appearance', () => {
   test('null until saved, then the same on all devices; empty overrides are dropped', async () => {
@@ -59,7 +59,7 @@ describe('custom themes', () => {
     expect(await owner.mutation(api.appearance.deleteTheme, { id })).toEqual({ removed: true });
     const { settings, themes } = await owner.query(api.appearance.get, {});
     expect(themes).toEqual([]);
-    expect(settings).toMatchObject({ dark: 'xlr8', light: 'xlr8', overrides: [{ theme: 'nord', colors: { accent: '#654321' } }] });
+    expect(settings).toMatchObject({ dark: 'selfbound', light: 'selfbound', overrides: [{ theme: 'nord', colors: { accent: '#654321' } }] });
     expect(await owner.mutation(api.appearance.deleteTheme, { id })).toEqual({ removed: false });
   });
 
@@ -68,7 +68,7 @@ describe('custom themes', () => {
     const { id } = await owner.mutation(api.appearance.saveTheme, { name: 'A', type: 'dark', source: THEME });
     await owner.mutation(api.appearance.save, { ...base, dark: `custom:${id}` });
     await owner.mutation(api.appearance.saveTheme, { id, name: 'A', type: 'light', source: THEME });
-    expect((await owner.query(api.appearance.get, {})).settings?.dark).toBe('xlr8');
+    expect((await owner.query(api.appearance.get, {})).settings?.dark).toBe('selfbound');
   });
 
   test('a foreign identity cannot access themes', async () => {

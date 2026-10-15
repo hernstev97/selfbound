@@ -45,7 +45,7 @@ export function issueFromShare(shared: Shared, maxTitle = 200): { title: string;
   return { title, description: parts.join('\n\n') };
 }
 
-const RECENT_KEY = 'xlr8:shared';
+const RECENT_KEY = 'selfbound:shared';
 const RECENT_MS = 10 * 60_000;
 
 /**

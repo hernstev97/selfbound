@@ -6,7 +6,8 @@ import { pushLocale, pushText, PUSH_DE } from '../convex/lib/pushText';
 import { generateVapidKeys } from '../convex/lib/webpush';
 import { addComment } from '../convex/ops/comments';
 import { createIssues } from '../convex/ops/issues';
-import { berlinHour, bundleMessages, plainPreview, vapidForSending } from '../convex/ops/notify';
+import { hourInZone } from '../convex/lib/dates';
+import { bundleMessages, plainPreview, vapidForSending } from '../convex/ops/notify';
 import { OWNER_KIND } from '../convex/shared/constants';
 import { createOne, fixture, getIssue, setup, type Client, type T } from './helpers';
 import { decryptPush, fakeBrowser, type FakeBrowser } from './lib/pushBrowser';
@@ -57,7 +58,7 @@ afterEach(() => {
   delete process.env.VAPID_PUBLIC_KEY;
   delete process.env.VAPID_PRIVATE_KEY;
   delete process.env.VAPID_SUBJECT;
-  delete process.env.XLR8_LOCALE;
+  delete process.env.SELFBOUND_LOCALE;
 });
 
 describe('events', () => {
@@ -280,7 +281,7 @@ describe('morning notification', () => {
     await createOne(owner, f.orb, { title: 'Done', dueDate: '2026-10-01', status: 'done' });
     await createOne(owner, f.nova, { title: 'Dormant', dueDate: '2026-10-01' });
     await owner.mutation(api.teams.update, { teamId: f.nova, dormant: true });
-    expect(berlinHour(at(5))).toBe(7);
+    expect(hourInZone(at(5), 'Europe/Berlin')).toBe(7);
 
     vi.setSystemTime(at(5));
     expect((await t.mutation(internal.push.morning, {})).sent).toEqual([]);
@@ -306,7 +307,7 @@ describe('morning notification', () => {
         startDate: '2026-10-05',
         endDate: '2026-10-12',
         state: 'active',
-        source: 'xlr8',
+        source: 'selfbound',
         updatedAt: Date.now(),
       }),
     );
@@ -339,15 +340,15 @@ describe('share to inbox', () => {
 });
 
 describe('locale of push texts', () => {
-  test('English by default, German with XLR8_LOCALE=de (the German wording of the original texts)', async () => {
+  test('English by default, German with SELFBOUND_LOCALE=de (the German wording of the original texts)', async () => {
     expect(pushLocale({})).toBe('en');
-    expect(pushLocale({ XLR8_LOCALE: 'de-DE' })).toBe('de');
+    expect(pushLocale({ SELFBOUND_LOCALE: 'de-DE' })).toBe('de');
     expect(pushText('{name} · {n} new issues', { name: 'Codex' }, 'de')).toBe('Codex · {n} neue Issues');
     expect(pushText('{id} is due today', { id: 'ORB-1' }, 'en')).toBe('ORB-1 is due today');
     // Values are not scanned for placeholders.
     expect(pushText('{name} commented on {id}', { name: '{id}', id: 'ORB-1' }, 'de')).toBe('{id} kommentiert ORB-1');
 
-    process.env.XLR8_LOCALE = 'de';
+    process.env.SELFBOUND_LOCALE = 'de';
     const { t, owner } = setup();
     const f = await fixture(owner);
     const phone = await fakeBrowser();
@@ -366,11 +367,11 @@ describe('locale of push texts', () => {
 });
 
 describe('VAPID subject', () => {
-  test('VAPID_SUBJECT, else XLR8_APP_URL, else a clear error when sending', () => {
+  test('VAPID_SUBJECT, else SELFBOUND_APP_URL, else a clear error when sending', () => {
     const keys = { VAPID_PUBLIC_KEY: 'pub', VAPID_PRIVATE_KEY: 'priv' };
     expect(vapidForSending({})).toBeNull();
-    expect(vapidForSending({ ...keys, VAPID_SUBJECT: 'mailto:ops@example.com', XLR8_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('mailto:ops@example.com');
-    expect(vapidForSending({ ...keys, XLR8_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('https://selfbound.example.com');
+    expect(vapidForSending({ ...keys, VAPID_SUBJECT: 'mailto:ops@example.com', SELFBOUND_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('mailto:ops@example.com');
+    expect(vapidForSending({ ...keys, SELFBOUND_APP_URL: 'https://selfbound.example.com' })?.subject).toBe('https://selfbound.example.com');
     expect(() => vapidForSending(keys)).toThrow('VAPID_SUBJECT');
   });
 

@@ -77,10 +77,10 @@ test('Name and picture: set in the settings, shown in the activity, removed agai
 
   // Shown with the owner's comment and in the history
   await open(page, `/issue/${issue.identifier}`);
-  const comment = page.locator('[data-testid="comment"][data-source="steven"]').first();
+  const comment = page.locator('[data-testid="comment"][data-source="owner"]').first();
   await expect(comment.locator('.who')).toHaveText('Jane Doe');
   await expect(comment.locator('img')).toBeVisible();
-  await expect(page.locator('[data-testid="activity-event"][data-source="steven"] .who').first()).toHaveText('Jane Doe');
+  await expect(page.locator('[data-testid="activity-event"][data-source="owner"] .who').first()).toHaveText('Jane Doe');
 
   // Remove the picture: initials again; clear the name: "You"
   await page.goto('/settings/profile');
@@ -91,7 +91,7 @@ test('Name and picture: set in the settings, shown in the activity, removed agai
   await page.getByTestId('profile-name').press('Enter');
   await expect.poll(async () => (await backend().query(api.meta.get, {})).owner).toEqual({ name: null, avatarUrl: null });
   await open(page, `/issue/${issue.identifier}`);
-  await expect(page.locator('[data-testid="comment"][data-source="steven"] .who').first()).toHaveText('You');
+  await expect(page.locator('[data-testid="comment"][data-source="owner"] .who').first()).toHaveText('You');
 });
 
 test('The profile page is in the command menu and the settings navigation', async ({ page }) => {

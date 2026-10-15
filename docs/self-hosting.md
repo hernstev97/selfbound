@@ -62,36 +62,37 @@ development instances are meant for testing and show a development badge.
    deployment has a name like `happy-otter-123`; the app talks to `https://happy-otter-123.convex.cloud`,
    the HTTP endpoints (MCP, GitHub webhook, health) live at `https://happy-otter-123.convex.site`.
 2. Create a **production deploy key** (project settings → Deploy keys) and store it in
-   `~/.config/xlr8/convex-deploy-key` with mode 600 (`tooling/cloud.mjs` refuses files others can read):
+   `~/.config/selfbound/convex-deploy-key` with mode 600 (`tooling/cloud.mjs` refuses files others can read):
    ```sh
-   mkdir -p ~/.config/xlr8 && (umask 077; cat > ~/.config/xlr8/convex-deploy-key)   # paste, Enter, Ctrl+D
+   mkdir -p ~/.config/selfbound && (umask 077; cat > ~/.config/selfbound/convex-deploy-key)   # paste, Enter, Ctrl+D
    ```
-3. Copy `deploy/instance.example.json` to `deploy/instance.json` (or `~/.config/xlr8/instance.json`) and fill in `convexDeployment`, `appUrl`,
+3. Copy `deploy/instance.example.json` to `deploy/instance.json` (or `~/.config/selfbound/instance.json`) and fill in `convexDeployment`, `appUrl`,
    `clerkPublishableKey`, and for Vercel `vercelProject` and `vercelScope`. Leave `mcpHosts` and
    `redirectHosts` empty unless you need them ([operations.md](operations.md#instance-settings)).
 
 ### Environment variables
 
 Set these on the production deployment **before the first deploy** (`auth.config.ts` reads
-`CLERK_JWT_ISSUER_DOMAIN` and `XLR8_DEV_JWKS`, and the deploy fails if they are missing). Use the Convex
+`CLERK_JWT_ISSUER_DOMAIN` and `SELFBOUND_DEV_JWKS`, and the deploy fails if they are missing). Use the Convex
 dashboard (Settings → Environment Variables) or `node tooling/cloud.mjs env set NAME value`:
 
 | Variable | Value | Required |
 |---|---|---|
 | `CLERK_JWT_ISSUER_DOMAIN` | Clerk Frontend API URL, e.g. `https://clerk.selfbound.example.com` (no trailing slash) | yes |
-| `XLR8_DEV_JWKS` | `none` (disables the local test sign-in) | yes |
-| `XLR8_OWNER_IDS` | `<issuer>\|<user id>`, e.g. `https://clerk.selfbound.example.com\|user_2abc…`. Several owners separated by commas. Empty means nobody gets in | yes |
-| `XLR8_APP_URL` | `https://selfbound.example.com`. Turns on OAuth for connectors (claude.ai, ChatGPT) | no |
-| `XLR8_PUBLIC_SITE_URL` | custom address for MCP/OAuth instead of `…convex.site`, e.g. `https://mcp.selfbound.example.com` | no |
-| `XLR8_OWNER_NAME` | fallback for the owner's display name in MCP output until you set a name in Settings → Profile (default `Owner`) | no |
-| `XLR8_LOCALE` | `de` for German push notification texts and German default status names of new teams (default English) | no |
+| `SELFBOUND_DEV_JWKS` | `none` (disables the local test sign-in) | yes |
+| `SELFBOUND_OWNER_IDS` | `<issuer>\|<user id>`, e.g. `https://clerk.selfbound.example.com\|user_2abc…`. Several owners separated by commas. Empty means nobody gets in | yes |
+| `SELFBOUND_APP_URL` | `https://selfbound.example.com`. Turns on OAuth for connectors (claude.ai, ChatGPT) | no |
+| `SELFBOUND_PUBLIC_SITE_URL` | custom address for MCP/OAuth instead of `…convex.site`, e.g. `https://mcp.selfbound.example.com` | no |
+| `SELFBOUND_OWNER_NAME` | fallback for the owner's display name in MCP output until you set a name in Settings → Profile (default `Owner`) | no |
+| `SELFBOUND_LOCALE` | `de` for German push notification texts and German default status names of new teams (default English) | no |
 | `GITHUB_TOKEN`, `GITHUB_WEBHOOK_SECRET`, `GITHUB_MANAGE_WEBHOOKS`, `GITHUB_REPOS`, `GITHUB_WEBHOOK_SECRET_PREVIOUS` | pull request integration, see [operations.md](operations.md#github) | no |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | Web Push; set them with `node tooling/vapid.mjs` | no |
 
-Never set `XLR8_ALLOW_SEED` or `XLR8_TEST_SWITCHES` in production. Full reference:
+Never set `SELFBOUND_ALLOW_SEED` or `SELFBOUND_TEST_SWITCHES` in production. Full reference:
 [operations.md](operations.md#backend-environment-variables).
+Setting up before 2026-10-15 (names starting with `XLR8_`)? See [Moving from the XLR8 names](operations.md#moving-from-the-xlr8-names).
 
-`XLR8_OWNER_IDS` holds Convex `tokenIdentifier`s: the token's issuer (`iss`), a `|`, and the Clerk user id
+`SELFBOUND_OWNER_IDS` holds Convex `tokenIdentifier`s: the token's issuer (`iss`), a `|`, and the Clerk user id
 (`sub`). The issuer must match exactly what Clerk puts into its tokens, which is the Frontend API URL.
 
 ## 3. Deploy the backend
@@ -112,7 +113,7 @@ Then open `https://happy-otter-123.convex.site/health`. Expect `"ok": true`, `"c
 `"devAuth": false`, `"local": false`.
 
 `tooling/cloud.mjs` refuses a deploy key that does not belong to `convexDeployment`. To keep the key
-elsewhere, point `XLR8_CONVEX_DEPLOY_KEY_FILE` at it.
+elsewhere, point `SELFBOUND_CONVEX_DEPLOY_KEY_FILE` at it.
 
 ## 4. Build and deploy the web app
 
@@ -125,7 +126,7 @@ node tooling/deploy-web.mjs
 ```
 
 It builds the app with `VITE_CONVEX_URL`, `VITE_CONVEX_SITE_URL`, `VITE_CLERK_PUBLISHABLE_KEY`,
-`VITE_XLR8_BRANCH_PREFIX` and `XLR8_PUBLIC_URL` derived from the instance settings, checks the bundle (no
+`VITE_SELFBOUND_BRANCH_PREFIX` and `SELFBOUND_PUBLIC_URL` derived from the instance settings, checks the bundle (no
 local test token or local address, production URL present, sign-in page does not load the app), copies
 the result to `deploy/web/`, writes `deploy/web/vercel.json` from `deploy/vercel.base.json` plus the host
 rules for `mcpHosts` and `redirectHosts`, links the folder to your Vercel project on first use and deploys it to
@@ -140,7 +141,7 @@ Build by hand:
 VITE_CONVEX_URL=https://happy-otter-123.convex.cloud \
 VITE_CONVEX_SITE_URL=https://happy-otter-123.convex.site \
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_… \
-XLR8_PUBLIC_URL=https://selfbound.example.com \
+SELFBOUND_PUBLIC_URL=https://selfbound.example.com \
 pnpm --filter @selfbound/app build
 mv app/dist/index.html app/dist/app.html
 ```
@@ -149,7 +150,7 @@ Make sure `app/.env.local` (written by `pnpm dev`) does not leak a `VITE_DEV_TOK
 `VITE_DEV_TOKEN=` (empty) in the build command or delete the file. Upload `app/dist/` and reproduce the
 rules from `deploy/vercel.base.json`:
 
-1. `/` **without** the cookie `xlr8_signed_in` → serve `/welcome.html` (the sign-in page). The app sets the
+1. `/` **without** the cookie `selfbound_signed_in` (nor the older `xlr8_signed_in`) → serve `/welcome.html` (the sign-in page). The app sets the
    cookie after sign-in and removes it on sign-out; it only selects the page and is not a credential.
 2. `/sign-in` → serve `/welcome.html` (the same page: the embedded Clerk form).
 3. Every other path except `/assets/…` → serve `/app.html` (single-page app fallback; deep links such as
@@ -172,22 +173,26 @@ The app is named `app.html` instead of `index.html` because many hosts (Vercel i
 2. You land in the app with an empty workspace. Create a team to start, or import from Linear
    ([architecture/import.md](architecture/import.md)).
 3. **"No access"** after signing in means the backend rejected your identity: check that
-   `XLR8_OWNER_IDS` contains exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>` (same issuer spelling, no
-   trailing slash). A change to `XLR8_OWNER_IDS` takes effect right away. After changing
+   `SELFBOUND_OWNER_IDS` contains exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>` (same issuer spelling, no
+   trailing slash). A change to `SELFBOUND_OWNER_IDS` takes effect right away. After changing
    `CLERK_JWT_ISSUER_DOMAIN`, redeploy the backend: `auth.config.ts` is evaluated when functions are pushed.
 
 The UI language follows the browser (English or German) and can be changed in Settings → General.
 
-Calendar days (due dates, sprints, recurrences, the 08:00 morning notifications) are computed in
-Europe/Berlin; there is no setting for the time zone yet.
+Calendar days (due dates, sprints, recurrences, the morning notifications, MCP's "today") are counted in
+the instance's time zone. The first sign-in saves the browser's; change it in Settings → General → Time zone.
+It is stored on the server (table `instanceSettings`), so the nightly jobs and MCP use it without a browser.
+Until a zone is saved, Europe/Berlin applies. For an existing instance, set it explicitly before the first
+sign-in after an update, so a different browser does not choose it:
+`node tooling/cloud.mjs run migrations:setInstanceTimeZone '{"timeZone":"Europe/Berlin"}'`.
 
 ## 6. Connect agents (MCP)
 
 - **Claude Code, Codex and other key-based clients:** Settings → Agents → create a key, then point the
   client at `https://happy-otter-123.convex.site/mcp` with `Authorization: Bearer <key>`
   ([operations.md](operations.md#agents-over-mcp)).
-- **claude.ai and ChatGPT** connect as OAuth connectors. They need `XLR8_APP_URL`; a custom MCP address
-  (`XLR8_PUBLIC_SITE_URL` plus a host rewrite) is optional
+- **claude.ai and ChatGPT** connect as OAuth connectors. They need `SELFBOUND_APP_URL`; a custom MCP address
+  (`SELFBOUND_PUBLIC_SITE_URL` plus a host rewrite) is optional
   ([operations.md](operations.md#connectors-in-claudeai-and-chatgpt)).
 
 ## 7. Optional extras

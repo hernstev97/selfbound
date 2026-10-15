@@ -10,7 +10,7 @@ import * as ops from './ops/teams';
 import { actorValidator } from './schema';
 import { LIMITS } from './shared/constants';
 
-// Teams and team logos. Only the owner (actor kind OWNER_KIND) changes teams and logos; the check
+// Teams and team logos. Only the owner (see isOwnerKind) changes teams and logos; the check
 // lives in ops/teams.ts, so it also covers any later MCP path.
 
 export const create = ownerWriteMutation({

@@ -228,17 +228,20 @@ describe('back closes overlays', () => {
     expect(browser.index).toBe(base - 1);
   });
 
-  test('reloaded on an overlay entry: leaves it right away', async () => {
-    const browser = fakeWindow('https://selfbound.test/all');
-    browser.win.history.pushState({ xlr8Overlay: true }, '', '/all');
-    (globalThis as { window?: unknown }).window = browser.win;
-    const client = fakeClient();
-    const app = new App({ client: client as never, auth: new Auth({ devToken: 'x' }), debug: false, perf: false, cacheName: `back-reload` });
-    app.start();
-    await settle();
-    expect(browser.index).toBe(0);
-    expect(browser.path()).toBe('/all');
-  });
+  // legacy-xlr8: the second entry is the marker written by the build before the rename
+  for (const marker of ['selfboundOverlay', 'xlr8Overlay']) {
+    test(`reloaded on an overlay entry (${marker}): leaves it right away`, async () => {
+      const browser = fakeWindow('https://selfbound.test/all');
+      browser.win.history.pushState({ [marker]: true }, '', '/all');
+      (globalThis as { window?: unknown }).window = browser.win;
+      const client = fakeClient();
+      const app = new App({ client: client as never, auth: new Auth({ devToken: 'x' }), debug: false, perf: false, cacheName: `back-reload` });
+      app.start();
+      await settle();
+      expect(browser.index).toBe(0);
+      expect(browser.path()).toBe('/all');
+    });
+  }
 
   test('new page right after closing: its entry waits for its own back', async () => {
     const { app, browser } = await setup();

@@ -419,7 +419,7 @@ describe('Invalid calls count, invalid keys cost no query', () => {
     const unknown = await client.rpc('tools/call', { name: 'drop_database', arguments: {} });
     expect(unknown.body.error).toBeDefined();
     expect(await rateCount(t, agentId)).toBe(4);
-    const wrong = await client.rpc('tools/list', {}, 'Bearer xlr8_too-short');
+    const wrong = await client.rpc('tools/list', {}, 'Bearer selfbound_too-short');
     expect(wrong.status).toBe(401);
   });
 });
@@ -496,7 +496,7 @@ describe('meta.get shows the most recently closed sprints, Selfbound first', () 
     });
     const closed = (await owner.query(api.meta.get, {})).sprints.filter((s) => s.state === 'closed');
     expect(closed).toHaveLength(6);
-    expect(closed.filter((s) => s.source === 'xlr8')).toHaveLength(2);
+    expect(closed.filter((s) => s.source === 'selfbound')).toHaveLength(2);
     expect(closed.filter((s) => s.source === 'linear').map((s) => s.name)).toEqual([
       'KIU Cycle 7',
       'KIU Cycle 6',
@@ -508,7 +508,7 @@ describe('meta.get shows the most recently closed sprints, Selfbound first', () 
 
 describe('Local test sign-in only on a local deployment', () => {
   test('with a cloud URL requireOwner rejects the local issuer; /health reports devAuth', async () => {
-    process.env.XLR8_DEV_JWKS = 'data:application/json,{}';
+    process.env.SELFBOUND_DEV_JWKS = 'data:application/json,{}';
     try {
       const local = setup();
       expect(await local.owner.query(api.health.whoami, {})).toEqual({ kind: OWNER_KIND });
@@ -522,7 +522,7 @@ describe('Local test sign-in only on a local deployment', () => {
         devAuthConfigured: true,
       });
     } finally {
-      delete process.env.XLR8_DEV_JWKS;
+      delete process.env.SELFBOUND_DEV_JWKS;
     }
   });
 });

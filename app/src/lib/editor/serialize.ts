@@ -257,7 +257,8 @@ function inline(parent: Node, ctx: Ctx): string {
 
     if (text !== null) {
       const inCode = marks.some((m) => m.type.name === 'code');
-      // In table cells "|" separates columns even inside code.
+      // In table cells "|" separates columns even inside code. There the marked parser takes `\|` as one escape and
+      // gives no way to double a backslash in front of it, so this is `\|` and nothing else.
       if (inCode) out += ctx.table ? text.replace(/\|/g, '\\|') : text;
       else out += escapeText(text, ctx, out === '' || out.endsWith('\n'));
     } else if (node.type.name === 'hard_break') {
@@ -275,7 +276,7 @@ function inline(parent: Node, ctx: Ctx): string {
 function openMark(mark: Mark, nodes: Node[], i: number, out: string): { before: string; open: string; close: string } {
   switch (mark.type.name) {
     case 'link': {
-      const title = mark.attrs.title ? ` "${String(mark.attrs.title).replace(/"/g, '\\"')}"` : '';
+      const title = mark.attrs.title ? ` "${String(mark.attrs.title).replace(/[\\"]/g, '\\$&')}"` : '';
       // "!" right before "[" would make an image.
       const before = /(^|[^\\])!$/.test(out) ? `${out.slice(0, -1)}\\!` : out;
       return { before, open: '[', close: `](${url(String(mark.attrs.href))}${title})` };
@@ -319,7 +320,7 @@ function url(href: string) {
 
 function image(node: Node) {
   const alt = String(node.attrs.alt ?? '').replace(/[[\]\\]/g, '\\$&');
-  const title = node.attrs.title ? ` "${String(node.attrs.title).replace(/"/g, '\\"')}"` : '';
+  const title = node.attrs.title ? ` "${String(node.attrs.title).replace(/[\\"]/g, '\\$&')}"` : '';
   return `![${alt}](${url(String(node.attrs.src))}${title})`;
 }
 
@@ -332,7 +333,8 @@ function escapeText(text: string, ctx: Ctx, lineStart: boolean): string {
 }
 
 function escapePart(text: string, ctx: Ctx, lineStart: boolean): string {
-  let s = text.replace(/\\(?=[!-/:-@[-`{-~])/g, '\\\\');
+  // A backslash at the end could escape the markup that follows (`**`, `*`, a line break), so it is doubled too.
+  let s = text.replace(/\\(?=[!-/:-@[-`{-~]|$)/g, '\\\\');
   s = s.replace(ENTITY_START, '\\&').replace(/<(?=[A-Za-z/!?])/g, '\\<');
   if (ctx.table) s = s.replace(/\|/g, '\\|');
   if (ctx.full) {
