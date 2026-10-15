@@ -137,6 +137,7 @@ class CodeView implements NodeView {
     const source = this.node.textContent;
     const key = `${renderer.id}\u0000${source}`;
     this.renderer = renderer;
+    this.dom.dataset.block = renderer.id;
     if (key === this.drawn && this.preview.firstChild) return;
     this.drawn = key;
     if (this.timer) clearTimeout(this.timer);
@@ -188,6 +189,7 @@ class CodeView implements NodeView {
     this.timer = null;
     this.drawn = '';
     this.renderer = null;
+    delete this.dom.dataset.block;
     this.preview?.remove();
     this.preview = null;
   }

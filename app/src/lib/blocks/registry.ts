@@ -6,6 +6,7 @@
 // A renderer module is loaded with a dynamic import, only when a text contains such a block and the
 // block becomes visible, so none of it is in the start bundle. Until then, and whenever drawing
 // fails, the block stays readable as source.
+import { t } from '@selfbound/core/i18n';
 
 export interface BlockContext {
   /** Aborted when the block leaves the page or is drawn again; stop work then. */
@@ -33,7 +34,9 @@ export interface BlockRenderer {
 }
 
 /** Registered renderers. Add one line per renderer. */
-export const BLOCKS: BlockRenderer[] = [];
+export const BLOCKS: BlockRenderer[] = [
+  { id: 'mermaid', langs: ['mermaid', 'mmd'], label: () => t('Diagram'), load: () => import('./mermaid.ts') },
+];
 
 /** Renderer that claims the code block's info string (`mermaid`, `mermaid title=…`), or null. */
 export function blockFor(info: string | undefined, blocks: readonly BlockRenderer[] = BLOCKS): BlockRenderer | null {

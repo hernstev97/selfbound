@@ -74,6 +74,9 @@ importers:
       '@web-kits/audio':
         specifier: 0.2.0
         version: 0.2.0(react@19.3.0)
+      beautiful-mermaid:
+        specifier: 1.1.3
+        version: 1.1.3
       convex:
         specifier: 1.46.0
         version: 1.46.0(bufferutil@4.1.0)(react@19.3.0)(utf-8-validate@6.0.6)
@@ -2513,6 +2516,9 @@ packages:
   bcp-47@2.1.1:
     resolution: {integrity: sha512-KLw+H/gd2p4zly1X7Yh/qziuyae5/w/QFnvTng9eZL5fvszL7Whl3MBoWF8yxL7ksUjBfOD+OxkytiqbBpG+Fw==}
 
+  beautiful-mermaid@1.1.3:
+    resolution: {integrity: sha512-TItrtrAyHp1vwFfFVYauWGrquouk/6SS21Aq3RsxindSYZODcN4xYrPZD6BiZRU+o5mKJzDPz9MUSMvELdylyg==}
+
   bidi-js@1.1.0:
     resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
 
@@ -2939,6 +2945,9 @@ packages:
   electron-to-chromium@1.5.450:
     resolution: {integrity: sha512-AC3HBt6+rJKNUJxpBA1FQPKjrJ2gV6zXu7uAL95PTqxdBxiHDELWpeJ8N5QK5qwBJqXU18hTsmv+hHjfwQ0gdQ==}
 
+  elkjs@0.11.1:
+    resolution: {integrity: sha512-zxxR9k+rx5ktMwT/FwyLdPCrq7xN6e4VGGHH8hA01vVYKjTFik7nHOxBnAYtrgYUB1RpAiLvA1/U2YraWxyKKg==}
+
   emoji-regex@8.0.0:
     resolution: {integrity: sha512-MSjYzcWNOA0ewAHpz0MxpYFvwg6yjy1NG3xteoqz644VCo/RPgnr1/GGt+ic3iJTzQ8Eu3TdM14SawnVUmGE6A==}
 
@@ -2956,6 +2965,10 @@ packages:
 
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
+  entities@7.0.1:
+    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
 
   entities@8.1.0:
@@ -7418,6 +7431,11 @@ snapshots:
       is-alphanumerical: 2.0.1
       is-decimal: 2.0.1
 
+  beautiful-mermaid@1.1.3:
+    dependencies:
+      elkjs: 0.11.1
+      entities: 7.0.1
+
   bidi-js@1.1.0:
     dependencies:
       require-from-string: 2.0.2
@@ -7797,6 +7815,8 @@ snapshots:
 
   electron-to-chromium@1.5.450: {}
 
+  elkjs@0.11.1: {}
+
   emoji-regex@8.0.0: {}
 
   empathic@2.1.0: {}
@@ -7806,6 +7826,8 @@ snapshots:
   encodeurl@2.0.0: {}
 
   entities@4.5.0: {}
+
+  entities@7.0.1: {}
 
   entities@8.1.0: {}
 

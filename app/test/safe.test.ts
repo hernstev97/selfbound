@@ -32,6 +32,10 @@ describe('sanitizeSvg', () => {
     const imported = html("<svg xmlns='http://www.w3.org/2000/svg'><style>@import url('https://fonts.googleapis.com/css2?family=Inter'); text { font-family: Inter; }</style><text>a</text></svg>");
     expect(imported).not.toContain('googleapis');
     expect(imported).toContain('font-family: Inter');
+    // A semicolon inside the font URL must not leave debris that swallows the next rule
+    const css = html("<svg xmlns='http://www.w3.org/2000/svg'><style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;display=swap');\n text { fill: red }</style><text>a</text></svg>");
+    expect(css).not.toMatch(/swap|500;600/);
+    expect(css).toContain('text { fill: red }');
     for (const css of ['rect { fill: url(https://evil.example/a.svg#x) }', 'rect { background: u\\72l(https://evil.example/a) }', 'rect { background: image-set("https://evil.example/a" 1x) }', 'rect { fill: expression(alert(1)) }']) {
       expect(html(`<svg xmlns="http://www.w3.org/2000/svg"><style>${css}</style><rect/></svg>`), css).not.toContain('<style');
     }

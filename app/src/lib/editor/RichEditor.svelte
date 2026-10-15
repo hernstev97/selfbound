@@ -23,7 +23,7 @@
   import { imageFiles, insertImages, pickImages, type ImageRef, type UploadTarget } from '../imageInput.ts';
   import LangPicker from '../../components/LangPicker.svelte';
   import { CALLOUT_KINDS, calloutLabel, type CalloutKind } from '../blocks/callout.ts';
-  import { codeToText, insertCallout, insertRule, insertTable, quote, setBlock, setCalloutKind, toggleList, unwrapCallout } from './commands.ts';
+  import { codeToText, insertCallout, insertCodeBlock, insertRule, insertTable, quote, setBlock, setCalloutKind, toggleList, unwrapCallout } from './commands.ts';
   import { markdownFragment, parseMarkdown, type Source } from './parse.ts';
   import { closeSlash, plugins, slashKey } from './plugins.ts';
   import { app } from '../../app-instance.ts';
@@ -103,6 +103,13 @@
       words: `panel callout alert box infobox ${kind} ${CALLOUT_WORDS[kind]}`,
       run: cmd(insertCallout(kind)),
     })),
+    {
+      id: 'mermaid',
+      label: t('Diagram (Mermaid)'),
+      hint: '```mermaid',
+      words: 'diagram mermaid flowchart graph chart sequence diagramm ablauf',
+      run: cmd(insertCodeBlock('mermaid', 'flowchart TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Done]\n  B -->|No| D[Try again]')),
+    },
     { id: 'table', label: t('Table'), hint: '', words: 'table tabelle', run: cmd(insertTable) },
     { id: 'rule', label: t('Divider'), hint: '---', words: 'divider rule line hr trennlinie linie', run: cmd(insertRule) },
   ];

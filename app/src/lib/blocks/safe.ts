@@ -27,7 +27,7 @@ export function sanitizeSvg(svg: string): DocumentFragment {
   const fragment = purify.sanitize(svg, CONFIG) as unknown as DocumentFragment; // RETURN_DOM_FRAGMENT
   for (const style of fragment.querySelectorAll('style')) {
     // A font import is the one thing renderers add on their own; drop it, keep the rest.
-    const css = (style.textContent ?? '').replace(/@import[^;{}]*;?/gi, '');
+    const css = (style.textContent ?? '').replace(/@import\s*(?:url\([^)]*\)|"[^"]*"|'[^']*')[^;{}]*;?/gi, '');
     if (UNSAFE_CSS.test(css)) style.remove();
     else style.textContent = css;
   }

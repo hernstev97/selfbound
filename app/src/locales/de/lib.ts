@@ -157,4 +157,9 @@ export default {
   'Turn into quote': 'In Zitat umwandeln',
   'Turn into text': 'In Text umwandeln',
   'Could not draw the {kind}: {reason}': '{kind} konnte nicht gezeichnet werden: {reason}',
+  // lib/blocks/mermaid.ts, lib/blocks/registry.ts, lib/editor/RichEditor.svelte (diagrams)
+  Diagram: 'Diagramm',
+  'Diagram (Mermaid)': 'Diagramm (Mermaid)',
+  'Diagram text is too long ({n} characters, at most {max})': 'Der Diagrammtext ist zu lang ({n} Zeichen, höchstens {max})',
+  '{type} diagrams are not drawn yet (flowchart, state, sequence, class, ER and XY charts are)': '{type}-Diagramme werden noch nicht gezeichnet (Flussdiagramme, Zustands-, Sequenz-, Klassen-, ER- und XY-Diagramme schon)',
 } satisfies Dictionary;
