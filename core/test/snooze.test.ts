@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
 import { ACTIONS, KEYMAP, actionById } from '../src/app/actions.ts';
 import { Auth } from '../src/auth.ts';
-import { addDays, berlinToday, berlinToday as today } from '../src/format.ts';
+import { addDays, setTimeZone, today } from '../src/format.ts';
 import { emptyFilters } from '../src/query.ts';
 import { parsePath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import type { IssueId } from '../src/types.ts';
@@ -26,12 +26,54 @@ const calls = (client: ReturnType<typeof fakeClient>, name: string) => client.mu
 const tomorrow = () => addDays(today(), 1);
 const visible = (app: App) => app.main.list.get().rows.flatMap((r) => (r.kind === 'issue' ? [r.id as string] : []));
 
-describe('days count in Europe/Berlin', () => {
+describe('days count in the instance time zone', () => {
+  afterEach(() => setTimeZone(null));
+
   test('the picker uses the server\'s day, not the device\'s', () => {
+    setTimeZone('Europe/Berlin');
     // 22:12 UTC is already the next day in Berlin (summer and winter time).
-    expect(berlinToday(Date.UTC(2026, 9, 13, 22, 12))).toBe('2026-10-14');
-    expect(berlinToday(Date.UTC(2026, 11, 1, 22, 59))).toBe('2026-12-01');
-    expect(berlinToday(Date.UTC(2026, 11, 1, 23, 0))).toBe('2026-12-02');
+    expect(today(Date.UTC(2026, 9, 13, 22, 12))).toBe('2026-10-14');
+    expect(today(Date.UTC(2026, 11, 1, 22, 59))).toBe('2026-12-01');
+    expect(today(Date.UTC(2026, 11, 1, 23, 0))).toBe('2026-12-02');
+  });
+
+  test('another zone, half-hour zones, and the device\'s zone once none is set', () => {
+    setTimeZone('America/Los_Angeles');
+    expect(today(Date.UTC(2026, 9, 13, 22, 12))).toBe('2026-10-13');
+    expect(today(Date.UTC(2026, 9, 14, 6, 59))).toBe('2026-10-13');
+    expect(today(Date.UTC(2026, 9, 14, 7, 0))).toBe('2026-10-14');
+    setTimeZone('Asia/Kolkata');
+    expect(today(Date.UTC(2026, 9, 13, 18, 29))).toBe('2026-10-13');
+    expect(today(Date.UTC(2026, 9, 13, 18, 30))).toBe('2026-10-14');
+    setTimeZone('Mars/Olympus'); // unknown here: back to the device
+    const local = new Date(Date.UTC(2026, 9, 13, 12));
+    expect(today(local.getTime())).toBe(`${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, '0')}-${String(local.getDate()).padStart(2, '0')}`);
+  });
+
+  test('a meta update sets the zone and a first start without one offers the browser\'s', async () => {
+    const { client, app } = await setup();
+    client.push('meta:get', {}, { ...meta, timeZone: 'Pacific/Auckland' });
+    await flush();
+    expect(today(Date.UTC(2026, 9, 13, 12, 30))).toBe('2026-10-14');
+    expect(calls(client, 'instance:setTimeZone')).toHaveLength(0);
+    client.push('meta:get', {}, { ...meta, timeZone: null });
+    await flush();
+    expect(calls(client, 'instance:setTimeZone')).toHaveLength(1);
+    // Not saved yet: the server counts in Europe/Berlin, so does the client.
+    expect(today(Date.UTC(2026, 9, 13, 22, 12))).toBe('2026-10-14');
+    expect(calls(client, 'instance:setTimeZone')[0]![1]).toEqual({ timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, ifUnset: true });
+    // Once per session, even if the answer takes a while.
+    client.push('meta:get', {}, { ...meta, timeZone: null, rejectWrites: false });
+    await flush();
+    expect(calls(client, 'instance:setTimeZone')).toHaveLength(1);
+    void app;
+  });
+
+  test('no offer while the server rejects writes', async () => {
+    const { client } = await setup();
+    client.push('meta:get', {}, { ...meta, timeZone: null, rejectWrites: true });
+    await flush();
+    expect(calls(client, 'instance:setTimeZone')).toHaveLength(0);
   });
 });
 

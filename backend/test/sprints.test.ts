@@ -2,10 +2,10 @@ import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import type { Actor } from '../convex/lib/actor';
-import { addDays, berlinDay, nextMonday, weekdayOf } from '../convex/lib/dates';
+import { addDays, nextMonday, weekdayOf } from '../convex/lib/dates';
 import { createIssues } from '../convex/ops/issues';
 import { addToSprint, suggestedStart } from '../convex/ops/sprints';
-import { createOne, expectCode, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
+import { berlinDay, createOne, expectCode, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
 async function items(owner: Client, sprintId: Id<'sprints'>) {
   return await owner.query(api.sprints.items, { sprintId });
@@ -13,7 +13,7 @@ async function items(owner: Client, sprintId: Id<'sprints'>) {
 
 async function agentActor(t: T): Promise<Actor> {
   const agentId = await t.run(
-    async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'b'.repeat(64), keyPrefix: 'xlr8_bbbbb', createdAt: 0 }),
+    async (ctx) => await ctx.db.insert('agents', { name: 'Codex', keyHash: 'b'.repeat(64), keyPrefix: 'selfbound_bbbbb', createdAt: 0 }),
   );
   return { kind: 'agent', agentId };
 }
@@ -26,7 +26,7 @@ describe('Sprints', () => {
     expect([number, second.number]).toEqual([1, 2]);
     const sprints = await owner.query(api.sprints.list, {});
     const sprint = sprints.find((s) => s._id === id)!;
-    expect(sprint).toMatchObject({ name: 'Sprint 1', goal: 'Focus', state: 'planning', source: 'xlr8' });
+    expect(sprint).toMatchObject({ name: 'Sprint 1', goal: 'Focus', state: 'planning', source: 'selfbound' });
     expect(sprint.startDate).toBe(nextMonday(berlinDay(Date.now())));
     expect(weekdayOf(sprint.startDate)).toBe(1);
     expect(weekdayOf(sprint.endDate)).toBe(7);

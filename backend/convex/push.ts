@@ -6,6 +6,7 @@ import { ownerAction, ownerMutation, ownerQuery, ownerWriteMutation } from './li
 import { invalid } from './lib/errors';
 import { pushLocale, pushText } from './lib/pushText';
 import { buildPushRequest, pushTopic, type PushTarget, type VapidKeys } from './lib/webpush';
+import { timeZoneOf } from './ops/instance';
 import { claimPending, confirmInApp as runConfirm, finishDelivery, markSeen, morning as runMorning, PRESENCE_MS, readPushSettings, recordResults, vapidForSending, vapidFromEnv } from './ops/notify';
 import { NOTIFY_KINDS, type NotifyKind, type PushMessage } from './shared/notifyEvents';
 
@@ -24,6 +25,7 @@ export const config = ownerQuery({
       publicKey: vapidFromEnv()?.publicKey ?? null,
       events: settings.events,
       morningHour: settings.morningHour,
+      timeZone: await timeZoneOf(ctx),
       devices: devices.map((d) => ({
         id: d._id,
         endpoint: d.endpoint,
@@ -149,7 +151,7 @@ type SendResult = { id: Id<'pushSubscriptions'>; ok: boolean; gone: boolean; err
 
 async function send(target: PushTarget & { id: Id<'pushSubscriptions'> }, message: PushMessage, vapid: VapidKeys): Promise<SendResult> {
   try {
-    // `lang` tells the service worker the language of the texts (XLR8_LOCALE).
+    // `lang` tells the service worker the language of the texts (SELFBOUND_LOCALE).
     const req = await buildPushRequest(target, JSON.stringify({ ...message, lang: pushLocale() }), vapid, {
       ttl: message.test ? 600 : 24 * 3600,
       urgency: 'high',

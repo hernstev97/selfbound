@@ -2,7 +2,7 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { SEQ, takeCounter, teamCounter } from '../lib/counters';
-import { berlinDay, DAY_MS } from '../lib/dates';
+import { DAY_MS } from '../lib/dates';
 import { sameValue } from '../lib/equal';
 import { fail, invalid } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
@@ -10,6 +10,7 @@ import { ranksAtEnd, rankAfter, rankBefore, rankBetween } from '../lib/rank';
 import type { IssuePatch, NewIssue, PatchField, RevertItem } from '../lib/validators';
 import { assertTransition, ensureTeamStates, resolveState, stateFields, workflowOf } from '../lib/workflow';
 import { PATCH_FIELDS } from '../lib/validators';
+import { todayOf } from './instance';
 import {
   bucketOf,
   CLOSED_STATUSES,
@@ -337,7 +338,7 @@ export async function applyPatch(
       const until = checkDay(patch.snoozedUntil, 'The snooze date');
       // Undo may bring back a day that has passed; the morning job then returns the issue.
       if (!opts.undo) {
-        if (until <= berlinDay(now)) invalid('Snooze until a day after today.');
+        if (until <= (await todayOf(ctx, now))) invalid('Snooze until a day after today.');
         if (CLOSED_STATUSES.includes(changes.status ?? issue.status)) invalid('Only open issues can be snoozed.');
       }
       set('snoozedUntil', until);

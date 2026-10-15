@@ -1,0 +1,151 @@
+---
+title: Move from the XLR8 names
+description: Selfbound used to be called XLR8. What changed in environment variables, files and keys, what keeps working, and how to move your instance step by step.
+sidebar:
+  label: Move from XLR8 names
+  order: 5
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+Selfbound was called XLR8 until 2026-10-14. On 2026-10-15 the last internal names moved over: environment
+variables, config files and directories, browser storage, key prefixes and a few stored values. This page
+tells you what to do with an existing instance.
+
+**Who needs this:** everyone who ran Selfbound (or XLR8) before 2026-10-15 and keeps that instance. A new
+installation never sees an old name and can skip this page.
+
+<Aside type="tip" title="Nothing breaks if you wait">
+The old names are still read as a fallback, so an instance keeps working after you update the code, without changing
+anything. The fallbacks are temporary. Move over while it is calm, and before they are [removed](#when-the-fallbacks-go-away).
+</Aside>
+
+## What keeps working without any action
+
+- **Backend environment variables** `XLR8_*` in Convex. The backend reads `SELFBOUND_<NAME>` first, then `XLR8_<NAME>`.
+  If only the old name is set, the Convex log shows `XLR8_<NAME> is deprecated, set SELFBOUND_<NAME> instead.` once per
+  variable (never the value).
+- **Environment variables on your machine or in CI** (`XLR8_*`, `VITE_XLR8_*`): same rule, with a warning on the console.
+- **Files and directories**: if `~/.config/selfbound/` does not exist yet but `~/.config/xlr8/` does, the tools use the old
+  directory and print a warning. The same applies to the data, state and cache directories.
+- **Agent keys** (`xlr8_…`), **connectors** (claude.ai, ChatGPT) and their tokens and client ids: they stay valid and nobody has
+  to reconnect. Everything created from now on gets the new `selfbound_…` spelling.
+- **Browsers**: settings, drafts, the sign-in marker and installed apps survive. The app copies its stored `xlr8:*` entries to
+  `selfbound:*` once at startup; the offline cache is rebuilt.
+- **Stored data**: rows written with the old actor kind `steven` and sprints with the source `xlr8` are read like the new values.
+  The agent field `reviewedBySteven` is still returned next to `reviewedByOwner`.
+- **Old backups** (`xlr8-backup-…` artifacts) can still be verified and restored.
+
+## Move your instance
+
+Do the steps in this order. They can be spread over several days.
+
+<Steps>
+
+1. **Update and deploy** as usual, backend first: see [Update your instance](/start/self-hosting/updating/). Make sure you have a
+   recent backup. Everything works with the old names.
+
+2. **Move the settings.** First a dry run that lists what would happen and changes nothing:
+
+   ```sh
+   node tooling/migrate-legacy-names.mjs
+   ```
+
+   Then apply it:
+
+   ```sh
+   node tooling/migrate-legacy-names.mjs --apply
+   ```
+
+   It copies every Convex variable `XLR8_<NAME>` of your production deployment to `SELFBOUND_<NAME>` (the old ones stay for now),
+   moves your local directories (`~/.config/xlr8` and the others in the table below) and prints the manual steps that remain.
+   It never overwrites an existing target and never prints a value.
+
+3. **Redeploy the backend** so the new variables are picked up, then migrate the stored data:
+
+   ```sh
+   node tooling/cloud.mjs deploy
+   node tooling/migrate-legacy-data.mjs --prod            # dry run: counts per table, writes nothing
+   node tooling/migrate-legacy-data.mjs --prod --apply    # rewrites the old values in small batches
+   node tooling/migrate-legacy-data.mjs --prod --verify   # must report 0 legacy rows
+   ```
+
+   The script only changes the stored actor kind `steven` to `owner`, the stored theme `xlr8` to `selfbound` and the sprint source `xlr8` to `selfbound`. It is safe to run
+   again and to interrupt: a second `--apply` finds nothing left to do. Keys, tokens and client ids are not touched; only their
+   hash is stored, and changing a prefix would lock your agents out. Without `--prod` the same script works on a local backend.
+
+   There is no way back after `--apply`: the data then holds `owner` and `selfbound`, which the previous version rejects. Take a backup first and roll back only by restoring it together with the old code.
+
+4. **Remove the old Convex variables.** Open the Convex dashboard → Logs and search for `is deprecated`. When nothing shows up for a few
+   days, delete the old variables:
+
+   ```sh
+   node tooling/migrate-legacy-names.mjs --remove-old
+   ```
+
+5. **Do the [manual steps](#manual-steps-outside-the-repository).**
+
+</Steps>
+
+Run `node tooling/migrate-legacy-names.mjs` (the dry run) again whenever you like: it reports what is still old.
+
+## Environment variables, old to new
+
+Replace the prefix `XLR8_` by `SELFBOUND_`. The Vite variables `VITE_XLR8_…` become `VITE_SELFBOUND_…`.
+
+| Where | Old | New |
+|---|---|---|
+| Convex (backend) | `XLR8_OWNER_IDS`, `XLR8_DEV_JWKS`, `XLR8_APP_URL`, `XLR8_PUBLIC_SITE_URL`, `XLR8_OWNER_NAME`, `XLR8_LOCALE`, `XLR8_ALLOW_SEED`, `XLR8_TEST_SWITCHES` | `SELFBOUND_OWNER_IDS`, `SELFBOUND_DEV_JWKS`, `SELFBOUND_APP_URL`, `SELFBOUND_PUBLIC_SITE_URL`, `SELFBOUND_OWNER_NAME`, `SELFBOUND_LOCALE`, `SELFBOUND_ALLOW_SEED`, `SELFBOUND_TEST_SWITCHES` |
+| Instance settings (override `deploy/instance.json`) | `XLR8_CONVEX_DEPLOYMENT`, `XLR8_APP_URL`, `XLR8_CLERK_PUBLISHABLE_KEY`, `XLR8_VERCEL_PROJECT`, `XLR8_VERCEL_SCOPE`, `XLR8_MCP_HOSTS`, `XLR8_REDIRECT_HOSTS`, `XLR8_SITE_URL`, `XLR8_SITE_VERCEL_PROJECT`, `XLR8_CONVEX_DEPLOY_KEY_FILE`, `VITE_XLR8_BRANCH_PREFIX` | the same with `SELFBOUND_` / `VITE_SELFBOUND_` |
+| Web app build (also in the Vercel project settings, if you set them there) | `XLR8_PUBLIC_URL`, `XLR8_BUILD_ID`, `VITE_XLR8_BRANCH_PREFIX`, `VITE_XLR8_TEST` | `SELFBOUND_PUBLIC_URL`, `SELFBOUND_BUILD_ID`, `VITE_SELFBOUND_BRANCH_PREFIX`, `VITE_SELFBOUND_TEST` |
+| Landing page and docs | `XLR8_SITE_LEGAL_FILE`, `XLR8_SITE_REQUIRE_LEGAL`, `XLR8_SITE_LISTED`, `XLR8_DOCS_VERCEL_PROJECT`, `XLR8_DOCS_VERCEL_SCOPE` | the same with `SELFBOUND_` |
+| Agents | `XLR8_MCP_KEY` (just a name you chose in your agent's configuration; any name works) | `SELFBOUND_MCP_KEY` |
+| Development, tests, performance | `XLR8_BACKEND_DIR`, `XLR8_CONVEX_PORT`, `XLR8_CONVEX_URL`, `XLR8_INTEGRATION_PORT`, `XLR8_TOKEN`, `XLR8_PERF_*`, `XLR8_QUIET_*`, `XLR8_LEISE_*` | the same with `SELFBOUND_` (`LEISE` becomes `QUIET`) |
+
+The current list for the backend is in [Self-hosting: Convex](/start/self-hosting/convex/#environment-variables).
+
+## Files, directories and other names
+
+| Old | New |
+|---|---|
+| `~/.config/xlr8/` (`instance.json`, `convex-deploy-key`, `linear-api-key`, `github-token`, `site-legal.json`, `backup-age.key`) | `~/.config/selfbound/` |
+| `~/.local/share/xlr8/` (Linear import snapshots and files) | `~/.local/share/selfbound/` |
+| `~/.local/state/xlr8-perf/`, `~/.cache/xlr8-perf/` (maintainers only) | `~/.local/state/selfbound-perf/`, `~/.cache/selfbound-perf/` |
+| `~/xlr8-restore/` (temporary, during a restore) | `~/selfbound-restore/` |
+| systemd units `xlr8-perf-idle.service` and `.timer` (maintainers only) | `selfbound-perf-idle.service` and `.timer`: run `perf/idle/install.sh --remove` before updating, then `perf/idle/install.sh` |
+| Backup artifacts `xlr8-backup-…` and files `xlr8-…zip.age` | `selfbound-…` (restore and verify accept both) |
+| Agent keys `xlr8_…`, tokens `xlr8_at_…`, `xlr8_rt_…` | `selfbound_…` for everything new; old ones stay valid |
+| OAuth client ids `xlr8-<app>-…`, scope `xlr8` | `selfbound-<app>-…`, `selfbound`; old ones stay valid |
+| Browser storage `xlr8:*`, cookie `xlr8_signed_in`, theme `xlr8` | `selfbound:*`, `selfbound_signed_in`, theme `selfbound` |
+| Stored actor kind `steven`, sprint source `xlr8`, agent field `reviewedBySteven` | `owner`, `selfbound`, `reviewedByOwner` |
+
+Not renamed: the database layout, function names, HTTP routes, MCP tool names and parameters, and the key of an existing team
+(a team with the key `XLR8` keeps its issue identifiers).
+
+If you wrote your own Vercel rewrite for the sign-in cookie ([Web app](/start/self-hosting/web-app/)), let it accept both
+`selfbound_signed_in` and `xlr8_signed_in` for now.
+
+## Manual steps outside the repository
+
+The scripts cannot reach these. None is urgent; they only change what people see.
+
+1. **Clerk**: in the Clerk dashboard, rename the application to Selfbound, upload the logo
+   [`app/public/brand/clerk-logo.png`](https://github.com/hernstev97/selfbound/blob/main/app/public/brand/clerk-logo.png) and
+   check the texts of the sign-in and verification e-mails for the old name. Existing sessions are not affected.
+2. **Convex dashboard**: if the project or deployment display name still says XLR8, rename it. Deployment names and URLs stay.
+3. **GitHub Actions**: the backup secrets `CONVEX_DEPLOY_KEY` and `AGE_RECIPIENTS` keep their names. If you stored something under a
+   `XLR8_…` name yourself (repository or environment variables, your own workflows), create it under the new name, point the
+   workflow at it and delete the old one.
+4. **Vercel**: in the project's Environment Variables, add the `SELFBOUND_…` / `VITE_SELFBOUND_…` twin of every `XLR8_…` /
+   `VITE_XLR8_…` variable you set there, deploy once, then delete the old one. The Vercel project name does not have to change.
+5. **Your shell, CI and password manager**: rename `XLR8_…` entries in your shell profile, direnv or CI settings, and in the labels of
+   stored keys.
+6. **Agents** (optional): the old keys keep working. To switch to the new spelling, create a key in **Settings → Agents**, give it to the
+   agent, then revoke the old one.
+
+## When the fallbacks go away
+
+A follow-up change removes the fallbacks: old environment variable and directory names, the `xlr8:` browser names, the stored
+values `steven` and `xlr8`, and the field `reviewedBySteven`. This happens only after the data check reports zero legacy rows and
+the logs of the maintainer's instance have shown no deprecation warning for at least two weeks. Old keys and connector tokens
+(`xlr8_…`) go last, and only after they have been replaced; that is announced in the release notes first. After the removal, an
+old name is ignored. So run the steps above before you update to that version.

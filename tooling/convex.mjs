@@ -6,7 +6,7 @@
 // <backend dir>/.convex-home, which has no token. Only the downloaded backend binaries are linked.
 //
 // Usage: node tooling/convex.mjs <convex arguments…>
-//   other backend directory: XLR8_BACKEND_DIR=e2e/.backend node tooling/convex.mjs …
+//   other backend directory: SELFBOUND_BACKEND_DIR=e2e/.backend node tooling/convex.mjs …
 //   e.g. node tooling/convex.mjs dev --local-cloud-port 13410 --local-site-port 13411
 
 import { spawn } from 'node:child_process';
@@ -15,10 +15,11 @@ import { existsSync, mkdirSync, readFileSync, symlinkSync, lstatSync } from 'nod
 import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { envVar } from './lib/env.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-// XLR8_BACKEND_DIR selects the backend directory (default backend/).
-const backendDir = resolve(root, process.env.XLR8_BACKEND_DIR ?? 'backend');
+// SELFBOUND_BACKEND_DIR selects the backend directory (default backend/).
+const backendDir = resolve(root, envVar('BACKEND_DIR') ?? 'backend');
 const realHome = homedir();
 const fakeHome = join(backendDir, '.convex-home');
 const tokenFile = join(realHome, '.convex', 'config.json');

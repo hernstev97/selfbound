@@ -18,7 +18,7 @@ export type ThemeType = 'dark' | 'light';
 
 const overridesValidator = v.array(v.object({ theme: v.string(), colors: v.record(v.string(), v.string()) }));
 
-const DEFAULTS = { dark: 'xlr8', light: 'xlr8', sans: 'inter', mono: 'system', overrides: [] as { theme: string; colors: Record<string, string> }[] };
+const DEFAULTS = { dark: 'selfbound', light: 'selfbound', sans: 'inter', mono: 'system', overrides: [] as { theme: string; colors: Record<string, string> }[] };
 
 async function row(ctx: QueryCtx): Promise<Doc<'appearance'> | null> {
   return await ctx.db.query('appearance').first();
@@ -47,7 +47,8 @@ export const theme = ownerQuery({
   },
 });
 
-const THEME_REF = /^(xlr8|[a-z0-9-]{1,60}|custom:[A-Za-z0-9]{1,80})$/;
+// legacy-xlr8: 'xlr8' is the old ID of the Selfbound theme; still stored by older clients, means 'selfbound'
+const THEME_REF = /^(selfbound|xlr8|[a-z0-9-]{1,60}|custom:[A-Za-z0-9]{1,80})$/;
 const FONT_REF = /^(inter|system|[a-z0-9-]{1,60}|local:[\p{L}\p{N} ._-]{1,64})$/u;
 const VAR_NAME = /^[a-z][a-z0-9-]{0,40}$/;
 const HEX = /^#[0-9a-f]{6}$/;

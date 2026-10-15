@@ -11,19 +11,19 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe('auth.config', () => {
   test('one Clerk issuer', async () => {
-    expect(await providers({ CLERK_JWT_ISSUER_DOMAIN: 'https://clerk.selfbound.example.com', XLR8_DEV_JWKS: 'none' })).toEqual([
+    expect(await providers({ CLERK_JWT_ISSUER_DOMAIN: 'https://clerk.selfbound.example.com', SELFBOUND_DEV_JWKS: 'none' })).toEqual([
       { domain: 'https://clerk.selfbound.example.com', applicationID: 'convex' },
     ]);
   });
   test('several Clerk issuers separated by commas', async () => {
     expect(
-      await providers({ CLERK_JWT_ISSUER_DOMAIN: 'https://clerk.selfbound.example.com, https://clerk.example.org', XLR8_DEV_JWKS: 'none' }),
+      await providers({ CLERK_JWT_ISSUER_DOMAIN: 'https://clerk.selfbound.example.com, https://clerk.example.org', SELFBOUND_DEV_JWKS: 'none' }),
     ).toEqual([
       { domain: 'https://clerk.selfbound.example.com', applicationID: 'convex' },
       { domain: 'https://clerk.example.org', applicationID: 'convex' },
     ]);
   });
   test('none disables Clerk', async () => {
-    expect(await providers({ CLERK_JWT_ISSUER_DOMAIN: 'none', XLR8_DEV_JWKS: 'none' })).toEqual([]);
+    expect(await providers({ CLERK_JWT_ISSUER_DOMAIN: 'none', SELFBOUND_DEV_JWKS: 'none' })).toEqual([]);
   });
 });

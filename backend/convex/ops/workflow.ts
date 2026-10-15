@@ -3,7 +3,7 @@ import type { MutationCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { fail, invalid, notFound } from '../lib/errors';
 import { ensureTeamStates, forgetTeamStates, teamStates, type State } from '../lib/workflow';
-import { CLOSED_STATUSES, OWNER_KIND } from '../shared/constants';
+import { CLOSED_STATUSES, isOwnerKind } from '../shared/constants';
 import {
   activeStates,
   MAX_EXCEPTIONS,
@@ -33,7 +33,7 @@ const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const NEEDED: readonly StateType[] = ['unstarted', 'completed', 'canceled'];
 
 export function assertCanManageWorkflow(actor: Actor) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', 'Only the owner can configure statuses.');
+  if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can configure statuses.');
 }
 
 async function getState(ctx: MutationCtx, stateId: Id<'workflowStates'>): Promise<State> {

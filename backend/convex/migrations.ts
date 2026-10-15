@@ -6,6 +6,8 @@ import { ensureTeamStates, teamStates } from './lib/workflow';
 import { record } from './ops/history';
 import { openCreatedEntry } from './ops/inboxChanges';
 import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
+import { canonicalTimeZone } from './lib/dates';
+import { storedTimeZone, writeTimeZone } from './ops/instance';
 import { removeTestTeam as removeTestTeamOp } from './ops/testData';
 import { CLOSED_STATUSES } from './shared/constants';
 import { stateForStatus, statusOfState } from './shared/workflow';
@@ -237,5 +239,20 @@ export const inboxBackfill = internalMutation({
       done: page.isDone,
       ...(page.isDone ? {} : { cursor: page.continueCursor }),
     };
+  },
+});
+
+/**
+ * Sets the instance time zone, e.g. `{"timeZone":"Europe/Berlin"}`. For an existing instance, run
+ * it before the first sign-in after the update: otherwise the app saves the browser's zone then.
+ * Stored days are plain "YYYY-MM-DD" strings and stay as they are. Without arguments it only
+ * reports the current zone.
+ */
+export const setInstanceTimeZone = internalMutation({
+  args: { timeZone: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    if (args.timeZone === undefined) return { timeZone: await storedTimeZone(ctx), applied: false };
+    if (!canonicalTimeZone(args.timeZone)) throw new Error(`Unknown time zone "${args.timeZone}".`);
+    return { ...(await writeTimeZone(ctx, args.timeZone)), applied: true };
   },
 });

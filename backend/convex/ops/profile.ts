@@ -2,12 +2,12 @@ import type { Doc } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { fail, invalid } from '../lib/errors';
 import { imageUrl } from '../lib/image';
-import { AVATAR_TYPES, IMAGE_PATH, LIMITS, OWNER_KIND } from '../shared/constants';
+import { AVATAR_TYPES, IMAGE_PATH, isOwnerKind, LIMITS } from '../shared/constants';
 import type { Actor } from '../lib/actor';
 import { syncFileRefs } from './files';
 
 // The owner's profile: display name and profile picture. One row in `profile`; a missing row or
-// field means "not set" (the UI then shows "You" / initials, MCP the name from XLR8_OWNER_NAME).
+// field means "not set" (the UI then shows "You" / initials, MCP the name from SELFBOUND_OWNER_NAME).
 //
 // The picture is an ordinary registered image (files.register: type and size checked, served via
 // /img/<token>). The profile references it under the owner id PROFILE_OWNER, so a replaced or removed
@@ -37,7 +37,7 @@ export function cleanName(raw: string | null): string | null {
 }
 
 function assertOwner(actor: Actor) {
-  if (actor.kind !== OWNER_KIND) fail('access_denied', 'Only the owner can change the profile.');
+  if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can change the profile.');
 }
 
 async function write(ctx: MutationCtx, patch: Partial<Pick<Doc<'profile'>, 'name' | 'avatarToken'>>) {

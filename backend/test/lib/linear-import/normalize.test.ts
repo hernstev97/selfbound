@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  dayInBerlin,
+  dayInTimeZone,
   mapStatus,
   normalize,
   parseStatusOverrides,
@@ -147,12 +147,23 @@ describe('normalize', () => {
     ]);
   });
 
-  test('cycles → sprints with source linear, days in Europe/Berlin', () => {
+  test('cycles → sprints with source linear, days in Europe/Berlin by default, in the given time zone otherwise', () => {
     expect(snap.sprints.map((s) => [s.linearId, s.source, s.name, s.startDate, s.endDate])).toEqual([
       ['c-1', 'linear', 'Start', '2026-09-01', '2026-09-14'],
       ['c-2', 'linear', 'KIU Cycle 2', '2026-09-15', '2026-09-28'],
     ]);
-    expect(dayInBerlin(Date.UTC(2026, 11, 31, 23, 30))).toBe('2027-01-01');
+    expect(dayInTimeZone(Date.UTC(2026, 11, 31, 23, 30), 'Europe/Berlin')).toBe('2027-01-01');
+    expect(dayInTimeZone(Date.UTC(2026, 11, 31, 23, 30), 'America/New_York')).toBe('2026-12-31');
+  });
+
+  test('cycle days follow the time zone option; an unknown zone is rejected', () => {
+    // Cycles start at 22:00 UTC: the next day in Berlin, still the same day in Los Angeles.
+    const la = normalize(rawData(), { ...OPTS, timeZone: 'America/Los_Angeles' });
+    expect(la.sprints.map((s) => [s.startDate, s.endDate])).toEqual([
+      ['2026-08-31', '2026-09-14'],
+      ['2026-09-14', '2026-09-28'],
+    ]);
+    expect(() => normalize(rawData(), { ...OPTS, timeZone: 'Mars/Olympus' })).toThrow();
   });
 
   test('comments: author, bot, thread reply', () => {

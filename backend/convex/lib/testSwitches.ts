@@ -1,13 +1,14 @@
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { fail } from './errors';
+import { envVar } from './legacyEnv';
 
 // Test switches for end-to-end tests ("server rejects → rollback").
-// Only effective when XLR8_TEST_SWITCHES=1 is set (local only).
+// Only effective when SELFBOUND_TEST_SWITCHES=1 is set (local only).
 
 export const REJECT_WRITES = 'rejectWrites';
 
 export function testSwitchesEnabled() {
-  return process.env.XLR8_TEST_SWITCHES === '1';
+  return envVar('TEST_SWITCHES') === '1';
 }
 
 export async function rejectWritesActive(ctx: QueryCtx): Promise<boolean> {

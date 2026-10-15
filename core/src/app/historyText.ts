@@ -4,7 +4,7 @@ import { PRIORITY_LABEL, STATUS_LABEL, dayLabel } from '../format.ts';
 import { t, tc, translated } from '../i18n.ts';
 import type { IssueStore } from '../store.ts';
 import { workflowsOf } from '../workflow.ts';
-import { OWNER_KIND, type HistoryDoc, type IssueId, type Priority, type Status } from '../types.ts';
+import { isOwnerKind, type HistoryDoc, type IssueId, type Priority, type Status } from '../types.ts';
 
 export const RELATION_LABEL: Record<string, string> = translated({
   'blocks:out': 'Blocks',
@@ -23,7 +23,7 @@ export function historyText(h: Pick<HistoryDoc, 'field' | 'from' | 'to' | 'actor
   const meta = store.meta.get();
   // Both calls stay literal so tooling/i18n-check.mjs can check them.
   // With a profile name the owner is a third person ("Jane Doe changed …"), not "You".
-  const own = h.actor.kind === OWNER_KIND && !meta?.owner?.name;
+  const own = isOwnerKind(h.actor.kind) && !meta?.owner?.name;
   const say = (yours: string, theirs: string) => (own ? yours : theirs);
   const keyOf = (id: unknown) => (typeof id === 'string' ? (store.get(id as IssueId)?.key ?? t('an issue')) : t('an issue'));
   const labelName = (id: string) => meta?.labels.find((l) => l._id === id)?.name ?? t('Label');

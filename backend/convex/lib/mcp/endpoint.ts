@@ -11,12 +11,13 @@
 // tool error.
 //
 // Two kinds of sign-in:
-//   Agent key "xlr8_…" (Claude Code, Codex, other agents): errors → 401 WITHOUT
+//   Agent key "selfbound_…" (Claude Code, Codex, other agents): errors → 401 WITHOUT
 //     WWW-Authenticate, so these clients never start an OAuth flow.
-//   Access token "xlr8_at_…" (connectors in claude.ai and ChatGPT): errors, missing or foreign
+//   Access token "selfbound_at_…" (connectors in claude.ai and ChatGPT): errors, missing or foreign
 //     bearer → 401 WITH WWW-Authenticate (starts the sign-in), but only when OAuth is enabled
 //     (`challenge` set). Otherwise like an agent key.
 
+import { ANY_PREFIX, KEY_PREFIX, LEGACY_KEY_PREFIX } from '../keys';
 import { ACCESS_FORMAT } from '../oauth/core';
 import {
   bearerToken,
@@ -29,13 +30,16 @@ import {
 } from './protocol';
 import { TOOLS, type ToolName } from './tools';
 
-/** Key format of `agents.create`: "xlr8_" + 32 bytes base64url. Anything else costs no lookup. */
-export const KEY_FORMAT = /^xlr8_[A-Za-z0-9_-]{43}$/;
+/**
+ * Key format of `agents.create`: "selfbound_" + 32 bytes base64url. Anything else costs no lookup.
+ * Keys issued before the rename start with the old prefix and stay valid.
+ */
+export const KEY_FORMAT = new RegExp(`^${ANY_PREFIX}_[A-Za-z0-9_-]{43}$`);
 
 export interface McpBackend {
   sha256(text: string): Promise<string>;
-  /** Calendar day (Europe/Berlin) for read tools, e.g. "completed today". */
-  today(): string;
+  /** Calendar day in the instance's time zone for read tools, e.g. "completed today". */
+  today(): string | Promise<string>;
   /** Hash of a key or access token → agent; `now` checks a token's expiry. */
   authenticate(keyHash: string, now: number): Promise<{ agentId: string; name: string }>;
   countCall(keyHash: string): Promise<unknown>;
@@ -101,7 +105,7 @@ export async function mcpEndpoint(
 ): Promise<McpHttpResponse> {
   const key = bearerToken(req.headers);
   const isAccessToken = key !== undefined && ACCESS_FORMAT.test(key) && backend.challenge !== undefined;
-  const isKey = key !== undefined && !isAccessToken && key.startsWith('xlr8_');
+  const isKey = key !== undefined && !isAccessToken && (key.startsWith(KEY_PREFIX) || key.startsWith(LEGACY_KEY_PREFIX));
   // Agent key (or OAuth off): plain 401. Otherwise 401 with a sign-in challenge.
   const unauthorized = () =>
     isKey || !backend.challenge
@@ -131,7 +135,7 @@ export async function mcpEndpoint(
       if (isReadTool(name)) {
         try {
           await retryOnConflict(() => backend.countCall(keyHash));
-          return await backend.read(keyHash, name, args, backend.today());
+          return await backend.read(keyHash, name, args, await backend.today());
         } catch (error) {
           const data = errorData(error);
           if (!data) throw error;

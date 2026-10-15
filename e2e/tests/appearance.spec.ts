@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { api, backend, contrast, open, settled } from '../support/helpers.ts';
 
-const DEFAULT = { dark: 'xlr8', light: 'xlr8', sans: 'inter', mono: 'system', overrides: [] };
+const DEFAULT = { dark: 'selfbound', light: 'selfbound', sans: 'inter', mono: 'system', overrides: [] };
 
 /** Other specs run afterwards on the same data: always reset the appearance to the default. */
 async function reset() {
@@ -51,7 +51,7 @@ test('Choosing a theme: applies at once, saved on the server, present after a re
 
   // Back to Selfbound: the theme's variables disappear.
   await openAppearance(page);
-  await page.locator('[data-testid="theme-card"][data-id="xlr8"][data-mode="dark"]').click();
+  await page.locator('[data-testid="theme-card"][data-id="selfbound"][data-mode="dark"]').click();
   await expect.poll(() => cssVar(page, '--bg-panel')).not.toBe('#1e1e2e');
 });
 

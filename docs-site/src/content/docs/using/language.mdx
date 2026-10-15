@@ -42,13 +42,13 @@ either language.
 ## On the server
 
 Push notifications, and the in-app notices that replace them while Selfbound is open, are written on the
-server, not in your browser, so they cannot follow your device's setting. The Convex environment variable `XLR8_LOCALE` sets their language:
+server, not in your browser, so they cannot follow your device's setting. The Convex environment variable `SELFBOUND_LOCALE` sets their language:
 
-| `XLR8_LOCALE` | Push notification texts | Default status names of new teams |
+| `SELFBOUND_LOCALE` | Push notification texts | Default status names of new teams |
 |---|---|---|
 | not set (default) | English | English (In Progress, Done, Canceled …) |
 | `de` | German | German (In Arbeit, Erledigt, Abgebrochen …) |
 
-A notification keeps the language it was created in. Changing `XLR8_LOCALE` does not rename the
+A notification keeps the language it was created in. Changing `SELFBOUND_LOCALE` does not rename the
 statuses of existing teams. For setting environment variables, see
 [Convex setup](/start/self-hosting/convex/).

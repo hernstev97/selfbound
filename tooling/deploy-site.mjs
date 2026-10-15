@@ -8,8 +8,8 @@
 //         node tooling/deploy-site.mjs --build    build only (into deploy/site/), upload nothing
 //
 // Whether search engines may list the page is the `listed` switch in site/site.config.json
-// (XLR8_SITE_LISTED=1 overrides it for one build). The same switch loads Vercel Web Analytics and Speed
-// Insights. The imprint details come from ~/.config/xlr8/site-legal.json (tooling/site-legal.mjs); a
+// (SELFBOUND_SITE_LISTED=1 overrides it for one build). The same switch loads Vercel Web Analytics and Speed
+// Insights. The imprint details come from ~/.config/selfbound/site-legal.json (tooling/site-legal.mjs); a
 // production build fails without them. Upload directory deploy/site/ (gitignored; .vercel/ keeps the
 // project link).
 
@@ -35,7 +35,7 @@ function main() {
   const instance = requireInstance(buildOnly ? [] : ['vercelScope', 'siteVercelProject']);
   const prod = process.argv.includes('--prod');
   run('pnpm', ['--filter', '@selfbound/site', 'build'], {
-    env: { ...process.env, ...(instance.siteUrl ? { XLR8_SITE_URL: instance.siteUrl } : {}), ...(prod ? { XLR8_SITE_REQUIRE_LEGAL: '1' } : {}) },
+    env: { ...process.env, ...(instance.siteUrl ? { SELFBOUND_SITE_URL: instance.siteUrl } : {}), ...(prod ? { SELFBOUND_SITE_REQUIRE_LEGAL: '1' } : {}) },
   });
 
   mkdirSync(out, { recursive: true });

@@ -272,6 +272,7 @@ export const ACTIONS: Action[] = [
   { id: 'go.drafts', label: msg('Go to: Drafts'), section: 'Navigation', icon: 'compose', keywords: 'drafts entwurf entwürfe', run: (a) => a.nav.go({ name: 'drafts' }) },
   { id: 'go.settings', label: msg('Settings'), section: 'Navigation', icon: 'settings', keywords: 'settings preferences einstellungen', run: (a) => a.nav.go({ name: 'settings', section: 'general' }) },
   { id: 'go.settings.profile', label: msg('Settings: Profile'), section: 'Navigation', icon: 'user', keywords: 'profile profil name picture photo avatar bild foto', run: (a) => a.nav.go({ name: 'settings', section: 'profile' }) },
+  { id: 'go.settings.timezone', label: msg('Settings: Time zone'), section: 'Navigation', icon: 'calendar', keywords: 'time zone timezone zeitzone datum tag day utc berlin', run: (a) => a.nav.go({ name: 'settings', section: 'general' }) },
   { id: 'go.settings.teams', label: msg('Settings: Teams and logos'), section: 'Navigation', icon: 'team', keywords: 'teams logo key color kürzel farbe', run: (a) => a.nav.go({ name: 'settings', section: 'teams' }) },
   { id: 'go.settings.labels', label: msg('Settings: Labels'), section: 'Navigation', icon: 'label', keywords: 'labels groups gruppen', run: (a) => a.nav.go({ name: 'settings', section: 'labels' }) },
   { id: 'go.settings.agents', label: msg('Settings: Agents'), section: 'Navigation', icon: 'agent', keywords: 'agents agenten schlüssel mcp api key connector claude chatgpt oauth', run: (a) => a.nav.go({ name: 'settings', section: 'agents' }) },

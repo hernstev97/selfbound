@@ -2,7 +2,7 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 // @ts-expect-error plain .mjs without types, shared with docs-site/
 import { LEGAL_PLACEHOLDER, fillLegal, legalRequired, loadLegal } from '../../tooling/site-legal.mjs';
 
@@ -31,11 +31,18 @@ describe('loadLegal', () => {
 });
 
 describe('legalRequired', () => {
-  it('is on for a listed site and for production deploys (XLR8_SITE_REQUIRE_LEGAL), off otherwise', () => {
+  it('is on for a listed site and for production deploys (SELFBOUND_SITE_REQUIRE_LEGAL), off otherwise', () => {
     expect(legalRequired({}, false)).toBe(false);
     expect(legalRequired({}, true)).toBe(true);
+    expect(legalRequired({ SELFBOUND_SITE_REQUIRE_LEGAL: '1' }, false)).toBe(true);
+    expect(legalRequired({ SELFBOUND_SITE_REQUIRE_LEGAL: '0' }, false)).toBe(false);
+  });
+  it('still reads the old variable name, the new one wins', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    // legacy-xlr8: fallback until the follow-up removes it
     expect(legalRequired({ XLR8_SITE_REQUIRE_LEGAL: '1' }, false)).toBe(true);
-    expect(legalRequired({ XLR8_SITE_REQUIRE_LEGAL: '0' }, false)).toBe(false);
+    expect(legalRequired({ XLR8_SITE_REQUIRE_LEGAL: '1', SELFBOUND_SITE_REQUIRE_LEGAL: '0' }, false)).toBe(false); // legacy-xlr8
+    vi.restoreAllMocks();
   });
 });
 

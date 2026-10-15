@@ -62,15 +62,15 @@ The issue then gets the team's status with the same name, or the default status 
 ## Before you start
 
 - A checkout of the Selfbound repository with Node.js 24 and its dependencies installed (`pnpm install`).
-- A **personal API key from Linear**. Read access is enough. Save it as `~/.config/xlr8/linear-api-key`, readable only by you:
+- A **personal API key from Linear**. Read access is enough. Save it as `~/.config/selfbound/linear-api-key`, readable only by you:
 
   ```sh
-  mkdir -p ~/.config/xlr8
-  (umask 077; cat > ~/.config/xlr8/linear-api-key)   # paste the key, then Enter and Ctrl+D
+  mkdir -p ~/.config/selfbound
+  (umask 077; cat > ~/.config/selfbound/linear-api-key)   # paste the key, then Enter and Ctrl+D
   ```
 
   The importer refuses to run if the file is readable by others, empty or a symlink.
-- The target: either a local backend started with `pnpm dev`, or your production instance. Production needs your instance settings in `deploy/instance.json` and a Convex deploy key in `~/.config/xlr8/convex-deploy-key`, as described in [Self-hosting](/start/self-hosting/).
+- The target: either a local backend started with `pnpm dev`, or your production instance. Production needs your instance settings in `deploy/instance.json` and a Convex deploy key in `~/.config/selfbound/convex-deploy-key`, as described in [Self-hosting](/start/self-hosting/).
 
 <Aside type="tip">
 Try the import against a local backend first. If your production instance already holds data you care about, take a backup before importing into it.
@@ -86,18 +86,18 @@ Try the import against a local backend first. If your production instance alread
    node tooling/linear-import/index.ts fetch
    ```
 
-   This writes a snapshot to `~/.local/share/xlr8/import/<timestamp>/`, outside the repository and readable only by you. The console shows counts and identifiers, never titles or text. Add `--dry-run` to fetch and check everything without writing files.
+   This writes a snapshot to `~/.local/share/selfbound/import/<timestamp>/`, outside the repository and readable only by you. The console shows counts and identifiers, never titles or text. Add `--dry-run` to fetch and check everything without writing files.
 
 2. **Push** the snapshot into Selfbound, either into the local backend:
 
    ```sh
-   node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<timestamp>
+   node tooling/linear-import/index.ts push ~/.local/share/selfbound/import/<timestamp>
    ```
 
    or into production:
 
    ```sh
-   node tooling/linear-import/index.ts push ~/.local/share/xlr8/import/<timestamp> --prod
+   node tooling/linear-import/index.ts push ~/.local/share/selfbound/import/<timestamp> --prod
    ```
 
 3. **Confirm.** The script shows the target and the number of records per kind and asks you to type `import`. For production it always asks.

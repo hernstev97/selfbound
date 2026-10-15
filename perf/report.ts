@@ -215,12 +215,22 @@ export interface ReportOptions {
 /** Load-independent metrics: may go into the baseline from any run, including a quick run or CI. */
 const isSize = (metric: string) => metric.startsWith('bundle.') || metric.endsWith('.bytes') || metric.startsWith('memory.domNodes');
 
+/** No existsSync before the read: the file could change in between; a missing file is a normal case. */
+function readBaseline(): Baseline | null {
+  try {
+    return JSON.parse(readFileSync(BASELINE_FILE, 'utf8')) as Baseline;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+    throw error;
+  }
+}
+
 export function buildReport(dir: string, opts: ReportOptions = {}) {
   const samples = JSON.parse(readFileSync(join(dir, 'samples.json'), 'utf8')) as Sample[];
   const env = existsSync(join(dir, 'environment.json')) ? JSON.parse(readFileSync(join(dir, 'environment.json'), 'utf8')) : {};
   const mode: 'quick' | 'full' = opts.mode ?? env.mode ?? 'full';
   const runId = dir.split('/').filter(Boolean).pop()!;
-  const baselineDoc = existsSync(BASELINE_FILE) ? (JSON.parse(readFileSync(BASELINE_FILE, 'utf8')) as Baseline) : null;
+  const baselineDoc = readBaseline();
 
   const cells = new Map<string, Sample[]>();
   for (const s of samples) {

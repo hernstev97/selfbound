@@ -120,9 +120,9 @@ describe('Sign-in required', () => {
     expect(checked.length).toBeGreaterThan(50);
   });
 
-  test('without XLR8_OWNER_IDS nobody gets in, not even the owner', async () => {
+  test('without SELFBOUND_OWNER_IDS nobody gets in, not even the owner', async () => {
     const { owner } = setup();
-    process.env.XLR8_OWNER_IDS = '';
+    process.env.SELFBOUND_OWNER_IDS = '';
     await expectCode(owner.query(api.meta.counter, {}), 'access_denied');
   });
 

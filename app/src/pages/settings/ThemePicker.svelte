@@ -3,7 +3,7 @@
   // color swatches, below them a preview, contrast notes and custom colors.
   import { t } from '@selfbound/core/i18n';
   import { BUILTIN } from '../../lib/look/builtin.ts';
-  import { look } from '../../lib/look/index.ts';
+  import { look, SELFBOUND_THEME } from '../../lib/look/index.ts';
   import { varLabel, type MappedTheme } from '../../lib/look/map.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import { SWATCHES } from '../../themes/swatches.ts';
@@ -24,7 +24,7 @@
   const fixesSlice = fromSlice(look.fixes);
   const selected = $derived(settings[mode]);
   const options = $derived([
-    { ref: 'xlr8', name: 'Selfbound', author: t('Default'), swatch: SELFBOUND_SWATCH[mode] as string[] | null },
+    { ref: SELFBOUND_THEME, name: 'Selfbound', author: t('Default'), swatch: SELFBOUND_SWATCH[mode] as string[] | null },
     ...BUILTIN.filter((b) => b.type === mode).map((b) => ({ ref: b.id, name: b.name, author: b.author, swatch: SWATCHES[b.id] as string[] | null })),
     ...themesSlice.current.filter((c) => c.type === mode).map((c) => ({ ref: `custom:${c.id}`, name: c.name, author: t('Custom theme'), swatch: null as string[] | null, at: c.updatedAt })),
   ]);
@@ -64,7 +64,7 @@
         .catch(() => {});
     }
   });
-  const fixes = $derived(selected === 'xlr8' ? [] : fixesSlice.current[mode]);
+  const fixes = $derived(selected === SELFBOUND_THEME ? [] : fixesSlice.current[mode]);
   let colorsOpen = $state(false);
 </script>
 
@@ -95,7 +95,7 @@
   <div class="theme-detail">
     <ThemePreview {mode} vars={mapped?.vars ?? null} testid="theme-preview-{mode}" />
     <div class="theme-notes">
-      {#if selected === 'xlr8'}
+      {#if selected === SELFBOUND_THEME}
         <p class="theme-note">{t('The Selfbound colors. Pick a theme to adjust its colors.')}</p>
       {:else}
         {#if fixes.length}
@@ -109,7 +109,7 @@
       {/if}
     </div>
   </div>
-  {#if colorsOpen && selected !== 'xlr8' && mapped}
+  {#if colorsOpen && selected !== SELFBOUND_THEME && mapped}
     <ThemeColors ref={selected} {mapped} />
   {/if}
 </div>

@@ -40,9 +40,11 @@ export const revokedReasonValidator = v.union(
   v.literal('client'),
 );
 
-// 'steven' is OWNER_KIND (shared/constants.ts): the legacy stored value for the instance owner.
+// 'owner' is OWNER_KIND (shared/constants.ts). legacy-xlr8: 'steven' is the old stored value for the
+// owner; it stays valid until the data migration (legacyNames.ts) has run and a follow-up removes it.
 export const actorValidator = v.object({
-  kind: v.union(v.literal('steven'), v.literal('agent'), v.literal('github'), v.literal('import'), v.literal('system')),
+  // legacy-xlr8: 'steven' still accepted
+  kind: v.union(v.literal('owner'), v.literal('steven'), v.literal('agent'), v.literal('github'), v.literal('import'), v.literal('system')),
   agentId: v.optional(v.id('agents')),
 });
 
@@ -156,7 +158,7 @@ export const prItemFields = {
 export const prItemValidator = v.object(prItemFields);
 export const prReviewSummaryValidator = v.union(v.literal('approved'), v.literal('changes_requested'));
 
-/** Calendar day as a string "YYYY-MM-DD" (Europe/Berlin). */
+/** Calendar day as a string "YYYY-MM-DD" in the instance time zone (instanceSettings). */
 const day = v.string();
 
 export default defineSchema({
@@ -245,7 +247,7 @@ export default defineSchema({
     projectId: v.optional(v.id('projects')),
     estimate: v.optional(v.number()),
     dueDate: v.optional(day),
-    // Snoozed: hidden from the lists until this day (Europe/Berlin). The morning job clears it and
+    // Snoozed: hidden from the lists until this day (instance time zone). The morning job clears it and
     // puts the issue back into the inbox. Missing = not snoozed (no migration needed).
     snoozedUntil: v.optional(day),
     parentId: v.optional(v.id('issues')),
@@ -386,7 +388,8 @@ export default defineSchema({
     endDate: day,
     state: sprintStateValidator,
     capacity: v.optional(v.number()),
-    source: v.union(v.literal('xlr8'), v.literal('linear')),
+    // 'selfbound' for sprints made here, 'linear' for imported cycles. legacy-xlr8: 'xlr8' is the old value for the former.
+    source: v.union(v.literal('selfbound'), v.literal('xlr8'), v.literal('linear')),
     startedAt: v.optional(v.number()),
     closedAt: v.optional(v.number()),
     retro: v.optional(v.string()),
@@ -487,7 +490,7 @@ export default defineSchema({
 
   // Idempotency: the same request ID from one actor takes effect only once.
   requests: defineTable({
-    owner: v.string(), // actor kind ('steven' = OWNER_KIND, 'system' …) | agentId
+    owner: v.string(), // actor kind ('owner' (legacy-xlr8: 'steven' before the migration), 'system' …) | agentId
     requestId: v.string(),
     argsHash: v.string(),
     operation: v.string(),
@@ -717,7 +720,14 @@ export default defineSchema({
     at: v.number(),
   }).index('by_key', ['key']),
 
-  // Test switches (only effective with XLR8_TEST_SWITCHES=1), e.g. "server rejects writes".
+  // Instance settings (one row; missing = defaults). `timeZone` is an IANA name; it decides where a
+  // calendar day begins (ops/instance.ts). Missing = Europe/Berlin, as before the setting existed.
+  instanceSettings: defineTable({
+    timeZone: v.string(),
+    updatedAt: v.number(),
+  }),
+
+  // Test switches (only effective with SELFBOUND_TEST_SWITCHES=1), e.g. "server rejects writes".
   settings: defineTable({
     key: v.string(),
     value: v.any(),
@@ -741,7 +751,7 @@ export default defineSchema({
   // Notification settings (one row). If missing, the defaults from shared/notifyEvents.ts apply.
   pushSettings: defineTable({
     events: v.record(v.string(), v.boolean()), // only deviations from the default
-    morningHour: v.optional(v.number()), // Berlin hour of the morning notification
+    morningHour: v.optional(v.number()), // hour of the morning notification in the instance time zone
   }),
 
   // Events that lead to a notification (outbox). `key` is unique: the same event reported twice
@@ -788,7 +798,7 @@ export default defineSchema({
   // ---- Appearance (appearance.ts): themes and fonts, shared across all devices.
 
   // Chosen themes and fonts (one row). If missing, the default applies (Selfbound colors, Inter).
-  // Theme ID: "xlr8", a bundled theme ("catppuccin-mocha") or "custom:<id>".
+  // Theme ID: "selfbound" (legacy-xlr8: "xlr8" in data not yet migrated, means the same), a bundled theme ("catppuccin-mocha") or "custom:<id>".
   appearance: defineTable({
     dark: v.string(),
     light: v.string(),

@@ -20,22 +20,22 @@
 //           (e.g. Google Drive for a video). Shows the counts first, then asks for confirmation
 //           ("rewrite", always typed in production), then verifies.
 //
-// Working directory (default ~/.local/share/xlr8/linear-files/<prod|local>/, outside the
+// Working directory (default ~/.local/share/selfbound/linear-files/<prod|local>/, outside the
 // repository, directories 700, files 600). The console shows only counts and ids, no content.
 
 import { createHash } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { isAbsolute, join, relative, resolve, dirname } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 import { LIMITS } from '../../backend/convex/shared/constants.ts';
 import { DEFAULT_KEY_FILE, readApiKey } from './client.ts';
 import { loadInstance } from '../instance.mjs';
+import { dataDir } from '../lib/env.mjs';
 import { convex, parseRunOutput, targetOf } from './push.ts';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-export const FILES_ROOT = join(homedir(), '.local', 'share', 'xlr8', 'linear-files');
+export const FILES_ROOT = join(dataDir(), 'linear-files');
 export const REWRITE_WORD = 'rewrite';
 const TEXT_TABLES = ['issueBodies', 'comments', 'bodyRevisions', 'recurrences'] as const;
 const UPLOAD_HOST = 'uploads.linear.app';
@@ -189,11 +189,11 @@ export async function runDownload(o: FilesOptions = {}) {
     let response: Response | undefined;
     for (let attempt = 1; attempt <= 4; attempt++) {
       // Do not follow redirects automatically: the API key goes to uploads.linear.app only.
-      response = await doFetch(path, { method: 'GET', headers: { Authorization: key }, redirect: 'manual' });
+      response = await doFetch(url.href, { method: 'GET', headers: { Authorization: key }, redirect: 'manual' });
       if (response.status >= 300 && response.status < 400) {
         // Follow one redirect (e.g. to storage with a signed URL) once, without the key.
         const location = response.headers.get('location');
-        const target = location ? new URL(location, path) : null;
+        const target = location ? new URL(location, url) : null;
         if (!target || target.protocol !== 'https:') break;
         response = await doFetch(target.href, { method: 'GET', redirect: 'manual' });
       }
