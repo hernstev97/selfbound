@@ -5,11 +5,13 @@
   import { t } from '@selfbound/core/i18n';
   import { OWNER_KIND } from '@selfbound/core/types';
   import { app } from '../app-instance.ts';
+  import { fromSlice } from '../slice.svelte.ts';
   import type { ImageField } from '../lib/imageInput.ts';
   import { uploadNote } from '../lib/uploadNote.ts';
   import { loadEditor } from '../lib/richtext.ts';
   import { setCodeLang } from '../lib/codeLang.ts';
   import { toggleTask } from '../lib/tasks.ts';
+  import Avatar from './Avatar.svelte';
   import ImageButton from './ImageButton.svelte';
   import Markdown from './Markdown.svelte';
   import TextEditor from './TextEditor.svelte';
@@ -35,11 +37,10 @@
   /** An image still uploading (placeholder from upload.ts): send only once it is done. */
   const uploading = (text: string) => [...text.matchAll(/!\[([^\]\n]*)\]\(#upload-/g)].some((m) => !uploadNote(m[1]).failed);
 
-  /** Neutral person glyph for the owner (no name or initial is stored for them). */
-  const PERSON =
-    '<svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true"><circle cx="8" cy="5.5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 13.5c.4-2.4 2.2-4 4.5-4s4.1 1.6 4.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>';
-  const SOURCE_ICON: Record<ActivityItem['actor'], string> = {
-    [OWNER_KIND]: PERSON,
+  // The owner shows as <Avatar> (profile picture, initials, or a person glyph without a profile).
+  const metaSlice = fromSlice(app.store.meta);
+  const owner = $derived(metaSlice.current?.owner);
+  const SOURCE_ICON: Record<Exclude<ActivityItem['actor'], typeof OWNER_KIND>, string> = {
     agent: ICON.agent,
     github: ICON.github,
     import: ICON.import,
@@ -97,7 +98,11 @@
       {#if item.kind === 'event'}
         <div class="act-event" data-testid="activity-event" data-source={item.actor}>
           <span class={['act-avatar', item.actor]} title={item.actorName}>
-            <span class="icon">{@html SOURCE_ICON[item.actor]}</span>
+            {#if item.actor === OWNER_KIND}
+              <Avatar name={owner?.name} url={owner?.avatarUrl} size={18} />
+            {:else}
+              <span class="icon">{@html SOURCE_ICON[item.actor]}</span>
+            {/if}
           </span>
           <span><span class="who">{item.actorName}</span> {item.text}</span>
           <span class="when" title={item.full}>· {item.ago}</span>
@@ -110,7 +115,11 @@
         <div class={['comment', item.pending && 'pending']} data-testid="comment" data-source={item.actor} data-id={item.id}>
           <div class="comment-head">
             <span class={['act-avatar', item.actor]} style="box-shadow: none">
-              <span class="icon">{@html SOURCE_ICON[item.actor]}</span>
+              {#if item.actor === OWNER_KIND}
+                <Avatar name={owner?.name} url={owner?.avatarUrl} size={18} />
+              {:else}
+                <span class="icon">{@html SOURCE_ICON[item.actor]}</span>
+              {/if}
             </span>
             <span class="who">{item.actorName}</span>
             <span title={item.full}>{item.ago}{item.edited ? ` · ${t('edited')}` : ''}</span>

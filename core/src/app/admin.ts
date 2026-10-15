@@ -4,7 +4,7 @@
 // (teams, projects, labels) changes optimistically in `meta.get`.
 import type { OptimisticLocalStore } from 'convex/browser';
 import { api } from '@selfbound/backend/api';
-import { LIMITS } from '@selfbound/backend/constants';
+import { imageTokens, LIMITS } from '@selfbound/backend/constants';
 import type { Id } from '@selfbound/backend/dataModel';
 import type { LabelDoc, LabelGroupDoc, Meta, ProjectDoc, StateDoc, StateId, TeamDoc, TeamId } from '../types.ts';
 import type { StateType } from '@selfbound/backend/shared/workflow';
@@ -150,6 +150,40 @@ export class Admin {
     } catch (error) {
       return errorMessage(error);
     }
+  }
+
+  // ---------------------------------------------------------------- Profile
+
+  /** Display name of the owner; empty or null clears it (the UI then says "You"). */
+  setProfileName(name: string | null) {
+    const clean = name?.replace(/\s+/g, ' ').trim() || null;
+    return this.#run(t('Name not saved'), () => this.store.call(api.profile.setName, { name: clean }, this.#meta((m) => ({ ...m, owner: { name: clean, avatarUrl: m.owner?.avatarUrl ?? null } }))));
+  }
+
+  /**
+   * Uploads the cropped profile picture: upload URL, POST, files.register (type and size are
+   * checked there), then profile.setAvatar. Returns null on success, else the reason.
+   */
+  async uploadAvatar(picture: Blob): Promise<string | null> {
+    if (picture.size === 0) return t('The file is empty.');
+    if (picture.size > LIMITS.avatarMaxBytes) return t('The picture is too large (at most {size} KB).', { size: LIMITS.avatarMaxBytes / 1024 });
+    try {
+      const url = await this.store.call(api.files.generateUploadUrl, {});
+      const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': picture.type }, body: picture });
+      if (!response.ok) return t('Upload failed ({status}).', { status: response.status });
+      const { storageId } = (await response.json()) as { storageId: Id<'_storage'> };
+      const registered = await this.store.act(api.files.register, { storageId });
+      const [token] = imageTokens(registered.url);
+      if (!token) return t('Upload failed ({status}).', { status: 500 });
+      await this.store.call(api.profile.setAvatar, { token });
+      return null;
+    } catch (error) {
+      return errorMessage(error);
+    }
+  }
+
+  removeAvatar() {
+    return this.#run(t('Picture not removed'), () => this.store.call(api.profile.removeAvatar, {}, this.#meta((m) => ({ ...m, owner: { name: m.owner?.name ?? null, avatarUrl: null } }))));
   }
 
   removeLogo(teamId: TeamId, variant: LogoVariant) {

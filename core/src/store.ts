@@ -157,6 +157,7 @@ export class IssueStore {
   readonly version = new Slice(0);
   /** Kind of entries in the active sprint: planned / added later */
   readonly sprintKinds = new Slice<ReadonlyMap<IssueId, SprintItemKind>>(new Map());
+  /** Names for the activity feed by actor: agent ID → name, and OWNER_KIND → the owner's display name (once set) */
   readonly agents = new Slice<ReadonlyMap<string, string>>(new Map());
   readonly maxSeq = new Slice(-1);
 
@@ -197,6 +198,8 @@ export class IssueStore {
   #hooks: DebugHooks | null;
   #sprintSub: { sprintId: string; unsub: () => void } | null = null;
   #agentsSub: (() => void) | null = null;
+  #agentNames: ReadonlyMap<string, string> = new Map();
+  #ownerName: string | null = null;
 
   /** Pending issues (tmp ID → issue) */
   readonly #pending = new Map<IssueId, Issue>();
@@ -393,6 +396,10 @@ export class IssueStore {
       this.#scheduleFlush();
     }
     this.meta.set(meta);
+    if ((meta.owner?.name ?? null) !== this.#ownerName) {
+      this.#ownerName = meta.owner?.name ?? null;
+      this.#publishNames();
+    }
     if (fromServer) {
       this.#mirror.setMeta(meta);
       this.#watchSprint(meta);
@@ -498,8 +505,13 @@ export class IssueStore {
   watchAgents() {
     if (this.#agentsSub) return;
     this.#agentsSub = this.client.onUpdate(api.agents.list, {}, (list) => {
-      this.agents.set(new Map((list as AgentInfo[] | undefined)?.map((a) => [a._id, a.name]) ?? []));
+      this.#agentNames = new Map((list as AgentInfo[] | undefined)?.map((a) => [a._id, a.name]) ?? []);
+      this.#publishNames();
     });
+  }
+
+  #publishNames() {
+    this.agents.set(this.#ownerName ? new Map([...this.#agentNames, [OWNER_KIND, this.#ownerName]]) : this.#agentNames);
   }
 
   #enrich(doc: IssueDoc, pending = false): Issue {
