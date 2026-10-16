@@ -132,7 +132,7 @@ export const ACTIONS: Action[] = [
       a.detail.openSplit();
     },
   },
-  { id: 'issue.peek', label: msg('Preview (peek)'), section: 'Issue', keys: ['space'], icon: 'eye', context: [3, 2], when: listFocus, run: (a) => a.detail.togglePeek() },
+  { id: 'issue.peek', label: msg('Preview (peek)'), section: 'Issue', keys: ['space'], icon: 'eye', context: [3, 2], when: (a) => listFocus(a) && !a.splitLayout(), run: (a) => a.detail.togglePeek() },
   { id: 'issue.status', label: msg('Change status …'), section: 'Issue', keys: ['s'], icon: 'active', top: true, keywords: 'status state', picker: 'status', context: [1, 1], when: notDeleted, run: picker('status') },
   { id: 'issue.priority', label: msg('Set priority …'), section: 'Issue', keys: ['p'], icon: 'gauge', top: true, keywords: 'priority prio priorität', picker: 'priority', context: [1, 2], when: notDeleted, run: picker('priority') },
   { id: 'issue.labels', label: msg('Labels …'), section: 'Issue', keys: ['l'], icon: 'label', top: true, keywords: 'label tag', picker: 'labels', context: [1, 3], when: notDeleted, run: picker('labels') },

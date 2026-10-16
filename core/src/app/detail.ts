@@ -192,6 +192,8 @@ export class DetailController {
   /** Split view: show the focused issue on the right (click, J/K, space; ⇧ space in other lists). */
   openSplit() {
     if (!this.app.splitCapable() || !this.app.list.focusId()) return;
+    // Otherwise an issue arriving at the top would take over the right side (and be read).
+    this.app.list.pinFocus();
     if (!this.split.get()) {
       this.#splitInbox = this.#inInbox();
       this.peekOpen.set(false);

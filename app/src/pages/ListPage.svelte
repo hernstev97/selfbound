@@ -81,7 +81,7 @@
   <span class="bar-count" data-testid="view-count-text"><span data-testid="view-count">{h.count}</span> {h.count === 1 ? t('issue') : t('issues')}</span>
   <span class="bar-spacer"></span>
   {#if shellSlice.current.canSplit && h.kind !== 'inbox'}
-    <button class={['icon-btn', split && 'on']} title={tip(split ? t('Close split view') : t('Open in split view'), 'view.split')} aria-label={t('Split view')} aria-pressed={split} data-testid="split-toggle" onclick={() => app.detail.toggleSplit()}>
+    <button class={['icon-btn', split && 'on']} title={tip(split ? t('Close split view') : t('Open in split view'), 'view.split')} aria-label={t('Split view')} aria-pressed={split} disabled={!split && h.count === 0} data-testid="split-toggle" onclick={() => app.detail.toggleSplit()}>
       <span class="icon">{@html ICON.split}</span>
     </button>
   {/if}

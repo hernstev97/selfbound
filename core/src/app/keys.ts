@@ -93,7 +93,7 @@ export class KeyController {
     }
 
     // Enter/space on a focused button or link: its own effect (keyboard operation).
-    if ((combo === 'enter' || combo === 'space') && e.target instanceof HTMLElement && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') && !e.target.closest('[data-testid="list"]')) return;
+    if ((combo === 'enter' || combo === 'space' || combo === 'shift+space') && e.target instanceof HTMLElement && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') && !e.target.closest('[data-testid="list"]')) return;
 
     if (combo === 'escape') {
       return consume(e, () => {
@@ -117,6 +117,9 @@ export class KeyController {
       }
       return;
     }
+
+    // Holding ⇧ space would open and close the split view over and over.
+    if (combo === 'shift+space' && e.repeat) return e.preventDefault();
 
     // Two-key sequences like "g i"
     const now = performance.now();

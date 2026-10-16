@@ -515,6 +515,24 @@ describe('split view in other lists', () => {
     expect(app.detail.split.get()).toBe(false);
   });
 
+  test('an issue arriving at the top does not take over the right side (nor gets read)', async () => {
+    const { client, app } = await setup([doc(0, { createdAt: 10 }), doc(1, { createdAt: 20 }), doc(2, { createdAt: 30 })]);
+    app.wide.set(true);
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none', order: 'created' });
+    const first = app.list.focusId();
+    actionById('view.split')!.run(app);
+    expect(app.detail.state.get()?.id).toBe(first);
+    client.push('meta:counter', {}, { maxSeq: 3 });
+    client.push('issues:bucket', { bucket: 0 }, [doc(0, { createdAt: 10 }), doc(1, { createdAt: 20 }), doc(2, { createdAt: 30 }), doc(3, { createdAt: 40, reviewedAt: undefined })]);
+    client.push('inbox:list', {}, [entry('i3')]);
+    await flush();
+    expect(app.list.order()[0]).toBe('i3');
+    expect(app.list.focusId()).toBe(first);
+    expect(app.detail.state.get()?.id).toBe(first);
+    await new Promise((r) => setTimeout(r, 320));
+    expect(calls(client, 'issues:markRead').flatMap((c) => c.ids as string[])).not.toContain('i3');
+  });
+
   test('the context menu opens its issue in the split view', async () => {
     const { app } = await list();
     app.menu.open('i2' as IssueId, 0, 0);
