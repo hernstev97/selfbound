@@ -114,9 +114,17 @@ export class Admin {
   updateTeam(teamId: TeamId, patch: { key?: string; name?: string; hue?: number; dormant?: boolean; wiki?: 'on' | 'only' | null }) {
     const now = Date.now();
     const local = { ...patch, ...(patch.wiki === null ? { wiki: undefined } : {}) };
+    // A team with issues keeps its old key (like the server), so old identifiers resolve right away.
+    const keepsKey = patch.key !== undefined && this.store.all().some((i) => i.teamId === teamId);
+    const renamed = (team: TeamDoc): Partial<TeamDoc> => {
+      if (patch.key === undefined || patch.key === team.key) return {};
+      const previousKeys = (team.previousKeys ?? []).filter((k) => k !== patch.key);
+      if (keepsKey) previousKeys.push(team.key);
+      return { previousKeys: previousKeys.length ? previousKeys : undefined };
+    };
     return this.#run(
       t('Team not updated'),
-      () => this.store.call(api.teams.update, { teamId, ...patch }, this.#meta((m) => ({ ...m, teams: m.teams.map((t) => (t._id === teamId ? ({ ...t, ...local, updatedAt: now } as TeamDoc) : t)) }))),
+      () => this.store.call(api.teams.update, { teamId, ...patch }, this.#meta((m) => ({ ...m, teams: m.teams.map((t) => (t._id === teamId ? ({ ...t, ...local, ...renamed(t), updatedAt: now } as TeamDoc) : t)) }))),
     );
   }
 

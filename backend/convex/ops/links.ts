@@ -1,6 +1,6 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
-import { aliasKey } from '../lib/identifiers';
+import { aliasKey, keysOf, teamsByKey } from '../lib/identifiers';
 import { articleIdsIn, issueRefsIn } from '../shared/links';
 
 // Links between knowledge pages and issues, for "Mentioned in" on the page and the knowledge
@@ -20,22 +20,25 @@ export type LinkSource =
 type Target = { toArticleId: Id<'articles'> } | { toIssueId: Id<'issues'> };
 const keyOf = (t: { toArticleId?: string; toIssueId?: string }) => (t.toArticleId ? `a:${t.toArticleId}` : `i:${t.toIssueId}`);
 
-async function issueByRef(ctx: QueryCtx, ref: string, teams: Map<string, Id<'teams'>>) {
+async function issueByRef(ctx: QueryCtx, ref: string, teams: Map<string, Doc<'teams'>>) {
   const [key, n] = ref.split('-');
-  const teamId = teams.get(key!);
+  const team = teams.get(key!);
   const number = Number(n);
-  if (teamId) {
+  if (team) {
     const issue = await ctx.db
       .query('issues')
-      .withIndex('by_team_number', (q) => q.eq('teamId', teamId).eq('number', number))
+      .withIndex('by_team_number', (q) => q.eq('teamId', team._id).eq('number', number))
       .unique();
     if (issue) return issue;
   }
-  const alias = await ctx.db
-    .query('identifierAliases')
-    .withIndex('by_key', (q) => q.eq('key', aliasKey(key!, number)))
-    .first();
-  return alias ? await ctx.db.get('issues', alias.issueId) : null;
+  for (const k of new Set([key!, ...(team ? keysOf(team) : [])])) {
+    const alias = await ctx.db
+      .query('identifierAliases')
+      .withIndex('by_key', (q) => q.eq('key', aliasKey(k, number)))
+      .first();
+    if (alias) return await ctx.db.get('issues', alias.issueId);
+  }
+  return null;
 }
 
 async function targetsOf(ctx: QueryCtx, source: LinkSource, text: string): Promise<Target[]> {
@@ -46,7 +49,8 @@ async function targetsOf(ctx: QueryCtx, source: LinkSource, text: string): Promi
     if (await ctx.db.get('articles', id)) out.push({ toArticleId: id });
   }
   if (source.kind !== 'article') return out;
-  const teams = new Map((await ctx.db.query('teams').take(500)).map((t) => [t.key, t._id]));
+  // Keys from before a rename count too: a page written earlier says "OLD-12".
+  const teams = teamsByKey(await ctx.db.query('teams').take(500));
   const seen = new Set<Id<'issues'>>();
   for (const ref of issueRefsIn(text, new Set(teams.keys()))) {
     const issue = await issueByRef(ctx, ref, teams);

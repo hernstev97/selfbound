@@ -155,6 +155,26 @@ describe('GitHub webhook', () => {
     expect((await getIssue(t, a.id)).status).toBe('backlog');
   });
 
+  test('after a team key rename, branches and texts with the old key still link and close', async () => {
+    const { t, owner } = init();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb, { status: 'in_progress' }); // ORB-1, later OBT-1
+    const b = await createOne(owner, f.orb, { status: 'todo' }); // ORB-2, later OBT-2
+    await owner.mutation(api.teams.update, { teamId: f.orb, key: 'OBT' });
+    const opened = pr('opened', { branch: 'feat/orb-1-search-field', body: 'Fixes OBT-2, see also ORB-2.' });
+    const first = await deliver(t, 'pull_request', opened, 'd-rename-open');
+    // One link per issue, even if a PR names it under the old and the new key.
+    expect(first.body.linked.sort()).toEqual(['OBT-2', 'ORB-1']);
+    const links = await t.run(async (ctx) => await ctx.db.query('issuePullRequests').collect());
+    expect(links).toHaveLength(2);
+    expect(links.find((l) => l.issueId === a.id)).toMatchObject({ via: 'branch', closes: true });
+    expect(links.find((l) => l.issueId === b.id)).toMatchObject({ closes: true });
+    const merged = await deliver(t, 'pull_request', pr('closed', { branch: 'feat/orb-1-search-field', merged: true, updatedAt: '2026-10-08T12:00:00Z' }), 'd-rename-merge');
+    expect(merged.body.closed.length).toBe(2);
+    expect((await getIssue(t, a.id)).status).toBe('done');
+    expect((await getIssue(t, b.id)).status).toBe('done');
+  });
+
   test('the cron removes deliveries older than 30 days', async () => {
     const { t, owner } = init();
     await fixture(owner);

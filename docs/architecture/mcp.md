@@ -58,7 +58,7 @@ Responses are lean: identifier, title, status (name within the team) and `status
 | `move_issues` | write | Move 1–50 issues to another team (one transaction) | `identifiers[]` (old identifiers work too), `team`, `requestId?` |
 | `add_comment` | write | Comment (Markdown) | `requestId`, `identifier`, `body` |
 | `get_current_sprint` | read | Active sprint (otherwise the next planned one): goal, date range, points done/total, planned and added later | – |
-| `list_teams` | read | Teams with key, name, dormant flag | `includeDormant?` (default true) |
+| `list_teams` | read | Teams with key, name, dormant flag, `wiki`; a renamed team also `previousKeys` | `includeDormant?` (default true) |
 | `list_projects` | read | Projects with team and state | `team?`, `includeClosed?` |
 | `list_labels` | read | Labels with group (single choice?) and scope (workspace/team) | `team?` |
 | `search_articles` | read | Full text over title and full text of knowledge pages; hits with the path of parent pages and a snippet | `q`, `team?`, `limit?` ≤ 50 |
@@ -95,6 +95,8 @@ A separate tool instead of a `team` field in `update_issue`: the move affects se
 - **All or nothing:** An unknown identifier (`not_found`, names all missing ones), an issue in the trash (`invalid`) or an urgent/high issue that would go over a hard [priority limit](#priority-limits) of the target team (`priority_limit`) fails the whole call; nothing is moved. Duplicate identifiers (including old and new identifier of the same issue) count once. The target team's strict order does not apply (same as in the UI).
 - **Result:** `team`; per moved issue `previousIdentifier`, `identifier`, `status` and `previousStatus` (names in the respective team) and `removed: { project, labels }` (name of the dropped project or `null`, names of the dropped team labels); `unchanged` (identifiers already in the target team); `note` (the rules in one sentence); `warnings` (`dormant_team` if the target team is dormant). History: one `teamId` entry (shown in `get_issue` → `recentHistory` as old and new identifier), plus `projectId`, `stateId`, `labelIds` where applicable, with the agent as actor and the `requestId`.
 - **Idempotency:** Like `set_status`: `requestId` is optional; with it, a retry returns the stored result (raw arguments, even if the identifiers have changed since). Without `requestId` a retry is harmless: the issues are already in the target team and are listed under `unchanged` with their new identifier. Old identifiers keep resolving in all tools (`get_issue` lists them under `previousIdentifiers`).
+
+**Renamed team key** (XLR8-72): identifiers and `team` arguments with a key the team had before a rename work in every tool (`resolveIssue`, `Lookup.teamByKey`). `get_issue` adds `<old key>-<number>` for each of the team's `previousKeys` to `previousIdentifiers`; `list_teams` shows `previousKeys`. Output always uses the current key.
 - Rate limit and permissions as for the other write tools.
 
 ### `list_issues` filters

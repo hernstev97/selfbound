@@ -847,3 +847,25 @@ describe('desired model (XLR8-93)', () => {
     expect(search.value.issues.map((i: Json) => i.title).sort()).toEqual(['Sync child', 'Sync engine']);
   });
 });
+
+describe('MCP after a team key rename (XLR8-72)', () => {
+  test('old identifiers and the old team key keep working; list_teams and get_issue name the old ones', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb, { title: 'Before the rename' });
+    await owner.mutation(api.teams.update, { teamId: f.orb, key: 'OBT' });
+    const mcp = client(t, (await agent(owner)).key);
+
+    const got = await mcp.call('get_issue', { identifier: 'orb-1' });
+    expect(got.value).toMatchObject({ id: a.id, identifier: 'OBT-1', team: 'OBT', previousIdentifiers: ['ORB-1'] });
+    expect((await mcp.call('set_status', { identifiers: ['ORB-1'], status: 'todo' })).ok).toBe(true);
+    expect((await getIssue(t, a.id)).status).toBe('todo');
+
+    // An agent that still knows the old team key creates in the renamed team.
+    const created = await mcp.call('create_issues', { requestId: 'req-rename-0001', issues: [{ team: 'ORB', title: 'Via old key', parent: 'ORB-1' }] });
+    expect(created.value.created[0]).toMatchObject({ identifier: 'OBT-2', parent: 'OBT-1' });
+    const teams = (await mcp.call('list_teams')).value.teams as Json[];
+    expect(teams.find((x) => x.key === 'OBT')).toMatchObject({ previousKeys: ['ORB'] });
+    expect(teams.find((x) => x.key === 'NOVA')).not.toHaveProperty('previousKeys');
+  });
+});

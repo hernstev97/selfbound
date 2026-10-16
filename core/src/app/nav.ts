@@ -1,7 +1,7 @@
 // Navigation: current page, browser history and URL. The list holds filters and display; the
 // navigator writes them into the URL.
 import { Slice } from '../observable.ts';
-import { labelIdsFrom, pagePath, readLocation, samePage, writeLocation, type Location, type Page } from '../route.ts';
+import { labelIdsFrom, pagePath, readLocation, samePage, withCurrentTeamKeys, writeLocation, type Location, type Page } from '../route.ts';
 import type { Filters, Grouping, Ordering, ViewRoute } from '../types.ts';
 import { VIEWS } from '../views.ts';
 import type { App } from './index.ts';
@@ -62,10 +62,14 @@ export class Navigator {
       this.#apply(readLocation(new URL(this.win!.location.href)), true);
     };
     this.win.addEventListener('popstate', onPop);
+    const stopRenames = this.#followRenames();
     // Reloaded on an overlay entry: the overlay is closed, so leave the entry.
     if (isOverlayState(this.win.history.state)) this.#leaveOverlayEntry();
     this.#apply(readLocation(new URL(this.win.location.href)), false);
-    return () => this.win?.removeEventListener('popstate', onPop);
+    return () => {
+      this.win?.removeEventListener('popstate', onPop);
+      stopRenames();
+    };
   }
 
   #apply(loc: Location, fromHistory: boolean) {
@@ -81,7 +85,44 @@ export class Navigator {
     }
     if (fromHistory) this.#depth = Math.max(0, this.#depth - 1);
     this.#show(page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, sub: loc.sub, order: loc.order, layout: loc.layout });
-    if (!fromHistory) this.syncUrl('replace');
+    // Also from history if #show replaced an old team key: the address shows the current one.
+    if (!fromHistory || !samePage(this.page.get(), page)) this.syncUrl('replace');
+  }
+
+  /**
+   * The current key for team keys from before a rename (old bookmarks, saved views, links). An issue
+   * the store has gets its current identifier here, before any history entry is written.
+   */
+  #currentKeys(page: Page, opts: GoOptions): [Page, GoOptions] {
+    const store = this.app.store;
+    if (page.name === 'issue') {
+      const issue = store.byKey(page.key);
+      return [issue && issue.key !== page.key ? { name: 'issue', key: issue.key } : page, opts];
+    }
+    if (store.renamedKeys().size === 0) return [page, opts];
+    const current = (key: string) => store.currentTeamKey(key);
+    const next = withCurrentTeamKeys(page, current);
+    const team = opts.filters?.team;
+    if (next.name !== 'view' || !team?.some((k) => current(k) !== k)) return [next, opts];
+    return [next, { ...opts, filters: { ...opts.filters!, team: [...new Set(team.map(current))] } }];
+  }
+
+  /** A rename arriving later (meta from the server, another device): move to the current key. */
+  #followRenames() {
+    return this.app.store.meta.subscribe(() => {
+      const page = this.page.get();
+      // Filters and display belong to lists only; other pages keep the list's state as it is.
+      if (page.name !== 'view') {
+        const [target] = this.#currentKeys(page, {});
+        if (target !== page) this.go(target, { replace: true });
+        return;
+      }
+      const { filters, quick, display } = this.app.main.view.get();
+      const [target, opts] = this.#currentKeys(page, { filters, quick });
+      if (target === page && opts.filters === filters) return;
+      const layout = display.layout === 'board' ? 'board' : null;
+      this.go(target, { ...opts, replace: true, group: display.grouping, sub: display.subGrouping ?? null, order: display.ordering, layout });
+    });
   }
 
   /**
@@ -117,6 +158,7 @@ export class Navigator {
   }
 
   #show(page: Page, opts: GoOptions = {}) {
+    [page, opts] = this.#currentKeys(page, opts);
     this.app.closeOverlays();
     if (page.name === 'view') {
       this.app.main.setRoute(page.view, opts);
@@ -134,6 +176,7 @@ export class Navigator {
 
   /** Go to a page (new history entry, unless `replace`). */
   go(page: Page, opts: GoOptions = {}) {
+    [page, opts] = this.#currentKeys(page, opts);
     const current = this.page.get();
     const changed = !samePage(current, page);
     this.#show(page, opts);

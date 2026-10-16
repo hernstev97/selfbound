@@ -65,7 +65,7 @@ A fixed stretch of time with a set of issues you plan to finish. Selfbound runs 
 
 ## Team key
 
-The 2 to 6 capital letters and digits that start every [identifier](#identifier) of a team, such as `ACME`. It can only be changed while the team has no issues, so identifiers stay stable.
+The 2 to 6 capital letters and digits that start every [identifier](#identifier) of a team, such as `ACME`. You can rename it: identifiers with the old key keep working, and the old key stays reserved for the team.
 
 ## Triage
 

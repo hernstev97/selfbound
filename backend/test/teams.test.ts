@@ -26,7 +26,7 @@ async function storageExists(t: T, id: Id<'_storage'>) {
 }
 
 describe('Teams, projects, labels', () => {
-  test('key follows TEAM_KEY_RE, is unique, and is fixed once issues exist', async () => {
+  test('key follows TEAM_KEY_RE and is unique; without issues a rename frees the old key', async () => {
     const { t, owner } = setup();
     await expectCode(owner.mutation(api.teams.create, { key: 'A', name: 'Too short' }), 'invalid');
     await expectCode(owner.mutation(api.teams.create, { key: 'ABCDEFG', name: 'Too long' }), 'invalid');
@@ -36,10 +36,12 @@ describe('Teams, projects, labels', () => {
     await expectCode(owner.mutation(api.teams.create, { key: 'KIU2', name: 'Duplicate' }), 'invalid');
     await owner.mutation(api.teams.update, { teamId, key: 'KIU', dormant: true, name: 'Acme Corp' });
     await createOne(owner, teamId);
-    await expectCode(owner.mutation(api.teams.update, { teamId, key: 'NEW' }), 'invalid');
     await owner.mutation(api.teams.update, { teamId, key: 'KIU', name: 'Acme Corp 2' });
     const team = await t.run(async (ctx) => await ctx.db.get('teams', teamId));
     expect(team).toMatchObject({ key: 'KIU', name: 'Acme Corp 2', dormant: true });
+    expect(team?.previousKeys).toBeUndefined();
+    await owner.mutation(api.teams.create, { key: 'KIU2', name: 'Takes the free key' });
+    // Renaming a team with issues: see teamRename.test.ts.
   });
 
   test('new team: the backend rejects an existing key, also in other spellings and on concurrent creation', async () => {

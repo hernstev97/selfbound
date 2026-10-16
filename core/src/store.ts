@@ -97,6 +97,14 @@ declare global {
   var __selfbound: DebugHooks | undefined;
 }
 
+/** Old key → current key of every renamed team. A key some team holds now is never mapped. */
+export function renamedKeys(teams: readonly { key: string; previousKeys?: string[] }[]): ReadonlyMap<string, string> {
+  const map = new Map<string, string>();
+  for (const team of teams) for (const old of team.previousKeys ?? []) map.set(old, team.key);
+  for (const team of teams) map.delete(team.key);
+  return map;
+}
+
 function omitRead({ readAt: _, ...entry }: InboxEntry): InboxEntry {
   return entry;
 }
@@ -179,6 +187,8 @@ export class IssueStore {
   /** Sub-issues per parent (confirmed issues only; childrenOf adds pending ones) */
   #children = new Map<IssueId, Set<IssueId>>();
   #byKey = new Map<string, IssueId>();
+  /** Team keys from before a rename (upper case) → the current key */
+  #renamedKeys: ReadonlyMap<string, string> = new Map();
   #bucketIds = new Map<number, Set<IssueId>>();
   #bucketSubs = new Map<number, () => void>();
   #liveBuckets = new Set<number>();
@@ -291,10 +301,25 @@ export class IssueStore {
     return issue ? haystackOf(issue) : undefined;
   }
 
-  /** Issue by ID ("KIU-106", case-insensitive). */
+  /** Issue by ID ("KIU-106", case-insensitive), also with a key the team had before a rename. */
   byKey(key: string): Issue | undefined {
-    const id = this.#byKey.get(key.toLowerCase());
+    let id = this.#byKey.get(key.toLowerCase());
+    if (!id && this.#renamedKeys.size) {
+      const m = /^([A-Za-z][A-Za-z0-9]{1,5})-(\d{1,6})$/.exec(key.trim());
+      const current = m && this.#renamedKeys.get(m[1]!.toUpperCase());
+      if (current) id = this.#byKey.get(`${current}-${Number(m[2])}`.toLowerCase());
+    }
     return id ? this.issues.get(id) : undefined;
+  }
+
+  /** Team keys from before a rename → current key (for old links, bookmarks and saved views). */
+  renamedKeys(): ReadonlyMap<string, string> {
+    return this.#renamedKeys;
+  }
+
+  /** The current key for a key from before a rename; any other key unchanged. */
+  currentTeamKey(key: string): string {
+    return this.#renamedKeys.get(key.toUpperCase()) ?? key;
   }
 
   team(teamId: string): TeamDoc | undefined {
@@ -386,6 +411,7 @@ export class IssueStore {
     if (fromServer) this.#metaFromServer = true;
     const teamsChanged = meta.teams.length !== this.#teams.size || meta.teams.some((t) => this.#teams.get(t._id)?.key !== t.key);
     this.#teams = new Map(meta.teams.map((t) => [t._id, t]));
+    this.#renamedKeys = renamedKeys(meta.teams);
     if (teamsChanged) {
       // IDs depend on the team key: re-derive all issues.
       this.#byKey.clear();

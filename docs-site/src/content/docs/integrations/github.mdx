@@ -26,7 +26,7 @@ Details that matter in practice:
 - **Closing keywords** work as on GitHub: `close`, `closes`, `closed`, `fix`, `fixes`, `fixed`, `resolve`, `resolves`, `resolved`, in any capitalization and optionally followed by a colon (`Closes: ACME-42`). One keyword can close a list: `Fixes ACME-1, ACME-2 and ACME-3`.
 - **Case does not matter.** `acme-42` and `ACME-42` are the same issue. Only keys of teams that exist in Selfbound count, so `UTF-8` in a description links nothing unless you have a team `UTF`.
 - **Code is ignored.** Identifiers inside inline code, code blocks and HTML comments (for example placeholders from a pull request template) do not count.
-- **Old identifiers work.** If an issue moved to another team and got a new identifier, the old one still links to it.
+- **Old identifiers work.** If an issue moved to another team and got a new identifier, the old one still links to it. The same goes for identifiers with a team's old key after you [renamed the key](/concepts/teams/#rename-the-key), so existing branches keep closing their issues.
 - **Links are never removed.** Removing the identifier from the pull request later leaves the link in place. A link that once closes keeps closing.
 
 A pull request appears in Selfbound once it is opened, edited, reopened, closed or switched between draft and ready after the webhook is installed. New commits or comments alone do not add it. For a pull request opened before that, editing its title or description is enough.

@@ -56,6 +56,8 @@
     if (!normalized || busy) return null;
     if (!KEY_RE.test(normalized)) return t('The key needs 2 to 6 characters: capital letters and digits, starting with a letter.');
     if (teams.some((team) => team.key === normalized)) return t('The key {key} is already taken.', { key: normalized });
+    const former = teams.find((team) => team.previousKeys?.includes(normalized));
+    if (former) return t('{key} was the key of {team}: old identifiers like {example} still lead there.', { key: normalized, team: former.name, example: `${normalized}-12` });
     return null;
   });
   const ready = $derived(name.trim() !== '' && normalized !== '' && !keyError && !busy);

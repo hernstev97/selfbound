@@ -243,6 +243,26 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
   return url;
 }
 
+/**
+ * The page with each team key passed through `current` (maps a key from before a rename to the
+ * current one). Returns the same object if nothing changes.
+ */
+export function withCurrentTeamKeys(page: Page, current: (key: string) => string): Page {
+  if (page.name === 'view' && page.view.team) {
+    const team = current(page.view.team);
+    return team === page.view.team ? page : { ...page, view: { ...page.view, team } };
+  }
+  if (page.name === 'projects' || page.name === 'wiki') {
+    const team = current(page.team);
+    return team === page.team ? page : { ...page, team };
+  }
+  if (page.name === 'settings' && page.section === 'teams' && page.sub) {
+    const sub = current(page.sub);
+    return sub === page.sub ? page : { ...page, sub };
+  }
+  return page;
+}
+
 export function samePage(a: Page, b: Page) {
   return pagePath(a) === pagePath(b);
 }

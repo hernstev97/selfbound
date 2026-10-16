@@ -159,8 +159,9 @@ function boot() {
     loadLater();
   }
 
-  // Identifiers like "ACME-106" in text become links, but only with the keys of real teams.
-  app.store.meta.subscribe(() => setLinkKeys(app.store.meta.get()?.teams.map((team) => team.key) ?? []));
+  // Identifiers like "ACME-106" in text become links, but only with the keys of real teams (and
+  // the keys they had before a rename: older texts still say "OLD-12").
+  app.store.meta.subscribe(() => setLinkKeys(app.store.meta.get()?.teams.flatMap((team) => [team.key, ...(team.previousKeys ?? [])]) ?? []));
 
   // Preloaded details (focus on a row): render the description while idle, so space and Enter show it
   // without marked/DOMPurify (the result sits in markdown.ts's cache).

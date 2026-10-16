@@ -71,7 +71,7 @@ Details: [Notifications](/using/notifications/).
 
 All teams in sidebar order, with a button to move each one up or down, and **New team** to add one. Each team has its own page, listed at the bottom of the settings navigation:
 
-- **General**: name, key, color, **Dormant**, **Knowledge** (Off, Alongside issues, or Knowledge only) and the **Default model** for the team's issues (see [Model](/concepts/issues/#model)). The key can only change while the team has no issues, so identifiers stay stable.
+- **General**: name, key, color, **Dormant**, **Knowledge** (Off, Alongside issues, or Knowledge only) and the **Default model** for the team's issues (see [Model](/concepts/issues/#model)). Renaming the key of a team with issues asks first; old identifiers keep working (see [Rename the key](/concepts/teams/#rename-the-key)).
 - **Workflow**: the team's statuses, grouped by type, the default status for new issues, and **Fixed order** if issues should move through the statuses in order.
 - **Logo**: a logo for light and, optionally, one for dark backgrounds.
 

@@ -127,3 +127,64 @@ export type FakeClient = ReturnType<typeof fakeClient>;
 export function callName(call: unknown[]) {
   return getFunctionName(call[0] as never);
 }
+
+/** History like in the browser: back/go arrive later as popstate, pushState cuts the forward entries. */
+export function fakeWindow(start: string) {
+  const entries: { url: string; state: unknown }[] = [{ url: start, state: null }];
+  let index = 0;
+  const listeners = new Set<() => void>();
+  const location = {
+    get href() {
+      return entries[index].url;
+    },
+    origin: new URL(start).origin,
+  };
+  const history = {
+    get state() {
+      return entries[index].state;
+    },
+    pushState(state: unknown, _title: string, url: string | URL) {
+      entries.splice(index + 1);
+      entries.push({ url: String(new URL(url, location.href)), state });
+      index++;
+    },
+    replaceState(state: unknown, _title: string, url: string | URL) {
+      entries[index] = { url: String(new URL(url, location.href)), state };
+    },
+    back() {
+      history.go(-1);
+    },
+    go(delta: number) {
+      setTimeout(() => {
+        const next = index + delta;
+        if (next < 0 || next >= entries.length) return;
+        index = next;
+        for (const listener of listeners) listener();
+      }, 0);
+    },
+  };
+  const win = {
+    location,
+    history,
+    addEventListener: (type: string, listener: () => void) => type === 'popstate' && listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+  };
+  return {
+    win,
+    entries,
+    get index() {
+      return index;
+    },
+    path: () => new URL(location.href).pathname,
+    /** Back like the Android gesture, then process everything. */
+    async back() {
+      history.back();
+      await settle();
+    },
+  };
+}
+
+/** Wait for microtasks and the delayed popstate events. */
+export async function settle() {
+  for (let i = 0; i < 4; i++) await flush();
+}

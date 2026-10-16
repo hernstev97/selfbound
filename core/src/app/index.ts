@@ -568,6 +568,11 @@ export class App {
     const page = this.nav.page.get();
     if (page.name !== 'issue') return;
     const issue = this.store.byKey(page.key);
+    if (issue && issue.key !== page.key) {
+      // Old key of a renamed team: show the current identifier in the address bar.
+      this.nav.go({ name: 'issue', key: issue.key }, { replace: true });
+      return;
+    }
     if (issue) {
       if (this.detail.pageId() !== issue._id) {
         this.detail.openPage(issue._id);
@@ -676,7 +681,8 @@ export class App {
   /** Key of the current team: last visited team page, otherwise the first active team. */
   currentTeam(): string | null {
     const teams = this.store.meta.get()?.teams ?? [];
-    const key = this.prefs.state.get().currentTeam;
+    const saved = this.prefs.state.get().currentTeam;
+    const key = saved && this.store.currentTeamKey(saved);
     if (key && teams.some((t) => t.key === key)) return key;
     return (teams.find((t) => !t.dormant) ?? teams[0])?.key ?? null;
   }

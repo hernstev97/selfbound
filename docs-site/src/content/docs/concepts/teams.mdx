@@ -16,8 +16,8 @@ with the key `ACME` is `ACME-42`.
 Each team has:
 
 - **A name and a key.** The key has 2 to 6 characters (capital letters and digits, starting with a letter)
-  and appears in every identifier. You can change it until the team has its first issue; after that it is
-  fixed, so identifiers stay stable.
+  and appears in every identifier. You can rename it later; old identifiers keep working, see
+  [Rename the key](#rename-the-key).
 - **A logo and a color.** The logo is an SVG or PNG, square, at most 256 KB. You can add a second logo for
   dark backgrounds. Without a logo, Selfbound shows a placeholder made from the key and the team's color.
 - **Its own statuses.** Every team has its own workflow, see [Statuses and workflow](/concepts/workflow/).
@@ -57,7 +57,7 @@ are listed below under **Teams**.
 Open a team under **Settings → Teams**, press <Kbd keys="o s" />, or click **Settings** under the current team
 in the sidebar. There you change:
 
-- **Name**, **Key** (only while the team has no issues) and **Color**.
+- **Name**, **Key** (see [Rename the key](#rename-the-key)) and **Color**.
 - **Dormant**: see below.
 - **Knowledge**: **Off**, **Alongside issues** or **Knowledge only**.
 - **Default model**: the model for the team's issues that set none themselves and whose parent sets none,
@@ -67,6 +67,31 @@ in the sidebar. There you change:
 
 The order of teams under **Settings → Teams** is the order in the sidebar; use the arrows to move a team up
 or down.
+
+## Rename the key
+
+Open the team's settings, click the **Key**, type the new one and press <Kbd keys="enter" />. If the team already
+has issues, Selfbound asks first, because every identifier changes: `OPS-24` becomes `ACME-24`. The numbers stay
+the same.
+
+The old key keeps working:
+
+- **Links and bookmarks** with an old identifier open the issue, and the address changes to the new identifier.
+  Team pages under the old key, such as `/team/OPS/backlog`, lead to the new key.
+- **Mentions** in descriptions, comments and knowledge pages are not rewritten. They keep saying `OPS-24`, but
+  still link to the issue and show its status.
+- **Search, the command menu and agents** find issues under their old identifiers. Agents can also still name
+  the team by its old key.
+- **Branch names and pull requests** with an old identifier still link to the issue and close it on merge, see
+  [GitHub](/integrations/github/).
+
+Once a team has had issues, its old key stays reserved for it, so an old identifier never points to another team's
+issue. No other team can take it, but the team itself can switch back to it. The settings list a team's earlier keys under **Key**.
+
+<Aside type="note">
+Identifiers outside Selfbound keep the old key: commit messages, branches you already pushed, notes in other
+tools. Selfbound still understands them wherever they come back in.
+</Aside>
 
 ## Dormant teams
 

@@ -179,7 +179,10 @@ export const modelChoiceValidator = v.object({
 
 export default defineSchema({
   teams: defineTable({
-    key: v.string(), // "KIU", immutable after the first issue
+    key: v.string(), // "KIU"
+    // Keys the team had before a rename (oldest first). They stay reserved for this team, so old
+    // identifiers ("OLD-12") keep resolving to the same issue. Missing = never renamed.
+    previousKeys: v.optional(v.array(v.string())),
     name: v.string(),
     hue: v.number(), // color of the placeholder without a logo (OKLCH hue)
     dormant: v.boolean(), // inactive: not in the sidebar, but in search and lists

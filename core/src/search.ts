@@ -44,9 +44,14 @@ export class IssueSearch {
   #issues: Issue[] = [];
   #haystack: string[] = [];
   #byKey = new Map<string, Issue>();
+  #renamed: ReadonlyMap<string, string> = new Map();
 
-  /** Rebuild the index only if the issues changed. Deleted ones do not count. */
-  prepare(version: number, all: Issue[]) {
+  /**
+   * Rebuild the index only if the issues changed. Deleted ones do not count. `renamed`: team keys
+   * from before a rename → current key, so "OLD-12" finds the issue too.
+   */
+  prepare(version: number, all: Issue[], renamed: ReadonlyMap<string, string> = new Map()) {
+    this.#renamed = renamed;
     if (version === this.#version) return;
     this.#version = version;
     this.#issues = all.filter((i) => i.deletedAt === undefined && !i.pending);
@@ -57,7 +62,9 @@ export class IssueSearch {
   /** The issue for the identifier, if the input is one. */
   exact(query: string): Issue | null {
     for (const candidate of identifierCandidates(query)) {
-      const hit = this.#byKey.get(candidate);
+      const dash = candidate.indexOf('-');
+      const current = this.#renamed.get(candidate.slice(0, dash));
+      const hit = this.#byKey.get(candidate) ?? (current ? this.#byKey.get(`${current}${candidate.slice(dash)}`) : undefined);
       if (hit) return hit;
     }
     return null;
