@@ -8,21 +8,26 @@ const slice = <T>(value: T) => {
   return { value, listeners, get: () => value, subscribe: (l: Listener) => (listeners.add(l), () => listeners.delete(l)) };
 };
 
-function fake(issues: Record<string, { status: string; title: string }>, phase = 'live') {
+function fake(issues: Record<string, { status: string; title: string }>, phase = 'live', renamed: Record<string, string> = {}) {
   const meta = slice<unknown>({ teams: [], workflowStates: [] });
   const sync = slice({ phase });
   const changes = new Set<(ids: ReadonlySet<string>) => void>();
   const source = {
     byKey: (key: string) => {
-      const hit = issues[key.toUpperCase()];
-      return hit && ({ _id: key.toUpperCase(), key: key.toUpperCase(), teamId: 't', stateId: undefined, ...hit } as never);
+      // like the store: also finds an issue by a team key from before a rename
+      const [team = '', digits = ''] = key.toUpperCase().split('-');
+      const n = String(Number(digits));
+      const hit = issues[key.toUpperCase()] ?? issues[`${renamed[team] ?? team}-${n}`];
+      const id = issues[key.toUpperCase()] ? key.toUpperCase() : `${renamed[team] ?? team}-${n}`;
+      return hit && ({ _id: id, key: id, teamId: 't', stateId: undefined, ...hit } as never);
     },
+    renamedKeys: () => new Map(Object.entries(renamed)),
     meta,
     sync,
     onChange: (l: (ids: ReadonlySet<string>) => void) => (changes.add(l), () => changes.delete(l)),
     resolve: async (identifier: string) => (identifier === 'OLD-1' ? { id: 'XLR8-5' as never, identifier: 'XLR8-5' } : null),
   } as unknown as MentionSource;
-  return { source, issues, emit: (id: string) => changes.forEach((l) => l(new Set([id]))), sync };
+  return { source, issues, renamed, meta, emit: (id: string) => changes.forEach((l) => l(new Set([id]))), sync };
 }
 
 function page(html: string) {
@@ -86,5 +91,90 @@ describe('issue mention chips', () => {
     const a = root.querySelector('a')!;
     expect(a.classList.contains('mention-done')).toBe(true);
     expect(a.dataset.title).toContain('XLR8-5');
+  });
+
+  describe('after a team key rename', () => {
+    const self = () => ({ 'SELF-72': { status: 'done', title: 'Rename keys' } }); // a fresh object per test: tests delete from it
+    const withOld = (renamed: Record<string, string>) => fake(self(), 'live', renamed);
+    const text = (a: Element) => a.textContent;
+
+    it('shows the current key with the icon; hover names the typed form', () => {
+      const f = withOld({ XLR8: 'SELF' });
+      const root = page(`${link('XLR8-72')} and ${link('SELF-72')}`);
+      decorateMentions(root, f.source);
+      const [old, current] = [...root.querySelectorAll('a')];
+      expect(text(old!)).toBe('SELF-72');
+      expect(old!.querySelector('.mention-icon svg')).toBeTruthy();
+      expect(old!.dataset.title).toBe('SELF-72 · Rename keys (Done) · written as XLR8-72');
+      expect(old!.getAttribute('aria-label')).toBe(old!.dataset.title);
+      expect(old!.getAttribute('href')).toBe('/issue/XLR8-72'); // the link itself is untouched
+      expect(text(current!)).toBe('SELF-72');
+      expect(current!.dataset.title).toBe('SELF-72 · Rename keys (Done)');
+    });
+
+    it('keeps the digits as typed', () => {
+      const f = withOld({ XLR8: 'SELF' });
+      const root = page(link('XLR8-072'));
+      decorateMentions(root, f.source);
+      expect(text(root.querySelector('a')!)).toBe('SELF-072');
+    });
+
+    it('follows a chain A→B→C and restores the typed form when renamed back', () => {
+      const f = withOld({ A: 'C', B: 'C' });
+      f.issues['C-1'] = { status: 'todo', title: 'Chain' };
+      const root = page(`${link('A-1')} ${link('B-1')} ${link('C-1')}`);
+      decorateMentions(root, f.source);
+      expect([...root.querySelectorAll('a')].map(text)).toEqual(['C-1', 'C-1', 'C-1']);
+      // renamed back to A: the store maps B and C to A and no longer A
+      delete f.renamed.A;
+      f.renamed.B = 'A';
+      f.renamed.C = 'A';
+      f.issues['A-1'] = f.issues['C-1']!;
+      delete f.issues['C-1'];
+      f.meta.listeners.forEach((l) => l());
+      expect([...root.querySelectorAll('a')].map(text)).toEqual(['A-1', 'A-1', 'A-1']);
+      expect(root.querySelectorAll('a')[0]!.dataset.typed).toBeUndefined();
+    });
+
+    it('leaves explicit links, unknown numbers, moved issues and unrelated keys as written', () => {
+      const f = withOld({ XLR8: 'SELF' });
+      const root = page(`${link('XLR8-72', false)} ${link('XLR8-99')} ${link('OLD-1')} ${link('ORB-5')}`);
+      decorateMentions(root, f.source);
+      expect([...root.querySelectorAll('a')].map(text)).toEqual(['XLR8-72', 'XLR8-99', 'OLD-1', 'ORB-5']);
+      expect(root.querySelector('a.mention-unknown')!.textContent).toBe('XLR8-99');
+    });
+
+    it('keeps the text of an issue that moved to another team after the rename', async () => {
+      const f = fake({ 'BEAR-32': { status: 'todo', title: 'Moved' } }, 'live', { XLR8: 'SELF' });
+      f.source.resolve = async () => ({ id: 'BEAR-32' as never, identifier: 'BEAR-32' });
+      const root = page(link('XLR8-5'));
+      decorateMentions(root, f.source);
+      await new Promise((r) => setTimeout(r, 0));
+      const a = root.querySelector('a')!;
+      expect(a.classList.contains('mention')).toBe(true); // found through the alias …
+      expect(text(a)).toBe('XLR8-5'); // … but shown as typed
+      expect(a.dataset.typed).toBeUndefined();
+    });
+
+    it('goes back to the typed text when the issue disappears', () => {
+      const f = withOld({ XLR8: 'SELF' });
+      const root = page(link('XLR8-72'));
+      decorateMentions(root, f.source);
+      const a = root.querySelector('a')!;
+      expect(text(a)).toBe('SELF-72');
+      delete f.issues['SELF-72'];
+      f.emit('SELF-72');
+      expect(text(a)).toBe('XLR8-72');
+      expect(a.dataset.typed).toBeUndefined();
+    });
+
+    it('a second run on the same DOM still knows what was typed', () => {
+      const f = withOld({ XLR8: 'SELF' });
+      const root = page(link('XLR8-72'));
+      decorateMentions(root, f.source)!();
+      decorateMentions(root, f.source);
+      expect(text(root.querySelector('a')!)).toBe('SELF-72');
+      expect(root.querySelector('a')!.dataset.title).toContain('written as XLR8-72');
+    });
   });
 });

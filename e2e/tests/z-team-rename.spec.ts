@@ -71,12 +71,17 @@ test('Settings: renaming asks first; old URLs, mentions and identifiers lead to 
   await open(page, `/team/${oldKey}/all`);
   await expect(page).toHaveURL(new RegExp(`/team/${newKey}/all`));
 
-  // A mention written with the old key is still a link with the issue's status.
+  // A mention written with the old key shows the current key and the issue's status; hover names the typed form.
   await open(page, `/issue/${hosts[0].identifier.replace(oldKey, newKey)}`);
-  const mention = page.getByTestId('detail-description').locator('a.mention', { hasText: `${oldKey}-1` });
+  const mention = page.getByTestId('detail-description').locator('a.mention', { hasText: `${newKey}-1` });
+  await expect(mention).toHaveText(`${newKey}-1`);
+  await expect(mention).toHaveAttribute('data-typed', `${oldKey}-1`);
   await expect(mention.locator('.mention-icon svg')).toBeVisible();
-  await expect(mention).toHaveAttribute('data-title', new RegExp(`^${newKey}-1 · Target ${stamp}`));
+  await expect(mention).toHaveAttribute('data-title', new RegExp(`^${newKey}-1 · Target ${stamp}.* · written as ${oldKey}-1$`));
   await page.screenshot({ path: test.info().outputPath('mention.png') });
+  await mention.hover();
+  await expect.poll(async () => mention.evaluate((el) => getComputedStyle(el, '::after').opacity), { timeout: 3000 }).toBe('1');
+  await page.screenshot({ path: test.info().outputPath('mention-tooltip.png') });
   await mention.click();
   await expect(page).toHaveURL(new RegExp(`/issue/${newKey}-1$`));
   // One history entry for the old link: Back returns to the text.
