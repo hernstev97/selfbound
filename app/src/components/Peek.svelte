@@ -49,7 +49,7 @@
         <div class="skeleton-bar" style="width: 68%; margin: 6px 0"></div>
       </div>
     {:else if d.body.markdown.trim()}
-      <div class="peek-desc" data-testid="peek-description"><Markdown markdown={shortBody} /></div>
+      <div class="peek-desc" data-testid="peek-description"><Markdown markdown={shortBody} keep={d.id} /></div>
     {:else}
       <div class="peek-desc desc-placeholder" data-testid="peek-description">{t('No description.')}</div>
     {/if}

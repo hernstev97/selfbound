@@ -29,6 +29,11 @@ prompt) what a good issue looks like for you, for example:
 - steps to reproduce or the context it found the problem in,
 - what "done" means.
 
+Long descriptions stay readable in two layers: a short summary for you on top, and the details for agents
+(acceptance criteria, files, technical notes, test steps) in an `[!AGENT]` panel below it, which the page
+shows closed. The server instructions already ask agents for this format; see
+[Details for agents](/using/visual-blocks/#details-for-agents).
+
 Agents should look for existing issues with `search_issues` before creating new ones, and comment on an
 existing issue instead of filing a duplicate.
 

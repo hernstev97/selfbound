@@ -46,19 +46,18 @@ const nodes: Record<string, NodeSpec> = {
     defining: true,
     // word: the keyword as written (`TIP`), so an untouched panel is written back as it was
     attrs: { kind: { default: 'info' }, word: { default: null } },
-    parseDOM: [
-      {
-        tag: 'div.callout',
-        getAttrs: (dom: HTMLElement) => ({ kind: CALLOUT_KINDS.find((k) => dom.classList.contains(`callout-${k}`)) ?? 'info' }),
-      },
-    ],
+    // details: agent details copied from the rendered view
+    parseDOM: ['div.callout', 'details.callout'].map((tag) => ({
+      tag,
+      getAttrs: (dom: HTMLElement) => ({ kind: CALLOUT_KINDS.find((k) => dom.classList.contains(`callout-${k}`)) ?? 'info' }),
+    })),
     toDOM: (node): DOMOutputSpec => ['div', { class: `callout callout-${node.attrs.kind}` }, 0],
   },
   callout_title: {
     content: 'text*',
     marks: '',
     defining: true,
-    parseDOM: [{ tag: 'div.callout-title' }],
+    parseDOM: [{ tag: 'div.callout-title' }, { tag: 'summary.callout-title' }],
     toDOM: () => ['div', { class: 'callout-title' }, 0],
   },
   horizontal_rule: {

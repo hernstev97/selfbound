@@ -90,7 +90,7 @@
   );
 
   // German search words per panel kind
-  const CALLOUT_WORDS: Record<CalloutKind, string> = { info: 'info', note: 'hinweis notiz', success: 'erfolg', warning: 'warnung achtung', error: 'fehler' };
+  const CALLOUT_WORDS: Record<CalloutKind, string> = { info: 'info', note: 'hinweis notiz', success: 'erfolg', warning: 'warnung achtung', error: 'fehler', agent: 'details agents ai ki agenten technisch' };
 
   // Labels are translated here (component script, runs at mount); `words` are search synonyms in
   // English and German.

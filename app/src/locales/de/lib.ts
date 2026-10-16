@@ -152,6 +152,7 @@ export default {
   Info: 'Info',
   Note: 'Hinweis',
   Success: 'Erfolg',
+  'Details for agents': 'Details für Agenten',
   'Panel: {kind}': 'Infoblock: {kind}',
   'Panel type': 'Art des Infoblocks',
   'Change panel type': 'Art des Infoblocks ändern',

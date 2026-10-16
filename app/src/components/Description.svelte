@@ -140,7 +140,7 @@
         {#if syncSlice.current.offline}<p class="desc-offline" role="status" data-testid="desc-offline">{t('Offline: the description loads once the network is back.')}</p>{/if}
       </div>
     {:else if d.body.markdown.trim()}
-      <Markdown markdown={d.body.markdown} ontoggle={d.deleted ? undefined : toggle} onlang={d.deleted ? undefined : setLang} />
+      <Markdown markdown={d.body.markdown} keep={d.id} ontoggle={d.deleted ? undefined : toggle} onlang={d.deleted ? undefined : setLang} />
     {:else}
       <span class="desc-placeholder">{t('Add description …')}</span>
     {/if}

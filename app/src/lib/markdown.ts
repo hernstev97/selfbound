@@ -109,9 +109,10 @@ export function cardEmbeds(root: HTMLElement): (() => void) | undefined {
   };
 }
 
-/** Short plain version without Markdown syntax (peek, preview). */
+/** Short plain version without Markdown syntax (peek, preview). Agent details are left out. */
 export function plainText(markdown: string, max = 600) {
   return markdown
+    .replace(/^[ \t]*>[ \t]*\[!agent\][^\n]*(?:\n[ \t]*>[^\n]*)*/gim, '')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_`>~]/g, '')

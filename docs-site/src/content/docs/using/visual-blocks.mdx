@@ -1,6 +1,6 @@
 ---
 title: Visual blocks
-description: Info panels and data charts in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
+description: Info panels, details for agents and data charts in descriptions, comments and knowledge pages, with the Markdown syntax, the editor shortcuts and how agents write them.
 sidebar:
   order: 7
 ---
@@ -23,7 +23,7 @@ optional title. The content goes on the following quote lines.
 > - The second one
 ```
 
-There are five kinds:
+There are six kinds:
 
 | Marker | Look | Use for |
 |---|---|---|
@@ -32,9 +32,10 @@ There are five kinds:
 | `[!SUCCESS]` | green, check mark | requirements met, a result that worked |
 | `[!WARNING]` | yellow, triangle | something to watch out for |
 | `[!ERROR]` | red, cross | what went wrong, a failing flow |
+| `[!AGENT]` | grey, robot, closed | [details for agents](#details-for-agents) below a short summary |
 
-Without a title the panel shows the name of its kind (Info, Note, Success, Warning, Error). The marker
-is not case sensitive.
+Without a title the panel shows the name of its kind (Info, Note, Success, Warning, Error, Details for
+agents). The marker is not case sensitive.
 
 The panel can hold anything a text can: paragraphs, lists, checklists (you can tick them in the shown text),
 code blocks, tables, images and other panels.
@@ -60,9 +61,38 @@ The title after the marker is a convenience of Selfbound (Obsidian reads it the 
 know it and shows such a quote with the marker as text; the content stays readable.
 </Aside>
 
+## Details for agents
+
+An issue description often has two readers: you, who want to know in a few lines what the issue is about,
+and the agent that works on it, which needs acceptance criteria, file names and test steps. Write both into
+the one description, in two layers:
+
+```md
+Imported GitHub issues keep their labels. Done when the next import shows them.
+
+> [!AGENT] Details for agents
+> ## Acceptance criteria
+> - [ ] Missing labels are created
+> - [ ] Existing labels are matched by name
+>
+> Files: `backend/convex/ops/import.ts`
+```
+
+- **On top, for people:** the goal, where it stands and what you need to know, in a few sentences or points.
+- **In the `[!AGENT]` panel:** acceptance criteria, affected files, technical notes, test steps.
+
+The page shows the panel closed, as a quiet grey bar with its title. Click or tap the bar, or focus it with
+<Kbd keys="tab" /> and press <Kbd keys="enter" />, to open it. An opened panel stays open while you tick its
+tasks, and when you come back to the issue before you reload the app. In the editor it is shown open, like
+every other panel. A description without such a panel looks as before.
+
+Agents connected over MCP are told to write issue descriptions this way, and to keep the split when they
+change one.
+
 ## In the editor
 
-- **/ menu:** type <Kbd keys="/" /> and "panel", "info", "warning" and so on, then pick **Panel: Warning**. On an empty
+- **/ menu:** type <Kbd keys="/" /> and "panel", "info", "warning", "agent" and so on, then pick **Panel: Warning**
+  or **Panel: Details for agents**. On an empty
   line you get an empty panel with the cursor in the title; on a line with text, the text becomes the content.
 - **While typing:** after a quote (`>` and a space), type `[!info]` and a space.
 - **Title and content:** type the title, press <Kbd keys="enter" /> (or <Kbd keys="shift+enter" />) to continue in the content. Without a title the
@@ -116,9 +146,12 @@ be one of the chart's `x` values.
 ## Agents
 
 Agents need no extra tool. They write the Markdown above (a `[!INFO]` quote or a `chart` code block with JSON) in a description, a comment or a knowledge page,
-and the server instructions at connect time give the syntax with a working example for every chart type. See [Working with agents](/agents/overview/).
+and the server instructions at connect time give the syntax with a working example for every chart type. The same
+instructions, and the `description` field of `create_issues` and `update_issue`, ask for the two layers: a short
+summary on top, the details in an `[!AGENT]` panel. See [Working with agents](/agents/overview/).
 
 ## Colours and themes
 
 The panels use one hue per kind on top of the surface they sit on, so they follow the theme you picked,
-light or dark, and keep their text readable in every built-in theme.
+light or dark, and keep their text readable in every built-in theme. Details for agents take the theme's
+muted text colour instead of a hue, so they stay in the background.

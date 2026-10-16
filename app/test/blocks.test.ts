@@ -19,6 +19,7 @@ describe('keywords', () => {
   it('the five kinds and the GitHub alert names', () => {
     expect(['info', 'note', 'success', 'warning', 'error'].map(calloutKind)).toEqual(['info', 'note', 'success', 'warning', 'error']);
     expect(['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'].map(calloutKind)).toEqual(['note', 'success', 'info', 'warning', 'error']);
+    expect(['AGENT', 'agent'].map(calloutKind)).toEqual(['agent', 'agent']);
     expect(calloutKind('Warning')).toBe('warning');
     expect(calloutKind('foo')).toBeNull();
     // Names of Object.prototype are not keywords
@@ -64,6 +65,25 @@ describe('quote → panel', () => {
   it('no title: the name of the kind', () => {
     const html = calloutHtml(calloutOf(quote('> [!SUCCESS]\n> ok'))!, '<p>ok</p>');
     expect(html).toContain('<span class="callout-name">Success</span>');
+  });
+  it('agent details: a closed <details> whose summary is the title, escaped like every title', () => {
+    const html = calloutHtml(calloutOf(quote('> [!AGENT] Details für Agenten\n> - [ ] criterion'))!, '<ul><li>criterion</li></ul>');
+    expect(html).toMatch(/^<details class="callout callout-agent"><summary class="callout-title">/);
+    expect(html).not.toContain(' open');
+    expect(html).not.toContain('role="note"');
+    expect(html).toContain('<span class="callout-name">Details für Agenten</span></summary>');
+    expect(html).toContain('<div class="callout-body"><ul><li>criterion</li></ul></div></details>');
+    const untitled = calloutHtml(calloutOf(quote('> [!AGENT]\n> x'))!, '<p>x</p>');
+    expect(untitled).toContain('<span class="callout-name">Details for agents</span>');
+    expect(calloutHtml(calloutOf(quote('> [!AGENT] <b>x</b>\n> y'))!, '')).toContain('&lt;b&gt;x&lt;/b&gt;');
+  });
+  it('plain text for previews leaves agent details out', () => {
+    const text = plainText('Goal in short.\n\n> [!AGENT] Details\n> - [ ] criterion\n> ```ts\n> a\n> ```\n\nAfter.\n\n> [!NOTE] Kept\n> text');
+    expect(text).not.toContain('criterion');
+    expect(text).not.toContain('Details');
+    expect(text).toContain('Goal in short.');
+    expect(text).toContain('After.');
+    expect(text).toContain('Kept');
   });
   it('plain text for previews drops the marker, keeps the title', () => {
     const text = plainText('> [!WARNING] Careful\n> Text');
@@ -113,6 +133,20 @@ describe('editor: reading and writing', () => {
     expect(out2).toBe('> [!INFO] T\n>\n> 3. x');
     expect(read(out2).doc.child(0).child(1).type.name).toBe('ordered_list');
   });
+  it('agent details read and write like the other panels', () => {
+    const md = '> [!AGENT] Details für Agenten\n> - [ ] criterion\n> - files';
+    const callout = read(md).doc.child(0);
+    expect(callout.attrs).toMatchObject({ kind: 'agent', word: 'AGENT' });
+    expect(callout.child(0).textContent).toBe('Details für Agenten');
+    expect(fresh(md)).toBe('> [!AGENT] Details für Agenten\n>\n> - [ ] criterion\n> - files');
+  });
+  it('agent details copied from the rendered view are pasted as a panel', () => {
+    const parse = schema.nodes.callout.spec.parseDOM!;
+    expect(parse.map((rule) => rule.tag)).toEqual(['div.callout', 'details.callout']);
+    const classes = (names: string) => ({ classList: { contains: (c: string) => names.split(' ').includes(c) } }) as unknown as HTMLElement;
+    expect(parse[1]!.getAttrs!(classes('callout callout-agent'))).toEqual({ kind: 'agent' });
+    expect(schema.nodes.callout_title.spec.parseDOM!.map((rule) => rule.tag)).toContain('summary.callout-title');
+  });
   it('nested panels and panels in lists read back the same', () => {
     const md = '> [!SUCCESS] Outer\n> > [!INFO] Inner\n> > Nested';
     const out = fresh(md);
@@ -144,6 +178,10 @@ describe('editor: commands', () => {
     expect(serializeMarkdown(next.doc)).toBe('> [!WARNING]');
     expect(next.selection.$from.parent.type.name).toBe('callout_title');
   });
+  it('insert agent details: an empty AGENT panel', () => {
+    const next = run(stateOf(''), insertCallout('agent'));
+    expect(serializeMarkdown(next.doc)).toBe('> [!AGENT]');
+  });
   it('insert on text wraps the text as content', () => {
     const next = run(stateOf('Some text', 3), insertCallout('info'));
     expect(serializeMarkdown(next.doc)).toBe('> [!INFO]\n> Some text');
@@ -170,7 +208,7 @@ describe('editor: commands', () => {
     const moved = run(state, hardBreak);
     expect(moved.selection.$from.parent.type.name).toBe('paragraph');
     let next = state;
-    for (const kind of ['NOTE', 'SUCCESS', 'WARNING', 'ERROR', 'INFO']) {
+    for (const kind of ['NOTE', 'SUCCESS', 'WARNING', 'ERROR', 'AGENT', 'INFO']) {
       next = run(next, cycleCalloutKind);
       expect(serializeMarkdown(next.doc)).toBe(`> [!${kind}] Title\n> body`);
     }

@@ -1,11 +1,13 @@
 // Info panels ("callouts"): a quote whose first line is `[!KIND] optional title`, the GitHub alert
 // syntax plus a title. Shared by the renderer (markdownRender.ts) and the editor (editor/parse.ts),
 // so both read the same text the same way. Pure: no DOM, no translation.
+// `[!AGENT]` holds the details for agents below a short summary for people (XLR8-76): the rendered
+// view shows it closed, the editor open like any other panel.
 import { t } from '@selfbound/core/i18n';
 import { Lexer, type Token, type Tokens } from 'marked';
 import { escapeHtml } from '../codeblock.ts';
 
-export const CALLOUT_KINDS = ['info', 'note', 'success', 'warning', 'error'] as const;
+export const CALLOUT_KINDS = ['info', 'note', 'success', 'warning', 'error', 'agent'] as const;
 export type CalloutKind = (typeof CALLOUT_KINDS)[number];
 
 // GitHub's five alert names read as the nearest panel; the word stays in the text as written.
@@ -15,6 +17,7 @@ const KEYWORDS = new Map<string, CalloutKind>([
   ['success', 'success'],
   ['warning', 'warning'],
   ['error', 'error'],
+  ['agent', 'agent'],
   ['tip', 'success'],
   ['important', 'info'],
   ['caution', 'error'],
@@ -72,17 +75,27 @@ export function calloutLabel(kind: CalloutKind): string {
       return t('Warning');
     case 'error':
       return t('Error');
+    case 'agent':
+      return t('Details for agents');
   }
 }
 
 /**
  * HTML of one panel. `bodyHtml` is the already rendered content. The result goes through DOMPurify
  * like all Markdown output; the icon is drawn by CSS (md.css), so there is no markup for it but an
- * empty span.
+ * empty span. Agent details are a closed `<details>`: the browser opens it, also by keyboard and
+ * for find in page; the summary is its name.
  */
 export function calloutHtml(callout: Callout, bodyHtml: string): string {
   const label = calloutLabel(callout.kind);
   const title = callout.title || label;
+  if (callout.kind === 'agent') {
+    return (
+      `<details class="callout callout-agent">` +
+      `<summary class="callout-title"><span class="callout-icon" aria-hidden="true"></span><span class="callout-name">${escapeHtml(title)}</span></summary>` +
+      `<div class="callout-body">${bodyHtml}</div></details>\n`
+    );
+  }
   // The kind is part of the name even when the title is custom (the icon alone says it only to eyes).
   const name = callout.title ? `${label}: ${callout.title}` : label;
   return (
