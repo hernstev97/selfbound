@@ -1792,18 +1792,22 @@ button.crumb:hover {
   font-weight: 450;
 }
 
-/* Split inbox: list on the left, issue on the right, width adjustable at the divider */
+/* Split view: list on the left, issue on the right, width adjustable at the divider. Without
+   .on the list takes the full width (the wrapper stays so that the list is not rebuilt). */
 .split {
   flex: 1;
   min-height: 0;
   display: flex;
 }
 .split-list {
-  flex: none;
-  width: clamp(320px, var(--split-w, 420px), calc(100% - 480px));
+  flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+.split.on .split-list {
+  flex: none;
+  width: clamp(320px, var(--split-w, 420px), calc(100% - 480px));
 }
 .split-handle {
   flex: none;

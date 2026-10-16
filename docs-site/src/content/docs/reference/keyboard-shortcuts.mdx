@@ -18,7 +18,7 @@ Nearly everything in Selfbound has a shortcut. The tables below come straight fr
 
 - **Single keys** like <Kbd keys="c" /> or <Kbd keys="s" /> act on what is focused or selected. In a list, that is the focused row, or all selected rows if you have selected some.
 - **Sequences** like <Kbd keys="g i" /> are two keys in a row: press G, release it, then press I within about 1.2 seconds.
-- **Context matters.** A shortcut only does something where its action makes sense. <Kbd keys="e" />, for example, edits the description on an issue page, edits the text on a knowledge page, and removes an entry on the inbox page.
+- **Context matters.** A shortcut only does something where its action makes sense. <Kbd keys="e" />, for example, edits the description on an issue page or in the split view, edits the text on a knowledge page, and removes an entry on the inbox page.
 - **While you type** in a text field, letters stay letters. Press <Kbd keys="escape" /> to leave the field; the shortcuts work again.
 
 ## General
@@ -49,7 +49,7 @@ On an issue page, <Kbd keys="j" /> and <Kbd keys="k" /> step to the next and pre
 
 <ShortcutTable sections={['View']} />
 
-On a board, <Kbd keys="arrowleft" /> and <Kbd keys="arrowright" /> move the focus between columns. <Kbd keys="t" /> collapses or expands the group of the focused issue when the list is grouped.
+<Kbd keys="shift+space" /> opens the focused issue to the right of the list or board and closes it again (see [Split view](/using/views-and-filters/#split-view)). On a board, <Kbd keys="arrowleft" /> and <Kbd keys="arrowright" /> move the focus between columns. <Kbd keys="t" /> collapses or expands the group of the focused issue when the list is grouped.
 
 ## Triage
 
@@ -123,7 +123,7 @@ In **Search in this view** (<Kbd keys="mod+f" />), <Kbd keys="enter" /> or <Kbd 
 <Kbd keys="escape" /> always closes the innermost thing first: an open menu, picker or dialog. Outside of those, each press undoes one step, in this order:
 
 1. close the navigation drawer (on a phone)
-2. close the issue shown next to the inbox (on wide screens)
+2. close the issue shown next to the list (split view, on wide screens)
 3. close the peek
 4. close the pull request shown next to the issue
 5. leave the issue page and go back to the list

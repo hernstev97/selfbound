@@ -41,8 +41,10 @@ export interface ShellState {
   /** Issue page: waiting for data, or the issue does not exist */
   issue: 'ok' | 'loading' | 'missing';
   peek: boolean;
-  /** Inbox as split view: list on the left, issue on the right */
+  /** Split view: list on the left, issue on the right (always in the wide inbox, on request in other lists) */
   split: boolean;
+  /** The current list can be split (wide window, a list or board, not on the phone) */
+  canSplit: boolean;
   mobile: boolean;
   sidebarHidden: boolean;
 }
@@ -138,7 +140,7 @@ export class App {
   readonly menu: ContextMenuController;
   readonly create: CreateController;
   readonly keys: KeyController;
-  readonly shell = new Slice<ShellState>({ page: 'home', issue: 'ok', peek: false, split: false, mobile: false, sidebarHidden: false });
+  readonly shell = new Slice<ShellState>({ page: 'home', issue: 'ok', peek: false, split: false, canSplit: false, mobile: false, sidebarHidden: false });
   readonly sidebar = new Slice<SidebarState>({ active: '', inbox: 0, snoozed: 0, triage: 0, drafts: 0, sprint: null, planning: false, current: null, teams: [], dormant: [], teamsCollapsed: false, dormantCollapsed: false, teamSize: 'small' });
   /** Team card numbers by team key, recomputed in batches (STATS_DELAY) */
   readonly teamStats = new Slice<Readonly<Record<string, TeamStats>>>({});
@@ -149,7 +151,7 @@ export class App {
   /** Pull request next to the open issue; null = closed. Only on the issue page. */
   readonly prSplit = new Slice<{ repo: string; number: number } | null>(null);
   readonly mobile = new Slice(false);
-  /** Window wide enough for the inbox split view */
+  /** Window wide enough for the split view */
   readonly wide = new Slice(false);
   #override: IssueId[] | null = null;
   #disposers: (() => void)[] = [];
@@ -410,10 +412,17 @@ export class App {
     return this.#budget.labels;
   }
 
-  /** Inbox as split view (wide window, inbox page)? */
-  splitLayout() {
+  /** A list or board in a wide window: the issue can show next to it. Sprint planning and closing have their own columns. */
+  splitCapable() {
     const page = this.nav.page.get();
-    return page.name === 'view' && page.view.kind === 'inbox' && this.wide.get() && !this.mobile.get();
+    return page.name === 'view' && page.view.kind !== 'plan' && page.view.kind !== 'close' && this.wide.get() && !this.mobile.get();
+  }
+
+  /** List with the issue on the right: the wide inbox always, other lists while the split view is open. */
+  splitLayout() {
+    if (!this.splitCapable()) return false;
+    const page = this.nav.page.get();
+    return (page.name === 'view' && page.view.kind === 'inbox') || this.detail.split.get();
   }
 
   rowHeight() {
@@ -591,9 +600,9 @@ export class App {
       const found = this.store.byKey(page.key);
       issue = found ? 'ok' : this.store.sync.get().phase === 'live' && this.#resolving === page.key ? 'missing' : 'loading';
     }
-    const next: ShellState = { page: page.name, issue, peek: page.name === 'view' && this.detail.peekVisible(), split: this.splitLayout(), mobile: this.mobile.get(), sidebarHidden: this.#sidebarHidden };
+    const next: ShellState = { page: page.name, issue, peek: page.name === 'view' && this.detail.peekVisible(), split: this.splitLayout(), canSplit: this.splitCapable(), mobile: this.mobile.get(), sidebarHidden: this.#sidebarHidden };
     const prev = this.shell.get();
-    if (prev.page !== next.page || prev.issue !== next.issue || prev.peek !== next.peek || prev.split !== next.split || prev.mobile !== next.mobile || prev.sidebarHidden !== next.sidebarHidden) this.shell.set(next);
+    if (prev.page !== next.page || prev.issue !== next.issue || prev.peek !== next.peek || prev.split !== next.split || prev.canSplit !== next.canSplit || prev.mobile !== next.mobile || prev.sidebarHidden !== next.sidebarHidden) this.shell.set(next);
   }
 
   closeOverlays() {

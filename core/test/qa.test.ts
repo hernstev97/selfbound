@@ -1,7 +1,8 @@
 // Regression tests for QA findings (relations, undo, pickers, notices, actions).
 import { describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
-import { actionById } from '../src/app/actions.ts';
+import { KEYMAP, actionById } from '../src/app/actions.ts';
+import { eventCombo } from '../src/keyboard.ts';
 import { Auth } from '../src/auth.ts';
 import { labelIdsFrom, labelParam, writeLocation } from '../src/route.ts';
 import { revealIndex } from '../src/window.ts';
@@ -427,6 +428,102 @@ describe('split inbox', () => {
     expect(app.detail.state.get()?.id).toBe('i1');
     app.nav.goView({ kind: 'all', team: null });
     expect(app.detail.split.get()).toBe(false);
+  });
+});
+
+describe('split view in other lists', () => {
+  const press = (k: string, mods: { shift?: boolean } = {}) =>
+    ({ key: k, code: k === ' ' ? 'Space' : `Key${k.toUpperCase()}`, ctrlKey: false, metaKey: false, altKey: false, shiftKey: !!mods.shift, isComposing: false, repeat: false, timeStamp: 0, target: null, preventDefault: () => {}, stopPropagation: () => {} }) as unknown as KeyboardEvent;
+  async function list(docs?: Parameters<typeof setup>[0]) {
+    const ctx = await setup(docs);
+    ctx.app.wide.set(true);
+    ctx.app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    return ctx;
+  }
+
+  test('⇧ space opens it with the focused issue; click and J/K switch, the mouse does not; Esc closes', async () => {
+    const { app } = await list();
+    expect(app.shell.get()).toMatchObject({ split: false, canSplit: true });
+    // A click without split view opens the page as before (checked below with a narrow window).
+    expect(eventCombo(press(' ', { shift: true }))).toBe('shift+space');
+    KEYMAP.get('shift+space')!.find((a) => !a.when || a.when(app))!.run(app);
+    expect(app.shell.get().split).toBe(true);
+    expect(app.detail.splitShown()).toBe(true);
+    expect(app.detail.state.get()?.id).toBe(app.list.focusId());
+    app.list.clickRow('i1' as IssueId);
+    expect(app.nav.page.get()).toMatchObject({ name: 'view', view: { kind: 'all' } });
+    expect(app.detail.state.get()?.id).toBe('i1');
+    actionById('nav.down')!.run(app);
+    const next = app.list.focusId();
+    expect(next).not.toBe('i1');
+    expect(app.detail.state.get()?.id).toBe(next);
+    app.list.hoverRow('i1' as IssueId);
+    expect(app.detail.state.get()?.id).toBe(next);
+    app.keys.onKeyDown(press('Escape'));
+    expect(app.shell.get().split).toBe(false);
+    expect(app.detail.state.get()).toBeNull();
+    expect(app.list.focusId()).toBe(next);
+  });
+
+  test('space closes it instead of opening the peek; E edits the description on the right', async () => {
+    const { client, app } = await list();
+    app.list.focus('i0' as IssueId);
+    actionById('view.split')!.run(app);
+    client.push('issues:detail', { id: 'i0' }, { id: 'i0', identifier: 'ACME-1', body: { markdown: 'Text', version: 1, updatedAt: 1, updatedBy: { kind: OWNER_KIND } }, comments: [], relations: [], pullRequests: [], history: [], sprints: [] });
+    await flush();
+    expect(actionById('issue.editDescription')!.when!(app)).toBe(true);
+    app.detail.togglePeek();
+    expect(app.detail.split.get()).toBe(false);
+    expect(app.detail.peekOpen.get()).toBe(false);
+    expect(actionById('issue.editDescription')!.when!(app)).toBe(false);
+  });
+
+  test('stays on across lists and other pages, but not into the inbox; the inbox side does not come along', async () => {
+    const { app } = await list([doc(0, { reviewedAt: undefined }), doc(1), doc(2)]);
+    actionById('view.split')!.run(app);
+    app.nav.goView({ kind: 'backlog', team: 'ACME' });
+    expect(app.detail.splitShown()).toBe(true);
+    app.nav.go({ name: 'settings', section: 'general' });
+    expect(app.detail.splitShown()).toBe(false);
+    app.nav.goView({ kind: 'all', team: null });
+    expect(app.detail.splitShown()).toBe(true);
+    app.nav.goView({ kind: 'inbox', team: null });
+    expect(app.detail.split.get()).toBe(false);
+    // The inbox's right side stays in the inbox.
+    app.list.clickRow(app.list.order()[0]);
+    expect(app.detail.splitShown()).toBe(true);
+    app.nav.goView({ kind: 'all', team: null });
+    expect(app.shell.get().split).toBe(false);
+  });
+
+  test('narrow window, sprint planning: not available, a click opens the page; narrowing closes it', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    expect(app.shell.get().canSplit).toBe(false);
+    expect(actionById('view.split')!.when!(app)).toBe(false);
+    app.list.clickRow('i0' as IssueId);
+    expect(app.nav.page.get()).toEqual({ name: 'issue', key: 'ACME-1' });
+
+    app.wide.set(true);
+    app.nav.goView({ kind: 'plan', team: null, sprint: null });
+    expect(app.splitCapable()).toBe(false);
+    app.nav.goView({ kind: 'all', team: null });
+    actionById('view.split')!.run(app);
+    expect(app.detail.splitShown()).toBe(true);
+    app.wide.set(false);
+    app.detail.onLayout();
+    expect(app.detail.split.get()).toBe(false);
+  });
+
+  test('the context menu opens its issue in the split view', async () => {
+    const { app } = await list();
+    app.menu.open('i2' as IssueId, 0, 0);
+    const action = actionById('issue.openSplit')!;
+    expect(action.when!(app)).toBe(true);
+    action.run(app);
+    app.menu.close();
+    expect(app.detail.state.get()?.id).toBe('i2');
+    expect(app.list.focusId()).toBe('i2');
   });
 });
 

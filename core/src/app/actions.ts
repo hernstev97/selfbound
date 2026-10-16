@@ -83,11 +83,12 @@ const someUnread = (a: App, ids: readonly IssueId[]) => entries(a, ids).some(unr
 const inboxAll = (a: App) => (inboxPage(a) ? entries(a, a.list.visibleIds()) : []);
 const manualOrder = (a: App) => listFocus(a) && a.list.view.get().display.ordering === 'rank' && a.list.view.get().display.grouping === 'none';
 
-// Edit text without the mouse: on an issue page or a wiki page, while the text is loaded and not
-// already being edited. The view puts the cursor at the end.
+// Edit text without the mouse: on an issue page (or on the right of a split list; in the inbox E
+// removes) or a wiki page, while the text is loaded and not already being edited. The view puts
+// the cursor at the end.
 function editableIssue(a: App) {
   const d = a.detail.state.get();
-  return issuePage(a) && !!d && d.body !== null && !d.deleted && !d.pending && !a.detail.desc.get().editing;
+  return (issuePage(a) || (a.detail.splitShown() && !inboxPage(a))) && !!d && d.body !== null && !d.deleted && !d.pending && !a.detail.desc.get().editing;
 }
 function editableArticle(a: App) {
   const wiki = a.nav.page.get().name === 'article' ? a.wikiLoaded() : null;
@@ -119,6 +120,18 @@ export const ACTIONS: Action[] = [
   // Issue
   { id: 'issue.create', label: msg('New issue'), section: 'Issue', keys: ['c'], icon: 'compose', top: true, keywords: 'create new anlegen erstellen neu', run: (a) => a.create.open() },
   { id: 'issue.open', label: msg('Open issue'), section: 'Issue', keys: ['enter'], icon: 'open', context: [3, 1], when: (a) => listFocus(a) || (a.menu.state.get() !== null && hasTarget(a)), run: (a) => a.openIssue(openTarget(a)!) },
+  {
+    id: 'issue.openSplit',
+    label: msg('Open in split view'),
+    section: 'Issue',
+    icon: 'split',
+    context: [3, 1.5],
+    when: (a) => a.menu.state.get() !== null && a.splitCapable() && !a.splitLayout() && hasTarget(a),
+    run: (a) => {
+      a.list.focus(a.targets()[0]);
+      a.detail.openSplit();
+    },
+  },
   { id: 'issue.peek', label: msg('Preview (peek)'), section: 'Issue', keys: ['space'], icon: 'eye', context: [3, 2], when: listFocus, run: (a) => a.detail.togglePeek() },
   { id: 'issue.status', label: msg('Change status …'), section: 'Issue', keys: ['s'], icon: 'active', top: true, keywords: 'status state', picker: 'status', context: [1, 1], when: notDeleted, run: picker('status') },
   { id: 'issue.priority', label: msg('Set priority …'), section: 'Issue', keys: ['p'], icon: 'gauge', top: true, keywords: 'priority prio priorität', picker: 'priority', context: [1, 2], when: notDeleted, run: picker('priority') },
@@ -296,6 +309,7 @@ export const ACTIONS: Action[] = [
   { id: 'board.moveLeft', label: msg('Move card one column left'), section: 'View', keys: ['shift+arrowleft'], icon: 'chevronLeft', keywords: 'status back zurück', when: (a) => onBoard(a) && notDeleted(a), run: (a) => a.list.moveCard(-1) },
   { id: 'board.moveRight', label: msg('Move card one column right'), section: 'View', keys: ['shift+arrowright'], icon: 'chevronRight', keywords: 'status forward weiter', when: (a) => onBoard(a) && notDeleted(a), run: (a) => a.list.moveCard(1) },
   { id: 'group.toggle', label: msg('Collapse/expand group'), section: 'View', keys: ['t'], keywords: 'collapse expand group gruppe', when: (a) => listPage(a) && a.list.view.get().display.grouping !== 'none', run: (a) => a.list.toggleFocusedGroup() },
+  { id: 'view.split', label: msg('Toggle split view'), section: 'View', keys: ['shift+space'], icon: 'split', keywords: 'split side by side beside panel pane right open next to geteilt daneben nebeneinander rechts teilen ansicht', when: (a) => a.splitCapable() && (a.detail.splitShown() || a.list.order().length > 0), run: (a) => a.detail.toggleSplit() },
   { id: 'sidebar.toggle', label: msg('Toggle sidebar'), section: 'View', icon: 'sidebar', keywords: 'sidebar navigation seitenleiste', run: (a) => a.toggleSidebar() },
 
   // General

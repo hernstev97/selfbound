@@ -27,7 +27,8 @@
   const hintId = $props.id();
   // In the split inbox E means "remove", so only Enter is mentioned there.
   const shellSlice = fromSlice(app.shell);
-  const hint = $derived(shellSlice.current.split ? t('Press Enter to edit') : t('Press Enter or {key} to edit', { key: formatShortcut(shortcutOf('issue.editDescription') ?? 'e') }));
+  const headerSlice = fromSlice(app.main.header);
+  const hint = $derived(shellSlice.current.split && shellSlice.current.page === 'view' && headerSlice.current.kind === 'inbox' ? t('Press Enter to edit') : t('Press Enter or {key} to edit', { key: formatShortcut(shortcutOf('issue.editDescription') ?? 'e') }));
   // Back to "end" after editing: E and Enter set no position, a click does.
   $effect(() => {
     if (!e.editing) focusAt = 'end';

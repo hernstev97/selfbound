@@ -15,7 +15,7 @@
   import IssuePullRequests from '../components/pr/IssuePullRequests.svelte';
   import DetailSkeleton from '../components/DetailSkeleton.svelte';
 
-  /** Right-hand side of the split inbox instead of a page of its own */
+  /** Right-hand side of the split view (inbox, other lists) instead of a page of its own */
   let { split = false }: { split?: boolean } = $props();
 
   const detailSlice = fromSlice(app.detail.state);
@@ -85,6 +85,9 @@
         app.menu.open(d!.id, r.right - 220, r.bottom + 4);
       }}><span class="icon">{@html ICON.more}</span></button
     >
+  {/if}
+  {#if split}
+    <button class="icon-btn plain" title={tip(t('Close split view'), 'view.split')} aria-label={t('Close split view')} data-testid="split-close" onclick={() => app.detail.closeSplit()}><span class="icon">{@html ICON.close}</span></button>
   {/if}
 </header>
 

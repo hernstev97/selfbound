@@ -17,8 +17,8 @@ export function eventCombo(e: Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKey' | '
   const parts: string[] = [];
   if (mod) parts.push('mod');
   if (e.altKey) parts.push('alt');
-  // Shift only for letters, named keys and shortcuts with Ctrl; "?" is already "shift+/".
-  if (e.shiftKey && (e.key.length > 1 || /^[a-z]$/i.test(e.key) || (mod && CODE_KEYS[e.code]))) parts.push('shift');
+  // Shift only for letters, space, named keys and shortcuts with Ctrl; "?" is already "shift+/".
+  if (e.shiftKey && (e.key.length > 1 || key === 'space' || /^[a-z]$/i.test(e.key) || (mod && CODE_KEYS[e.code]))) parts.push('shift');
   parts.push(key);
   return parts.join('+');
 }

@@ -74,6 +74,8 @@ export const ICON = {
   filter: stroke('M2.5 4h11M4.5 8h7M6.5 12h3'),
   display: stroke('M2.5 4.5h4M9.5 4.5h4M2.5 11.5h7M12.5 11.5h1M8 3v3M11 10v3'),
   sidebar: stroke('M3.5 2.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM6.5 2.5v11'),
+  /** Split view: issue pane on the right */
+  split: stroke('M3.5 2.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM8.5 2.5v11'),
   chevronDown: stroke('M4.5 6.5 8 10l3.5-3.5'),
   chevronRight: stroke('M6.5 4.5 10 8l-3.5 3.5'),
   chevronLeft: stroke('M9.5 4.5 6 8l3.5 3.5'),
