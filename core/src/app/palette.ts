@@ -8,6 +8,7 @@ import {
   PRIORITY_LABEL,
   PRIORITY_ORDER,
   STATUS_KEYWORDS,
+  CLOSED,
   addDays,
   dayLabel,
   dayOf,
@@ -633,9 +634,23 @@ export class PaletteController {
       }
       case 'priority': {
         const current = values((i) => i.priority, () => draft!.priority);
-        PRIORITY_ORDER.forEach((p) =>
-          add({ id: `p:${p}`, label: PRIORITY_LABEL[p], icon: PRIORITY_ICON[p], checked: all(current, p), keywords: `prio ${PRIORITY_KEYWORDS[p]}`, shortcut: prefix ? undefined : String(p) }, () => this.apply({ priority: p }, target)),
-        );
+        // Full hard limits are named next to the option (counted once per opening, not per row).
+        // Closed issues carry no priority, so only open ones (and an open draft) count.
+        const draftType = draft?.stateId ? workflowsOf(meta).view(draft.stateId)?.type : undefined;
+        const draftClosed = draftType ? draftType === 'completed' || draftType === 'canceled' : !!draft && CLOSED.has(draft.status);
+        const subjects = draft
+          ? draft.teamId && !draftClosed
+            ? [{ id: 'new:0' as IssueId, teamId: draft.teamId }]
+            : []
+          : issues.filter((i) => !CLOSED.has(i.status) && i.deletedAt === undefined).map((i) => ({ id: i._id, teamId: i.teamId as string }));
+        const full = (p: Priority) => (p === 1 || p === 2 ? this.app.edit.limitHits(subjects.map((x) => ({ ...x, priority: p }))).find((h) => h.hard) : undefined);
+        PRIORITY_ORDER.forEach((p) => {
+          const hit = full(p);
+          add(
+            { id: `p:${p}`, label: PRIORITY_LABEL[p], icon: PRIORITY_ICON[p], checked: all(current, p), keywords: `prio ${PRIORITY_KEYWORDS[p]}`, shortcut: prefix ? undefined : String(p), ...(hit ? { detail: t('Limit reached') } : {}) },
+            () => this.apply({ priority: p }, target),
+          );
+        });
         break;
       }
       case 'labels': {
@@ -776,7 +791,7 @@ export class PaletteController {
     return { items, run, multi: false };
   }
 
-  /** Priority budget exceeded: the team's candidates; picking one lowers it by one level. */
+  /** Over a priority limit: the team's candidates; picking one lowers it by one level (two if High is full and hard). */
   openDowngrade(teamId: string, priority: 1 | 2) {
     this.#downgrade = { teamId, priority };
     this.open('downgrade', { target: { kind: 'issues', ids: [] } });
@@ -790,7 +805,8 @@ export class PaletteController {
     const items: MenuItem[] = [];
     const dg = this.#downgrade;
     if (!dg) return { items, run, multi: false };
-    const lower = (dg.priority + 1) as Priority;
+    const highFull = dg.priority === 1 && this.app.edit.limitHits([{ id: 'dg:new' as IssueId, teamId: dg.teamId, priority: 2 }]).some((h) => h.hard);
+    const lower = (highFull ? 3 : dg.priority + 1) as Priority;
     const open = new Set<Status>(['triage', 'backlog', 'todo', 'in_progress', 'in_review']);
     const candidates = this.app.store
       .all()

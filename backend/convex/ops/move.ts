@@ -10,6 +10,7 @@ import { identifierOf, LIMITS } from '../shared/constants';
 import { matchingState, stateForStatus, statusOfState } from '../shared/workflow';
 import { record } from './history';
 import { statusTimestamps } from './issues';
+import { assertRoom, holds } from './priorityLimits';
 import { assertIssuesAllowed, getIssue, getTeam } from './validate';
 
 // Move issues to another team (triage "accept into team …", and from the UI).
@@ -92,6 +93,8 @@ export async function moveIssuesToTeamCore(ctx: MutationCtx, actor: Actor, args:
       const status = statusOfState(state);
       if (status !== issue.status) Object.assign(changes, { status }, statusTimestamps(issue, status, now));
     }
+    // Urgent/high travels along: it must fit the target team's hard limit.
+    if (holds({ ...issue, ...changes }, issue.priority)) await assertRoom(ctx, target._id, issue.priority);
     await ctx.db.patch('issues', issue._id, changes);
     await ctx.db.insert('identifierAliases', { key: aliasKey(source?.key ?? '?', issue.number), issueId: issue._id });
     const identifier = identifierOf(target.key, number);

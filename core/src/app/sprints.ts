@@ -8,6 +8,8 @@ import { Slice } from '../observable.ts';
 import type { Page } from '../route.ts';
 import {
   budgetLabel,
+  limitsOf,
+  limitsSummary,
   closeSummary,
   defaultSprintRange,
   dropNeighbors,
@@ -23,6 +25,7 @@ import {
   type SprintStats,
   type SprintTotals,
 } from '../sprintlogic.ts';
+import { overLimit } from '@selfbound/backend/shared/priorityLimits';
 import type { Issue, IssueId, SprintDoc, SprintId, TeamBadge } from '../types.ts';
 import { planSprint } from '../views.ts';
 import { registerAction } from './actions.ts';
@@ -54,8 +57,10 @@ export interface PlanState {
   running: { name: string; number: number } | null;
   /** Other sprints in planning (to switch between) */
   others: { number: number; name: string }[];
-  /** Priority budget per active team */
-  teams: { badge: TeamBadge; label: string; over: boolean; urgent: number; high: number }[];
+  /** Priority limits per active team (count, and whether it is over the limit) */
+  teams: { badge: TeamBadge; label: string; over: boolean; urgent: number; high: number; overUrgent: boolean; overHigh: boolean }[];
+  /** The limits (null = none) and their description */
+  limits: { urgent: number | null; high: number | null; title: string };
   /** Defaults for a new sprint */
   defaults: { name: string; startDate: string; endDate: string };
 }
@@ -171,6 +176,7 @@ export class SprintController {
     const suggestion = this.#suggestion?.slice.get() as { capacity: number | null; basis: { name: string; donePoints: number }[] } | undefined;
     const running = meta?.sprints.find((s) => s.state === 'active');
     const budget = priorityBudget(this.app.store.all());
+    const limits = limitsOf(meta);
     const { startDate, endDate } = defaultSprintRange(undefined, (meta?.sprints ?? []).filter((s) => s.state === 'active' || s.state === 'planning'));
     const nextNumber = Math.max(0, ...(meta?.sprints.map((s) => s.number) ?? [0])) + 1;
     const next: PlanState = {
@@ -184,8 +190,19 @@ export class SprintController {
         .filter((t) => !t.dormant && t.wiki !== 'only')
         .map((t) => {
           const b = budget.get(t._id);
-          return { badge: this.app.main.teamBadge(t._id), label: budgetLabel(b), over: overBudget(b), urgent: b?.urgent ?? 0, high: b?.high ?? 0 };
+          const urgent = b?.urgent ?? 0;
+          const high = b?.high ?? 0;
+          return {
+            badge: this.app.main.teamBadge(t._id),
+            label: budgetLabel(b, limits),
+            over: overBudget(b, limits),
+            urgent,
+            high,
+            overUrgent: overLimit(limits.urgent, urgent),
+            overHigh: overLimit(limits.high, high),
+          };
         }),
+      limits: { urgent: limits.urgent.max, high: limits.high.max, title: limitsSummary(limits) },
       defaults: { name: `Sprint ${nextNumber}`, startDate, endDate },
     };
     const prev = this.plan.get();

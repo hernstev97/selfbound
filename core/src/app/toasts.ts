@@ -1,6 +1,7 @@
 // Notices at the bottom right. Only for things not visible otherwise: "Link copied", bulk changes
 // with "Undo", errors. Success notices disappear on their own, errors stay until dismissed.
 import { ConvexError } from 'convex/values';
+import { PRIORITY_LABEL } from '../format.ts';
 import { t } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import type { Cues } from './cues.ts';
@@ -40,8 +41,9 @@ export class Toasts {
 /** Readable message from a server error. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ConvexError) {
-    const data = error.data as { message?: string } | string;
+    const data = error.data as { code?: string; message?: string } | string;
     if (typeof data === 'string') return data;
+    if (data?.code === 'priority_limit') return limitMessage(data as LimitError);
     if (data?.message) return data.message;
   }
   const text = error instanceof Error ? error.message : String(error);
@@ -52,4 +54,15 @@ export function errorMessage(error: unknown): string {
 export function errorCode(error: unknown): string | null {
   if (error instanceof ConvexError) return ((error.data as { code?: string }) ?? {}).code ?? null;
   return null;
+}
+
+type LimitError = { team?: string; priority?: number; limit?: number; issues?: string[] };
+
+/** A full hard priority limit, rejected by the server (e.g. on undo or from a stale state). */
+function limitMessage(data: LimitError): string {
+  const priority = PRIORITY_LABEL[(data.priority ?? 1) as 1 | 2];
+  const vars = { team: data.team ?? '?', max: data.limit ?? 0, priority };
+  return data.issues?.length
+    ? t('{team} is at its limit of {max} × {priority}. Lower one of these first: {list}', { ...vars, list: data.issues.join(', ') })
+    : t('{team} allows at most {max} × {priority}. Change the limit under Settings → Priorities.', vars);
 }

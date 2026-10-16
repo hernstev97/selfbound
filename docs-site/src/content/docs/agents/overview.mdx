@@ -55,6 +55,11 @@ Two safeguards protect writes:
   conflict, so the agent reads the issue again and decides. Replacing a description or a knowledge page's
   text always requires the version the agent based its edit on.
 
+[Priority limits](/concepts/issues/#priority) apply to agents too. Over a limit that only warns, the change is
+saved and the result carries a `budget_warning`. Over a hard limit, `create_issues`, `update_issue` and
+`move_issues` fail with a `priority_limit` error that names the issues already holding the priority, and
+nothing is changed; the agent can lower one of them first or pick a lower priority.
+
 ## What agents cannot do
 
 There are no tools for the following, so agents cannot do them over MCP:
@@ -63,8 +68,8 @@ There are no tools for the following, so agents cannot do them over MCP:
 - Delete knowledge pages. When an agent replaces a page's text, Selfbound first keeps the old text as a version
   you can restore.
 - Edit or delete comments, including their own.
-- Change settings: teams, workflows and statuses, labels, projects, appearance, notifications, keys or
-  connectors.
+- Change settings: teams, workflows and statuses, labels, projects, priority limits, appearance, notifications,
+  keys or connectors.
 - Create labels or projects. Agents can only use the ones that exist (topics of knowledge pages are the
   exception: unknown topics are created).
 - Plan sprints or add issues to a sprint.

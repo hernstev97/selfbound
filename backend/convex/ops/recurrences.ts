@@ -6,8 +6,10 @@ import { daysBetween, nextMonthDay, nextWeekday, type Day } from '../lib/dates';
 import { invalid, notFound } from '../lib/errors';
 import type { Priority } from '../shared/constants';
 import { syncFileRefs } from './files';
+import { record } from './history';
 import { todayOf } from './instance';
 import { createIssues } from './issues';
+import { hasRoom } from './priorityLimits';
 import { assertIssuesAllowed, checkDay, checkDescription, checkEstimate, checkLabels, checkProject, checkTitle, getTeam } from './validate';
 
 // Recurrences: weekly (weekday 1 = Monday … 7 = Sunday) or monthly (monthDay 1–28),
@@ -162,6 +164,9 @@ export async function runDueRecurrences(ctx: MutationCtx, now = Date.now(), limi
       .unique();
     if (!run) {
       try {
+        // A full hard priority limit must not cost the issue: it comes without the priority and
+        // goes to the inbox, the history says which priority was left out.
+        const full = !(await hasRoom(ctx, r.teamId, r.priority));
         const result = await createIssues(
           ctx,
           SYSTEM,
@@ -172,7 +177,7 @@ export async function runDueRecurrences(ctx: MutationCtx, now = Date.now(), limi
                 title: r.title,
                 description: r.description,
                 status: 'todo',
-                priority: r.priority,
+                priority: full ? 0 : r.priority,
                 labelIds: r.labelIds,
                 projectId: r.projectId,
                 estimate: r.estimate,
@@ -180,9 +185,10 @@ export async function runDueRecurrences(ctx: MutationCtx, now = Date.now(), limi
               },
             ],
           },
-          { recurrenceId: r._id },
+          { recurrenceId: r._id, inbox: full },
         );
         const issueId = result.issues[0].id;
+        if (full) await record(ctx, SYSTEM, now, undefined, { issueId, field: 'priority', from: r.priority, to: 0 });
         await ctx.db.insert('recurrenceRuns', { recurrenceId: r._id, date, issueId });
         created.push({ recurrenceId: r._id, date, issueId });
       } catch (error) {

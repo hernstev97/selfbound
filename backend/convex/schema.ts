@@ -80,6 +80,10 @@ export const projectStateValidator = v.union(
 
 export const wikiModeValidator = v.union(v.literal('on'), v.literal('only'));
 
+// Priority limit (shared/priorityLimits.ts): `max` null = no limit; `hard` = reject instead of warn.
+export const priorityLimitValidator = v.object({ max: v.union(v.number(), v.null()), hard: v.boolean() });
+export const priorityLimitsValidator = v.object({ urgent: priorityLimitValidator, high: priorityLimitValidator });
+
 // ---- Pull requests in Selfbound. Types as in shared/pullRequests.ts.
 
 export const prStateValidator = v.union(v.literal('open'), v.literal('closed'), v.literal('merged'), v.literal('draft'));
@@ -299,7 +303,7 @@ export default defineSchema({
     .index('by_rank', ['rank'])
     .index('by_updated', ['updatedAt'])
     .index('by_deleted', ['deletedAt'])
-    // For the priority budget: count open urgent/high issues per team without scanning the team.
+    // For the priority limits: count open urgent/high issues per team without scanning the team.
     .index('by_team_priority', ['teamId', 'priority', 'status'])
     // For MCP list_issues (project filter) without a scan over all issues.
     .index('by_project', ['projectId', 'status'])
@@ -784,8 +788,10 @@ export default defineSchema({
 
   // Instance settings (one row; missing = defaults). `timeZone` is an IANA name; it decides where a
   // calendar day begins (ops/instance.ts). Missing = Europe/Berlin, as before the setting existed.
+  // `priorityLimits`: open urgent/high issues per team (XLR8-91). Missing = 1 and 3, warning only.
   instanceSettings: defineTable({
-    timeZone: v.string(),
+    timeZone: v.optional(v.string()),
+    priorityLimits: v.optional(priorityLimitsValidator),
     updatedAt: v.number(),
   }),
 

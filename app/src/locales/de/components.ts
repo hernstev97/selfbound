@@ -115,7 +115,6 @@ export default {
   // GroupRow.svelte
   Expand: 'Aufklappen',
   Collapse: 'Einklappen',
-  'Priority budget: at most 1 urgent and 3 high open': 'Prioritäts-Budget: höchstens 1 Dringend und 3 Hoch offen',
   'Create issue in this group': 'Issue in dieser Gruppe anlegen',
   // Lazy.svelte
   'This part could not be loaded.': 'Dieser Teil ließ sich nicht laden.',

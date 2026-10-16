@@ -106,6 +106,29 @@ describe('MCP over HTTP', () => {
     expect(await health.json()).toMatchObject({ ok: true });
   });
 
+  test('hard priority limit: create_issues, update_issue and move_issues fail with priority_limit and change nothing', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    await owner.mutation(api.instance.setPriorityLimits, { limits: { urgent: { max: 1, hard: true }, high: { max: 3, hard: false } } });
+    await createOne(owner, f.orb, { priority: 1 });
+    const other = await createOne(owner, f.orb, { priority: 3 });
+    await createOne(owner, f.nova, { priority: 1 });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const created = await mcp.call('create_issues', { requestId: 'req-limit-0001', issues: [{ team: 'ORB', title: 'Another fire', priority: 'urgent' }] });
+    expect(created.ok).toBe(false);
+    expect(created.error).toContain('priority_limit: Team ORB already has 1 open urgent issue: ORB-1, and the hard limit is 1');
+    expect(created.error).toContain('Lower the priority of one of them first');
+    const updated = await mcp.call('update_issue', { identifier: 'ORB-2', priority: 'urgent', title: 'Not saved either' });
+    expect(updated.ok).toBe(false);
+    expect(updated.error).toContain('priority_limit');
+    expect(await getIssue(t, other.id)).toMatchObject({ priority: 3, title: 'Test issue' });
+    const moved = await mcp.call('move_issues', { identifiers: ['NOVA-1'], team: 'ORB' });
+    expect(moved.ok).toBe(false);
+    expect(moved.error).toContain('priority_limit');
+    expect(await t.run(async (ctx) => (await ctx.db.query('issues').collect()).length)).toBe(3);
+  });
+
   test('create_issues: requestId twice → one issue, actor agent, unreviewed, triage, priority warning', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);

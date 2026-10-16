@@ -1,6 +1,7 @@
 import type { Doc, Id } from '@selfbound/backend/dataModel';
 import type { Priority, Status } from '@selfbound/backend/constants';
 import type { ModelChoice, ModelInfo } from '@selfbound/backend/shared/models';
+import type { PriorityLimits } from '@selfbound/backend/shared/priorityLimits';
 
 export type { Priority, Status };
 export type IssueDoc = Doc<'issues'>;
@@ -47,6 +48,8 @@ export interface Meta {
   timeZone?: string | null;
   /** Models the owner enabled (XLR8-93); missing in an older cache */
   models?: ModelInfo[];
+  /** Open urgent/high issues per team (XLR8-91); missing in an older cache (then the defaults) */
+  priorityLimits?: PriorityLimits;
 }
 
 /** Display name and picture URL of the owner (null = not set). */
@@ -337,9 +340,10 @@ export interface GroupInfo {
   hue?: number;
   /** Model groups: the provider's logo */
   logo?: string;
-  /** Team groups: priority budget "Urgent 1/1 · High 3/3" */
+  /** Team groups: priority limits "Urgent 1/1 · High 3/3", exceeded, and what the limits are */
   budget?: string;
   overBudget?: boolean;
+  budgetTitle?: string;
 }
 
 export type RowStyle = 'issue' | 'inbox' | 'trash';

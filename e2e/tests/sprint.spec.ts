@@ -1,6 +1,6 @@
 // Sprints: create, plan (issues from three teams, keyboard and drag), reorder the backlog, start,
 // add late (also from a second client), close with decisions (impossible without all of them),
-// carry over into the next sprint. Plus the priority budget and the identifier column. The tests
+// carry over into the next sprint. Plus the soft priority limit and the identifier column. The tests
 // build on each other.
 import { expect, test, type Page } from '@playwright/test';
 import { ConvexError } from 'convex/values';
@@ -248,7 +248,7 @@ test('Closing: impossible without all decisions, 1/2/3 and bulk decision, carrie
   await expect(row).toContainText('2 · 40 %');
 });
 
-test('Priority budget: notice with candidates and "Downgrade", overview per team', async ({ page }) => {
+test('Priority limit (soft): notice with candidates and "Downgrade", overview per team', async ({ page }) => {
   await open(page, '/all');
   // All issues is grouped by team: the budget is in the group header.
   await expect(page.getByTestId('group-budget').first()).toContainText(/Urgent \d+\/1 · High \d+\/3/);
@@ -259,7 +259,7 @@ test('Priority budget: notice with candidates and "Downgrade", overview per team
   await page.mouse.move(2, 890);
   await page.locator(`[data-testid="issue-row"][data-id="${id}"] [data-testid="row-priority"]`).click();
   await page.keyboard.press('2');
-  const toast = page.getByTestId('toast').filter({ hasText: 'High open (budget 3)' });
+  const toast = page.getByTestId('toast').filter({ hasText: 'High open (limit 3)' });
   await expect(toast).toBeVisible();
   await expect(toast.getByTestId('toast-detail')).toContainText('So far:');
   await toast.getByTestId('toast-action').click();

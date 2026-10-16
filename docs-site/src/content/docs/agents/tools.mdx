@@ -23,8 +23,9 @@ marked **write** do.
   `model` and the `effectiveModel` that applies (own, parent's or team default, with `source`); the `model` filter
   of `list_issues` and `search_issues` takes `"provider/modelId"`, a model ID, a provider or `"none"`.
 
-Errors such as an unknown label or a status the workflow doesn't allow come back as a readable message,
-so the agent can correct itself and try again.
+Errors such as an unknown label, a status the workflow doesn't allow or a full hard
+[priority limit](/concepts/issues/#priority) come back as a readable message, so the agent can correct itself and
+try again.
 
 ## Find and read issues
 

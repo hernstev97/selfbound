@@ -32,7 +32,7 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 **Why read tools run as a query:** Convex caches query results. If an agent calls the same tool with the same arguments again and the data it read hasn't changed, the database reads nothing. A reading mutation is also retried on every concurrent change to a document it read; a query is not. The cost is one more function call (action, authenticate, count, read = 4 instead of 3). At 5000 calls a day that is at most 20,000 of the roughly 33,000 function calls per day on the Convex free plan. Counting and reading are no longer atomic: if the key is revoked in between, the query rejects the call (401).
 
-**Errors:** Business errors (unknown identifier, conflict, trash, rate limit) come back as a tool result with `isError: true` and plain text `code: message`, so the model can correct itself. An unexpected error reads "Internal error …; retrying with the same requestId is safe".
+**Errors:** Business errors (unknown identifier, conflict, trash, full hard priority limit, rate limit) come back as a tool result with `isError: true` and plain text `code: message`, so the model can correct itself. An unexpected error reads "Internal error …; retrying with the same requestId is safe".
 
 **Idempotency:** `requestId` is required for `create_issues`, `add_comment`, `create_article` and `update_article`, and optional for `update_issue`, `set_status` and `move_issues` (setting the same values again changes nothing; with a requestId, a retry after a lost response returns the original result instead of a conflict with the agent's own change). The **whole** tool is wrapped in the check, keyed on the agent's raw arguments (team key, label and project names, identifiers): a retry returns the stored result even if a name no longer resolves (label archived, issue in the trash). Same requestId with different arguments → error. Each agent has its own namespace; the requestId is recorded in the history.
 
@@ -92,7 +92,7 @@ Teams can have a knowledge area (`list_teams` → `wiki`: `"on"` alongside issue
 
 A separate tool instead of a `team` field in `update_issue`: the move affects several issues at once, changes the identifier, and has consequences the agent should see in the result; `update_issue` stays a compare-and-set for one issue. Same operation as the UI (`moveIssuesToTeamCore` in `ops/move.ts`; rules in [backend.md](backend.md): new number in the target team, the old identifier stays as an alias, status mapped to the target team, project and team labels are dropped).
 
-- **All or nothing:** An unknown identifier (`not_found`, names all missing ones) or an issue in the trash (`invalid`) fails the whole call; nothing is moved. Duplicate identifiers (including old and new identifier of the same issue) count once. The target team's strict order does not apply (same as in the UI).
+- **All or nothing:** An unknown identifier (`not_found`, names all missing ones), an issue in the trash (`invalid`) or an urgent/high issue that would go over a hard [priority limit](#priority-limits) of the target team (`priority_limit`) fails the whole call; nothing is moved. Duplicate identifiers (including old and new identifier of the same issue) count once. The target team's strict order does not apply (same as in the UI).
 - **Result:** `team`; per moved issue `previousIdentifier`, `identifier`, `status` and `previousStatus` (names in the respective team) and `removed: { project, labels }` (name of the dropped project or `null`, names of the dropped team labels); `unchanged` (identifiers already in the target team); `note` (the rules in one sentence); `warnings` (`dormant_team` if the target team is dormant). History: one `teamId` entry (shown in `get_issue` → `recentHistory` as old and new identifier), plus `projectId`, `stateId`, `labelIds` where applicable, with the agent as actor and the `requestId`.
 - **Idempotency:** Like `set_status`: `requestId` is optional; with it, a retry returns the stored result (raw arguments, even if the identifiers have changed since). Without `requestId` a retry is harmless: the issues are already in the target team and are listed under `unchanged` with their new identifier. Old identifiers keep resolving in all tools (`get_issue` lists them under `previousIdentifiers`).
 - Rate limit and permissions as for the other write tools.
@@ -143,11 +143,16 @@ Same operations and rules as the UI ([backend.md](backend.md#models-desired-mode
 - `snoozedUntil` (YYYY-MM-DD, after today in the instance time zone) snoozes an open issue: the owner's lists no longer show it, and on that day, in the morning, it returns to the inbox with a push notification. `null` unsnoozes. Moving the issue to done, canceled or duplicate ends the snooze (`changed` then includes `snoozedUntil`). `list_issues` and `get_issue` show `snoozedUntil`; `snoozed: true` lists only snoozed issues, `false` only the others (without it, snoozed issues are listed like any other).
 - `expected` holds the values the agent last saw (labels as a set, case-insensitive). If a field has changed in the meantime, **that field is not written**; the others are. The result lists it under `conflicts` with expected and current value and a message.
 - The description changes only with `expectedDescriptionVersion` (from `get_issue`). If the version doesn't match, `description` is listed under `conflicts` and nothing is overwritten.
-- `changed` lists the fields that actually changed, `warnings` the priority budget warning.
+- `changed` lists the fields that actually changed, `warnings` the priority limit warning.
 
-### Priority budget warning
+### Priority limits
 
-If a team ends up with more than 1 open urgent or more than 3 open high issues, the result of `create_issues` and `update_issue` contains a warning (`warnings[].code = 'budget_warning'`). The change is saved anyway.
+The owner sets how many open urgent and high issues a team may have (Settings → Priorities; default 1 urgent and 3 high, warning only). Same rules as the UI ([backend.md](backend.md#priority-limits)). A call that adds an issue to a team's open urgent or high issues (setting the priority, creating, moving to another team) is checked against the limit:
+
+- **Soft limit:** the change is saved, and the result of `create_issues` and `update_issue` contains a warning `{ code: 'budget_warning', team, priority, open, budget, message }` (`budget` = the limit).
+- **Hard limit:** a change that would end above the limit fails for the whole call, nothing is written: `create_issues`, `update_issue` and `move_issues` return `isError: true` with `priority_limit: Team ORB already has 1 open urgent issue: ORB-1, and the hard limit is 1, so another urgent issue is not allowed. Lower the priority of one of them first, or raise the limit in Settings → Priorities.` The agent can lower another issue first or create the issue with a lower priority.
+
+Issues already above a lowered limit stay; lowering a priority and changing other fields always work.
 
 ### Priority is cleared on completion
 
@@ -186,7 +191,7 @@ Create with retry protection:
 
 ```json
 {"created":[{"identifier":"KIU-107","title":"Investigate webhook error","status":"Triage","statusType":"triage","priority":"urgent","team":"KIU","labels":["Bug"],"parent":"KIU-100"}],
- "warnings":[{"code":"budget_warning","team":"KIU","priority":"urgent","open":2,"budget":1,"message":"Priority budget exceeded: …"}]}
+ "warnings":[{"code":"budget_warning","team":"KIU","priority":"urgent","open":2,"budget":1,"message":"Priority limit exceeded: …"}]}
 ```
 
 Change only if the status still matches:
@@ -278,7 +283,7 @@ The Convex site URL works as is, but a custom domain gives connectors a stable, 
 
 ## Tests
 
-- `backend/test/mcp.test.ts` (convex-test via `t.fetch`): handshake, 401/405/404, every tool (`move_issues`: identifiers, dropped fields, status, alias, idempotency, trash, dormant team), all filters, compare-and-set, description with version, requestId, trash, revocation, rate limit, counting of failed calls.
+- `backend/test/mcp.test.ts` (convex-test via `t.fetch`): handshake, 401/405/404, every tool (`move_issues`: identifiers, dropped fields, status, alias, idempotency, trash, dormant team; `priority_limit` on `create_issues`, `update_issue` and `move_issues`), all filters, compare-and-set, description with version, requestId, trash, revocation, rate limit, counting of failed calls.
 - `backend/test/regressions.test.ts`: archived labels, read limits with 3100 completed issues, `read` as a query, retry with requestId after archiving or trashing, counting invalid calls.
 - `backend/test/lib/mcp/endpoint.test.ts`: key format, order of count/read, 401 on revocation between authentication and call, separation of keys (401 without challenge) and access tokens (401 with `WWW-Authenticate`).
 - `backend/test/lib/mcp/*`: protocol and argument validation without a database, plus the official MCP SDK client against a local test server.

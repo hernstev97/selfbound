@@ -59,6 +59,7 @@ const stroke = (d: string) => svg16(`<path d="${d}" stroke="currentColor" stroke
 
 /** UI icons (16 px). */
 export const ICON = {
+  priority: svg16(PRIORITY_BODY[2], 'fill="currentColor"'),
   inbox: stroke('M2.5 9.5h3l1 1.5h3l1-1.5h3M3.6 3.5h8.8l1.1 6V12a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 2.5 12V9.5Z'),
   triage: svg16('<circle cx="8" cy="8" r="5.75" stroke="currentColor" stroke-width="1.3"/><path d="M5 8l1.6-1.5v1h2.8v-1L11 8 9.4 9.5v-1H6.6v1Z" fill="currentColor"/>'),
   issues: stroke('M5.5 2.5h6a2 2 0 0 1 2 2v6M3.5 5.5h6a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-6a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1Z'),

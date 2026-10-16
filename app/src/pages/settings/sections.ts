@@ -14,6 +14,7 @@ export const SECTION_LABEL: Record<string, string> = translated({
   projects: 'Projects',
   labels: 'Labels',
   recurrences: 'Recurrences',
+  priorities: 'Priorities',
   agents: 'Agents',
   models: 'Models',
   github: 'GitHub',
@@ -46,6 +47,7 @@ export const SECTIONS = [
     { id: 'projects', icon: 'projects' },
     { id: 'labels', icon: 'label' },
     { id: 'recurrences', icon: 'restore' },
+    { id: 'priorities', icon: 'priority' },
   ]),
   group('agents', [
     { id: 'agents', icon: 'agent' },

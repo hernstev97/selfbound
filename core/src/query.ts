@@ -15,7 +15,7 @@ export interface ListExtras {
   /** Active sprint: planned / added later */
   kinds?: ReadonlyMap<IssueId, SprintItemKind>;
   /** Team groups: budget text and whether it is exceeded, per team id */
-  budget?: ReadonlyMap<string, { label: string; over: boolean }>;
+  budget?: ReadonlyMap<string, { label: string; over: boolean; title: string }>;
   /** Creator groups: display names of agents and the owner (store.agents) */
   actors?: ReadonlyMap<string, string>;
   /** Parent groups: name of the parent issue */
@@ -259,7 +259,7 @@ function groupSpec(by: Grouping, meta: Meta | null, dark: boolean, extras: ListE
             .filter((team) => keys.has(team._id) || (showEmpty && opts.teams.includes(team._id)))
             .map((team) => {
               const b = extras.budget?.get(team._id);
-              return { by, value: team._id, label: team.name, team: teamBadge(team, dark), ...(b ? { budget: b.label, overBudget: b.over } : {}) };
+              return { by, value: team._id, label: team.name, team: teamBadge(team, dark), ...(b ? { budget: b.label, overBudget: b.over, budgetTitle: b.title } : {}) };
             }),
       };
     }
@@ -542,7 +542,7 @@ export function reuseList(prev: ListState, next: ListState): ListState {
     const a = prev.rows[i];
     const b = next.rows[i];
     if (a.key !== b.key) return next;
-    if (a.kind === 'group' && b.kind === 'group' && (a.count !== b.count || a.collapsed !== b.collapsed || a.group.label !== b.group.label || a.group.color !== b.group.color || a.group.hue !== b.group.hue || a.group.team?.logo !== b.group.team?.logo || a.group.budget !== b.group.budget)) return next;
+    if (a.kind === 'group' && b.kind === 'group' && (a.count !== b.count || a.collapsed !== b.collapsed || a.group.label !== b.group.label || a.group.color !== b.group.color || a.group.hue !== b.group.hue || a.group.team?.logo !== b.group.team?.logo || a.group.budget !== b.group.budget || a.group.budgetTitle !== b.group.budgetTitle)) return next;
   }
   return prev;
 }

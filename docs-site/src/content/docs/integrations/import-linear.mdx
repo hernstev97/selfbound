@@ -129,6 +129,10 @@ node tooling/cloud.mjs run migrations:priorityClearClosed
 node tooling/cloud.mjs run migrations:priorityClearClosed '{"apply":true}'
 ```
 
+### Hard priority limits
+
+If a team's [priority limit](/concepts/issues/#priority) is set to **Block** and already full, an Urgent or High issue from Linear is still imported, but without that priority (an issue imported earlier keeps its value in Selfbound). The report lists each one as a deviation, for example "KIU-2: priority high not taken, the hard limit of team KIU is full".
+
 ## Copy files and images
 
 The import copies text, not the files behind it. Images in descriptions and comments still point to Linear afterwards, need a Linear login and may stop showing. The `files` tool copies them into Selfbound and rewrites the references. Each step can be repeated safely:
