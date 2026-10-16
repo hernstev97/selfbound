@@ -30,9 +30,9 @@ Node 24 and pnpm 11. `pnpm install`, then `pnpm dev` (local Convex backend, no a
 A branch name describes the work: `<type>/<issue>-<slug>`, or `<type>/<slug>` without an issue.
 
 - Type: `feat`, `fix`, `docs`, `refactor`, `perf`, `test`, `chore` or `ci`.
-- Issue: the GitHub issue number or the XLR8 identifier, in lower case. Slug: lower-case words
+- Issue: the GitHub issue number or the Selfbound identifier (`SELF-48`), in lower case. Slug: lower-case words
   separated by hyphens.
-- Examples: `feat/xlr8-48-github-issues-import`, `fix/123-focus-after-esc`, `docs/self-hosting-clerk`.
+- Examples: `feat/self-48-github-issues-import`, `fix/123-focus-after-esc`, `docs/self-hosting-clerk`.
 - No prefixes that name a tool or person (`claude/`, `codex/`, `t3code/`, user names), and no e-mail
   addresses. Dependabot branches (`dependabot/…`) are the only exception.
 

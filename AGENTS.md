@@ -21,13 +21,14 @@ low priority). Do not start full performance runs unless asked.
 ## Rules
 
 - Branch names describe the work: `<type>/<issue>-<slug>` with type `feat|fix|docs|refactor|perf|test|chore|ci`
-  (e.g. `feat/xlr8-48-github-issues-import`), or `<type>/<slug>` without an issue. Never a tool, user or
+  (e.g. `feat/self-48-github-issues-import`), or `<type>/<slug>` without an issue. Never a tool, user or
   account prefix (`t3code/`, `claude/`, `codex/`, `aleister/`, user names, e-mail addresses). The CI check
   `branch-name` fails otherwise; rename with `git branch -m`.
 - Outside contributions are issue-first (`CONTRIBUTING.md`): a pull request from a non-collaborator must
   refer to an issue the maintainer labeled `accepted`, or it is closed automatically.
-- Naming: the product is called Selfbound. `XLR8` survives only as the team key with its issue ids (`XLR8-48`), the
-  instance URL `xlr8.kiumu.app` and MCP URL of the maintainer's instance, and the Vercel project `xlr8`. The few
+- Naming: the product is called Selfbound. The Selfbound team's key is `SELF` (issue ids `SELF-48`) since 2026-10-16. `XLR8` survives only as its previous key
+  (`XLR8-48` and `xlr8-48` still resolve), the instance URL `xlr8.kiumu.app` and MCP URL of the maintainer's instance, and the
+  Vercel project `xlr8`. The few
   remaining old names (`XLR8_*` env vars, `xlr8:*` storage, `xlr8_` key prefixes, actor kind `steven`) are accepted
   fallbacks, each marked `legacy-xlr8` in code, until the follow-up removes them (`docs/operations.md`, "Moving from
   the XLR8 names"). New code uses only the new names. The repository is `hernstev97/selfbound`; packages are `@selfbound/*`.

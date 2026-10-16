@@ -75,7 +75,8 @@ built from them, the instance `xlr8.kiumu.app`, the MCP address `mcp.xlr8.kiumu.
 address). Historical reports under `docs/reports/` and
 `docs/brand.md` describe the past and stay as they are.
 
-Superseded in part on 2026-10-15: see the next entry.
+Superseded in part on 2026-10-15: see the next entry. Update 2026-10-16: the team key `XLR8` of the Selfbound team became
+`SELF`; see "Team keys can be renamed" below. The text above describes the state of 2026-10-14.
 
 ## The remaining XLR8 names move to Selfbound, with fallbacks
 
@@ -133,3 +134,9 @@ they reach Selfbound. Push notifications already delivered keep their old links 
 **Shows up as:** `teams.previousKeys`, `lib/identifiers.ts` (`resolveIssue`, `teamByKey`), `ops/teams.ts`
 (`assertKeyFree`), `core/src/store.ts` (`renamedKeys`), `core/src/route.ts` (`withCurrentTeamKeys`), and "Rename the key"
 in the docs site (`docs-site/src/content/docs/concepts/teams.mdx`).
+
+**Applied (2026-10-16, XLR8-98):** Steven renamed the key of the Selfbound team in production from `XLR8` to `SELF`
+(`SELF-98`; `XLR8-98` still resolves). `XLR8` is now the team's previous key. It stays in the maintainer's instance address
+`xlr8.kiumu.app`, the MCP address `mcp.xlr8.kiumu.app` and the Vercel project `xlr8`, which do not follow the key. Branch
+names and examples in the repository use `self-48-…`; branches and texts with `xlr8-48` keep linking. Earlier entries,
+reports and changelogs keep the identifiers they were written with.
