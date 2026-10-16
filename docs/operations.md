@@ -672,8 +672,11 @@ by hand before step 4.
 | Stored: actor kind `steven`, sprint source `xlr8`, MCP field `reviewedBySteven` | `owner`, `selfbound`, `reviewedByOwner` |
 
 What does **not** change: Convex table and field names, function names, HTTP routes, MCP tool names and parameters, the
-team key `XLR8` of an existing team (issue identifiers like `XLR8-48` stay), and your own addresses. A team key can be renamed
+team key of an existing team (a team keyed `XLR8` keeps identifiers like `XLR8-48`), and your own addresses. A team key can be renamed
 in the team settings if wanted; old identifiers keep resolving (`teams.previousKeys`, see [decisions](decisions.md)).
+The maintainer's instance did that on 2026-10-16: the Selfbound team is `SELF` now and `XLR8` is its previous key
+(`XLR8-48` and `SELF-48` are the same issue). The instance address `xlr8.kiumu.app`, the MCP address and the Vercel project
+`xlr8` did not change.
 
 ### Manual steps outside the repository
 
