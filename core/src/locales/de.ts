@@ -241,6 +241,7 @@ export default {
   // app/palette.ts
   Model: 'Modell',
   'No model': 'Kein Modell',
+  'All models': 'Alle Modelle',
   'Agent decides': 'Agent entscheidet',
   'Choose models in the settings …': 'Modelle in den Einstellungen wählen …',
   'No models enabled yet': 'Noch keine Modelle aktiviert',
@@ -353,6 +354,7 @@ export default {
   'Label: {values}': 'Label: {values}',
   'Project: {values}': 'Projekt: {values}',
   'Sprint: {values}': 'Sprint: {values}',
+  'Model: {values}': 'Modell: {values}',
   Unread: 'Ungelesen',
 
   // app/toasts.ts

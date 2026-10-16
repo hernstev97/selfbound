@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { type ListRow, type Draft, type GroupInfo } from '@selfbound/core';
+  import { modelIndex, modelKey, type ListRow, type Draft, type GroupInfo } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { today } from '@selfbound/core/format';
   import type { ListController } from '@selfbound/core/app/list';
   import { app } from '../app-instance.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import TeamLogo from './TeamLogo.svelte';
 
   type GroupListRow = Extract<ListRow, { kind: 'group' }>;
@@ -39,6 +40,13 @@
     if (g.by === 'parent' && !none) ctx.parentId = g.value;
     if (g.by === 'project' && !none) ctx.projectId = g.value;
     if (g.by === 'sprint' && !none) ctx.sprintId = g.value;
+    // Only a model that can be chosen, and not one the new issue gets from its team anyway.
+    if (g.by === 'model' && !none) {
+      const meta = app.store.meta.get();
+      const info = modelIndex(meta).get(g.value);
+      const team = meta?.teams.find((x) => x.key === list.view.get().route.team)?.defaultModel;
+      if (info && !info.removed && !(team && modelKey(team.provider, team.modelId) === g.value)) ctx.model = { provider: info.provider, modelId: info.modelId };
+    }
     if (g.by === 'scope') ctx.sprintId = app.store.meta.get()?.sprints.find((s) => s.state === 'active')?._id ?? null;
   }
   function add(e: MouseEvent) {
@@ -71,6 +79,8 @@
       <span class="icon mi ui-parent" style="color: var(--text-muted)"></span>
     {:else if row.group.by === 'project'}
       <span class="icon mi ui-projects" style="color: var(--text-muted)"></span>
+    {:else if row.group.by === 'model'}
+      <span class={['icon mi', row.group.value === 'none' ? 'ui-model' : logoClass(row.group.logo)]} style="color: var(--text-muted)"></span>
     {:else if row.group.by === 'sprint' || row.group.by === 'scope'}
       <span class="icon mi ui-sprint" style:color={row.group.value === 'late' ? 'var(--status-progress)' : 'var(--text-muted)'}></span>
     {/if}

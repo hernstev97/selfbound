@@ -54,7 +54,7 @@ export interface Location {
 
 const GLOBAL: Record<string, ViewKind> = { inbox: 'inbox', snoozed: 'snoozed', triage: 'triage', all: 'all', active: 'active', backlog: 'backlog', sprint: 'sprint', trash: 'trash' };
 const TEAM_TABS: Record<string, ViewKind> = { '': 'active', all: 'all', active: 'active', backlog: 'backlog', triage: 'triage', sprint: 'sprint', snoozed: 'snoozed' };
-const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'scope', 'none'];
+const GROUPINGS: Grouping[] = ['status', 'team', 'priority', 'label', 'labelGroup', 'creator', 'estimate', 'model', 'due', 'project', 'sprint', 'parent', 'created', 'updated', 'scope', 'none'];
 const ORDERINGS: Ordering[] = ['priority', 'rank', 'updated', 'created', 'due', 'status', 'snoozed'];
 /** Settings section shown for /settings */
 export const DEFAULT_SETTINGS_SECTION = 'general';
@@ -172,6 +172,8 @@ export function readLocation(url: URL): Location {
     label: list(p.get('label')),
     project: list(p.get('project')),
     sprint: list(p.get('sprint')),
+    // Values are "provider/modelId"; a comma inside one is written as %2C (and % as %25).
+    model: list(p.get('model')).map((v) => v.replace(/%2C/gi, ',').replace(/%25/g, '%')),
     unreviewed: p.get('unreviewed') === '1',
     snoozed: p.get('snoozed') === '1',
   };
@@ -219,7 +221,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
   const url = new URL(base);
   url.pathname = pagePath(loc.page);
   const p = url.searchParams;
-  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'unreviewed', 'snoozed', 'q', 'group', 'sub', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
+  for (const key of ['status', 'prio', 'fteam', 'label', 'project', 'sprint', 'model', 'unreviewed', 'snoozed', 'q', 'group', 'sub', 'order', 'layout', 'title', 'priority', 'team', 'description', 'estimate', 'due']) p.delete(key);
   if (loc.page.name === 'view') {
     const set = (key: string, value: string | null | undefined) => (value ? p.set(key, value) : p.delete(key));
     const f = loc.filters;
@@ -229,6 +231,7 @@ export function writeLocation(base: URL, loc: Pick<Location, 'page' | 'filters' 
     set('label', f.label.map((id) => labelParam(id, labels)).join(','));
     set('project', f.project.join(','));
     set('sprint', f.sprint.join(','));
+    set('model', f.model.map((v) => v.replace(/%/g, '%25').replace(/,/g, '%2C')).join(','));
     set('unreviewed', f.unreviewed ? '1' : null);
     set('snoozed', f.snoozed ? '1' : null);
     set('q', loc.quick);

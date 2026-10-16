@@ -135,7 +135,7 @@ export function effectiveModel(
 }
 
 /**
- * Filter by effective model (MCP `model`, the list filter): "none" = no model, otherwise a provider ID,
+ * Filter by effective model (MCP `model` and the list filter): "none" = no model, otherwise a provider ID,
  * a model ID or "provider/modelId", case-insensitive.
  */
 export function modelFilterMatches(filter: string, effective: ModelChoice | null | undefined): boolean {

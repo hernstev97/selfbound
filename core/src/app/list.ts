@@ -13,6 +13,7 @@ import { VIEWS, planSprint, subGroupings, viewKey, viewTitle, type ViewContext }
 import { revealIndex, revealSpan } from '../window.ts';
 import { inboxAt, unread } from '../inbox.ts';
 import { entryText } from '../inboxText.ts';
+import { effectiveChoice, modelFilterLabel, modelInfo, modelLabel, teamModels } from '../models.ts';
 import type { BoardColumn, BoardState, Display, Filters, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, RowState, StateId, TeamBadge, ViewKind, ViewRoute, ViewState } from '../types.ts';
 import type { App } from './index.ts';
 
@@ -127,6 +128,8 @@ export class ListController {
   #projects = new Map<string, string>();
   #sprints = new Map<string, { name: string; state: string }>();
   #badges = new Map<string, TeamBadge>();
+  /** Model chip texts per choice object (issue, parent or team default), dropped when meta changes */
+  #modelLabels = new WeakMap<object, string>();
   /** Board: column and position per issue (also in collapsed columns) */
   #boardPos = new Map<IssueId, { col: number; index: number }>();
   #columnScrollers = new Map<string, ColumnScroller>();
@@ -189,6 +192,7 @@ export class ListController {
       projectId: route.project ?? null,
       keep: this.#keep,
       board: this.isBoard(),
+      issueOf: (id) => this.app.store.get(id),
       ...(planning ? { planSprintId: planSprint(route, meta)?._id ?? null, activeTeams: new Set(meta?.teams.filter((t) => !t.dormant && t.wiki !== 'only').map((t) => t._id as string)) } : {}),
     };
   }
@@ -208,6 +212,7 @@ export class ListController {
     this.#labels = new Map(meta?.labels.map((l) => [l._id, { name: l.name, hue: l.hue }]) ?? []);
     this.#projects = new Map(meta?.projects.map((p) => [p._id, p.name]) ?? []);
     this.#sprints = new Map(meta?.sprints.map((s) => [s._id, { name: s.name, state: s.state }]) ?? []);
+    this.#modelLabels = new WeakMap();
     this.#badges.clear();
     this.rows.refreshAll();
     this.recompute();
@@ -221,6 +226,8 @@ export class ListController {
 
   onIssues(ids: ReadonlySet<IssueId>) {
     for (const id of ids) this.rows.refresh(id);
+    // Sub-issues show the parent's model as inherited (row state is cached across views, so always).
+    for (const id of ids) for (const child of this.app.store.childrenOf(id)) this.rows.refresh(child._id);
     const quick = this.#tryInPlace(ids);
     // Pending issue confirmed: focus and selection move to the real one.
     const store = this.app.store;
@@ -288,9 +295,11 @@ export class ListController {
     if (grouping === 'team' || grouping === 'scope' || grouping === 'parent' || multiGrouping(grouping)) return false;
     if (view.display.subGrouping && view.display.subGrouping !== 'none') return false;
     const store = this.app.store;
+    // The effective model also depends on the parent: a parent's change may move its sub-issues.
+    if ((grouping === 'model' || view.filters.model.length) && [...ids].some((id) => store.childrenOf(id).length > 0)) return false;
     const matches = visibleFilter(view, store.meta.get(), this.context());
     const compare = viewComparator(view);
-    const groupKey = groupKeyOf(grouping, {}, store.meta.get());
+    const groupKey = groupKeyOf(grouping, { issueOf: (id) => store.get(id) }, store.meta.get());
     const rows = this.list.get().rows;
     const issueAt = (i: number) => {
       const row = rows[i];
@@ -350,7 +359,7 @@ export class ListController {
     if (view.display.grouping === 'scope') extras.kinds = this.app.store.sprintKinds.get();
     if (view.display.grouping === 'team') extras.budget = this.app.budgetLabels();
     if (view.display.grouping === 'creator' || view.display.subGrouping === 'creator') extras.actors = this.app.store.agents.get();
-    if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent') extras.issueOf = (id) => this.app.store.get(id);
+    if (view.display.grouping === 'parent' || view.display.subGrouping === 'parent' || view.display.grouping === 'model' || view.display.subGrouping === 'model') extras.issueOf = (id) => this.app.store.get(id);
     const next = reuseList(this.list.get(), computeList(visible, view, meta, this.#collapsedFor(view.route), this.app.prefs.dark.get(), extras));
     if (next !== this.list.get()) {
       const keep = anchor ? this.#scrollAnchor() : null;
@@ -418,6 +427,8 @@ export class ListController {
     if (this.idle || !board || ids.size > 200) return false;
     const view = this.view.get();
     const store = this.app.store;
+    // A parent's model decides whether its sub-issues pass the model filter.
+    if (view.filters.model.length && [...ids].some((id) => store.childrenOf(id).length > 0)) return false;
     const meta = store.meta.get();
     const matches = visibleFilter(view, meta, this.context());
     const compare = viewComparator(view);
@@ -646,6 +657,7 @@ export class ListController {
       project: issue.projectId ? (this.#projects.get(issue.projectId) ?? null) : null,
       sprint: sprint && sprint.state !== 'closed' ? { name: sprint.name, late: this.app.store.sprintKinds.get().get(id) === 'late', active: sprint.state === 'active' } : null,
       estimate: issue.estimate ?? null,
+      model: this.#modelCell(issue),
       due: issue.dueDate ? dueLabel(issue.dueDate) : null,
       snoozed: issue.snoozedUntil ? shortDate(parseDay(issue.snoozedUntil).getTime()) : null,
       created: shortDate(issue.createdAt),
@@ -660,6 +672,17 @@ export class ListController {
       focused: this.#focus === id && this.app.list === this,
       selected: this.#selection.has(id),
     };
+  }
+
+  /** The row's model: own, else inherited from the parent or the team default (shown dimmed). */
+  #modelCell(issue: Issue): RowState['model'] {
+    const store = this.app.store;
+    const meta = store.meta.get();
+    const choice = effectiveChoice(issue, (id) => store.get(id), teamModels(meta));
+    if (!choice) return null;
+    let label = this.#modelLabels.get(choice);
+    if (label === undefined) this.#modelLabels.set(choice, (label = modelLabel(meta, choice)));
+    return { label, inherited: !issue.model, logo: modelInfo(meta, choice)?.logo ?? null };
   }
 
   /** Column in use changed (sprint planning): redraw the focus row. */
@@ -715,6 +738,7 @@ export class ListController {
     if (f.label.length) chips.push({ field: 'label', label: t('Label: {values}', { values: names(f.label, new Map(meta?.labels.map((l) => [l._id, l.name]))) }) });
     if (f.project.length) chips.push({ field: 'project', label: t('Project: {values}', { values: names(f.project, new Map(meta?.projects.map((p) => [p._id, p.name]))) }) });
     if (f.sprint.length) chips.push({ field: 'sprint', label: t('Sprint: {values}', { values: names(f.sprint, new Map(meta?.sprints.map((s) => [s._id, s.name]))) }) });
+    if (f.model.length) chips.push({ field: 'model', label: t('Model: {values}', { values: f.model.map((v) => modelFilterLabel(meta, v)).join(', ') }) });
     if (f.unreviewed) chips.push({ field: 'unreviewed', label: t('Unread') });
     if (f.snoozed) chips.push({ field: 'snoozed', label: t('With snoozed') });
     return chips;

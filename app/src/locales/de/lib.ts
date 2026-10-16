@@ -137,6 +137,7 @@ export default {
   // lib/rowHtml.ts
   Due: 'Fällig',
   Estimate: 'Schätzung',
+  'inherited from the parent issue or the team default': 'geerbt vom Eltern-Issue oder vom Team-Standard',
   'Added to the sprint later': 'Nachträglich in den Sprint gekommen',
   'In the active sprint': 'Im laufenden Sprint',
   'In the planned sprint': 'Im geplanten Sprint',

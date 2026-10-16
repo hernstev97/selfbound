@@ -45,7 +45,7 @@ command menu: **Board columns: toggle status / priority**.
 
 Press <Kbd keys="shift+v" /> or click **Display** to open the display options:
 
-- **Grouping**: by Status, Team, Priority, Label, Label group, Creator, Estimate, Due date, Project,
+- **Grouping**: by Status, Team, Priority, Label, Label group, Creator, Estimate, Model, Due date, Project,
   Sprint, Parent issue, Created, Updated, or None. The sprint view also offers **Planned / added
   later**. The available choices depend on the view. An issue with several labels appears under each of
   them (and under each label group it has a label from), and the counts count issues, not rows.
@@ -56,9 +56,16 @@ Press <Kbd keys="shift+v" /> or click **Display** to open the display options:
 - **Ordering**: by Priority, Manual, Last updated, Created, Due date, and in some views Status.
 - **Show completed**: in views where done and canceled issues are relevant (All issues, Sprint,
   projects), this switch shows or hides them.
-- **Properties**: which details each row shows, such as ID, status, labels, project, estimate or due
-  date. Click a property to toggle it.
+- **Properties**: which details each row shows, such as ID, status, labels, project, model, estimate or
+  due date. Click a property to toggle it. The model column shows a model the issue inherits (from its
+  parent or its team) dimmed, next to the provider's logo.
 - **Restore defaults** resets everything to the view's original setup.
+
+Grouping and filtering by **Model** use the model that applies to the issue: its own, otherwise its
+parent's, otherwise the team's default (see [Model](/concepts/issues/#model)). Effort and speed do not split
+a group.
+
+<Screenshot name="list-model" alt="All issues of a team grouped by model, with the model column: issues with their own model, sub-issues that inherit their parent's model shown dimmed, and a group of issues without a model" />
 
 A dot on the **Display** button means the view differs from its defaults. Display options are saved per
 view and per team in this browser, so the Backlog of one team can look different from another's.
@@ -81,7 +88,7 @@ Press <Kbd keys="f" /> or click **Filter** to filter a view.
 
 <Screenshot name="filter" alt="The filter menu over an issue list, with the fields Status, Priority, Team, Label, Project and Sprint, and the Unread (in inbox) checkbox" width={720} />
 
-1. Pick a field: **Status**, **Priority**, **Team**, **Label**, **Project** or **Sprint**.
+1. Pick a field: **Status**, **Priority**, **Team**, **Label**, **Project**, **Sprint** or **Model**.
 2. Check one or more values. The menu stays open, so you can check several.
 3. Press <Kbd keys="escape" /> to go back to the fields, and again to close.
 
@@ -90,7 +97,7 @@ matching values of all fields at once.
 
 How filters combine: several values of one field mean "any of these" (Priority Urgent or High). Several
 fields mean "all of these" (Urgent or High, and label Bug). Project and Sprint also offer "No project" and
-"No sprint". **Unread (in inbox)** shows only inbox entries you have not opened yet.
+"No sprint"; Model offers "No model", a whole provider, or one model. **Unread (in inbox)** shows only inbox entries you have not opened yet.
 
 Active filters appear as chips below the header. Click the × on a chip to remove one, or **Reset
 filters** to remove all. **Clear filters** in the command menu does the same.

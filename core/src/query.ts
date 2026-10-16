@@ -5,6 +5,8 @@ import { intlLocale, t, tn, translated } from './i18n.ts';
 import { stateGroupKey, statusMatcher, workflowsOf, type StateView } from './workflow.ts';
 import { VIEWS, type ViewContext } from './views.ts';
 import { haystackOf } from './haystack.ts';
+import { modelFilterMatches } from '@selfbound/backend/shared/models';
+import { effectiveChoice, modelKey, teamModels } from './models.ts';
 import { inboxAt, unread } from './inbox.ts';
 import type { Filters, GroupInfo, GroupOrder, Grouping, Issue, IssueId, ListRow, ListState, Meta, Ordering, Priority, SprintItemKind, TeamBadge, ViewState } from './types.ts';
 
@@ -43,11 +45,11 @@ function groupTeams(view: ViewState, meta: Meta | null): string[] {
 const STATUS_POS = new Map(STATUS_GROUP_ORDER.map((s, i) => [s, i]));
 
 export function emptyFilters(): Filters {
-  return { status: [], priority: [], team: [], label: [], project: [], sprint: [], unreviewed: false, snoozed: false };
+  return { status: [], priority: [], team: [], label: [], project: [], sprint: [], model: [], unreviewed: false, snoozed: false };
 }
 
 export function filterCount(f: Filters) {
-  return f.status.length + f.priority.length + f.team.length + f.label.length + f.project.length + f.sprint.length + (f.unreviewed ? 1 : 0) + (f.snoozed ? 1 : 0);
+  return f.status.length + f.priority.length + f.team.length + f.label.length + f.project.length + f.sprint.length + (f.model?.length ?? 0) + (f.unreviewed ? 1 : 0) + (f.snoozed ? 1 : 0);
 }
 
 export function hasFilters(view: ViewState) {
@@ -56,7 +58,7 @@ export function hasFilters(view: ViewState) {
 
 export function sameFilters(a: Filters, b: Filters) {
   const eq = (x: readonly unknown[], y: readonly unknown[]) => x.length === y.length && x.every((v, i) => v === y[i]);
-  return eq(a.status, b.status) && eq(a.priority, b.priority) && eq(a.team, b.team) && eq(a.label, b.label) && eq(a.project, b.project) && eq(a.sprint, b.sprint) && a.unreviewed === b.unreviewed && a.snoozed === b.snoozed;
+  return eq(a.status, b.status) && eq(a.priority, b.priority) && eq(a.team, b.team) && eq(a.label, b.label) && eq(a.project, b.project) && eq(a.sprint, b.sprint) && eq(a.model ?? [], b.model ?? []) && a.unreviewed === b.unreviewed && a.snoozed === b.snoozed;
 }
 
 const byRank = (a: Issue, b: Issue) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0);
@@ -100,6 +102,9 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
   const labels = f.label.length ? new Set(f.label) : null;
   const projects = f.project.length ? new Set(f.project) : null;
   const sprints = f.sprint.length ? new Set(f.sprint) : null;
+  // Effective model: "provider/modelId", a model ID, a provider ID or "none" (as MCP's `model` filter).
+  const models = f.model.length ? f.model : null;
+  const teamDefaults = teamModels(meta);
   const hideClosed = def.closedOption && !view.display.showClosed && !status;
   const tokens = view.quick.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const unreviewed = f.unreviewed;
@@ -115,6 +120,10 @@ export function visibleFilter(view: ViewState, meta: Meta | null, ctx: ViewConte
     if (labels && !issue.labelIds.some((l) => labels.has(l))) return false;
     if (projects && !projects.has(issue.projectId ?? 'none')) return false;
     if (sprints && !sprints.has(issue.sprintId ?? 'none')) return false;
+    if (models) {
+      const m = effectiveChoice(issue, ctx.issueOf, teamDefaults);
+      if (!models.some((value) => modelFilterMatches(value, m))) return false;
+    }
     if (unreviewed && !unread(issue) && !ctx.keep.has(issue._id)) return false;
     if (tokens.length && !tokens.every((token) => haystackOf(issue).includes(token))) return false;
     return true;
@@ -337,6 +346,29 @@ function groupSpec(by: Grouping, meta: Meta | null, dark: boolean, extras: ListE
           ...sprints.filter((s) => keys.has(s._id) || (showEmpty && s.state !== 'closed')).map((s) => ({ by, value: s._id as string, label: s.state === 'active' ? t('{name} (active)', { name: s.name }) : s.name })),
           ...(keys.has(NONE) || showEmpty ? [{ by, value: NONE, label: t('No sprint') }] : []),
         ],
+      };
+    }
+    case 'model': {
+      // Effective model (own, parent's, team default), one group per model whatever the effort.
+      const teams = teamModels(meta);
+      const models = (meta?.models ?? []).map((m) => ({ key: modelKey(m.provider, m.modelId), m }));
+      const names = new Map<string, number>();
+      for (const { m } of models) names.set(m.name, (names.get(m.name) ?? 0) + 1);
+      const label = (m: (typeof models)[number]['m']) => ((names.get(m.name) ?? 0) > 1 ? `${m.name} · ${m.providerName}` : m.name);
+      return {
+        key: (i) => {
+          const m = effectiveChoice(i, extras.issueOf, teams);
+          return m ? modelKey(m.provider, m.modelId) : NONE;
+        },
+        order: (keys, showEmpty) => {
+          const known = new Set(models.map((x) => x.key));
+          return [
+            ...models.filter((x) => keys.has(x.key) || (showEmpty && !x.m.removed)).map((x) => ({ by, value: x.key, label: label(x.m), ...(x.m.logo ? { logo: x.m.logo } : {}) })),
+            // A model no longer enabled: its ID and provider.
+            ...[...keys].filter((k) => k !== NONE && !known.has(k)).map((k) => ({ by, value: k, label: `${k.slice(k.indexOf('/') + 1)} · ${k.slice(0, k.indexOf('/'))}` })),
+            ...(keys.has(NONE) || showEmpty ? [{ by, value: NONE, label: t('No model') }] : []),
+          ];
+        },
       };
     }
     case 'parent':

@@ -183,12 +183,12 @@ export interface NewIssue {
 export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
 /** scope = planned / added later (active sprint); due, created, updated = date buckets */
-export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
+export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'model' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
 /** Order of the groups: the natural order, reversed, or the biggest group first */
 export type GroupOrder = 'asc' | 'desc' | 'size';
 export type Ordering = 'priority' | 'rank' | 'updated' | 'created' | 'due' | 'status' | 'snoozed';
-export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'estimate' | 'due' | 'snoozed' | 'created' | 'updated' | 'team';
-export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'estimate', 'due', 'snoozed', 'created', 'updated'];
+export type DisplayProp = 'priority' | 'id' | 'status' | 'labels' | 'project' | 'sprint' | 'model' | 'estimate' | 'due' | 'snoozed' | 'created' | 'updated' | 'team';
+export const DISPLAY_PROPS: DisplayProp[] = ['priority', 'id', 'status', 'team', 'labels', 'project', 'sprint', 'model', 'estimate', 'due', 'snoozed', 'created', 'updated'];
 
 export interface Display {
   grouping: Grouping;
@@ -242,6 +242,8 @@ export interface Filters {
   project: string[];
   /** Sprint ids, "none" = no sprint */
   sprint: string[];
+  /** Effective model (own, parent's, team default): "provider/modelId", a provider id, or "none" */
+  model: string[];
   /** Only unread inbox entries (URL `unreviewed=1`, an older name) */
   unreviewed: boolean;
   /** Also show snoozed issues (URL `snoozed=1`) */
@@ -283,6 +285,8 @@ export interface RowState {
   project: string | null;
   sprint: { name: string; late: boolean; active: boolean } | null;
   estimate: number | null;
+  /** Effective model ("Claude Opus 5.5 · xhigh"); `inherited` from the parent or the team default; the provider's logo */
+  model: { label: string; inherited: boolean; logo: string | null } | null;
   due: { label: string; overdue: boolean; soon: boolean } | null;
   /** Snoozed until (column "Snoozed") */
   snoozed: string | null;
@@ -331,6 +335,8 @@ export interface GroupInfo {
   team?: TeamBadge;
   /** Label groups: the label's color */
   hue?: number;
+  /** Model groups: the provider's logo */
+  logo?: string;
   /** Team groups: priority budget "Urgent 1/1 · High 3/3" */
   budget?: string;
   overBudget?: boolean;

@@ -52,6 +52,39 @@ export function issueModel(meta: Meta | null | undefined, issue: Pick<Issue, 'mo
   return effectiveModel(issue.model, parent?.model, team);
 }
 
+const TEAM_MODELS = new WeakMap<object, Map<string, ModelChoice>>();
+
+/** Team defaults by team id, once per meta revision (filters and groups check them per issue). */
+export function teamModels(meta: Meta | null | undefined): ReadonlyMap<string, ModelChoice> {
+  const teams = meta?.teams;
+  if (!teams) return new Map();
+  let map = TEAM_MODELS.get(teams);
+  if (!map) {
+    map = new Map(teams.flatMap((x) => (x.defaultModel ? [[x._id as string, x.defaultModel] as const] : [])));
+    TEAM_MODELS.set(teams, map);
+  }
+  return map;
+}
+
+/** The effective model for lists: own, else the parent's own (looked up by id), else the team default. */
+export function effectiveChoice(
+  issue: Pick<Issue, 'model' | 'parentId' | 'teamId'>,
+  issueOf: ((id: Issue['_id']) => Pick<Issue, 'model'> | undefined) | undefined,
+  teams: ReadonlyMap<string, ModelChoice>,
+): ModelChoice | undefined {
+  if (issue.model) return issue.model;
+  const parent = issue.parentId ? issueOf?.(issue.parentId)?.model : undefined;
+  return parent ?? teams.get(issue.teamId);
+}
+
+/** Text of a model filter value: "No model", a provider's name or a model's name. */
+export function modelFilterLabel(meta: Meta | null | undefined, value: string): string {
+  if (value === 'none') return t('No model');
+  const models = meta?.models ?? [];
+  if (!value.includes('/')) return models.find((m) => m.provider === value)?.providerName ?? value;
+  return modelIndex(meta).get(value)?.name ?? value.slice(value.indexOf('/') + 1);
+}
+
 /** Why a chosen model is shown with a hint: not enabled any more, or gone from the catalog. */
 export function modelProblem(meta: Meta | null | undefined, choice: ModelChoice): string | null {
   const info = modelInfo(meta, choice);
