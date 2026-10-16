@@ -34,3 +34,13 @@
 > [!SUCCESS] Outer
 > > [!INFO] Inner
 > > Nested panel
+
+Short summary for people.
+
+> [!AGENT] Details für Agenten
+> ## Acceptance criteria
+>
+> - [ ] The block starts closed
+> - [x] It opens with one click
+>
+> Files: `app/src/lib/blocks/callout.ts`

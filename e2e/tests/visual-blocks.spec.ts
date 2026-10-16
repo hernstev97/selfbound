@@ -190,3 +190,125 @@ test('Panels in the editor: "/" menu, title, content, kind menu, back to text; u
   await page.keyboard.press('Escape');
   await expect.poll(async () => (await backend().query(api.issues.detail, { id: issue.id as never }))!.body.markdown).toContain('\n\n> [!info] Heads up');
 });
+
+test('Agent details: closed under the summary, open with a click or the keyboard, stay open while a task is ticked and on return; phone width', async ({ page }, testInfo) => {
+  const meta = await backend().query(api.meta.get, {});
+  const team = meta.teams.find((t) => t.key === 'ORB')!;
+  const { issues: linked } = await backend().mutation(api.issues.create, { issues: [{ teamId: team._id, title: `Linked ${Date.now()}` }] });
+  const other = linked[0];
+  created.push(other.id);
+  const issue = await freshIssue(
+    page,
+    [`Short summary for people, see ${other.identifier}.`, '', '> [!AGENT] Details für Agenten', '> - [ ] First criterion', '> - [ ] Second criterion', '>', '> Files: `app/src/lib/blocks/callout.ts`'].join('\n'),
+  );
+  const description = page.getByTestId('detail-description');
+  const details = description.locator('details.callout-agent');
+  const summary = details.locator('summary');
+  await expect(details).toHaveCount(1);
+  await expect(details).not.toHaveAttribute('open');
+  await expect(summary).toHaveText('Details für Agenten');
+  await expect(details.locator('.callout-body')).toBeHidden();
+  await expect(description.getByText('Short summary for people')).toBeVisible();
+
+  // One click opens it, without starting the editor
+  await summary.click();
+  await expect(details).toHaveAttribute('open', '');
+  await expect(details.getByText('First criterion')).toBeVisible();
+  await expect(page.getByTestId('desc-editor')).toHaveCount(0);
+
+  // Ticking a task inside renders the text again; the block stays open
+  await details.getByTestId('task-box').first().click();
+  await expect.poll(async () => (await backend().query(api.issues.detail, { id: issue.id as never }))!.body.markdown).toContain('- [x] First criterion');
+  await expect(details.getByTestId('task-box').first()).toBeChecked();
+  await expect(details).toHaveAttribute('open', '');
+
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', scheme);
+    expect(await contrast(summary.locator('.callout-name')), `${scheme} title`).toBeGreaterThan(4.5);
+    expect(await contrast(details.locator('.callout-body')), `${scheme} body`).toBeGreaterThan(4.5);
+  }
+  await page.emulateMedia({ colorScheme: 'dark' });
+
+  // Keyboard: Enter and space on the focused bar
+  await summary.click();
+  await expect(details).not.toHaveAttribute('open');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(details).toHaveAttribute('open', '');
+  await page.keyboard.press(' ');
+  await expect(details).not.toHaveAttribute('open');
+  await expect(page.getByTestId('desc-editor')).toHaveCount(0);
+
+  // Opened, it is still open when coming back to the issue
+  await summary.click();
+  await description.locator(`a[href="/issue/${other.identifier}"]`).click();
+  await expect(page.getByTestId('detail-key')).toHaveText(other.identifier);
+  await page.goBack();
+  await expect(page.getByTestId('detail-key')).toHaveText(issue.identifier);
+  await expect(details).toHaveAttribute('open', '');
+
+  // Phone width: the bar is a touch target and nothing overflows
+  await page.setViewportSize({ width: 360, height: 800 });
+  expect((await summary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  for (const scheme of ['light', 'dark'] as const) {
+    await page.emulateMedia({ colorScheme: scheme });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', scheme);
+    for (const state of ['open', 'closed'] as const) {
+      if ((state === 'open') !== (await details.evaluate((el) => (el as HTMLDetailsElement).open))) await summary.click();
+      await expect(details.locator('.callout-body')).toBeVisible({ visible: state === 'open' });
+      const image = await description.screenshot({ path: testInfo.outputPath(`agent-${scheme}-${state}.png`), animations: 'disabled' });
+      await testInfo.attach(`agent-${scheme}-${state}`, { body: image, contentType: 'image/png' });
+    }
+  }
+  await page.emulateMedia({ colorScheme: 'dark' });
+});
+
+test('Agent details in the editor: the "/" menu inserts an AGENT panel, shown open; the page shows it closed', async ({ page }) => {
+  await freshIssue(page, 'Summary');
+  await page.getByTestId('detail-description').locator('p').first().click();
+  const editor = page.getByTestId('desc-editor');
+  await expect(editor).toBeFocused();
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('/agent');
+  await expect(page.getByTestId('slash-menu').getByTestId('slash-item').first()).toHaveAttribute('data-id', 'callout-agent');
+  await page.keyboard.press('Enter');
+  // Without a title the kind's name is the hint
+  await expect(editor.locator('.callout-agent.untitled')).toHaveCount(1);
+  await page.keyboard.press('Enter');
+  await page.keyboard.type('Acceptance criteria');
+  await expect(editor.getByText('Acceptance criteria')).toBeVisible();
+  await expectMarkdown(editor, 'Summary\n\n> [!AGENT]\n> Acceptance criteria');
+  await page.keyboard.press('Escape');
+  const details = page.getByTestId('detail-description').locator('details.callout-agent');
+  await expect(details).not.toHaveAttribute('open');
+  await expect(details.locator('summary')).toHaveText('Details for agents');
+});
+
+test('Agent details: the open state belongs to its issue, also when two descriptions are the same', async ({ page }) => {
+  const same = 'Same summary.\n\n> [!AGENT]\n> - [ ] Same criterion';
+  const meta = await backend().query(api.meta.get, {});
+  const team = meta.teams.find((t) => t.key === 'ORB')!;
+  const { issues } = await backend().mutation(api.issues.create, { issues: [{ teamId: team._id, title: `Same text ${Date.now()}`, description: same }] });
+  const other = issues[0];
+  created.push(other.id);
+  const issue = await freshIssue(page, same);
+  const go = (key: string) => page.evaluate((key) => (window as unknown as { __selfbound: { app: { nav: { go(p: object): void } } } }).__selfbound.app.nav.go({ name: 'issue', key }), key);
+  const details = page.getByTestId('detail-description').locator('details.callout-agent');
+  // Visit the other issue first, so its description is there at once when switching back
+  await go(other.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(other.identifier);
+  await expect(details).toHaveCount(1);
+  await go(issue.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(issue.identifier);
+  await details.locator('summary').click();
+  await expect(details).toHaveAttribute('open', '');
+  await go(other.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(other.identifier);
+  await expect(details).not.toHaveAttribute('open');
+  await go(issue.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(issue.identifier);
+  await expect(details).toHaveAttribute('open', '');
+});

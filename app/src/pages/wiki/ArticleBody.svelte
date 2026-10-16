@@ -110,7 +110,7 @@
     {@attach back.attach}
   >
     {#if a.body.markdown.trim()}
-      <Markdown markdown={a.body.markdown} ontoggle={a.deleted ? undefined : toggle} onlang={a.deleted ? undefined : setLang} />
+      <Markdown markdown={a.body.markdown} keep={a.id} ontoggle={a.deleted ? undefined : toggle} onlang={a.deleted ? undefined : setLang} />
     {:else}
       <span class="desc-placeholder">{t('Write …')}</span>
     {/if}

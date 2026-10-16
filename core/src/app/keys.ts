@@ -92,8 +92,8 @@ export class KeyController {
       return;
     }
 
-    // Enter/space on a focused button or link: its own effect (keyboard operation).
-    if ((combo === 'enter' || combo === 'space' || combo === 'shift+space') && e.target instanceof HTMLElement && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') && !e.target.closest('[data-testid="list"]')) return;
+    // Enter/space on a focused button, link or summary (agent details): its own effect (keyboard operation).
+    if ((combo === 'enter' || combo === 'space' || combo === 'shift+space') && e.target instanceof HTMLElement && (e.target.tagName === 'BUTTON' || e.target.tagName === 'A' || e.target.tagName === 'SUMMARY') && !e.target.closest('[data-testid="list"]')) return;
 
     if (combo === 'escape') {
       return consume(e, () => {

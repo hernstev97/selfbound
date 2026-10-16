@@ -1,3 +1,8 @@
+<script module lang="ts">
+  // Agent details the reader opened, per `keep` key, while the app runs.
+  const opened = new Map<string, Set<number>>();
+</script>
+
 <script lang="ts">
   // Rendered Markdown (marked + DOMPurify, loaded on demand). Plain text until the library is loaded.
   // Code blocks with a language get highlighted a moment later (own chunks); every block gets a
@@ -9,7 +14,7 @@
   import { t } from '@selfbound/core/i18n';
   import { languageLabel } from '../lib/languages.ts';
   import { highlightReady, loadHighlight, needsHighlight } from '../lib/highlightLoad.ts';
-  import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
+  import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown, withoutAgentDetails } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';
   import { app } from '../app-instance.ts';
 
@@ -18,9 +23,11 @@
     class?: string;
     ontoggle?: (index: number, total: number) => void;
     onlang?: (index: number, total: number, lang: string) => void;
+    /** Remembers which agent details are open under this key (issue or page id) while the app runs */
+    keep?: string;
   }
 
-  let { markdown, class: cls = '', ontoggle, onlang }: Props = $props();
+  let { markdown, class: cls = '', ontoggle, onlang, keep }: Props = $props();
   let ready = $state(false);
   let colors = $state(highlightVersion());
   onMarkdownReady(() => (ready = true));
@@ -116,6 +123,35 @@
     }
   });
 
+  // Agent details (`> [!AGENT]`) start closed. One the reader opened stays open when the text renders
+  // again (a ticked task, a saved edit) and, with `keep`, when the same issue is shown again. Closed ones
+  // are set too: another issue with the same text keeps the DOM.
+  const local = new Set<number>();
+  $effect(() => {
+    html;
+    const set = keep ? opened.get(keep) : local;
+    if (!root) return;
+    root.querySelectorAll<HTMLDetailsElement>('details.callout-agent').forEach((el, i) => {
+      el.open = !!set?.has(i);
+    });
+  });
+  // `toggle` does not bubble: caught on the way down.
+  function agentToggle(event: Event) {
+    const el = event.target as HTMLElement;
+    if (!root || !(el instanceof HTMLDetailsElement) || !el.classList.contains('callout-agent')) return;
+    const i = [...root.querySelectorAll('details.callout-agent')].indexOf(el);
+    if (i < 0) return; // replaced in the meantime
+    const set = keep ? (opened.get(keep) ?? remember(keep)) : local;
+    if (el.open) set.add(i);
+    else set.delete(i);
+  }
+  function remember(key: string) {
+    if (opened.size >= 200) opened.delete(opened.keys().next().value!);
+    const set = new Set<number>();
+    opened.set(key, set);
+    return set;
+  }
+
   let picker = $state<{ index: number; total: number; current: string; anchor: DOMRect } | null>(null);
 
   function pickLang(lang: string) {
@@ -137,6 +173,11 @@
   });
 
   async function onclick(event: MouseEvent) {
+    // Opening or closing agent details does not start editing the text.
+    if ((event.target as Element).closest('summary')) {
+      event.stopPropagation();
+      return;
+    }
     // Using a chart (table toggle, hovering and clicking in the plot) does not start editing the text.
     if ((event.target as Element).closest('.vchart-toggle, .vchart-svg, .vchart-table')) {
       event.stopPropagation();
@@ -184,9 +225,10 @@
 
 {#if html !== null}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class={['md', cls]} bind:this={root} {onclick} {@attach embeds} {@attach blocks} {@attach mentions}>{@html html}</div>
+  <div class={['md', cls]} bind:this={root} {onclick} ontogglecapture={agentToggle} {@attach embeds} {@attach blocks} {@attach mentions}>{@html html}</div>
 {:else}
-  <div class={['md', cls]} style="white-space: pre-wrap">{markdown}</div>
+  <!-- Until the renderer is loaded: the source, without the agent details that will show closed -->
+  <div class={['md', cls]} style="white-space: pre-wrap">{withoutAgentDetails(markdown)}</div>
 {/if}
 
 {#if picker && onlang}

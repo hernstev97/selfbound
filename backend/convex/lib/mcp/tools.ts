@@ -129,6 +129,8 @@ const requestId = (description = REQUEST_ID_DESCRIPTION) =>
 
 /** Said once in the instructions (protocol.ts), repeated where agents write Markdown. */
 const VISUAL_BLOCKS = 'Info panel: "> [!INFO] Title" quote; chart: ```chart code block with JSON (examples in the server instructions).';
+/** The two layers of an issue description (XLR8-76), repeated where agents write one. */
+const TWO_LAYERS = 'Write a short summary for the owner on top and the details for agents (acceptance criteria, files, technical notes, test steps) in one "> [!AGENT]" panel below it, shown collapsed.';
 
 const title = () => string({ description: 'Issue title.', min: 1, max: LIMITS.titleMax, transform: (s) => s.trim() });
 const labelNames = () =>
@@ -249,7 +251,7 @@ const getIssue = object(
 const newIssue = object({
   team: teamKey(),
   title: title(),
-  description: optional(string({ description: `Markdown description. ${VISUAL_BLOCKS}`, max: LIMITS.descriptionMax })),
+  description: optional(string({ description: `Markdown description. ${TWO_LAYERS} ${VISUAL_BLOCKS}`, max: LIMITS.descriptionMax })),
   status: optional(status('Initial status. Default: triage for agents.')),
   priority: optional(priority()),
   labels: optional(labelNames()),
@@ -322,7 +324,7 @@ const updateIssue = object(
     model: optional(nullable(modelChoice(`${MODEL_INPUT} null removes the issue's own model (it then inherits again).`))),
     description: optional(
       string({
-        description: `New Markdown description (replaces the old one). Requires expectedDescriptionVersion. ${VISUAL_BLOCKS}`,
+        description: `New Markdown description (replaces the old one). Requires expectedDescriptionVersion. ${TWO_LAYERS} ${VISUAL_BLOCKS}`,
         max: LIMITS.descriptionMax,
       }),
     ),
