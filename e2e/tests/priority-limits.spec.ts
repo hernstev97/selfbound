@@ -55,7 +55,7 @@ test('hard limit: raising another issue to urgent is refused, the menu and the t
     await target.hover();
     await page.mouse.move(2, 890);
     await page.locator(`[data-testid="issue-row"][data-id="${id}"] [data-testid="row-priority"]`).click();
-    await expect(page.locator('[data-testid="palette-item"][data-id="p:1"]')).toContainText(`Limit of ${max} reached`);
+    await expect(page.locator('[data-testid="palette-item"][data-id="p:1"]')).toContainText('Limit reached');
     await page.keyboard.press('1');
     const toast = page.getByTestId('toast').filter({ hasText: `Orbit: at most ${max} × Urgent open` });
     await expect(toast).toBeVisible();

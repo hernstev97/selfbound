@@ -368,7 +368,12 @@ export class Editor {
   /** Create; undo moves the new issues to the trash. Returns the temporary IDs. */
   create(items: NewIssue[], onFail?: (error: unknown) => void): IssueId[] {
     // The new issues do not exist yet: placeholders. Closed ones carry no priority (backend).
-    const incoming = items.map((i, n) => (i.priority === 1 || i.priority === 2) && !CLOSED.has(i.status ?? 'todo') ? { id: `new:${n}` as IssueId, teamId: i.teamId as string, priority: i.priority } : null);
+    const workflows = workflowsOf(this.app.store.meta.get());
+    const closed = (i: NewIssue) => {
+      const type = i.stateId ? workflows.view(i.stateId)?.type : undefined;
+      return type ? type === 'completed' || type === 'canceled' : CLOSED.has(i.status ?? 'todo');
+    };
+    const incoming = items.map((i, n) => ((i.priority === 1 || i.priority === 2) && !closed(i) ? { id: `new:${n}` as IssueId, teamId: i.teamId as string, priority: i.priority } : null));
     if (this.#limits(incoming)) return [];
     const { temps, done } = this.app.store.create(items);
     const entry: UndoEntry = { kind: 'create', label: tc('undo', 'Created'), ids: temps, ctx: this.#context() };

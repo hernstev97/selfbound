@@ -264,7 +264,7 @@ describe('app: planning and completion', () => {
     // The priority menu names the full limit; the issue that already is urgent may stay so.
     app.list.focus('i3' as IssueId);
     app.palette.open('priority');
-    expect(app.palette.state.get()?.items.find((i) => i.id === 'p:1')?.detail).toBe('Limit of 1 reached');
+    expect(app.palette.state.get()?.items.find((i) => i.id === 'p:1')?.detail).toBe('Limit reached');
     app.palette.close();
     app.edit.patch(['i1' as IssueId], { title: 'Still urgent' });
     expect(calls(client, 'issues:update')).toHaveLength(1);
@@ -296,6 +296,15 @@ describe('app: planning and completion', () => {
     app.create.update({ status: 'done' });
     app.create.submit(false);
     expect(app.create.isOpen()).toBe(false);
+    expect(calls(client, 'issues:create')).toHaveLength(1);
+  });
+
+  test('"Downgrade …" skips High when its hard limit is full too', async () => {
+    const { client, app } = await setup();
+    client.push('meta:get', {}, { ...meta, priorityLimits: { urgent: { max: 1, hard: true }, high: { max: 0, hard: true } } });
+    await flush();
+    app.palette.openDowngrade('t2', 1);
+    expect(app.palette.state.get()?.items.find((i) => i.id === 'dg:i1')?.detail).toBe('PX-2 → Medium');
   });
 });
 

@@ -410,7 +410,7 @@ export default {
   'More than {max} per team: the change is saved, with a hint.': 'Mehr als {max} je Team: Die Änderung wird gespeichert, mit einem Hinweis.',
   'More than {max} per team: the change is rejected, also for agents (MCP). Recurring issues and the import come without the priority.':
     'Mehr als {max} je Team: Die Änderung wird abgelehnt, auch für Agenten (MCP). Wiederkehrende Issues und der Import kommen ohne die Priorität.',
-  '{team} already has {count}. They stay; only new ones count against the limit.': '{team} hat schon {count}. Die bleiben; nur neue zählen gegen die Grenze.',
+  '{team} already has {count}. They stay; only new ones count against the limit.': '{team} hat schon {count}. Die bleiben; nur neue werden gegen die Grenze geprüft.',
   'Limit for {priority}': 'Grenze für {priority}',
   // settings/General.svelte
   'Automatic (browser language)': 'Automatisch (Sprache des Browsers)',

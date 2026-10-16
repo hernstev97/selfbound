@@ -465,7 +465,7 @@ export default {
   // app/toasts.ts, app/palette.ts, app/admin.ts (priority limits)
   '{team} is at its limit of {max} × {priority}. Lower one of these first: {list}': '{team} hat die Grenze von {max} × {priority} erreicht. Stufe zuerst eines davon herab: {list}',
   '{team} allows at most {max} × {priority}. Change the limit under Settings → Priorities.': '{team} erlaubt höchstens {max} × {priority}. Ändere die Grenze unter Einstellungen → Prioritäten.',
-  'Limit of {max} reached': 'Grenze von {max} erreicht',
+  'Limit reached': 'Grenze erreicht',
   'Priority limits not saved': 'Prioritätsgrenzen nicht gespeichert',
   'Change reverted': 'Fremde Änderung zurückgenommen',
   'Labels changed': 'Labels geändert',

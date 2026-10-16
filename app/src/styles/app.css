@@ -2178,6 +2178,9 @@ button.crumb:hover {
   text-overflow: ellipsis;
 }
 .menu-item .detail {
+  /* Not the detail page's `.detail { flex: 1 }` (detail.css), which would halve its width. */
+  flex: 0 1 auto;
+  min-width: 0;
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -7,6 +7,7 @@ import { aliasKey } from '../lib/identifiers';
 import { lastRank, rankBetween } from '../lib/rank';
 import { ensureTeamStates, stateFields, type State as WorkflowState } from '../lib/workflow';
 import { bucketOf, identifierOf, LIMITS, type Priority, type Status } from '../shared/constants';
+import { isLimited } from '../shared/priorityLimits';
 import { stateByName, stateForStatus, statusOfState } from '../shared/workflow';
 import type {
   ImportComment,
@@ -608,7 +609,10 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
   const priority = (patch.priority ?? existing.priority) as Priority;
   if (raises(priority) && !(await hasRoom(ctx, team._id, priority, holds(existing, priority) ? 0 : 1))) {
     limitNote(s, identifier, priority, team.key);
-    if ('priority' in patch && !raises(existing.priority)) delete patch.priority;
+    // Keep the local priority unless that one does not fit either (e.g. after a team move).
+    const keep = existing.priority as Priority;
+    const keepFits = !isLimited(keep) || !raises(keep) || (await hasRoom(ctx, team._id, keep, holds(existing, keep) ? 0 : 1));
+    if (keepFits) delete patch.priority;
     else patch.priority = 0;
   }
   for (const field of TRACKED) {

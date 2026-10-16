@@ -148,6 +148,40 @@ describe('Priority limits', () => {
     expect(kiu2.priority).toBe(0);
     expect(kiu2.status).toBe('in_review');
   });
+
+  test('import update: a raise from Linear is not taken, the local priority stays (also after a team move)', async () => {
+    const { t, owner } = setup();
+    await stage(t, stagingRows(normalize(rawData(), { run: 'r1', fetchedAt: Date.UTC(2026, 9, 8) })));
+    await t.action(internal.importer.process, { run: 'r1' });
+    await setLimits(owner, { urgent: { max: 0, hard: true }, high: { max: 3, hard: false } });
+    // In Linear: XLR-1 raised to urgent; KIU-2 (high) moved to XLR as XLR-5 and raised to urgent.
+    const raw = rawData();
+    const xlr1 = raw.issues.find((i) => i.id === 'i-4')!;
+    Object.assign(xlr1, { priority: 1, updatedAt: '2026-10-09T09:00:00.000Z' });
+    const kiu2 = raw.issues.find((i) => i.id === 'i-2')!;
+    Object.assign(kiu2, {
+      priority: 1,
+      identifier: 'XLR-5',
+      number: 5,
+      team: { id: 'team-xlr', key: 'XLR' },
+      state: { id: 's-xtest', name: 'Testing', type: 'started' },
+      labels: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } },
+      project: null,
+      updatedAt: '2026-10-09T09:00:00.000Z',
+    });
+    await stage(t, stagingRows(normalize(raw, { run: 'r2', fetchedAt: Date.UTC(2026, 9, 9) })));
+    const summary = (await t.action(internal.importer.process, { run: 'r2' })) as { status: string; deviations: string[] };
+    expect(summary.status).toBe('done');
+    expect(summary.deviations).toEqual(expect.arrayContaining(['XLR-1: priority urgent not taken, the hard limit of team XLR is full', 'XLR-5: priority urgent not taken, the hard limit of team XLR is full']));
+    const byNumber = (n: number) =>
+      t.run(async (ctx) => {
+        const team = await ctx.db.query('teams').withIndex('by_key', (q) => q.eq('key', 'XLR')).unique();
+        return (await ctx.db.query('issues').withIndex('by_team_number', (q) => q.eq('teamId', team!._id).eq('number', n)).unique())!;
+      });
+    expect((await byNumber(1)).priority).toBe(0);
+    // Moved to XLR and still high: High has room there, so the local value stays.
+    expect(await byNumber(5)).toMatchObject({ priority: 2, status: 'in_progress' });
+  });
 });
 
 /** Like `push`: rows in batches via importer:stage. */

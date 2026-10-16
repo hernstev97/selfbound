@@ -362,6 +362,8 @@ export class CreateController {
       this.#saveList([{ ...draftCopy, id: `${draftCopy.id}r` }, ...this.drafts.get()]);
       this.app.toasts.error(t('“{title}” not created, saved as draft', { title: item.title }), error, () => this.openDraft(`${draftCopy.id}r`));
     });
+    // Refused locally (a full hard priority limit, the toast says why): the dialog stays as it is.
+    if (!temp) return;
     // After the list is recomputed (store microtask): visible → focus and scroll to it, otherwise a
     // toast with "Open" (the result would be invisible).
     queueMicrotask(() => {

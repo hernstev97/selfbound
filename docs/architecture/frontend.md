@@ -349,11 +349,11 @@ What only the sprint pages need is not in the start bundle: `app.loadSprints()` 
 
 The limits come from `meta.priorityLimits` (`limitsOf`; an old cache without the field gets the defaults 1 Urgent and 3 High, warning only) and are set in Settings › Priorities (`pages/settings/Priorities.svelte`: per priority “No limit / Warn / Block” and a number; it says when a team already has more than a lowered limit). Same rules as the backend ([backend.md](backend.md#priority-limits)).
 
-Every change that adds an issue to a team's open Urgent or High issues is checked locally by `app.edit` (`core/src/app/edit.ts`, `#limits`, on the store state before the change): setting the priority (chip, key, command menu, bulk, board drag), create, move to another team, restore from the trash, undo and redo.
+Every change that adds an issue to a team's open Urgent or High issues is checked locally by `app.edit` (`core/src/app/edit.ts`, `#limits`, on the store state before the change): setting the priority (chip, key, command menu, bulk, board drag), create, move to another team, restore from the trash. Undo and redo are not checked locally: the server rejects them with `priority_limit` and the toast says “Undo failed” with the translated reason.
 
-- **Soft limit:** the change is saved; a toast “{team}: now N × High open (limit 3)” shows the existing candidates and “Downgrade …” (picker `downgrade`, lowers by one level).
+- **Soft limit:** the change is saved; a toast “{team}: now N × High open (limit 3)” shows the existing candidates and “Downgrade …” (picker `downgrade`, lowers by one level; Urgent goes to Medium when High is full under a hard limit).
 - **Hard limit:** nothing is sent, no optimistic change. An error toast “{team}: at most 1 × Urgent open” with “Lower one of these first: …” and “Downgrade …” (“Settings” if the limit is 0). The create dialog stays open with that reason. If the server rejects anyway (another device was faster), `errorMessage` in `app/toasts.ts` shows the `priority_limit` error translated.
-- The priority menu shows “Limit of N reached” next to Urgent/High when a hard limit is full.
+- The priority menu shows “Limit reached” next to Urgent/High when a hard limit is full.
 
 Team groups (e.g. “All issues”) show “Urgent 1/1 · High 3/3” with the configured numbers, only the count for a priority without a limit; planning shows it per active team. The tooltip describes the limits (`limitsSummary`).
 
