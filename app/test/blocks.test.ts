@@ -86,8 +86,14 @@ describe('quote → panel', () => {
     expect(text).toContain('Kept');
   });
   it('the plain source shown before rendering leaves agent details out, other quotes stay', () => {
-    expect(withoutAgentDetails('Goal.\n\n> [!agent] Details\n> - x\n>\n> more\n\n> quote')).toBe('Goal.\n\n\n\n> quote');
+    expect(withoutAgentDetails('Goal.\n\n> [!agent] Details\n> - x\n>\n> more\n\n> quote')).toBe('Goal.\n\n\n> quote');
     expect(withoutAgentDetails('No block.')).toBe('No block.');
+    // A lazy continuation line belongs to the quote; the block ends at a blank line
+    expect(withoutAgentDetails('> [!AGENT]\n> details\ncontinued details\n\nAfter')).toBe('\nAfter');
+    // A code block inside stays inside; an example in a code block outside stays as written
+    expect(withoutAgentDetails('> [!AGENT]\n> ```\n>\n> ```\n\nAfter')).toBe('\nAfter');
+    expect(withoutAgentDetails('````md\n> [!AGENT] Example\n> x\n````\nText')).toBe('````md\n> [!AGENT] Example\n> x\n````\nText');
+    expect(withoutAgentDetails('~~~\n```\n> [!AGENT]\n~~~\n> [!AGENT] real\n> y')).toBe('~~~\n```\n> [!AGENT]\n~~~');
   });
   it('plain text for previews drops the marker, keeps the title', () => {
     const text = plainText('> [!WARNING] Careful\n> Text');
