@@ -109,10 +109,17 @@ export function cardEmbeds(root: HTMLElement): (() => void) | undefined {
   };
 }
 
+/** Agent details: a quote starting with `[!AGENT]`, up to its last quote line. */
+const AGENT_BLOCK = /^[ \t]*>[ \t]*\[!agent\][^\n]*(?:\n[ \t]*>[^\n]*)*/gim;
+
+/** The text without agent details (shown closed once rendered), for plain-text views. */
+export function withoutAgentDetails(markdown: string) {
+  return markdown.replace(AGENT_BLOCK, '');
+}
+
 /** Short plain version without Markdown syntax (peek, preview). Agent details are left out. */
 export function plainText(markdown: string, max = 600) {
-  return markdown
-    .replace(/^[ \t]*>[ \t]*\[!agent\][^\n]*(?:\n[ \t]*>[^\n]*)*/gim, '')
+  return withoutAgentDetails(markdown)
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
     .replace(/[*_`>~]/g, '')

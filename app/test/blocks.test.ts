@@ -11,7 +11,7 @@ import { cycleCalloutKind, hardBreak, insertCallout, insertRule, setCalloutKind,
 import { parseMarkdown } from '../src/lib/editor/parse.ts';
 import { schema } from '../src/lib/editor/schema.ts';
 import { serializeMarkdown } from '../src/lib/editor/serialize.ts';
-import { plainText } from '../src/lib/markdown.ts';
+import { plainText, withoutAgentDetails } from '../src/lib/markdown.ts';
 
 const quote = (md: string) => new Lexer({ gfm: true, breaks: true }).lex(md)[0] as Tokens.Blockquote;
 
@@ -84,6 +84,10 @@ describe('quote → panel', () => {
     expect(text).toContain('Goal in short.');
     expect(text).toContain('After.');
     expect(text).toContain('Kept');
+  });
+  it('the plain source shown before rendering leaves agent details out, other quotes stay', () => {
+    expect(withoutAgentDetails('Goal.\n\n> [!agent] Details\n> - x\n>\n> more\n\n> quote')).toBe('Goal.\n\n\n\n> quote');
+    expect(withoutAgentDetails('No block.')).toBe('No block.');
   });
   it('plain text for previews drops the marker, keeps the title', () => {
     const text = plainText('> [!WARNING] Careful\n> Text');

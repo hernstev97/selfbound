@@ -14,7 +14,7 @@
   import { t } from '@selfbound/core/i18n';
   import { languageLabel } from '../lib/languages.ts';
   import { highlightReady, loadHighlight, needsHighlight } from '../lib/highlightLoad.ts';
-  import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown } from '../lib/markdown.ts';
+  import { cardEmbeds, driveEmbeds, highlightVersion, onHighlightChange, onMarkdownReady, renderMarkdown, withoutAgentDetails } from '../lib/markdown.ts';
   import LangPicker from './LangPicker.svelte';
   import { app } from '../app-instance.ts';
 
@@ -124,14 +124,15 @@
   });
 
   // Agent details (`> [!AGENT]`) start closed. One the reader opened stays open when the text renders
-  // again (a ticked task, a saved edit) and, with `keep`, when the same issue is shown again.
+  // again (a ticked task, a saved edit) and, with `keep`, when the same issue is shown again. Closed ones
+  // are set too: another issue with the same text keeps the DOM.
   const local = new Set<number>();
   $effect(() => {
     html;
     const set = keep ? opened.get(keep) : local;
-    if (!root || !set?.size) return;
+    if (!root) return;
     root.querySelectorAll<HTMLDetailsElement>('details.callout-agent').forEach((el, i) => {
-      if (set.has(i)) el.open = true;
+      el.open = !!set?.has(i);
     });
   });
   // `toggle` does not bubble: caught on the way down.
@@ -226,7 +227,8 @@
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
   <div class={['md', cls]} bind:this={root} {onclick} ontogglecapture={agentToggle} {@attach embeds} {@attach blocks} {@attach mentions}>{@html html}</div>
 {:else}
-  <div class={['md', cls]} style="white-space: pre-wrap">{markdown}</div>
+  <!-- Until the renderer is loaded: the source, without the agent details that will show closed -->
+  <div class={['md', cls]} style="white-space: pre-wrap">{withoutAgentDetails(markdown)}</div>
 {/if}
 
 {#if picker && onlang}

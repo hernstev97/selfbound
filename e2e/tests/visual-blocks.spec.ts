@@ -258,7 +258,7 @@ test('Agent details: closed under the summary, open with a click or the keyboard
     for (const state of ['open', 'closed'] as const) {
       if ((state === 'open') !== (await details.evaluate((el) => (el as HTMLDetailsElement).open))) await summary.click();
       await expect(details.locator('.callout-body')).toBeVisible({ visible: state === 'open' });
-      const image = await description.screenshot({ path: testInfo.outputPath(`agent-${scheme}-${state}.png`) });
+      const image = await description.screenshot({ path: testInfo.outputPath(`agent-${scheme}-${state}.png`), animations: 'disabled' });
       await testInfo.attach(`agent-${scheme}-${state}`, { body: image, contentType: 'image/png' });
     }
   }
@@ -285,4 +285,30 @@ test('Agent details in the editor: the "/" menu inserts an AGENT panel, shown op
   const details = page.getByTestId('detail-description').locator('details.callout-agent');
   await expect(details).not.toHaveAttribute('open');
   await expect(details.locator('summary')).toHaveText('Details for agents');
+});
+
+test('Agent details: the open state belongs to its issue, also when two descriptions are the same', async ({ page }) => {
+  const same = 'Same summary.\n\n> [!AGENT]\n> - [ ] Same criterion';
+  const meta = await backend().query(api.meta.get, {});
+  const team = meta.teams.find((t) => t.key === 'ORB')!;
+  const { issues } = await backend().mutation(api.issues.create, { issues: [{ teamId: team._id, title: `Same text ${Date.now()}`, description: same }] });
+  const other = issues[0];
+  created.push(other.id);
+  const issue = await freshIssue(page, same);
+  const go = (key: string) => page.evaluate((key) => (window as unknown as { __selfbound: { app: { nav: { go(p: object): void } } } }).__selfbound.app.nav.go({ name: 'issue', key }), key);
+  const details = page.getByTestId('detail-description').locator('details.callout-agent');
+  // Visit the other issue first, so its description is there at once when switching back
+  await go(other.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(other.identifier);
+  await expect(details).toHaveCount(1);
+  await go(issue.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(issue.identifier);
+  await details.locator('summary').click();
+  await expect(details).toHaveAttribute('open', '');
+  await go(other.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(other.identifier);
+  await expect(details).not.toHaveAttribute('open');
+  await go(issue.identifier);
+  await expect(page.getByTestId('detail-key')).toHaveText(issue.identifier);
+  await expect(details).toHaveAttribute('open', '');
 });
