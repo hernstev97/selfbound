@@ -112,6 +112,8 @@ export default {
   Knowledge: 'Wissen',
   linked: 'verlinkt',
   'mentions this issue': 'erwähnt dieses Issue',
+  // lib/mentions.ts
+  'written as {typed}': 'geschrieben als {typed}',
   // GroupRow.svelte
   Expand: 'Aufklappen',
   Collapse: 'Einklappen',

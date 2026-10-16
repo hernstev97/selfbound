@@ -120,7 +120,10 @@ The old key goes into `teams.previousKeys` and stays reserved for that team: no 
 with it (`OLD-12`) resolve to the issue with the same number everywhere: links and bookmarks (redirected to the current
 identifier), mentions in texts with their status chips, search and the command menu, MCP (identifiers and `team`
 arguments), the GitHub webhook (branch names, titles, descriptions), knowledge page links, the Linear import (adopting
-a team by its old key). The team may take an old key back. Texts are not rewritten.
+a team by its old key). The team may take an old key back. Texts are not rewritten; mentions are shown with the current
+key (SELF-102): a typed `XLR8-72` reads `SELF-72` with its status chip, the tooltip names the typed form, renaming back
+restores it. Display only: stored text, versions, MCP output and search keep the typed form. Not done: moved issues
+(`BOX-3` showing `BEAR-32`), a one-off rewrite of existing texts (after the backup, SELF-13), normalizing on save.
 
 **Why:** Keys outlive their names (the team key `XLR8` of the Selfbound team). Blocking renames forever made a stale key
 permanent; rewriting identifiers in texts would change what people and agents wrote. One reserved key per rename costs
