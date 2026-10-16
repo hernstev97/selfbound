@@ -89,14 +89,21 @@ export class Navigator {
     if (!fromHistory || !samePage(this.page.get(), page)) this.syncUrl('replace');
   }
 
-  /** The current key for team keys from before a rename (old bookmarks, saved views, links). */
+  /**
+   * The current key for team keys from before a rename (old bookmarks, saved views, links). An issue
+   * the store has gets its current identifier here, before any history entry is written.
+   */
   #currentKeys(page: Page, opts: GoOptions): [Page, GoOptions] {
     const store = this.app.store;
     if (store.renamedKeys().size === 0) return [page, opts];
+    if (page.name === 'issue') {
+      const issue = store.byKey(page.key);
+      return [issue && issue.key !== page.key ? { name: 'issue', key: issue.key } : page, opts];
+    }
     const current = (key: string) => store.currentTeamKey(key);
     const next = withCurrentTeamKeys(page, current);
     const team = opts.filters?.team;
-    if (!team?.some((k) => current(k) !== k)) return [next, opts];
+    if (next.name !== 'view' || !team?.some((k) => current(k) !== k)) return [next, opts];
     return [next, { ...opts, filters: { ...opts.filters!, team: [...new Set(team.map(current))] } }];
   }
 
@@ -104,9 +111,17 @@ export class Navigator {
   #followRenames() {
     return this.app.store.meta.subscribe(() => {
       const page = this.page.get();
-      const view = this.app.main.view.get();
-      const [target, opts] = this.#currentKeys(page, { filters: view.filters, quick: view.quick });
-      if (target !== page || opts.filters !== view.filters) this.go(target, { ...opts, replace: true });
+      // Filters and display belong to lists only; other pages keep the list's state as it is.
+      if (page.name !== 'view') {
+        const [target] = this.#currentKeys(page, {});
+        if (target !== page) this.go(target, { replace: true });
+        return;
+      }
+      const { filters, quick, display } = this.app.main.view.get();
+      const [target, opts] = this.#currentKeys(page, { filters, quick });
+      if (target === page && opts.filters === filters) return;
+      const layout = display.layout === 'board' ? 'board' : null;
+      this.go(target, { ...opts, replace: true, group: display.grouping, sub: display.subGrouping ?? null, order: display.ordering, layout });
     });
   }
 
@@ -161,6 +176,7 @@ export class Navigator {
 
   /** Go to a page (new history entry, unless `replace`). */
   go(page: Page, opts: GoOptions = {}) {
+    [page, opts] = this.#currentKeys(page, opts);
     const current = this.page.get();
     const changed = !samePage(current, page);
     this.#show(page, opts);

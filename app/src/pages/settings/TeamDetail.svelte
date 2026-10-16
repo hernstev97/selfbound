@@ -3,6 +3,7 @@
   // color, dormant, light/dark logos with a preview on light and dark ground at 16/20/32 px. Upload: upload URL → file → check on the
   // server (SVG/PNG, square, ≤ 256 KB, SVG without scripts); errors show at the field.
   import { ICON, type TeamBadge, type TeamId } from '@selfbound/core';
+  import { TEAM_KEY_RE } from '@selfbound/backend/constants';
   import { t, tn } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
@@ -57,19 +58,36 @@
   /** New key waiting for confirmation (the team has issues, so every identifier changes). */
   let renaming = $state<string | null>(null);
 
+  /** Checked before asking (the server checks again), so the dialog only offers keys that work. */
+  function keyProblem(key: string): string | null {
+    if (!TEAM_KEY_RE.test(key)) return t('The key needs 2 to 6 characters: capital letters and digits, starting with a letter.');
+    const others = (metaSlice.current?.teams ?? []).filter((x) => x._id !== team?._id);
+    if (others.some((x) => x.key === key)) return t('The key {key} is already taken.', { key });
+    const former = others.find((x) => x.previousKeys?.includes(key));
+    if (former) return t('{key} was the key of {team}: old identifiers like {example} still lead there.', { key, team: former.name, example: `${key}-12` });
+    return null;
+  }
+
   function setKey(next: string) {
     if (!team) return;
     const key = next.trim().toUpperCase();
     if (key === team.key) return;
-    if (issueCount > 0) renaming = key;
+    const problem = keyProblem(key);
+    if (problem) app.toasts.show(t('Team not updated'), undefined, 'error', problem);
+    else if (issueCount > 0) renaming = key;
     else rename(key);
   }
 
   function rename(key: string) {
     renaming = null;
     if (!team) return;
+    const before = team.key;
     void admin.updateTeam(team._id as TeamId, { key }).then((r) => {
-      if (r) app.nav.go({ name: 'settings', section: 'teams', sub: key }, { replace: true });
+      // The optimistic rename may already have moved this page; if the server said no, move it back.
+      const page = app.nav.page.get();
+      if (page.name === 'settings' && page.section === 'teams' && (page.sub === key || page.sub === before)) {
+        app.nav.go({ name: 'settings', section: 'teams', sub: r ? key : before }, { replace: true });
+      }
     });
   }
   const WIKI_MODES = [[null, t('Off')], ['on', t('Alongside issues')], ['only', t('Knowledge only')]] as const;

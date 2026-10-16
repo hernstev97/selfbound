@@ -113,7 +113,8 @@ fallback carries the word `legacy-xlr8` in the code, so `grep -ri legacy-xlr8` f
 
 ## Team keys can be renamed; old keys stay with the team
 
-**Decided (2026-10-16, XLR8-72):** The key of a team with issues can be renamed in the team settings, after a confirmation.
+**Decided (2026-10-16, XLR8-72):** The key of a team with issues can be renamed in the team settings, after a confirmation. A team that has ever had issues
+(team counter above zero, so also after all of them moved out) keeps its old key; a team that never had any frees it.
 The old key goes into `teams.previousKeys` and stays reserved for that team: no other team can take it, and identifiers
 with it (`OLD-12`) resolve to the issue with the same number everywhere: links and bookmarks (redirected to the current
 identifier), mentions in texts with their status chips, search and the command menu, MCP (identifiers and `team`
@@ -123,7 +124,8 @@ a team by its old key). The team may take an old key back. Texts are not rewritt
 **Why:** Keys outlive their names (the team key `XLR8` of the Selfbound team). Blocking renames forever made a stale key
 permanent; rewriting identifiers in texts would change what people and agents wrote. One reserved key per rename costs
 one document write instead of one alias row per issue (`identifierAliases`), so a team with 10,000 issues renames in one
-transaction, and numbers are never reused within a team, so `OLD-12` can only mean the current `NEW-12`.
+transaction. `OLD-12` means whatever `NEW-12` means, exactly as if the key had always been `NEW` (numbers are handed out
+once per team; only the Linear import can give a number to another issue, and then the current key follows it too).
 
 **Not covered:** identifiers outside Selfbound (commit messages, other tools) keep the old key; they still resolve when
 they reach Selfbound. Push notifications already delivered keep their old links (they redirect).

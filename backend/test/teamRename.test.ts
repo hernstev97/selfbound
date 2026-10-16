@@ -57,6 +57,17 @@ describe('Team key rename', () => {
     expect((await t.run(async (ctx) => await ctx.db.get('teams', f.orb)))?.key).toBe('ORB');
   });
 
+  test('a team whose issues all moved out keeps its old key reserved', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const issue = await createOne(owner, f.orb);
+    await owner.mutation(api.issues.moveTeam, { ids: [issue.id], teamId: f.nova });
+    await owner.mutation(api.teams.update, { teamId: f.orb, key: 'OBT' });
+    expect((await t.run(async (ctx) => await ctx.db.get('teams', f.orb)))?.previousKeys).toEqual(['ORB']);
+    await expectCode(owner.mutation(api.teams.create, { key: 'ORB', name: 'Would shadow ORB-1' }), 'invalid');
+    expect((await owner.query(api.issues.resolve, { identifier: 'ORB-1' }))?.id).toBe(issue.id);
+  });
+
   test('issues moved out before or after the rename keep their old identifiers', async () => {
     const { owner } = setup();
     const f = await fixture(owner);

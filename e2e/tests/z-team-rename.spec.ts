@@ -2,7 +2,7 @@
 // The file name starts with "z-" so it runs last: it creates a team that must not show up in the
 // other tests. All specs run serially against one backend.
 import { expect, test } from '@playwright/test';
-import { api, backend, open, resolve, settled } from '../support/helpers.ts';
+import { api, backend, open, resolve, setRejectWrites, settled } from '../support/helpers.ts';
 
 test('Settings: renaming asks first; old URLs, mentions and identifiers lead to the renamed issues', async ({ page }) => {
   // Keys unique per run (a retry runs against the same backend).
@@ -31,6 +31,29 @@ test('Settings: renaming asks first; old URLs, mentions and identifiers lead to 
   await dialog.getByRole('button', { name: 'Cancel' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(field).toHaveValue(oldKey);
+
+  // A key another team holds: an error right away, no dialog.
+  await field.fill('ORB');
+  await field.press('Enter');
+  await expect(page.getByTestId('toast').filter({ hasText: 'The key ORB is already taken.' })).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+
+  // The server says no: the page stays on (or returns to) the team under its old key.
+  // Error toasts stay until closed.
+  await page.getByTestId('toast').getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByTestId('toast')).toHaveCount(0);
+  await setRejectWrites(true);
+  try {
+    await field.fill(newKey);
+    await field.press('Enter');
+    await page.getByTestId('team-rename-confirm').click();
+    await expect(page.getByTestId('toast').filter({ hasText: 'Team not updated' })).toBeVisible();
+    await expect(page).toHaveURL(new RegExp(`/settings/teams/${oldKey}$`));
+    await expect(field).toHaveValue(oldKey);
+  } finally {
+    await setRejectWrites(false);
+  }
+
   await field.fill(newKey);
   await field.press('Enter');
   await page.getByTestId('team-rename-confirm').click();
@@ -56,6 +79,9 @@ test('Settings: renaming asks first; old URLs, mentions and identifiers lead to 
   await page.screenshot({ path: test.info().outputPath('mention.png') });
   await mention.click();
   await expect(page).toHaveURL(new RegExp(`/issue/${newKey}-1$`));
+  // One history entry for the old link: Back returns to the text.
+  await page.goBack();
+  await expect(page).toHaveURL(new RegExp(`/issue/${newKey}-2$`));
 
   // The old key is reserved: a new team cannot take it.
   await expect(backend().mutation(api.teams.create, { key: oldKey, name: 'Copy' })).rejects.toThrow(/used by/);

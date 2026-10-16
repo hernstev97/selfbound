@@ -67,16 +67,51 @@ describe('renamed team key', () => {
     expect(decodeURIComponent(url(browser))).toBe(decodeURIComponent(to));
   });
 
-  test('display options saved under the old key apply until the view saves under the new one', async () => {
+  test('display options saved under the old key move to the new one; a reset stays a reset', async () => {
     const storage = new Map<string, string>([['selfbound:display:backlog:ACME', JSON.stringify({ grouping: 'priority' })]]);
     vi.stubGlobal('localStorage', { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => storage.set(k, v), removeItem: (k: string) => storage.delete(k) });
     try {
       const { app } = await setup('/team/ACME/backlog');
-      expect(app.list.displayFor({ kind: 'backlog', team: 'NOVA' }).grouping).toBe('priority');
+      expect(app.list.view.get().display.grouping).toBe('priority');
       expect(app.list.displayFor({ kind: 'backlog', team: 'PX' }).grouping).not.toBe('priority');
+      expect(storage.has('selfbound:display:backlog:ACME')).toBe(false);
+      expect(storage.has('selfbound:display:backlog:NOVA')).toBe(true);
+      app.list.resetDisplay();
+      expect(app.list.displayFor({ kind: 'backlog', team: 'NOVA' }).grouping).not.toBe('priority');
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  test('following a link with an old identifier adds one history entry; Back returns', async () => {
+    const { app, browser } = await setup('/issue/NOVA-3');
+    const before = browser.entries.length;
+    app.nav.go({ name: 'issue', key: 'ACME-1' });
+    await settle();
+    expect(url(browser)).toBe('/issue/NOVA-1');
+    expect(browser.entries.length).toBe(before + 1);
+    await browser.back();
+    expect(url(browser)).toBe('/issue/NOVA-3');
+    expect(app.nav.page.get()).toEqual({ name: 'issue', key: 'NOVA-3' });
+  });
+
+  test('a later rename keeps the list display from the address; other pages are not navigated again', async () => {
+    const { app, browser, client } = await setup('/team/ACME/backlog?group=priority', meta);
+    client.push('meta:get', {}, renamedMeta);
+    await settle();
+    expect(url(browser)).toBe('/team/NOVA/backlog?group=priority');
+
+    // On settings with a list filter still holding the old key: no navigation on each meta update.
+    const second = await setup('/all?fteam=ACME', meta);
+    second.app.nav.go({ name: 'settings', section: 'general' });
+    second.client.push('meta:get', {}, renamedMeta);
+    await settle();
+    const go = vi.spyOn(second.app.nav, 'go');
+    second.client.push('meta:get', {}, { ...renamedMeta, labels: [...renamedMeta.labels] });
+    second.client.push('meta:get', {}, { ...renamedMeta });
+    await settle();
+    expect(go).not.toHaveBeenCalled();
+    expect(url(second.browser)).toBe('/settings');
   });
 
   test('a rename that arrives later moves the open team page to the new key', async () => {

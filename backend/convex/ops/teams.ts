@@ -1,6 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
+import { readCounter, teamCounter } from '../lib/counters';
 import { fail, invalid, notFound } from '../lib/errors';
 import type { LogoVariant } from '../lib/validators';
 import { teamByPreviousKey } from '../lib/identifiers';
@@ -44,7 +45,9 @@ async function assertKeyFree(ctx: MutationCtx, key: string, except?: Id<'teams'>
   }
 }
 
-async function hasIssues(ctx: MutationCtx, teamId: Id<'teams'>) {
+/** Issues now or earlier (moved out, purged): identifiers with the team's key may be in use. */
+async function hadIssues(ctx: MutationCtx, teamId: Id<'teams'>) {
+  if ((await readCounter(ctx, teamCounter(teamId))) > 0) return true;
   const issue = await ctx.db
     .query('issues')
     .withIndex('by_team_number', (q) => q.eq('teamId', teamId))
@@ -129,10 +132,10 @@ export async function updateTeam(
     const key = normalizeKey(args.key);
     if (key !== team.key) {
       await assertKeyFree(ctx, key, team._id);
-      // Issues, pages and links store the team ID, so only identifiers change. With issues, the old
-      // key stays with the team, so "OLD-12" keeps resolving. Taking back an old key releases it.
+      // Issues, pages and links store the team ID, so only identifiers change. Once the team has had
+      // issues, the old key stays with it, so "OLD-12" keeps resolving. Taking back an old key releases it.
       const previous = (team.previousKeys ?? []).filter((k) => k !== key);
-      if (await hasIssues(ctx, team._id)) {
+      if (await hadIssues(ctx, team._id)) {
         if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can rename the key of a team with issues.');
         previous.push(team.key);
       }

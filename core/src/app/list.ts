@@ -885,14 +885,18 @@ export class ListController {
     for (const id of ids) this.#keep.add(id);
   }
 
-  /** Saved per view; after a team key rename, what was saved under an old key until the view saves again. */
+  /** Saved per view. After a team key rename, what was saved under an old key moves to the new one. */
   #readView<T>(prefix: string, route: ViewRoute): T | null {
     const saved = readJson<T>(prefix + viewKey(route));
     if (saved !== null || !route.team) return saved;
     const team = this.app.store.meta.get()?.teams.find((t) => t.key === route.team);
     for (const old of [...(team?.previousKeys ?? [])].reverse()) {
-      const before = readJson<T>(prefix + viewKey({ ...route, team: old }));
-      if (before !== null) return before;
+      const oldKey = prefix + viewKey({ ...route, team: old });
+      const before = readJson<T>(oldKey);
+      if (before === null) continue;
+      writeJson(prefix + viewKey(route), before);
+      writeJson(oldKey, null);
+      return before;
     }
     return null;
   }
