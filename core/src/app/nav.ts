@@ -95,11 +95,11 @@ export class Navigator {
    */
   #currentKeys(page: Page, opts: GoOptions): [Page, GoOptions] {
     const store = this.app.store;
-    if (store.renamedKeys().size === 0) return [page, opts];
     if (page.name === 'issue') {
       const issue = store.byKey(page.key);
       return [issue && issue.key !== page.key ? { name: 'issue', key: issue.key } : page, opts];
     }
+    if (store.renamedKeys().size === 0) return [page, opts];
     const current = (key: string) => store.currentTeamKey(key);
     const next = withCurrentTeamKeys(page, current);
     const team = opts.filters?.team;
