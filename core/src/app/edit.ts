@@ -6,7 +6,7 @@ import { CLOSED, PRIORITY_LABEL, actorName, branchName, dayLabel } from '../form
 import { t, tc, tn, translated } from '../i18n.ts';
 import type { Page } from '../route.ts';
 import { applyPatch, sameValue } from '../store.ts';
-import { budgetCheck } from '../budget.ts';
+import { limitHits, limitsOf, type BudgetHit } from '../budget.ts';
 import { inInbox } from '../inbox.ts';
 import { isOwnerKind, type Filters, type Issue, type IssueId, type IssuePatch, type LabelId, type NewIssue, type PatchField, type Priority, type RelationType, type StateId, type Status } from '../types.ts';
 import { workflowsOf } from '../workflow.ts';
@@ -196,7 +196,7 @@ export class Editor {
       if (Object.keys(after).length) items.push({ id, before, after });
     }
     if (items.length === 0) return;
-    if (first.priority === 1 || first.priority === 2) this.budgetHint(items.map((i) => i.id), first.priority);
+    if (this.#limits(items.filter((i) => i.after.priority !== undefined).map((i) => this.#incoming(i.id, i.after.priority as number)))) return;
     const label = opts.label ?? t('{field} changed', { field: FIELD_LABEL[firstField!] });
     const entry: UndoEntry = { kind: 'patch', label, items, ctx: this.#context() };
     this.#push(entry);
@@ -226,26 +226,69 @@ export class Editor {
     this.toastForLast(day ? t('{what} snoozed until {day}', { what, day: dayLabel(day) }) : t('{what} is no longer snoozed', { what }));
   }
 
+  /** An issue that would newly count toward `priority` in `teamId` (default: its own team), else null. */
+  #incoming(id: IssueId, priority: number, teamId?: string) {
+    const issue = this.app.store.get(id);
+    if (!issue || (priority !== 1 && priority !== 2) || CLOSED.has(issue.status)) return null;
+    const team = teamId ?? issue.teamId;
+    if (issue.priority === priority && issue.teamId === team && issue.deletedAt === undefined) return null;
+    return { id, teamId: team, priority };
+  }
+
+  /** Limits that `incoming` would go over (hard ones first). Computed on the state before the change. */
+  limitHits(incoming: ({ id: IssueId; teamId: string; priority: number } | null)[], all: Iterable<Issue> = this.app.store.all()): BudgetHit[] {
+    const list = incoming.filter((i) => i !== null);
+    if (!list.length) return [];
+    const limits = limitsOf(this.app.store.meta.get());
+    const issues = [...all];
+    const hits = ([1, 2] as const).flatMap((p) => limitHits(issues, list.filter((i) => i.priority === p), p, limits));
+    return hits.sort((a, b) => Number(b.hard) - Number(a.hard));
+  }
+
+  /** Text for a full hard limit: what is full and what to do. */
+  limitText(hit: BudgetHit) {
+    const team = this.app.store.team(hit.teamId)?.name ?? t('Team');
+    const priority = PRIORITY_LABEL[hit.priority];
+    const names = hit.previous.slice(0, 3).map((i) => `${i.key} ${i.title}`);
+    const rest = hit.previous.length - names.length;
+    const list = rest > 0 ? t('{list} and {count} more', { list: names.join(' · '), count: rest }) : names.join(' · ');
+    return {
+      text: t('{team}: at most {max} × {priority} open', { team, max: hit.budget, priority }),
+      detail: names.length ? t('Lower one of these first: {list}', { list }) : t('Choose another priority, or change the limit under Settings → Priorities.'),
+    };
+  }
+
   /**
-   * Priority budget: more than 1 urgent or 3 high open in a team → subtle toast with the existing
-   * candidates and "Downgrade …". Not a ban, the change is saved anyway. Computed locally on the
-   * state before the change (same rule as `budget_warning` in the backend).
+   * Priority limits (XLR8-91). Over a hard limit: error toast with "Downgrade …", and true (the
+   * caller drops the change; the server would reject it too). Over a soft one: the subtle hint
+   * with the existing candidates, the change is saved anyway.
    */
-  budgetHint(ids: IssueId[], priority: 1 | 2, all: Iterable<Issue> = this.app.store.all()) {
-    for (const hit of budgetCheck(all, ids, priority)) {
+  #limits(incoming: ({ id: IssueId; teamId: string; priority: number } | null)[], all?: Iterable<Issue>): boolean {
+    const hits = this.limitHits(incoming, all);
+    const hard = hits.filter((h) => h.hard);
+    for (const hit of hard) {
+      const { text, detail } = this.limitText(hit);
+      const action = hit.previous.length
+        ? { label: t('Downgrade …'), run: () => this.app.palette.openDowngrade(hit.teamId, hit.priority) }
+        : { label: t('Settings'), run: () => this.app.nav.go({ name: 'settings', section: 'priorities' }) };
+      this.app.toasts.show(text, action, 'error', detail);
+    }
+    if (hard.length) return true;
+    for (const hit of hits) {
       this.app.cues.emit('warning');
       const team = this.app.store.team(hit.teamId);
       const names = hit.previous.slice(0, 3).map((i) => `${i.key} ${i.title}`);
       const list = names.join(' · ');
       const rest = hit.previous.length - 3;
       this.app.toasts.show(
-        t('{team}: now {open} × {priority} open (budget {budget})', { team: team?.name ?? t('Team'), open: hit.open, priority: PRIORITY_LABEL[priority], budget: hit.budget }),
-        { label: t('Downgrade …'), run: () => this.app.palette.openDowngrade(hit.teamId, priority) },
+        t('{team}: now {open} × {priority} open (limit {budget})', { team: team?.name ?? t('Team'), open: hit.open, priority: PRIORITY_LABEL[hit.priority], budget: hit.budget }),
+        { label: t('Downgrade …'), run: () => this.app.palette.openDowngrade(hit.teamId, hit.priority) },
         'info',
         rest > 0 ? t('So far: {list} and {count} more', { list, count: rest }) : t('So far: {list}', { list }),
         9000,
       );
     }
+    return false;
   }
 
   /**
@@ -301,12 +344,6 @@ export class Editor {
     if (items.length > 1) this.#undoToast(entry, tn(items.length, '{count} issue changed', '{count} issues changed'));
   }
 
-  #budgetForNew(teamId: string, priority: 1 | 2, count: number) {
-    // The new issues do not exist yet: count them as placeholders.
-    const placeholders = Array.from({ length: count }, (_, n) => ({ _id: `new:${n}`, teamId, priority: 0, status: 'todo', updatedAt: 0 }) as unknown as Issue);
-    this.budgetHint(placeholders.map((p) => p._id), priority, [...this.app.store.all(), ...placeholders]);
-  }
-
   remove(ids: IssueId[]) {
     const targets = ids.filter((id) => this.app.store.get(id)?.deletedAt === undefined);
     if (!targets.length) return;
@@ -321,6 +358,7 @@ export class Editor {
   restore(ids: IssueId[]) {
     const targets = ids.filter((id) => this.app.store.get(id)?.deletedAt !== undefined);
     if (!targets.length) return;
+    if (this.#limits(targets.map((id) => this.#incoming(id, this.app.store.get(id)!.priority)))) return;
     const entry: UndoEntry = { kind: 'restore', label: t('Restored'), ids: targets, ctx: this.#context() };
     this.#push(entry);
     this.#undoToast(entry, t('{what} restored', { what: this.#what(targets) }));
@@ -329,11 +367,9 @@ export class Editor {
 
   /** Create; undo moves the new issues to the trash. Returns the temporary IDs. */
   create(items: NewIssue[], onFail?: (error: unknown) => void): IssueId[] {
-    for (const p of [1, 2] as const) {
-      const count = items.filter((i) => i.priority === p).length;
-      const team = items.find((i) => i.priority === p)?.teamId;
-      if (count && team) this.#budgetForNew(team, p, count);
-    }
+    // The new issues do not exist yet: placeholders. Closed ones carry no priority (backend).
+    const incoming = items.map((i, n) => (i.priority === 1 || i.priority === 2) && !CLOSED.has(i.status ?? 'todo') ? { id: `new:${n}` as IssueId, teamId: i.teamId as string, priority: i.priority } : null);
+    if (this.#limits(incoming)) return [];
     const { temps, done } = this.app.store.create(items);
     const entry: UndoEntry = { kind: 'create', label: tc('undo', 'Created'), ids: temps, ctx: this.#context() };
     this.#push(entry);
@@ -357,6 +393,7 @@ export class Editor {
   moveTeam(ids: IssueId[], teamId: string) {
     const items = ids.map((id) => this.app.store.get(id)).filter((i): i is Issue => !!i && i.teamId !== teamId && i.deletedAt === undefined).map((i) => ({ id: i._id, from: i.teamId as string }));
     if (!items.length) return;
+    if (this.#limits(items.map((i) => this.#incoming(i.id, this.app.store.get(i.id)!.priority, teamId)))) return;
     const entry: UndoEntry = { kind: 'move', label: t('Team changed'), items, to: teamId, ctx: this.#context() };
     this.#push(entry);
     this.app.list.noteOwnChange(items.map((i) => i.id));

@@ -4,7 +4,7 @@ import { ownerQuery } from './lib/auth';
 import { logoUrl } from './lib/logo';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
-import { storedTimeZone } from './ops/instance';
+import { priorityLimitsOf, storedTimeZone } from './ops/instance';
 import { enabledModels } from './ops/models';
 import { ownerProfile } from './ops/profile';
 import { recentClosedSprints } from './ops/sprints';
@@ -60,6 +60,8 @@ export const get = ownerQuery({
       owner: await ownerProfile(ctx),
       // Time zone for calendar days (IANA name); null = not set yet, the app then saves the browser's.
       timeZone: await storedTimeZone(ctx),
+      // Open urgent/high issues per team (XLR8-91), with the defaults filled in.
+      priorityLimits: await priorityLimitsOf(ctx),
       // The models the owner enabled (XLR8-93), with their effort and speed values. Not the catalog.
       models: await enabledModels(ctx),
     };

@@ -87,7 +87,7 @@
     <span>{row.group.label}</span>
     <span class="group-count">{row.count}</span>
     {#if row.group.budget}
-      <span class={['group-budget', row.group.overBudget && 'over']} data-testid="group-budget" title={t('Priority budget: at most 1 urgent and 3 high open')}>{row.group.budget}</span>
+      <span class={['group-budget', row.group.overBudget && 'over']} data-testid="group-budget" title={row.group.budgetTitle}>{row.group.budget}</span>
     {/if}
     {@html cols}
     <button class="group-add" title={t('Create issue in this group')} aria-label={t('Create issue')} onclick={add}><span class="icon mi ui-plus"></span></button>

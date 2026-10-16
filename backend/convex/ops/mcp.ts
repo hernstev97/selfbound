@@ -350,7 +350,7 @@ function englishWarnings(warnings: BudgetWarning[], lookup: Lookup) {
         priority: word,
         open: w.open,
         budget: w.budget,
-        message: `Priority budget exceeded: team ${key} now has ${w.open} open ${word} issues (budget ${w.budget}). The change was saved; consider lowering the priority of something else.`,
+        message: `Priority limit exceeded: team ${key} now has ${w.open} open ${word} issues (limit ${w.budget}). The change was saved; consider lowering the priority of something else.`,
       };
     }),
   );

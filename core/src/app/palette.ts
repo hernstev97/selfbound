@@ -633,9 +633,16 @@ export class PaletteController {
       }
       case 'priority': {
         const current = values((i) => i.priority, () => draft!.priority);
-        PRIORITY_ORDER.forEach((p) =>
-          add({ id: `p:${p}`, label: PRIORITY_LABEL[p], icon: PRIORITY_ICON[p], checked: all(current, p), keywords: `prio ${PRIORITY_KEYWORDS[p]}`, shortcut: prefix ? undefined : String(p) }, () => this.apply({ priority: p }, target)),
-        );
+        // Full hard limits are named next to the option (counted once per opening, not per row).
+        const subjects = draft ? (draft.teamId ? [{ id: 'new:0' as IssueId, teamId: draft.teamId }] : []) : issues.map((i) => ({ id: i._id, teamId: i.teamId as string }));
+        const full = (p: Priority) => (p === 1 || p === 2 ? this.app.edit.limitHits(subjects.map((x) => ({ ...x, priority: p }))).find((h) => h.hard) : undefined);
+        PRIORITY_ORDER.forEach((p) => {
+          const hit = full(p);
+          add(
+            { id: `p:${p}`, label: PRIORITY_LABEL[p], icon: PRIORITY_ICON[p], checked: all(current, p), keywords: `prio ${PRIORITY_KEYWORDS[p]}`, shortcut: prefix ? undefined : String(p), ...(hit ? { detail: t('Limit of {max} reached', { max: hit.budget }) } : {}) },
+            () => this.apply({ priority: p }, target),
+          );
+        });
         break;
       }
       case 'labels': {

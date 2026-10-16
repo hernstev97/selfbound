@@ -102,7 +102,14 @@ export default {
   'Took the other version, yours is in the clipboard': 'Fremde Fassung übernommen, deine liegt in der Zwischenablage',
 
   // budget.ts
-  'Urgent {urgent}/{urgentMax} · High {high}/{highMax}': 'Dringend {urgent}/{urgentMax} · Hoch {high}/{highMax}',
+  'Urgent {count}/{max}': 'Dringend {count}/{max}',
+  'Urgent {count}': 'Dringend {count}',
+  'High {count}/{max}': 'Hoch {count}/{max}',
+  'High {count}': 'Hoch {count}',
+  '{priority}: no limit': '{priority}: keine Grenze',
+  '{priority}: at most {max}, blocks': '{priority}: höchstens {max}, blockiert',
+  '{priority}: at most {max}, warns': '{priority}: höchstens {max}, warnt',
+  'Priority limits per team (open issues). {urgent} · {high}': 'Prioritätsgrenzen je Team (offene Issues). {urgent} · {high}',
 
   // keyboard.ts
   Ctrl: 'Strg',
@@ -447,10 +454,19 @@ export default {
   Title: 'Titel',
   '{field} changed': '{field} geändert',
   '{count} issue changed': ['{count} Issue geändert', '{count} Issues geändert'],
-  '{team}: now {open} × {priority} open (budget {budget})': '{team}: jetzt {open} × {priority} offen (Budget {budget})',
+  '{team}: now {open} × {priority} open (limit {budget})': '{team}: jetzt {open} × {priority} offen (Grenze {budget})',
+  '{team}: at most {max} × {priority} open': '{team}: höchstens {max} × {priority} offen',
+  'Lower one of these first: {list}': 'Stufe zuerst eines davon herab: {list}',
+  'Choose another priority, or change the limit under Settings → Priorities.': 'Wähle eine andere Priorität oder ändere die Grenze unter Einstellungen → Prioritäten.',
+  '{list} and {count} more': '{list} und {count} weitere',
   'Downgrade …': 'Herabstufen …',
   'So far: {list}': 'Bisher: {list}',
   'So far: {list} and {count} more': 'Bisher: {list} und {count} weitere',
+  // app/toasts.ts, app/palette.ts, app/admin.ts (priority limits)
+  '{team} is at its limit of {max} × {priority}. Lower one of these first: {list}': '{team} hat die Grenze von {max} × {priority} erreicht. Stufe zuerst eines davon herab: {list}',
+  '{team} allows at most {max} × {priority}. Change the limit under Settings → Priorities.': '{team} erlaubt höchstens {max} × {priority}. Ändere die Grenze unter Einstellungen → Prioritäten.',
+  'Limit of {max} reached': 'Grenze von {max} erreicht',
+  'Priority limits not saved': 'Prioritätsgrenzen nicht gespeichert',
   'Change reverted': 'Fremde Änderung zurückgenommen',
   'Labels changed': 'Labels geändert',
   Deleted: 'Gelöscht',

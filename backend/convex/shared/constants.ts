@@ -32,9 +32,6 @@ export function isOpen(status: Status) {
 export const PRIORITIES = [0, 1, 2, 3, 4] as const;
 export type Priority = (typeof PRIORITIES)[number];
 
-/** Priority budget per team: only a hint, never a block. */
-export const PRIORITY_BUDGET: Record<1 | 2, number> = { 1: 1, 2: 3 };
-
 export const RELATION_TYPES = ['blocks', 'related', 'duplicate'] as const;
 export type RelationType = (typeof RELATION_TYPES)[number];
 

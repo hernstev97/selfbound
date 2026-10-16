@@ -6,7 +6,7 @@ import { hashText, sameValue, stable } from '../lib/equal';
 import { aliasKey } from '../lib/identifiers';
 import { lastRank, rankBetween } from '../lib/rank';
 import { ensureTeamStates, stateFields, type State as WorkflowState } from '../lib/workflow';
-import { bucketOf, identifierOf, LIMITS } from '../shared/constants';
+import { bucketOf, identifierOf, LIMITS, type Priority, type Status } from '../shared/constants';
 import { stateByName, stateForStatus, statusOfState } from '../shared/workflow';
 import type {
   ImportComment,
@@ -25,6 +25,7 @@ import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
 import { syncArticleLinks } from './links';
 import { record } from './history';
+import { hasRoom, holds } from './priorityLimits';
 import { addRelation } from './relations';
 import { setImportedSprintItem, upsertImportedSprint } from './sprints';
 import { createTeam } from './teams';
@@ -152,6 +153,10 @@ async function isLinked(ctx: QueryCtx, localId: string) {
 
 function note(s: State, text: string) {
   if (!s.notes.includes(text)) s.notes.push(text);
+}
+
+function limitNote(s: State, identifier: string, priority: number, teamKey: string) {
+  note(s, `${identifier}: priority ${priority === 1 ? 'urgent' : 'high'} not taken, the hard limit of team ${teamKey} is full`);
 }
 
 const clip = (text: string, max: number, fallback: string) => {
@@ -528,6 +533,13 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
   };
 
   if (!existing) {
+    // A full hard priority limit: the issue comes without that priority (base keeps Linear's, so
+    // a later run does not try again unless Linear changes it).
+    let priority = fields.priority;
+    if (holds({ priority, status: fields.status, deletedAt: undefined }, priority) && !(await hasRoom(ctx, team._id, priority))) {
+      limitNote(s, identifier, priority, team.key);
+      priority = 0;
+    }
     await claimNumber(s, team, p.teamLinearId, p.number, null);
     const seq = await takeCounter(ctx, SEQ);
     const rank = rankBetween(s.rank.last, null);
@@ -539,7 +551,7 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
       number: p.number,
       title: fields.title,
       ...stateFields(await importState(s, team, p)),
-      priority: fields.priority,
+      priority,
       labelIds: fields.labelIds,
       ...(fields.projectId ? { projectId: fields.projectId } : {}),
       ...(fields.estimate !== undefined ? { estimate: fields.estimate } : {}),
@@ -588,7 +600,19 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
     if (decision === 'conflict') conflicts.push(field);
     if (decision !== 'take') continue;
     patch[field] = fields[field];
-    await record(ctx, IMPORT, now, undefined, { issueId: existing._id, field, from: existing[field], to: fields[field] });
+  }
+  // A full hard priority limit: Linear's raise is not taken. The team move above is already
+  // written, so an issue that keeps its priority counts in `team` already.
+  const finalStatus = (patch.status ?? existing.status) as Status;
+  const raises = (priority: Priority) => holds({ priority, status: finalStatus, deletedAt: existing.deletedAt }, priority) && !(existing.teamId === team._id && holds(existing, priority));
+  const priority = (patch.priority ?? existing.priority) as Priority;
+  if (raises(priority) && !(await hasRoom(ctx, team._id, priority, holds(existing, priority) ? 0 : 1))) {
+    limitNote(s, identifier, priority, team.key);
+    if ('priority' in patch && !raises(existing.priority)) delete patch.priority;
+    else patch.priority = 0;
+  }
+  for (const field of TRACKED) {
+    if (field in patch) await record(ctx, IMPORT, now, undefined, { issueId: existing._id, field, from: existing[field], to: patch[field] });
   }
   // The timestamps follow the status: only when the status is taken from Linear.
   if ('status' in patch) {

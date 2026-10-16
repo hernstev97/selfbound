@@ -49,9 +49,19 @@ Priority is stored as a number from 0 to 4: 0 is **No priority**, 1 **Urgent**, 
 Duplicate), Selfbound removes its priority. Reopening the issue does not bring it back. If you undo the status
 change with <Kbd keys="mod+z" />, status and priority both return.
 
-**Priority budget.** Each team should have at most 1 open Urgent and 3 open High issues. If a change goes
-beyond that, Selfbound shows a hint listing the team's other Urgent or High issues, with **Downgrade …** to lower one
-of them. It is only a hint; your change is saved either way.
+**Priority limits.** Each team may have only a few open Urgent and High issues: by default 1 Urgent and 3 High.
+You set the numbers under [Settings → Priorities](/reference/settings/#priorities), each one either as a warning or as
+a hard limit. They count open issues of a team with that priority (snoozed ones included, not the trash).
+
+- **Warn:** if a change goes beyond the limit, Selfbound saves it and shows a hint listing the team's other Urgent
+  or High issues, with **Downgrade …** to lower one of them.
+- **Block:** a change that would go beyond the limit is not made. Selfbound says which issues already hold the
+  priority, again with **Downgrade …**. The priority picker shows "Limit of N reached" next to a full priority.
+  Agents get the same rule over MCP.
+
+Everything that gives a team another Urgent or High issue counts: setting the priority, creating an issue,
+moving it to another team, restoring it from the trash, and undo or redo. If you lower a limit, issues already
+above it stay; only new ones count against it.
 
 ### Model
 
@@ -174,5 +184,6 @@ and **Resume** it, or **Delete** it. Deleting a template only stops new issues; 
 
 <Aside type="note">
 If Selfbound cannot create an issue from a template, for example because one of its labels was archived, it pauses
-the template. If several due days were missed, Selfbound creates one catch-up issue, not one per missed day.
+the template. A full hard [priority limit](#priority) does not pause it: the issue is created without the priority
+and lands in your inbox. If several due days were missed, Selfbound creates one catch-up issue, not one per missed day.
 </Aside>

@@ -17,6 +17,7 @@
   import Agents from './settings/Agents.svelte';
   import Models from './settings/Models.svelte';
   import Recurrences from './settings/Recurrences.svelte';
+  import Priorities from './settings/Priorities.svelte';
   import Ops from './settings/Ops.svelte';
   import Github from './settings/Github.svelte';
   import Notifications from './settings/Notifications.svelte';
@@ -69,6 +70,8 @@
       <Models />
     {:else if section === 'recurrences'}
       <Recurrences />
+    {:else if section === 'priorities'}
+      <Priorities />
     {:else if section === 'github'}
       <Github />
     {:else if section === 'ops'}

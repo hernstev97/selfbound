@@ -6,7 +6,6 @@
   // ← sends back, Tab switches the column, Alt ↑/↓ and dragging reorder.
   import { ICON, PRIORITY_ICON } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
-  import { PRIORITY_BUDGET } from '@selfbound/backend/constants';
   import { points } from '@selfbound/core/sprintlogic';
   import { pages } from '../../lib/pages.ts';
   import Lazy from '../../components/Lazy.svelte';
@@ -154,10 +153,10 @@
           <button class="chip-link" onclick={() => app.main.clearFilters()}>{t('Reset filters')}</button>
         </div>
       {/if}
-      <div class="budget-strip" data-testid="budget-strip" title={t('Priority budget per team: at most {urgent} urgent and {high} high open', { urgent: PRIORITY_BUDGET[1], high: PRIORITY_BUDGET[2] })}>
+      <div class="budget-strip" data-testid="budget-strip" title={plan.limits.title}>
         {#each plan.teams as tm (tm.badge.id)}
           <span class={['budget-chip', tm.over && 'over']} data-testid="budget-chip" data-team={tm.badge.key} title="{tm.badge.name}: {tm.label}"
-            ><TeamLogo team={tm.badge} size={14} /><span class="icon">{@html PRIORITY_ICON[1]}</span><span class={['n', tm.urgent > PRIORITY_BUDGET[1] && 'over']}>{tm.urgent}/{PRIORITY_BUDGET[1]}</span><span class="icon">{@html PRIORITY_ICON[2]}</span><span class={['n', tm.high > PRIORITY_BUDGET[2] && 'over']}>{tm.high}/{PRIORITY_BUDGET[2]}</span></span
+            ><TeamLogo team={tm.badge} size={14} /><span class="icon">{@html PRIORITY_ICON[1]}</span><span class={['n', tm.overUrgent && 'over']}>{tm.urgent}{plan.limits.urgent === null ? '' : `/${plan.limits.urgent}`}</span><span class="icon">{@html PRIORITY_ICON[2]}</span><span class={['n', tm.overHigh && 'over']}>{tm.high}{plan.limits.high === null ? '' : `/${plan.limits.high}`}</span></span
           >
         {/each}
       </div>

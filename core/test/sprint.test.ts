@@ -1,11 +1,13 @@
 // Sprints, priority budget, identifier column, settings helpers.
+import { ConvexError } from 'convex/values';
 import { describe, expect, test } from 'vitest';
+import { errorMessage } from '../src/app/toasts.ts';
 import { actionById } from '../src/app/actions.ts';
 import { App } from '../src/app/index.ts';
 import { mcpCommand, precheckLogo, siteUrl } from '../src/app/admin.ts';
 import { Auth } from '../src/auth.ts';
 import { computeList, computeVisible, emptyFilters, keyWidth } from '../src/query.ts';
-import { budgetCheck, closeSummary, defaultSprintRange, dropNeighbors, nextMonday, priorityBudget, remainingLabel, sprintStats, sprintTotals, type SprintItem } from '../src/sprintlogic.ts';
+import { budgetCheck, budgetLabel, closeSummary, limitHits, overBudget, defaultSprintRange, dropNeighbors, nextMonday, priorityBudget, remainingLabel, sprintStats, sprintTotals, type SprintItem } from '../src/sprintlogic.ts';
 import type { Issue, IssueId, SprintItemKind, ViewState } from '../src/types.ts';
 import { VIEWS, planSprint } from '../src/views.ts';
 import { callName, doc, fakeClient, flush, meta } from './helpers.ts';
@@ -57,6 +59,18 @@ describe('priority budget', () => {
   test('open urgent/high per team (done ones do not count)', () => {
     expect(priorityBudget(all).get('t1')).toEqual({ urgent: 0, high: 3 });
     expect(priorityBudget(all).get('t2')).toEqual({ urgent: 1, high: 0 });
+  });
+  test('configured limits: other numbers, no limit, hard ones marked', () => {
+    const limits = { urgent: { max: 0, hard: true }, high: { max: null, hard: false } };
+    expect(budgetCheck(all, ['i6' as IssueId], 1, limits)).toMatchObject([{ teamId: 't2', open: 2, budget: 0, hard: true }]);
+    expect(budgetCheck(all, ['i4' as IssueId], 1, limits)).toMatchObject([{ teamId: 't1', open: 1, budget: 0, hard: true, previous: [] }]);
+    expect(budgetCheck(all, ['i4' as IssueId, 'i6' as IssueId], 2, limits)).toEqual([]);
+    expect(budgetLabel(priorityBudget(all).get('t1'), limits)).toBe('Urgent 0/0 · High 3');
+    expect(overBudget(priorityBudget(all).get('t2'), limits)).toBe(true);
+    expect(overBudget(priorityBudget(all).get('t1'), limits)).toBe(false);
+    // Several teams at once: each counted on its own.
+    const hits = limitHits(all, [{ id: 'new:0' as IssueId, teamId: 't1' }, { id: 'new:1' as IssueId, teamId: 't2' }], 2, { urgent: { max: 1, hard: false }, high: { max: 3, hard: true } });
+    expect(hits).toMatchObject([{ teamId: 't1', open: 4, hard: true }]);
   });
   test('the 4th high or 2nd urgent triggers the notice, with the previous candidates', () => {
     const [hit] = budgetCheck(all, ['i4' as IssueId], 2);
@@ -226,11 +240,71 @@ describe('app: planning and completion', () => {
     app.edit.patch(['i70' as IssueId], { priority: 2 });
     const toast = app.toasts.list.get().find((t) => t.text.includes('High open'));
     // i2 from the base data is also high in Acme.
-    expect(toast?.text).toBe('Acme: now 5 × High open (budget 3)');
+    expect(toast?.text).toBe('Acme: now 5 × High open (limit 3)');
     expect(toast?.detail).toContain('So far:');
     toast!.action!.run();
     expect(app.palette.state.get()?.kind).toBe('downgrade');
     expect(app.palette.state.get()?.items.map((i) => i.id)).toEqual(expect.arrayContaining(['dg:i10', 'dg:i11', 'dg:i12']));
+  });
+
+  test('hard priority limit: nothing is sent, an error toast says what to lower', async () => {
+    const { client, app } = await setup();
+    client.push('meta:get', {}, { ...meta, priorityLimits: { urgent: { max: 1, hard: true }, high: { max: null, hard: false } } });
+    await flush();
+    // i1 is the one open urgent issue of Pixelwerk (t2); i3 is in Pixelwerk too.
+    app.edit.patch(['i3' as IssueId], { priority: 1 });
+    expect(calls(client, 'issues:update')).toHaveLength(0);
+    expect(app.store.get('i3' as IssueId)?.priority).toBe(3);
+    const toast = app.toasts.list.get().find((t) => t.kind === 'error');
+    expect(toast?.text).toBe('Pixelwerk: at most 1 × Urgent open');
+    expect(toast?.detail).toBe('Lower one of these first: PX-2 Issue number 1');
+    toast!.action!.run();
+    expect(app.palette.state.get()?.kind).toBe('downgrade');
+    app.palette.close();
+    // The priority menu names the full limit; the issue that already is urgent may stay so.
+    app.list.focus('i3' as IssueId);
+    app.palette.open('priority');
+    expect(app.palette.state.get()?.items.find((i) => i.id === 'p:1')?.detail).toBe('Limit of 1 reached');
+    app.palette.close();
+    app.edit.patch(['i1' as IssueId], { title: 'Still urgent' });
+    expect(calls(client, 'issues:update')).toHaveLength(1);
+    // Acme (t1) has room for one urgent issue.
+    app.edit.patch(['i0' as IssueId], { priority: 1 });
+    expect(calls(client, 'issues:update')).toHaveLength(2);
+    // Creating, moving and restoring into the full team are blocked as well.
+    expect(app.edit.create([{ teamId: 't2' as never, title: 'New', priority: 1 }])).toEqual([]);
+    expect(calls(client, 'issues:create')).toHaveLength(0);
+    app.edit.moveTeam(['i0' as IssueId], 't2');
+    expect(calls(client, 'issues:moveTeam')).toHaveLength(0);
+    // No limit for high: no hint at all.
+    const before = app.toasts.list.get().length;
+    app.edit.patch(['i4' as IssueId], { priority: 2 });
+    expect(app.toasts.list.get()).toHaveLength(before);
+  });
+
+  test('hard priority limit in the create dialog: it stays open with the reason', async () => {
+    const { client, app } = await setup();
+    client.push('meta:get', {}, { ...meta, priorityLimits: { urgent: { max: 1, hard: true }, high: { max: 3, hard: false } } });
+    await flush();
+    app.create.open();
+    app.create.update({ title: 'Another fire', teamId: 't2', priority: 1, status: 'todo' });
+    app.create.submit(false);
+    expect(app.create.isOpen()).toBe(true);
+    expect(app.create.state.get().error).toBe('Pixelwerk: at most 1 × Urgent open. Lower one of these first: PX-2 Issue number 1');
+    expect(calls(client, 'issues:create')).toHaveLength(0);
+    // Created as done it carries no priority (backend), so nothing is blocked.
+    app.create.update({ status: 'done' });
+    app.create.submit(false);
+    expect(app.create.isOpen()).toBe(false);
+  });
+});
+
+describe('priority limit errors from the server', () => {
+  test('are told in the UI language with what to lower', () => {
+    const full = new ConvexError({ code: 'priority_limit', message: 'Team PX already has …', team: 'PX', priority: 1, limit: 1, issues: ['PX-2'] });
+    expect(errorMessage(full)).toBe('PX is at its limit of 1 × Urgent. Lower one of these first: PX-2');
+    const zero = new ConvexError({ code: 'priority_limit', message: '…', team: 'PX', priority: 2, limit: 0, issues: [] });
+    expect(errorMessage(zero)).toBe('PX allows at most 0 × High. Change the limit under Settings → Priorities.');
   });
 });
 

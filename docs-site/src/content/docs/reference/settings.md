@@ -91,6 +91,12 @@ Details: [Labels](/concepts/labels/).
 
 Issues that come back every week or every month. On the due day, Selfbound creates the issue for you. You can also set up a recurrence from an issue with **Repeat …** in its context menu.
 
+### Priorities
+
+How many open Urgent and High issues each team may have. For each of the two priorities choose **No limit**, **Warn** or **Block**, and the number (0 to 99). The default is 1 Urgent and 3 High, warning only. The limits apply to the whole instance and are counted per team. If a team already has more than a new, lower limit, the page says so: those issues stay, only new ones count against the limit. Only the owner can change it.
+
+Details: [Priority](/concepts/issues/#priority).
+
 ## Agents and ops
 
 ### Agents

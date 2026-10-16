@@ -11,6 +11,7 @@ import type { StateType } from '@selfbound/backend/shared/workflow';
 import type { ModelChoice, ModelInfo } from '@selfbound/backend/shared/models';
 import type { App } from './index.ts';
 import { errorMessage } from './toasts.ts';
+import type { PriorityLimits } from '../budget.ts';
 import { t, tc } from '../i18n.ts';
 
 export type LogoVariant = 'light' | 'dark';
@@ -192,6 +193,13 @@ export class Admin {
   /** Instance time zone (IANA name); the server checks it and answers with the canonical spelling. */
   setTimeZone(timeZone: string) {
     return this.#run(t('Time zone not saved'), () => this.store.call(api.instance.setTimeZone, { timeZone }, this.#meta((m) => ({ ...m, timeZone }))));
+  }
+
+  // ---------------------------------------------------------------- Priority limits
+
+  /** Open urgent/high issues per team (XLR8-91): `max` null = no limit, `hard` = block instead of warn. */
+  setPriorityLimits(limits: PriorityLimits) {
+    return this.#run(t('Priority limits not saved'), () => this.store.call(api.instance.setPriorityLimits, { limits }, this.#meta((m) => ({ ...m, priorityLimits: limits }))));
   }
 
   // ---------------------------------------------------------------- Profile

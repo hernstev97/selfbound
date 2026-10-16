@@ -33,7 +33,7 @@ import type { SprintController } from './sprints.ts';
 import type { WikiController } from './wiki.ts';
 import { Cues } from './cues.ts';
 import { Toasts } from './toasts.ts';
-import { budgetLabel, overBudget, priorityBudget } from '../budget.ts';
+import { budgetLabel, limitsOf, limitsSummary, overBudget, priorityBudget, type PriorityLimits } from '../budget.ts';
 
 export interface ShellState {
   /** What the main area shows */
@@ -399,15 +399,17 @@ export class App {
     this.detail.onFocus(this.list.focusId());
   }
 
-  #budget: { version: number; labels: Map<string, { label: string; over: boolean }> } | null = null;
+  #budget: { version: number; limits: PriorityLimits; labels: Map<string, { label: string; over: boolean; title: string }> } | null = null;
 
-  /** Priority budget per team as text (for team groups), recomputed only after changes. */
+  /** Priority limits per team as text (for team groups), recomputed only after changes. */
   budgetLabels() {
     const version = this.store.version.get();
-    if (this.#budget?.version !== version) {
-      const labels = new Map<string, { label: string; over: boolean }>();
-      for (const [teamId, b] of priorityBudget(this.store.all())) labels.set(teamId, { label: budgetLabel(b), over: overBudget(b) });
-      this.#budget = { version, labels };
+    const limits = limitsOf(this.store.meta.get());
+    if (this.#budget?.version !== version || this.#budget.limits !== limits) {
+      const labels = new Map<string, { label: string; over: boolean; title: string }>();
+      const title = limitsSummary(limits);
+      for (const [teamId, b] of priorityBudget(this.store.all())) labels.set(teamId, { label: budgetLabel(b, limits), over: overBudget(b, limits), title });
+      this.#budget = { version, limits, labels };
     }
     return this.#budget.labels;
   }

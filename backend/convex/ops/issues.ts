@@ -10,14 +10,14 @@ import { ranksAtEnd, rankAfter, rankBefore, rankBetween } from '../lib/rank';
 import type { IssuePatch, NewIssue, PatchField, RevertItem } from '../lib/validators';
 import { assertTransition, ensureTeamStates, resolveState, stateFields, workflowOf } from '../lib/workflow';
 import { PATCH_FIELDS } from '../lib/validators';
-import { todayOf } from './instance';
+import { priorityLimitsOf, todayOf } from './instance';
+import { assertRoom, holds, openWithPriority } from './priorityLimits';
+import { isLimited, limitFor, overLimit } from '../shared/priorityLimits';
 import {
   bucketOf,
   CLOSED_STATUSES,
   identifierOf,
   LIMITS,
-  OPEN_STATUSES,
-  PRIORITY_BUDGET,
   type Priority,
   type Status,
 } from '../shared/constants';
@@ -47,7 +47,7 @@ import {
 
 export const TRASH_DAYS = 30;
 
-/** Hint (not an error): the team has more open urgent/high issues than the budget allows. */
+/** Hint (not an error): the team has more open urgent/high issues than its (soft) limit. */
 export interface BudgetWarning {
   code: 'budget_warning';
   teamId: Id<'teams'>;
@@ -77,36 +77,31 @@ export function statusTimestamps(issue: Pick<Doc<'issues'>, 'startedAt'> | null,
   }
 }
 
-/** Checks the priority budget for (team, priority) pairs. */
+/** Checks the priority limits for (team, priority) pairs; teams over a limit get a warning. */
 export async function budgetWarnings(
   ctx: QueryCtx,
   pairs: Iterable<{ teamId: Id<'teams'>; priority: Priority }>,
 ): Promise<BudgetWarning[]> {
   const seen = new Set<string>();
   const warnings: BudgetWarning[] = [];
+  const limits = await priorityLimitsOf(ctx);
   for (const { teamId, priority } of pairs) {
-    if (priority !== 1 && priority !== 2) continue;
+    if (!isLimited(priority)) continue;
+    const limit = limitFor(limits, priority);
+    if (limit?.max == null) continue;
     const key = `${teamId}:${priority}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const budget = PRIORITY_BUDGET[priority];
-    let open = 0;
-    for (const status of OPEN_STATUSES) {
-      const rows = await ctx.db
-        .query('issues')
-        .withIndex('by_team_priority', (q) => q.eq('teamId', teamId).eq('priority', priority).eq('status', status))
-        .take(200);
-      open += rows.filter((r) => r.deletedAt === undefined).length;
-    }
-    if (open > budget) {
+    const open = (await openWithPriority(ctx, teamId, priority)).length;
+    if (overLimit(limit, open)) {
       const team = await ctx.db.get('teams', teamId);
       warnings.push({
         code: 'budget_warning',
         teamId,
         priority,
         open,
-        budget,
-        message: `${team?.key ?? 'The team'} now has ${open} open issues with priority "${PRIORITY_NAMES[priority]}" (budget ${budget}).`,
+        budget: limit.max,
+        message: `${team?.key ?? 'The team'} now has ${open} open issues with priority "${PRIORITY_NAMES[priority]}" (limit ${limit.max}).`,
       });
     }
   }
@@ -184,6 +179,17 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       model: item.model ? await checkModel(ctx, item.model) : undefined,
     });
   }
+
+  // Hard priority limits: all new urgent/high issues of a team together, before anything is written.
+  const adding = new Map<string, { teamId: Id<'teams'>; priority: Priority; count: number }>();
+  for (const p of prepared) {
+    if (!isLimited(p.priority)) continue;
+    const key = `${p.team._id}:${p.priority}`;
+    const entry = adding.get(key) ?? { teamId: p.team._id, priority: p.priority, count: 0 };
+    entry.count++;
+    adding.set(key, entry);
+  }
+  for (const { teamId, priority, count } of adding.values()) await assertRoom(ctx, teamId, priority, count);
 
   const firstSeq = await takeCounter(ctx, SEQ, items.length);
   const ranks = await ranksAtEnd(ctx, items.length);
@@ -357,6 +363,9 @@ export async function applyPatch(
   }
 
   if (changes.status !== undefined) Object.assign(changes, statusTimestamps(issue, changes.status, now));
+  // A raise (the issue newly counts toward urgent/high in its team) must fit a hard limit.
+  const after = { priority: changes.priority ?? issue.priority, status: changes.status ?? issue.status, deletedAt: issue.deletedAt };
+  if (holds(after, after.priority) && !holds(issue, after.priority)) await assertRoom(ctx, issue.teamId, after.priority);
   let changed = false;
   if (rows.length > 0) {
     await ctx.db.patch('issues', issue._id, { ...changes, updatedAt: now });
@@ -527,6 +536,7 @@ export async function restoreIssues(ctx: MutationCtx, actor: Actor, args: { ids:
     for (const id of new Set(args.ids)) {
       const issue = await getIssue(ctx, id, { allowDeleted: true });
       if (issue.deletedAt === undefined) continue;
+      if (holds({ ...issue, deletedAt: undefined }, issue.priority)) await assertRoom(ctx, issue.teamId, issue.priority);
       await ctx.db.patch('issues', issue._id, { deletedAt: undefined, updatedAt: now });
       await record(ctx, actor, now, args.requestId, { issueId: issue._id, field: 'restored', from: issue.deletedAt });
       restored++;

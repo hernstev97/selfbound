@@ -1,6 +1,6 @@
 // Create dialog (C) with defaults from the context, "Create more", drafts that survive navigating
 // away and closing the tab, and creating via URL (/new?…).
-import { PRIORITY_KEYWORDS, PRIORITY_LABEL, STATUS_KEYWORDS, STATUS_LABEL, STATUS_ORDER, parseDueInput } from '../format.ts';
+import { CLOSED, PRIORITY_KEYWORDS, PRIORITY_LABEL, STATUS_KEYWORDS, STATUS_LABEL, STATUS_ORDER, parseDueInput } from '../format.ts';
 import { t, tc } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import { VIEWS } from '../views.ts';
@@ -328,6 +328,16 @@ export class CreateController {
     }
     if (!d.teamId) {
       this.state.set({ ...s, error: t('Please choose a team.') });
+      return;
+    }
+    // A full hard priority limit: the dialog stays open with the reason, nothing is lost.
+    const stateId = this.draftState(d);
+    const type = stateId ? workflowsOf(this.app.store.meta.get()).view(stateId)?.type : undefined;
+    const closed = stateId ? type === 'completed' || type === 'canceled' : CLOSED.has(d.status);
+    const full = closed ? undefined : this.app.edit.limitHits([{ id: 'new:0' as IssueId, teamId: d.teamId, priority: d.priority }]).find((h) => h.hard);
+    if (full) {
+      const { text, detail } = this.app.edit.limitText(full);
+      this.state.set({ ...s, error: `${text}. ${detail}` });
       return;
     }
     const item: NewIssue = {

@@ -51,11 +51,11 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 | `app/keys.ts` | Keyboard |
 | `app/toasts.ts`, `prefs.ts`, `perf.ts` | Toasts, theme/font, perf overlay |
 | `app/sprints.ts` | SprintController (own chunk, `app.loadSprints()`): header numbers of the current sprint, planning, decisions when closing, overview `/sprints`, sprint mutations, drag and drop; registers the keys of the sprint pages (→ ← Tab, 1/2/3/0, Ctrl Enter) |
-| `app/admin.ts` | Settings (`@selfbound/core/app/admin`, only in the settings chunk): teams, logos, projects, labels, groups, agent keys, recurrences; site URL and MCP command |
+| `app/admin.ts` | Settings (`@selfbound/core/app/admin`, only in the settings chunk): teams, logos, projects, labels, groups, agent keys, recurrences, priority limits; site URL and MCP command |
 | `app/repeat.ts` | “Repeat …”: template from an issue (small chunk) |
 | `app/wiki.ts`, `wikiTree.ts` | WikiController (own chunk, `app.loadWiki()`): a team's wiki, page, trash, dragging in the tree ([below](#wiki-appwikits-pageswiki)) |
 | `bodyEdit.ts` | `BodyEditSession`: editing a versioned text (autosave, draft, conflict), for the description and wiki pages |
-| `budget.ts` | Priority budget: open Urgent/High per team, warning when exceeded |
+| `budget.ts` | Priority limits: open Urgent/High per team, the limits in effect (`limitsOf`), label and tooltip, which changes would go over a limit (`limitHits`, `budgetCheck`) |
 | `models.ts` | Desired model per issue: index of the enabled models per meta revision, chip text ("Claude Opus 5.5 · xhigh"), context label, effective model (own, parent, team default), hint for a model no longer enabled or in the catalog |
 | `sprintlogic.ts` | Pure sprint computations: date range, points, metrics from `sprints.items`, closing state, insertion point when dragging |
 
@@ -85,7 +85,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 
 `meta.get` returns all statuses of all teams (`workflowStates`, including archived ones). `workflowsOf(meta)` builds an index (`Workflows`) once per meta revision: an issue's status (`of(issue)`: name, status type for icon and default colour, custom colour), a team's statuses in workflow order, statuses for a status type (`forStatus`), groups across teams (`groups()`: same type and name = one entry; pickers, filters, board columns). Rules and order come from `@selfbound/backend/shared/workflow`, so they match the backend.
 
-- **Status type** (`issue.status`, eight keys) remains the client's basis for views (Triage, Active, Backlog), “Show completed”, sprint logic, budget and sorting. Name, icon colour and group come from the status.
+- **Status type** (`issue.status`, eight keys) remains the client's basis for views (Triage, Active, Backlog), “Show completed”, sprint logic, priority limits and sorting. Name, icon colour and group come from the status.
 - **Setting a status:** The picker (S) shows the statuses of the affected teams; with several teams only those that exist in all of them (same name and type). Digits 1–9 pick the first nine. `edit.setState` sends each issue the `stateId` of its own team (`patchEach`, one undo step). A bare status type (accept from triage, decline, duplicate) is first translated by `edit.patch` into the team's status, so undo restores exactly the old status. Optimistically, the status type follows the status (`applyPatch` with `Workflows`).
 - **Fixed order:** The picker only offers targets allowed for all affected issues (`Workflows.allowed`, same rule as the backend); the hint below names the blocked ones. “Accept from triage” only offers what is allowed. If the server still rejects (e.g. stale metadata), the reason comes back as a toast listing the allowed targets.
 - **Move to another team** (`issue.team`, **Ctrl Shift M**, also in the command menu without search text, in the context menu, in the issue's properties by clicking the team, and for the whole selection in the list): The team picker calls `palette.requestMove(ids, teamId)`. `movePlan` (`core/src/move.ts`, a pure function over the metadata, same rules as `ops/move.ts`) computes up front what will be dropped: the project (belongs to one team) and team labels of the old team. If something is dropped, a confirmation replaces the picker (entries “Move to <team>” and “Cancel”, the lines from `moveLines` as a hint below; `‹ Team` and Esc go back to the team picker, Enter moves); otherwise the move happens at once. Afterwards as usual: a toast “KIU-12 is now PX-3” with Undo, and an open detail page switches to the new identifier. Triage “Accept into <team>” does not ask (rarely drops anything there). The MCP route: [mcp.md](mcp.md) (`move_issues`).
@@ -307,7 +307,7 @@ Browsers that used the app before 2026-10-15 still hold the old `xlr8:*` keys. N
 | `/sprint/close` | Closing the current sprint with a decision per open issue |
 | `/sprints` | All sprints (current, in planning, closed, imported Linear cycles) with goal, date range, points, share added later |
 | `/trash`, `/drafts` | Trash, drafts |
-| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `agents`, `models` (enabled models of the catalog), `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
+| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `priorities` (priority limits), `agents`, `models` (enabled models of the catalog), `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
 | `/new?title=…&priority=high&status=todo&team=KIU&label=Bug&project=…&estimate=3&due=tomorrow` | Create with prefilled fields |
 | `/share?title=…&text=…&url=…` | Share from another app (Web Share Target): creates an issue in the inbox, then `/inbox` |
 | `/oauth/consent?request=…` | Consent page for connectors (claude.ai, ChatGPT), outside the app shell; old path `/oauth/freigabe?anfrage=…` still works |
@@ -345,9 +345,17 @@ Actions always operate on `app.targets()`; if they change issues, they do so thr
 
 What only the sprint pages need is not in the start bundle: `app.loadSprints()` loads `core/src/app/sprints.ts` (the page loaders in `app/src/lib/pages.ts` wait for it). The chunk registers the keys of these pages itself through `registerAction`. Actions available everywhere (command menu “Plan sprint”, “Start sprint”, “Close sprint”, “Add to sprint”) live in `actions.ts` and load the chunk on demand. Same pattern: `uFuzzy` (`loadFuzzy()`, simple substring search until then), `app/src/components/overlays.ts` (context menu, create, display, peek; loaded right after startup), perf overlay and mobile bar.
 
-### Priority budget
+### Priority limits
 
-When setting Urgent/High (also on create), `edit.patch` checks locally with `budgetCheck` (same rule as `budget_warning`): over budget, a toast shows the existing candidates and “Downgrade …” (picker `downgrade`, lowers by one level). It never blocks. Team groups (e.g. “All issues”) show “Urgent 1/1 · High 3/3”; planning shows it per active team.
+The limits come from `meta.priorityLimits` (`limitsOf`; an old cache without the field gets the defaults 1 Urgent and 3 High, warning only) and are set in Settings › Priorities (`pages/settings/Priorities.svelte`: per priority “No limit / Warn / Block” and a number; it says when a team already has more than a lowered limit). Same rules as the backend ([backend.md](backend.md#priority-limits)).
+
+Every change that adds an issue to a team's open Urgent or High issues is checked locally by `app.edit` (`core/src/app/edit.ts`, `#limits`, on the store state before the change): setting the priority (chip, key, command menu, bulk, board drag), create, move to another team, restore from the trash, undo and redo.
+
+- **Soft limit:** the change is saved; a toast “{team}: now N × High open (limit 3)” shows the existing candidates and “Downgrade …” (picker `downgrade`, lowers by one level).
+- **Hard limit:** nothing is sent, no optimistic change. An error toast “{team}: at most 1 × Urgent open” with “Lower one of these first: …” and “Downgrade …” (“Settings” if the limit is 0). The create dialog stays open with that reason. If the server rejects anyway (another device was faster), `errorMessage` in `app/toasts.ts` shows the `priority_limit` error translated.
+- The priority menu shows “Limit of N reached” next to Urgent/High when a hard limit is full.
+
+Team groups (e.g. “All issues”) show “Urgent 1/1 · High 3/3” with the configured numbers, only the count for a priority without a limit; planning shows it per active team. The tooltip describes the limits (`limitsSummary`).
 
 ### New list (view)
 

@@ -2,9 +2,18 @@ import { ConvexError, type Value } from 'convex/values';
 
 /**
  * Error codes that the UI and MCP tell apart.
- * `budget_warning` is deliberately NOT an error but a hint in the result.
+ * `budget_warning` (soft priority limit) is deliberately NOT an error but a hint in the result.
  */
-export type ErrorCode = 'access_denied' | 'not_found' | 'conflict' | 'invalid' | 'invalid_transition' | 'rejected' | 'rate_limited';
+export type ErrorCode =
+  | 'access_denied'
+  | 'not_found'
+  | 'conflict'
+  | 'invalid'
+  | 'invalid_transition'
+  | 'rejected'
+  | 'rate_limited'
+  // A hard priority limit is full (ops/priorityLimits.ts).
+  | 'priority_limit';
 
 export type ErrorData = { code: ErrorCode; message: string } & Record<string, Value>;
 

@@ -398,6 +398,20 @@ export default {
   Settings: 'Einstellungen',
   'This section does not exist.': 'Diesen Bereich gibt es nicht.',
   'Go to settings': 'Zu den Einstellungen',
+  // settings/Priorities.svelte
+  Priorities: 'Prioritäten',
+  'No limit': 'Keine Grenze',
+  Warn: 'Warnen',
+  Block: 'Blockieren',
+  'How many open urgent and high issues a team may have. The limits apply to every team of this instance, each team counted on its own. Open means every status that is not done, canceled or a duplicate.':
+    'Wie viele offene dringende und hohe Issues ein Team haben darf. Die Grenzen gelten für jedes Team dieser Instanz, jedes Team wird für sich gezählt. Offen heißt: jeder Status, der nicht erledigt, abgebrochen oder Duplikat ist.',
+  'Limits per team': 'Grenzen je Team',
+  'No limit: any number of open issues per team.': 'Keine Grenze: beliebig viele offene Issues je Team.',
+  'More than {max} per team: the change is saved, with a hint.': 'Mehr als {max} je Team: Die Änderung wird gespeichert, mit einem Hinweis.',
+  'More than {max} per team: the change is rejected, also for agents (MCP). Recurring issues and the import come without the priority.':
+    'Mehr als {max} je Team: Die Änderung wird abgelehnt, auch für Agenten (MCP). Wiederkehrende Issues und der Import kommen ohne die Priorität.',
+  '{team} already has {count}. They stay; only new ones count against the limit.': '{team} hat schon {count}. Die bleiben; nur neue zählen gegen die Grenze.',
+  'Limit for {priority}': 'Grenze für {priority}',
   // settings/General.svelte
   'Automatic (browser language)': 'Automatisch (Sprache des Browsers)',
   'Settings for this device. They take effect right away, without reloading. Color scheme, themes and fonts are under': 'Einstellungen für dieses Gerät. Wirken sofort, ohne Neuladen. Farbschema, Themes und Schriften stehen unter',
@@ -558,7 +572,6 @@ export default {
   'The sprint runs from now on; anything added afterwards counts as added late': 'Ab jetzt läuft der Sprint; was danach dazukommt, gilt als nachträglich',
   'Start sprint': 'Sprint starten',
   'open, without sprint': 'offen, ohne Sprint',
-  'Priority budget per team: at most {urgent} urgent and {high} high open': 'Prioritäts-Budget je Team: höchstens {urgent} Dringend und {high} Hoch offen',
   'More points planned than capacity': 'Mehr Punkte geplant als Kapazität',
   'Capacity not set: suggestion from recent sprints': 'Kapazität nicht gesetzt: Vorschlag aus den letzten Sprints',
   'Average of completed points: {basis}': 'Durchschnitt der erledigten Punkte: {basis}',
