@@ -134,8 +134,13 @@ const commentKey = (id: string) => `selfbound:comment:${id}`;
 export class DetailController {
   readonly state = new Slice<DetailState | null>(null);
   readonly peekOpen = new Slice(false);
-  /** Split view of the inbox: the focused issue shows on the right. */
+  /**
+   * Split view: the focused issue shows on the right. In the wide inbox this is only the right
+   * side (the list is always split); in other lists and on the board it is the split view itself.
+   */
   readonly split = new Slice(false);
+  /** Opened in the inbox: the inbox's right side does not carry over to other lists, nor back. */
+  #splitInbox = false;
   #readTimer: ReturnType<typeof setTimeout> | null = null;
   #readFor: IssueId | null = null;
   /** Description editing (autosave, draft, conflict) */
@@ -181,14 +186,33 @@ export class DetailController {
 
   /** The right side of the split view shows the focused issue. */
   splitShown() {
-    return this.#pageId === null && this.split.get() && this.app.splitLayout();
+    return this.#pageId === null && this.split.get() && this.app.splitCapable();
   }
 
-  /** Split view: show the focused issue on the right (click, J/K, space). */
+  /** Split view: show the focused issue on the right (click, J/K, space; ⇧ space in other lists). */
   openSplit() {
-    if (!this.app.splitLayout() || !this.app.list.focusId()) return;
-    if (!this.split.get()) this.split.set(true);
+    if (!this.app.splitCapable() || !this.app.list.focusId()) return;
+    // Otherwise an issue arriving at the top would take over the right side (and be read).
+    this.app.list.pinFocus();
+    if (!this.split.get()) {
+      this.#splitInbox = this.#inInbox();
+      this.peekOpen.set(false);
+      this.split.set(true);
+    }
     this.#retarget();
+  }
+
+  /** ⇧ space, the button in the view bar: open or close the split view (without focus: the first issue). */
+  toggleSplit() {
+    if (this.splitShown()) return this.closeSplit();
+    if (!this.app.splitCapable()) return;
+    if (!this.app.list.focusId()) this.app.list.focusEdge(false);
+    this.openSplit();
+  }
+
+  #inInbox() {
+    const page = this.app.nav.page.get();
+    return page.name === 'view' && page.view.kind === 'inbox';
   }
 
   closeSplit() {
@@ -197,11 +221,21 @@ export class DetailController {
     this.#retarget();
   }
 
-  /** Page or window width changed: without split layout the right side closes. */
+  /** Page or window width changed: without room for the split view the right side closes. */
   onLayout() {
-    // It stays open when going into the issue (Enter) and back.
-    if (this.split.get() && !this.app.splitLayout() && this.app.nav.page.get().name !== 'issue') this.split.set(false);
+    if (this.split.get() && !this.#keepSplit()) this.split.set(false);
     if (this.#wanted() !== this.#target) this.#retarget();
+  }
+
+  /**
+   * It stays open when going into the issue (Enter) and back. The inbox's right side closes when
+   * leaving the inbox; the split view of the other lists stays on for the session (other list,
+   * settings and back), only not across into the inbox.
+   */
+  #keepSplit() {
+    if (this.app.nav.page.get().name === 'issue') return true;
+    if (!this.app.wide.get() || this.app.mobile.get()) return false;
+    return this.#splitInbox ? this.app.splitCapable() && this.#inInbox() : !this.#inInbox();
   }
 
   // ---------------------------------------------------------------- Choosing the target
@@ -267,8 +301,9 @@ export class DetailController {
   }
 
   #retarget() {
-    // List became empty: close the right side, otherwise an entry arriving later would open itself.
-    if (this.splitShown() && !this.app.list.focusId()) this.split.set(false);
+    // Inbox became empty: close the right side, otherwise an entry arriving later would open itself.
+    // Other lists keep the split view (an empty filter result shows the hint on the right).
+    if (this.splitShown() && this.#splitInbox && !this.app.list.focusId()) this.split.set(false);
     const target = this.#wanted();
     const readFor = this.splitShown() ? target : null;
     if (readFor !== this.#readFor) {

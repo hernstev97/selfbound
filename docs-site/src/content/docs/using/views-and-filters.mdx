@@ -1,6 +1,6 @@
 ---
 title: Views and filters
-description: Switch between list and board, group and order issues, filter a view, search inside it and preview issues with peek.
+description: Switch between list and board, group and order issues, filter a view, search inside it, open issues next to the list and preview them with peek.
 sidebar:
   order: 4
 ---
@@ -142,3 +142,29 @@ results.
 <Aside type="tip">
 Opening an issue from peek is one key away: <Kbd keys="enter" /> opens the focused issue as a full page.
 </Aside>
+
+## Split view
+
+The split view shows the full, editable issue to the right of the list, so you can work through a list
+without leaving it. It works in every list and on the board, like the [inbox](/concepts/triage-and-inbox/#inbox),
+which is always split on a wide screen.
+
+<Screenshot name="split-view" alt="The Active view split in two: the issue list on the left, the focused issue with its description and properties on the right" />
+
+- Press <Kbd keys="shift+space" />, click the split button at the top right of the view, or choose
+  **Open in split view** in an issue's context menu.
+- Click an issue, or move with <Kbd keys="j" /> and <Kbd keys="k" /> (on the board also
+  <Kbd keys="arrowleft" /> and <Kbd keys="arrowright" />): the right side follows. Pointing at a row with
+  the mouse does not change it.
+- <Kbd keys="e" /> edits the description on the right. <Kbd keys="enter" /> opens the issue as its own page;
+  going back shows the list and the split view as you left them.
+- Press <Kbd keys="escape" />, <Kbd keys="space" /> or <Kbd keys="shift+space" />, or click × on the right,
+  to close it.
+- Drag the divider to change the width of the list, or focus it and use <Kbd keys="arrowleft" /> and
+  <Kbd keys="arrowright" />. A double-click resets it. Selfbound remembers the width in this browser.
+
+Once open, the split view stays open when you switch to another list. It closes when you close it, go to
+the inbox (which has its own split view), make the window narrower or reload the page. As in the inbox, an
+inbox entry shown on the right counts as read after a short moment. The split view needs a window at least
+1100 pixels wide. On a phone or in a narrow window, issues open as their own
+page as before. Sprint planning and completing a sprint have no split view, as they already show two columns.

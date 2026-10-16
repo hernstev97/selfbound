@@ -7,7 +7,7 @@ export type { CreateState, Draft } from './app/create.ts';
 export type { WikiState, ArticleView, TrashEntry, WikiFilter, SourceInput } from './app/wiki.ts';
 export type { BodyEdit } from './bodyEdit.ts';
 export type { PerfState } from './app/perf.ts';
-export { INBOX_SPLIT_DEFAULT, SOUND_VOLUME_DEFAULT, type Theme, type FontSize, type PrefsState, type SidebarTeamSize } from './app/prefs.ts';
+export { INBOX_SPLIT_DEFAULT, LIST_SPLIT_DEFAULT, SOUND_VOLUME_DEFAULT, type Theme, type FontSize, type PrefsState, type SidebarTeamSize } from './app/prefs.ts';
 export { Auth, LEGACY_SIGNED_IN_COOKIE, SIGNED_IN_COOKIE, signInPath, type AuthConfig, type AuthStatus } from './auth.ts';
 export { Slice, SliceFamily } from './observable.ts';
 export { STATUS_ICON, PRIORITY_ICON, CHECK_ICON, ICON, rowIconCss, statusIcon, type IconName } from './icons.ts';

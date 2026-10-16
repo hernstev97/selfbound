@@ -171,6 +171,14 @@ const shots = {
       await idle(p, 2000);
     },
   },
+  'split-view': {
+    run: async (p) => {
+      await ready(p, '/team/ORB');
+      await press(p, 'j', 'j', 'Shift+Space');
+      await p.waitForSelector('[data-testid="split-detail"] [data-testid="detail-key"]');
+      await idle(p, 1000);
+    },
+  },
   triage: { schemes: ['light'], run: (p) => ready(p, '/triage') },
   inbox: {
     schemes: ['light'],

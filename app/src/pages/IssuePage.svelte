@@ -15,11 +15,12 @@
   import IssuePullRequests from '../components/pr/IssuePullRequests.svelte';
   import DetailSkeleton from '../components/DetailSkeleton.svelte';
 
-  /** Right-hand side of the split inbox instead of a page of its own */
+  /** Right-hand side of the split view (inbox, other lists) instead of a page of its own */
   let { split = false }: { split?: boolean } = $props();
 
   const detailSlice = fromSlice(app.detail.state);
   const shellSlice = fromSlice(app.shell);
+  const headerSlice = fromSlice(app.main.header);
   const pageSlice = fromSlice(app.nav.page);
   const d = $derived(detailSlice.current);
   const missingKey = $derived(pageSlice.current.name === 'issue' ? pageSlice.current.key : '');
@@ -67,7 +68,8 @@
       </span>
     {/if}
     {#if split}
-      {#if d.inInbox}
+      <!-- Inbox actions only next to the inbox: their shortcuts work only there. -->
+      {#if d.inInbox && headerSlice.current.kind === 'inbox'}
         <button class="icon-btn plain" title={tip(d.unread ? t('Mark as read') : t('Mark as unread'), d.unread ? 'inbox.read' : 'inbox.unread')} aria-label={d.unread ? t('Mark as read') : t('Mark as unread')} data-testid="split-read" onclick={() => app.edit.markRead([d!.id], d!.unread, { undo: true })}><span class="icon">{@html ICON.eye}</span></button>
         <button class="btn ghost small" title={tip(t('Remove only the entry; the issue stays'), 'inbox.remove')} data-testid="split-remove" onclick={() => app.edit.removeFromInbox([d!.id])}><span class="icon">{@html ICON.check}</span><span class="btn-label">{t('Remove')}</span></button>
       {/if}
@@ -85,6 +87,9 @@
         app.menu.open(d!.id, r.right - 220, r.bottom + 4);
       }}><span class="icon">{@html ICON.more}</span></button
     >
+  {/if}
+  {#if split}
+    <button class="icon-btn plain" title={tip(t('Close split view'), 'view.split')} aria-label={t('Close split view')} data-testid="split-close" onclick={() => app.detail.closeSplit()}><span class="icon">{@html ICON.close}</span></button>
   {/if}
 </header>
 

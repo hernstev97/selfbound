@@ -796,6 +796,8 @@ export class ListController {
     this.view.set({ route, filters, quick, quickOpen: quick !== '', display });
     this.recompute();
     if (prevKey !== key) this.#restoreScroll();
+    // Split view: the issue on the right stays put when another one arrives at the top.
+    if (prevKey !== key && this.app.detail.splitShown()) this.pinFocus();
   }
 
   #syncUrl() {
@@ -967,6 +969,11 @@ export class ListController {
 
   focus(id: IssueId | null, reveal = false) {
     this.#setFocus(id, reveal);
+  }
+
+  /** The automatic focus stops following the first row (split view: the issue on the right is chosen). */
+  pinFocus() {
+    this.#autoFocus = false;
   }
 
   revealFocus() {

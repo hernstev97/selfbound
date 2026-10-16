@@ -151,13 +151,16 @@ export default {
   Conflicts: 'Konflikte',
   'Open full size': 'In voller Größe öffnen',
   'Open on GitHub': 'Auf GitHub öffnen',
-  // InboxSplit.svelte
+  // SplitView.svelte
   'List width': 'Breite der Liste',
   'All done. New entries appear on the left.': 'Alles erledigt. Neue Einträge erscheinen links.',
   'Pick an entry on the left to see the issue here.': 'Wähle links einen Eintrag, um das Issue hier zu sehen.',
   switch: 'wechseln',
   remove: 'entfernen',
   read: 'gelesen',
+  'No issues in this view.': 'Keine Issues in dieser Ansicht.',
+  'Pick an issue on the left to see it here.': 'Wähle links ein Issue, um es hier zu sehen.',
+  close: 'schließen',
   // CreateDialog.svelte
   'Choose team': 'Team wählen',
   'Sub-issue of {key}': 'Sub-Issue von {key}',

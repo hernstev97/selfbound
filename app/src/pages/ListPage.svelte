@@ -7,7 +7,7 @@
   import TeamLogo from '../components/TeamLogo.svelte';
   import ListView from '../components/ListView.svelte';
   import { pages } from '../lib/pages.ts';
-  import InboxSplit from '../components/InboxSplit.svelte';
+  import SplitView from '../components/SplitView.svelte';
   import Lazy from '../components/Lazy.svelte';
 
   const headerSlice = fromSlice(app.main.header);
@@ -18,7 +18,7 @@
   const h = $derived(headerSlice.current);
   const viewIconName = $derived(VIEWS[h.kind].icon);
   let scrolled = $state(false);
-  // Split inbox: opening an issue as a page (Enter) keeps the list as it was (mounted, only hidden).
+  // Split view: opening an issue as a page (Enter) keeps the list as it was (mounted, only hidden).
   // Otherwise the switch would tear the list down and rebuild it on the way back.
   let viewSplit = $state(false);
   $effect.pre(() => {
@@ -35,11 +35,10 @@
   <Lazy load={pages.plan} />
 {:else if h.kind === 'close'}
   <Lazy load={pages.close} />
-{:else if split}
-  <!-- Wide inbox: list on the left, issue on the right; the list stays visible. -->
-  <InboxSplit>{@render listContent()}</InboxSplit>
 {:else}
-  {@render listContent()}
+  <!-- Split view (wide inbox, or opened with ⇧ space): list on the left, issue on the right. The
+       wrapper is always there, so opening and closing it does not rebuild the list. -->
+  <SplitView active={split} inbox={h.kind === 'inbox'}>{@render listContent()}</SplitView>
 {/if}
 
 {#snippet listContent()}
@@ -81,6 +80,11 @@
   {/if}
   <span class="bar-count" data-testid="view-count-text"><span data-testid="view-count">{h.count}</span> {h.count === 1 ? t('issue') : t('issues')}</span>
   <span class="bar-spacer"></span>
+  {#if shellSlice.current.canSplit && h.kind !== 'inbox'}
+    <button class={['icon-btn', split && 'on']} title={tip(split ? t('Close split view') : t('Open in split view'), 'view.split')} aria-label={t('Split view')} aria-pressed={split} disabled={!split && h.count === 0} data-testid="split-toggle" onclick={() => app.detail.toggleSplit()}>
+      <span class="icon">{@html ICON.split}</span>
+    </button>
+  {/if}
   {#if VIEWS[h.kind].boardTypes}
     <button class="icon-btn" title={tip(boardSlice.current ? t('Show as list') : t('Show as board'), 'layout.toggle')} aria-label={boardSlice.current ? t('List') : t('Board')} data-testid="layout-toggle" onclick={() => app.main.toggleLayout()}>
       <span class="icon mi ui-{boardSlice.current ? 'list' : 'board'}"></span>

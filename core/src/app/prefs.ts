@@ -20,6 +20,8 @@ export interface PrefsState {
   sidebarTeams: SidebarTeamSize;
   /** Split inbox: width of the list in px */
   inboxSplit: number;
+  /** Split view of the other lists and the board: width of the list in px */
+  listSplit: number;
   /** UI sounds on/off */
   sound: boolean;
   /** Sound volume, 0.05 to 1 */
@@ -31,6 +33,9 @@ export interface PrefsState {
 /** Width of the list in the split inbox without a saved choice. */
 export const INBOX_SPLIT_DEFAULT = 420;
 
+/** Width of a split list or board without a saved choice: wider than the inbox, rows have columns. */
+export const LIST_SPLIT_DEFAULT = 560;
+
 /** Sound volume without a saved choice: half */
 export const SOUND_VOLUME_DEFAULT = 0.5;
 
@@ -38,7 +43,7 @@ export const SOUND_VOLUME_DEFAULT = 0.5;
 export const THEME_COLOR = { dark: '#0f0f10', light: '#fcfcfd' } as const;
 
 const KEY = 'selfbound:prefs';
-const DEFAULTS: PrefsState = { theme: 'system', fontSize: 'normal', currentTeam: null, teamsCollapsed: false, dormantCollapsed: false, sidebarTeams: 'small', inboxSplit: INBOX_SPLIT_DEFAULT, sound: true, soundVolume: SOUND_VOLUME_DEFAULT, locale: 'auto' };
+const DEFAULTS: PrefsState = { theme: 'system', fontSize: 'normal', currentTeam: null, teamsCollapsed: false, dormantCollapsed: false, sidebarTeams: 'small', inboxSplit: INBOX_SPLIT_DEFAULT, listSplit: LIST_SPLIT_DEFAULT, sound: true, soundVolume: SOUND_VOLUME_DEFAULT, locale: 'auto' };
 /** Old sidebar keys, dropped on load */
 const OLD = ['teamOpen', 'showDormant'];
 
