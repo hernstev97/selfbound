@@ -1122,6 +1122,10 @@ button.crumb:hover {
   mask-size: 100% 100%;
   mask-repeat: no-repeat;
 }
+/* Model provider logos (lib/providerLogo.ts) keep their aspect ratio */
+.mi.plogo::before {
+  mask-size: contain;
+}
 .row-check {
   position: absolute;
   /* 4 px instead of 6 px and priority shifted 2 px right: the centers are 24 px apart, so both
@@ -2014,6 +2018,10 @@ button.crumb:hover {
 }
 .palette.anchored.wide {
   width: 320px;
+}
+/* Model names plus the context window ("Claude Sonnet 5.5 · 1M context") */
+.palette.anchored.wide[data-kind='model'] {
+  width: 380px;
 }
 .palette-target {
   display: inline-flex;

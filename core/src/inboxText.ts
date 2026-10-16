@@ -1,6 +1,7 @@
 // What an inbox entry says: "Aleister set the status to Done", with "· 2 more changes" when
 // several changes were grouped. The wording of the single change is the activity feed's
 // (`historyText`), so English and German exist already.
+import { decodeChoice } from '@selfbound/backend/shared/models';
 import { historyText } from './app/historyText.ts';
 import { actorName } from './format.ts';
 import { t, tn } from './i18n.ts';
@@ -38,6 +39,7 @@ function asHistory(c: Change) {
     to = team(c.value);
     from = team(c.from);
   } else if (c.field === 'labelIds') to = c.value ?? [];
+  else if (c.field === 'model') to = typeof c.value === 'string' ? (decodeChoice(c.value) ?? undefined) : undefined;
   return { field: c.field, from, to, actor: c.actor };
 }
 

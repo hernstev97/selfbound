@@ -17,6 +17,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/http.ts` | HTTP endpoints `/mcp`, `/github`, `/logo/<id>`, `/img/<token>`, `/health` ([below](#http-endpoints-convexhttpts)) |
 | `convex/profile.ts`, `convex/ops/profile.ts` | The owner's profile: display name and profile picture ([below](#profile)) |
 | `convex/instance.ts`, `convex/ops/instance.ts` | Instance settings: the time zone ([below](#instance-time-zone)) |
+| `convex/models.ts`, `convex/ops/models.ts`, `convex/lib/modelsCatalog.ts`, `convex/shared/models.ts` | Desired model per issue: the models.dev catalog (daily sync), the enabled models, the rules for a choice and the resolution order ([below](#models-desired-model-per-issue)) |
 | `convex/files.ts`, `convex/ops/files.ts`, `convex/lib/image.ts` | Images in descriptions and comments: validated upload, references, cleanup ([below](#files-images)) |
 | `convex/wiki.ts`, `convex/ops/wiki.ts`, `convex/lib/wikiText.ts` | Knowledge base: pages per team as a tree, text with revisions, sources, topics, search, trash ([below](#wiki-knowledge-base)) |
 | `convex/lib/search.ts` | Search terms, "contains all words" matching and snippets for `issues.search` and `wiki.search` |
@@ -39,13 +40,13 @@ This document is the contract between the backend and the UI. It describes the t
 
 | Table | Contents | Key indexes |
 |---|---|---|
-| `teams` | `key`, name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none) | `by_key` |
+| `teams` | `key`, name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none), `defaultModel?` (model choice for issues that set none, [models](#models-desired-model-per-issue)) | `by_key` |
 | `workflowStates` | A team's statuses: name, `type` (triage, backlog, unstarted, started, completed, canceled), `position` (within the type), `color?`, `description?`, `isDuplicate?`, `legacyKey?` (old key of the default statuses), `archivedAt?` | `by_team` |
 | `projects` | Belongs to exactly one team. Name, `state`, `order` | `by_team` |
 | `labelGroups` | Name, `exclusive` (single choice), `hue`, optional `teamId` | |
 | `labels` | Name, `hue`, optional `groupId`, optional `teamId` (missing = workspace label), `archived` | |
 | `counters` | `seq`, `team:<teamId>`, `sprint`: the last value handed out for each | `by_name` |
-| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `snoozedUntil` (snooze), `parentId`, `sprintId`, `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_snoozed`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
+| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `snoozedUntil` (snooze), `parentId`, `sprintId`, `model?` (`{ provider, modelId, effort?, speed? }`, [models](#models-desired-model-per-issue)), `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_snoozed`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
 | `identifierAliases` | Old identifier (upper case, "ACME-106") → issue | `by_key`, `by_issue` |
 | `issueBodies` | Markdown, `version`, `updatedAt`, `updatedBy` | `by_issue` |
 | `bodySearch` | Search text of the description: the first 8000 characters (`BODY_SEARCH_CHARS`). Written only through `ops/bodies.ts`, together with `issueBodies` | `by_issue`, search `search_text` |
@@ -78,6 +79,9 @@ This document is the contract between the backend and the UI. It describes the t
 | `opsStatus` | Operational state: `backup`, `auditSprints`, `seed` | `by_key` |
 | `settings` | Test switches (`rejectWrites`) | `by_key` |
 | `profile` | The owner's profile, one row: `name?`, `avatarToken?` (token of an image in `files`), `updatedAt`. A missing row or field means "not set"; no migration was needed | |
+| `models` | The models.dev catalog in slim form, one row per model: `provider`, `providerName`, `modelId`, `name`, `family?`, `efforts?`, `modes?` (speeds besides standard), `context?`, `output?`, `releaseDate?`, `enabled?` (the owner's choice; the sync never writes it), `removedAt?` (left the catalog; the row stays), `updatedAt` | `by_provider_model`, `by_enabled`, search `search_name` (filter `provider`) |
+| `modelLogos` | Provider logos from models.dev: `provider`, `storageId?` (missing = none, or it failed the check), `etag?`, `checkedAt` | `by_provider`, `by_storage` |
+| `modelProviders` | Catalog providers: `provider`, `name`, `count` (models), `hash` (SHA-256 of the slim form at the last sync), `removedAt?` | `by_provider` |
 | `instanceSettings` | Instance settings, one row: `timeZone` (IANA name), `updatedAt`. No row = Europe/Berlin (`DEFAULT_TIME_ZONE`), which is what every instance did before the setting existed. |
 
 **Index notes:**
@@ -174,7 +178,7 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 
 | Function | Arguments | Returns |
 |---|---|---|
-| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, Selfbound sprints first; imported Linear cycles only fill up while there are fewer than 6 Selfbound sprints; descending by number), `rejectWrites`, `owner: { name, avatarUrl }` (the profile, `null` = not set; `avatarUrl` = `<site>/img/<token>`) }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
+| `meta.get` (query) | – | `{ teams: (Team & { logoUrl, logoDarkUrl })[]` by `order`, `workflowStates` (all statuses of all teams, archived ones included), `projects` by `order`, `labelGroups`, `labels`, `sprints` (all sprints not closed + the last 6 closed ones by close time, Selfbound sprints first; imported Linear cycles only fill up while there are fewer than 6 Selfbound sprints; descending by number), `rejectWrites`, `owner: { name, avatarUrl }` (the profile, `null` = not set; `avatarUrl` = `<site>/img/<token>`), `timeZone`, `models` (the enabled models as `ModelInfo`, by provider name, newest first; not the catalog) }`. Deliberately without counters. `logoUrl`/`logoDarkUrl` = `<site>/logo/<storageId>` (dedicated endpoint with a strict CSP, not the storage URL), still displayed via `<img>`. |
 | `meta.counter` (query) | – | `{ maxSeq }` (−1 without issues). The buckets `0 … floor(maxSeq/64)` follow from it. |
 
 ### issues
@@ -198,9 +202,9 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 | `issues.reorder` | `{ id, beforeId?, afterId?, requestId? }`: at least one neighbour | `{ rank }` |
 | `issues.moveTeam` | `{ ids, teamId, requestId? }` (used by the UI, e.g. triage "accept into …"; MCP: `move_issues`) | `{ moved: [{ id, identifier, previous }] }` |
 
-`NewIssue = { teamId, title, description?, stateId?, status?, priority? = 0, labelIds?, projectId?, estimate?, dueDate?, parentId?, sprintId? }`: without `stateId` and `status`, the team's default status ([below](#statuses-per-team)).
+`NewIssue = { teamId, title, description?, stateId?, status?, priority? = 0, labelIds?, projectId?, estimate?, dueDate?, parentId?, sprintId?, model? }`: without `stateId` and `status`, the team's default status ([below](#statuses-per-team)).
 
-`IssuePatch = { title?, stateId?, status?, priority?, labelIds?, projectId? | null, estimate? | null, dueDate? | null, snoozedUntil? | null, parentId? | null, sprintId? | null }`
+`IssuePatch = { title?, stateId?, status?, priority?, labelIds?, projectId? | null, estimate? | null, dueDate? | null, snoozedUntil? | null, parentId? | null, sprintId? | null, model? | null }`
 
 Rules for changes:
 
@@ -209,6 +213,7 @@ Rules for changes:
 - **Status** (`stateId` or status kind `status`, see [Statuses per team](#statuses-per-team)). The status kind sets the timestamps: `in_progress`/`in_review` → `startedAt` (if empty); `done` → `completedAt`; `canceled`/`duplicate` → `canceledAt`; `triage`/`backlog`/`todo` → all three cleared. The history row is `field: 'stateId'` with the old and new status ID (older rows: `field: 'status'` with the old key).
 - `snoozedUntil` (`null` = unsnooze): see invariant 12. A day that is not after today (instance time zone) or an issue that is not open → `invalid`; undo is exempt from both checks.
 - `sprintId` in the patch is passed on to the sprint operations (rules below).
+- `model` (`null` = none of its own): checked by `checkModel` ([models](#models-desired-model-per-issue)); stored in normal form (no empty effort, no speed `standard`). History row `model` with both objects; an agent's change reaches the inbox as `provider/modelId?effort=…&speed=…`.
 - Issues in the trash cannot be changed (`invalid`), only restored.
 - **Description:** `baseVersion` must match the current `version` (new issues: 1), otherwise `conflict` with `{ version, updatedAt, updatedBy }`. Afterwards `version + 1`. Same text: no change. The history only records `{ version }` and a 120-character preview.
 - **Rank** (`issues.reorder`): afterwards the order is `before, issue, after`. `beforeId` is the neighbour directly above, `afterId` the one directly below. If one is missing, the server takes the next rank in the index. If the neighbours no longer fit together (stale state), the issue lands directly after `before`. The rank is global across all teams; each view sorts its subset by it. New issues go to the end.
@@ -301,7 +306,7 @@ Relations: no self-reference, no second relation of the same type between the sa
 | Function | Arguments | Returns |
 |---|---|---|
 | `teams.create` | `{ key, name, hue?, dormant?, wiki?: 'on' \| 'only' }` (key is upper-cased) | `{ teamId, key }` |
-| `teams.update` | `{ teamId, key?, name?, hue?, dormant?, wiki?: 'on' \| 'only' \| null }` (`'only'` only without open issues and active recurrences, `null` only without pages) | `{ teamId }` |
+| `teams.update` | `{ teamId, key?, name?, hue?, dormant?, wiki?: 'on' \| 'only' \| null, defaultModel?: ModelChoice \| null }` (`'only'` only without open issues and active recurrences, `null` only without pages; `defaultModel` checked like an issue's model) | `{ teamId }` |
 | `teams.reorder` | `{ teamIds }` (missing ones go to the end) | `{ count }` |
 | `teams.generateLogoUploadUrl` | – | upload URL (string) |
 | `teams.setLogo` (action) | `{ teamId, storageId, variant: 'light'|'dark' }` | `{ teamId, contentType }` |
@@ -357,6 +362,26 @@ Where a calendar day begins is a setting of the instance, stored in `instanceSet
 `meta.get` returns `timeZone` (`null` = not set yet; the client treats a missing field in an old cache the same). The client keeps the zone in `core/src/format.ts` (`setTimeZone`), where `today()` uses it, so "today", overdue and the snooze picker agree with the server; without a zone `today()` is the device's day. Users: snooze check (`applyPatch`), sprints (default dates, start, close), recurrences, morning job (`hourInZone`, key `due:<day>`), rate-limit day window, wiki source access date, MCP `list_issues` (`overdue`, `due`, `done_today` via `dayStartInZone`). `migrations:setInstanceTimeZone` pins the zone of an existing instance before the first sign-in ([operations](../operations.md)).
 
 Zones with clock changes at midnight or half-hour shifts (Havana, Lord Howe) are covered by `backend/test/timeZone.test.ts`; `dayStartInZone` returns the first moment of the day that exists.
+
+### models (desired model per issue)
+
+An issue can name the model an agent should use (XLR8-93): `model?: { provider, modelId, effort?, speed? }` on the issue, `defaultModel?` on the team. Empty = whoever runs the issue decides. Types and rules shared with the client: `shared/models.ts`.
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `models.catalog` (query) | – | `{ providers: [{ provider, name, count }]` (by name, removed ones left out)`, status }` (`CatalogStatus` of the last sync, `null` before the first) |
+| `models.list` (query) | `{ provider }` | `ModelInfo[]` of the provider, newest first; models that left the catalog only while enabled |
+| `models.search` (query) | `{ q, provider?, limit? ≤ 50 }` | `ModelInfo[]` whose name matches (search index) |
+| `models.setEnabled` | `{ provider, modelId, enabled }` (owner only; at most 200 enabled; a removed model cannot be enabled) | `{ enabled }` |
+| `models.refresh` | – | `{ scheduled }`: runs the sync now, unless the last check is younger than a minute |
+| `models.seedForTest` | `{ providers, enable? }` (only with `SELFBOUND_TEST_SWITCHES=1`) | `{ providers }` |
+
+- **Catalog and sync** (`models.sync`, internal action, cron `sync-models`): GET `https://models.dev/api.json` with `If-None-Match` (the ETag of the last full read, in `opsStatus.modelsCatalog`), no redirects, 60 s, at most 32 MB. `304` → only `checkedAt`. Otherwise `reduceCatalog` (`lib/modelsCatalog.ts`) keeps per model: name, family, the values of `reasoning_options` of type `effort` (strings only; `toggle` and `budget_tokens` are no effort setting), the keys of `experimental.modes` as speeds besides `standard`, `limit.context`, `limit.output`, `release_date`; entries in another shape are skipped, a catalog without a usable provider is an error. Per provider a SHA-256 of the slim form: only providers whose hash changed are rewritten (`applyProviders`, up to 1500 models per mutation): new models inserted, changed ones patched, missing ones get `removedAt` (the row, `enabled` and every issue that uses it stay). A provider that disappears gets `removedAt` on all its models (`removeProviders`), unless more providers vanished than remain: then nothing is written, the run counts as failed and the ETag is dropped. The ETag is stored last, and dropped when storing fails halfway, so the next run reads everything again (unchanged providers are skipped by their hash). Any error (network, status, JSON, shape, storing) only goes into the status; the stored catalog stays valid and the app shows no error.
+- **Provider logos:** after storing, the sync fetches `https://models.dev/logos/<provider>.svg` for new and changed providers and for those never checked (the first sync: all of them, 6 at a time), with `If-None-Match`. A logo must pass the team-logo check (`lib/logo.ts` allowlist: no scripts, no external references …) except the square rule; otherwise the provider has none. Stored in file storage, a replaced file is deleted; `modelLogos` keeps the result, so the enabled models' logos are read without rows the sync rewrites. Served like team logos through `GET /logo/<storageId>` (now also `Access-Control-Allow-Origin: *`, because the app draws them as CSS masks, which load in CORS mode). A failed logo request is tried again next time and never fails the sync. `ModelInfo.logo` carries the URL.
+- **Checking a choice** (`checkModel` in `ops/validate.ts`, used by `createIssuesCore`, `applyPatch`, `teams.update`): the model exists in `models`, is `enabled` and not `removedAt`; `effort` is one of its efforts (a model without efforts takes none); `speed` is `standard` or one of its modes. A model the issue (or team) already has stays allowed after it was disabled or left the catalog (like an archived label), with effort and speed still checked against its last known values; on undo (`issues.revert`) so does the model the issue's last model change replaced. Errors are `invalid` with the valid values in the message.
+- **Effective model** (`effectiveModel` in `shared/models.ts`): the issue's own model, else its parent's own model, else the default of the issue's team, else none. One parent level, as specified; MCP returns it with `source` (`issue`, `parent`, `team`).
+- **Data for the client:** `meta.get` returns only the enabled models (a handful; the provider name is on the model row), so a sync that changes other models or a provider's counts does not touch the subscription. The settings read the catalog through `models.list`/`models.search` while they are open.
+- **Local data:** the seed (`seed.insertModels`, `data/models.ts`) stores a small sample catalog and enables three models; e2e and `pnpm dev` need no network.
 
 ### embeds (video and post cards)
 
@@ -484,7 +509,7 @@ Served under the site URL (locally the backend port + 1, in the cloud `https://<
 | `GET /.well-known/oauth-protected-resource[/mcp]`, `GET /.well-known/oauth-authorization-server` | OAuth metadata for connectors (only with `SELFBOUND_APP_URL`, otherwise 404). Other `/.well-known/*` → 404 |
 | `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `SELFBOUND_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
 | `POST /github` | Read the raw body, verify `X-Hub-Signature-256` with `GITHUB_WEBHOOK_SECRET` (during rotation also `GITHUB_WEBHOOK_SECRET_PREVIOUS`) → otherwise 401. `ping` → 200. Otherwise `internal.github.applyDelivery` |
-| `GET /logo/<storageId>` | Team logo, no sign-in (like a storage URL; `<img>` sends no token). Only files a team uses as its logo and that pass the logo check, otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
+| `GET /logo/<storageId>` | Team logo or model provider logo, no sign-in (like a storage URL; `<img>` and CSS masks send no token). Only files a team or `modelLogos` uses as its logo and that pass the logo check (provider logos need not be square), otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
 | `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches) |
 | `GET /embed/<provider>/<id>/<slot>` | Thumbnail of a video card (`thumb`), stored by `embeds.resolve`. No sign-in (`<img>` sends no token; public content of the provider, only for cached cards). Provider, ID and slot must match their patterns; unknown → 404. `Content-Type` from the check at storing, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: public, max-age=86400` (not immutable: a refresh may replace the file) |
 | `GET /ghmedia/<mediaKey>/<index>` | Media from a PR, no sign-in (the key is the access protection, as with `/img`). Repo file: Contents API → fresh `download_url` (for private repos with a short-lived `token` parameter). Attachment: signed URL from the last fetch if younger than 4 min; otherwise refetch the post (description or comment/review, `source`) with `full+json` and store the fresh URLs of all its attachments (`github.com/user-attachments` cannot be resolved with a fine-grained token). The detail caches the `download_url` for 60 s (`resolved`). While one call is refetching a post (`resigningAt` on all attachments of that post, valid for 10 s), parallel calls wait up to 4 s for its result. Response `302` with `Cache-Control: private, max-age=60` (or the remaining cache time; `private, no-store` if the target is valid for less than 60 s), `Referrer-Policy: no-referrer`; no bytes pass through Convex. Assumption: GitHub's `token` parameter on a `download_url` stays valid for more than 2 minutes. Unknown or error → 404 without details |
@@ -547,6 +572,7 @@ New event: add an entry to `shared/notifyEvents.ts` (label, hint, default) and a
 | `purge-embeds` | daily 03:10 | `embeds.purge`: delete embed cache entries (and their pictures) not fetched for 30 days (50 per run, reschedules itself) |
 | `fail-stale-imports` | hourly :20 | `importer.failStale`: import runs without progress for 15 minutes → `failed` |
 | `push-morning` | hourly :00 | `push.morning`: from the configured hour in the instance time zone (default 8), once a day a combined "due/overdue" and "sprint ends tomorrow/today" notification; also returns snoozed issues whose day has come (inbox entry, push `snooze`) |
+| `sync-models` | daily 04:10 | `models.sync`: the models.dev catalog with `If-None-Match`, only changed providers rewritten ([models](#models-desired-model-per-issue)) |
 | `github-webhooks` | daily 03:30 | `githubPr.ensureWebhooksDaily`: check webhooks in all repos owned by the token's user, create missing ones (only with `GITHUB_MANAGE_WEBHOOKS=1` and the secret, never locally; nothing without `GITHUB_TOKEN`) |
 | `cleanup-oauth` | hourly :35 | `oauth.cleanup`: expired tokens, OAuth requests one day after expiry, never-approved clients after one hour (500 per run, reschedules itself) |
 

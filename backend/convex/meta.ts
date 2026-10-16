@@ -1,9 +1,11 @@
 import { v } from 'convex/values';
 import type { Id } from './_generated/dataModel';
 import { ownerQuery } from './lib/auth';
+import { logoUrl } from './lib/logo';
 import { readCounter, SEQ } from './lib/counters';
 import { rejectWritesActive } from './lib/testSwitches';
 import { storedTimeZone } from './ops/instance';
+import { enabledModels } from './ops/models';
 import { ownerProfile } from './ops/profile';
 import { recentClosedSprints } from './ops/sprints';
 import { compareStates } from './shared/workflow';
@@ -11,14 +13,6 @@ import { compareStates } from './shared/workflow';
 /** Number of closed sprints meta.get returns. */
 const RECENT_CLOSED = 6;
 
-/**
- * URL of a team logo: our own endpoint GET /logo/<storageId> (convex/http.ts) with a strict
- * Content-Security-Policy, not the raw storage URL.
- */
-function logoUrl(storageId: Id<'_storage'>) {
-  const site = (process.env.CONVEX_SITE_URL ?? '').replace(/\/+$/, '');
-  return `${site}/logo/${storageId}`;
-}
 
 /**
  * Reference data for the UI, one subscription per client. Deliberately WITHOUT the counter: new
@@ -66,6 +60,8 @@ export const get = ownerQuery({
       owner: await ownerProfile(ctx),
       // Time zone for calendar days (IANA name); null = not set yet, the app then saves the browser's.
       timeZone: await storedTimeZone(ctx),
+      // The models the owner enabled (XLR8-93), with their effort and speed values. Not the catalog.
+      models: await enabledModels(ctx),
     };
   },
 });

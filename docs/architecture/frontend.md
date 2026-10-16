@@ -56,6 +56,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 | `app/wiki.ts`, `wikiTree.ts` | WikiController (own chunk, `app.loadWiki()`): a team's wiki, page, trash, dragging in the tree ([below](#wiki-appwikits-pageswiki)) |
 | `bodyEdit.ts` | `BodyEditSession`: editing a versioned text (autosave, draft, conflict), for the description and wiki pages |
 | `budget.ts` | Priority budget: open Urgent/High per team, warning when exceeded |
+| `models.ts` | Desired model per issue: index of the enabled models per meta revision, chip text ("Claude Opus 5.5 · xhigh"), context label, effective model (own, parent, team default), hint for a model no longer enabled or in the catalog |
 | `sprintlogic.ts` | Pure sprint computations: date range, points, metrics from `sprints.items`, closing state, insertion point when dragging |
 
 ### Data layer (`IssueStore`)
@@ -296,7 +297,7 @@ Browsers that used the app before 2026-10-15 still hold the old `xlr8:*` keys. N
 | `/sprint/close` | Closing the current sprint with a decision per open issue |
 | `/sprints` | All sprints (current, in planning, closed, imported Linear cycles) with goal, date range, points, share added later |
 | `/trash`, `/drafts` | Trash, drafts |
-| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `agents`, `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
+| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `agents`, `models` (enabled models of the catalog), `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
 | `/new?title=…&priority=high&status=todo&team=KIU&label=Bug&project=…&estimate=3&due=tomorrow` | Create with prefilled fields |
 | `/share?title=…&text=…&url=…` | Share from another app (Web Share Target): creates an issue in the inbox, then `/inbox` |
 | `/oauth/consent?request=…` | Consent page for connectors (claude.ai, ChatGPT), outside the app shell; old path `/oauth/freigabe?anfrage=…` still works |
@@ -353,6 +354,10 @@ The list, peek, filters, display options, undo and all shortcuts then work witho
 2. Component under `app/src/pages/`, registered as a chunk in `app/src/lib/pages.ts` and mounted in `Shell.svelte` with `{#await pages.x() then m}`.
 3. Data: own slices in a new module `core/src/app/<name>.ts` (e.g. `sprints.ts` with subscriptions `sprints.list`/`sprints.items`), instantiated in `App`. For issue lists inside the page, reuse `computeVisible`/`computeList`.
 4. Settings: an entry in `app/src/pages/settings/sections.ts` plus a case in `SettingsPage.svelte`, each section a component under `pages/settings/`. On settings pages the left navigation (`SettingsNav.svelte`) replaces the sidebar. Operations through `admin` (`pages/settings/admin.ts`, class `Admin` from `@selfbound/core/app/admin`), data through `useQuery` or `app.store.meta`. Team logos: `Admin.uploadLogo` (browser pre-check → `teams.generateLogoUploadUrl` → `fetch POST` → `teams.setLogo`; the server's message appears at the field). Logos are always displayed as `<img>` through `TeamLogo.svelte` (14/16/20/32/40 px); the URL points to `GET <site>/logo/<id>`.
+
+### Model picker (XLR8-93)
+
+The model of an issue is one chip (`issue.model`, **Shift M**, property row "Model" on the issue page, mobile chips, create dialog, context menu). The picker `model` goes step by step: provider → model → effort → speed (`ModelStep` in `palette.ts`). Each step lists only what the previous one allows (enabled models from `meta.models`, their `efforts` and `modes`); a step with nothing to choose is skipped, and with only one provider the picker starts at its models. Step items carry `submenu`, so `choose` keeps the picker open and `#modelGo` replaces the list in place (query cleared, `parent` = breadcrumb for "‹", current value active, hint with the selection so far and the context window). Esc and "‹" go back one step (`back()` → `#modelUp`). The context menu and the command menu list the enabled models flat; picking one opens the picker at the next step. Provider logos (`ModelInfo.logo`, our own `/logo/<id>`) are drawn as mask icons in the text color by `app/src/lib/providerLogo.ts` (`logoClass`: one class and one CSS rule per logo, `mask-size: contain`; without a logo the model icon), in the picker (`MenuItem.logo`), context menu, chip and settings. Inherited values (`issueModel`: own, parent's, team default) are drawn dimmed with their source in the property row and the create dialog; the first step's hint says what the issue inherits. Settings: `pages/settings/Models.svelte` (enabled models, catalog state, provider select and search; `models.list`/`models.search` only while open) and `TeamModel.svelte` (team default). Menu items keep the focus in the search field on mouse down, so a step chosen with the mouse keeps filtering as you type.
 
 ### New picker (e.g. milestone)
 

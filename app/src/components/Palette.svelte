@@ -6,6 +6,7 @@
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
   import { autofocus, keepInView } from '../lib/ui.ts';
+  import { logoClass } from '../lib/providerLogo.ts';
   import { leave } from '../lib/motion.ts';
   import { modal } from '../lib/modal.ts';
   import TeamLogo from './TeamLogo.svelte';
@@ -19,7 +20,7 @@
   // shortcuts in the entries.
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
-  const PICKER_KEY: Partial<Record<PaletteKind, string>> = { status: 'S', priority: 'P', labels: 'L', estimate: '⇧E', sprint: '⇧C', project: '⇧P', due: '⇧D', filter: 'F' };
+  const PICKER_KEY: Partial<Record<PaletteKind, string>> = { status: 'S', priority: 'P', labels: 'L', estimate: '⇧E', model: '⇧M', sprint: '⇧C', project: '⇧P', due: '⇧D', filter: 'F' };
 
   // Reads only `active`: runs after each change of it, once the entries are in the DOM.
   function revealActive(list: HTMLElement) {
@@ -59,7 +60,7 @@
     }}
   >
     <div
-      class={['palette', p.anchor && 'anchored', p.anchor && (p.kind === 'labels' || p.kind === 'parent' || p.kind === 'relation' || p.kind === 'duplicate' || p.kind === 'due' || p.kind === 'snooze') && 'wide']}
+      class={['palette', p.anchor && 'anchored', p.anchor && (p.kind === 'labels' || p.kind === 'parent' || p.kind === 'relation' || p.kind === 'duplicate' || p.kind === 'due' || p.kind === 'snooze' || p.kind === 'model') && 'wide']}
       style:left={p.anchor ? `${p.anchor.x}px` : shellSlice.current.peek && (p.kind === 'search' || p.kind === 'command') ? 'calc(50% - 250px)' : undefined}
       style:top={p.anchor ? `${p.anchor.y}px` : undefined}
       data-testid="palette"
@@ -99,6 +100,10 @@
             data-id={item.id}
             data-index={i}
             onpointermove={() => app.palette.hover(i)}
+            onmousedown={(e) => {
+              // Keep the focus in the search field: a step that replaces the list (filter, model) keeps filtering as you type.
+              if (!coarse) e.preventDefault();
+            }}
             onclick={() => app.palette.choose(i)}
           >
             {#if item.checkbox}
@@ -106,7 +111,9 @@
             {:else if p.kind !== 'command' && p.kind !== 'search' && p.kind !== 'help' && p.kind !== 'filter'}
               <span class="check">{#if item.checked}{@html ICON.check}{/if}</span>
             {/if}
-            {#if item.team && !item.icon}
+            {#if item.logo}
+              <span class={['icon mi', logoClass(item.logo)]}></span>
+            {:else if item.team && !item.icon}
               <TeamLogo team={item.team} />
             {:else if item.icon}
               <span class="icon">{@html item.icon}</span>

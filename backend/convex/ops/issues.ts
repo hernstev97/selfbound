@@ -21,6 +21,7 @@ import {
   type Priority,
   type Status,
 } from '../shared/constants';
+import type { ModelChoice } from '../shared/models';
 import { defaultState, statusOfState } from '../shared/workflow';
 import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
@@ -36,6 +37,7 @@ import {
   checkDescription,
   checkEstimate,
   checkLabels,
+  checkModel,
   checkParent,
   checkProject,
   checkTitle,
@@ -179,6 +181,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       estimate: item.estimate === undefined ? undefined : checkEstimate(item.estimate),
       dueDate: item.dueDate === undefined ? undefined : checkDay(item.dueDate, 'The due date'),
       parentId: item.parentId ? (await checkParent(ctx, null, item.parentId))._id : undefined,
+      model: item.model ? await checkModel(ctx, item.model) : undefined,
     });
   }
 
@@ -209,6 +212,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       ...(p.estimate !== undefined ? { estimate: p.estimate } : {}),
       ...(p.dueDate ? { dueDate: p.dueDate } : {}),
       ...(p.parentId ? { parentId: p.parentId } : {}),
+      ...(p.model ? { model: p.model } : {}),
       rank: ranks[i],
       createdBy: actor,
       // Legacy marker (see schema): lets the inbox migration tell issues apart that never had an entry.
@@ -347,6 +351,10 @@ export async function applyPatch(
   if (patch.parentId !== undefined) {
     set('parentId', patch.parentId === null ? undefined : (await checkParent(ctx, issue._id, patch.parentId))._id);
   }
+  if (patch.model !== undefined) {
+    const undo = opts.undo ? await lastReplacedModel(ctx, issue._id) : null;
+    set('model', patch.model === null ? undefined : await checkModel(ctx, patch.model, { keep: issue.model, undo }));
+  }
 
   if (changes.status !== undefined) Object.assign(changes, statusTimestamps(issue, changes.status, now));
   let changed = false;
@@ -362,6 +370,17 @@ export async function applyPatch(
 }
 
 /** Labels the issue had before its last label change (for undo). */
+/** The model the issue had before its last model change (for undo and redo). */
+async function lastReplacedModel(ctx: QueryCtx, issueId: Id<'issues'>): Promise<ModelChoice | null> {
+  const rows = await ctx.db
+    .query('history')
+    .withIndex('by_issue', (q) => q.eq('issueId', issueId))
+    .order('desc')
+    .take(50);
+  const from = rows.find((r) => r.field === 'model')?.from as ModelChoice | undefined;
+  return from && typeof from === 'object' ? from : null;
+}
+
 async function lastRemovedLabels(ctx: QueryCtx, issueId: Id<'issues'>): Promise<Id<'labels'>[]> {
   const rows = await ctx.db
     .query('history')

@@ -1,5 +1,6 @@
 import type { Doc, Id } from '@selfbound/backend/dataModel';
 import type { Priority, Status } from '@selfbound/backend/constants';
+import type { ModelChoice, ModelInfo } from '@selfbound/backend/shared/models';
 
 export type { Priority, Status };
 export type IssueDoc = Doc<'issues'>;
@@ -44,6 +45,8 @@ export interface Meta {
   owner?: OwnerProfile;
   /** Instance time zone (IANA name); null = not set yet, missing in an older cache */
   timeZone?: string | null;
+  /** Models the owner enabled (XLR8-93); missing in an older cache */
+  models?: ModelInfo[];
 }
 
 /** Display name and picture URL of the owner (null = not set). */
@@ -148,9 +151,11 @@ export interface IssuePatch {
   snoozedUntil?: string | null;
   parentId?: IssueId | null;
   sprintId?: SprintId | null;
+  /** Desired model (XLR8-93); `null` = none of its own (inherits again) */
+  model?: ModelChoice | null;
 }
 export type PatchField = keyof IssuePatch;
-export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'snoozedUntil', 'parentId', 'sprintId'];
+export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'snoozedUntil', 'parentId', 'sprintId', 'model'];
 
 /** New issue (like `NewIssue` in the backend). */
 export interface NewIssue {
@@ -166,6 +171,7 @@ export interface NewIssue {
   dueDate?: string;
   parentId?: IssueId;
   sprintId?: SprintId;
+  model?: ModelChoice;
 }
 
 // ---------------------------------------------------------------- Views
@@ -362,6 +368,8 @@ export interface MenuItem {
   team?: TeamBadge;
   /** Color dot (labels) */
   dot?: number;
+  /** Logo URL of a model provider, drawn as a mask icon (instead of `icon`) */
+  logo?: string;
   /** Current value (check mark) */
   checked?: boolean;
   /** Multiple choice: checkbox instead of check mark */
@@ -389,6 +397,7 @@ export type PaletteKind =
   | 'project'
   | 'sprint'
   | 'estimate'
+  | 'model'
   | 'due'
   | 'snooze'
   | 'parent'

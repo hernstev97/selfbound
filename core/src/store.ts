@@ -856,6 +856,7 @@ export class IssueStore {
         ...(item.dueDate ? { dueDate: item.dueDate } : {}),
         ...(item.parentId ? { parentId: item.parentId } : {}),
         ...(item.sprintId ? { sprintId: item.sprintId } : {}),
+        ...(item.model ? { model: item.model } : {}),
       } as IssueDoc;
       this.#pending.set(id, this.#enrich(doc, true));
       this.#changed.add(id);

@@ -2,6 +2,7 @@
 // of the issue and the inbox entries share it.
 import { PRIORITY_LABEL, STATUS_LABEL, dayLabel } from '../format.ts';
 import { t, tc, translated } from '../i18n.ts';
+import { modelLabel, type ModelChoice } from '../models.ts';
 import type { IssueStore } from '../store.ts';
 import { workflowsOf } from '../workflow.ts';
 import { isOwnerKind, type HistoryDoc, type IssueId, type Priority, type Status } from '../types.ts';
@@ -91,6 +92,11 @@ export function historyText(h: Pick<HistoryDoc, 'field' | 'from' | 'to' | 'actor
       }
       const sprint = sprintName(h.from);
       return say(tc('you', 'removed it from {sprint}', { sprint }), t('removed it from {sprint}', { sprint }));
+    }
+    case 'model': {
+      if (!h.to || typeof h.to !== 'object') return say(tc('you', 'removed the model'), t('removed the model'));
+      const model = modelLabel(meta, h.to as ModelChoice);
+      return say(tc('you', 'set the model to {model}', { model }), t('set the model to {model}', { model }));
     }
     case 'description':
       return say(tc('you', 'changed the description'), t('changed the description'));

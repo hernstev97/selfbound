@@ -19,6 +19,9 @@ marked **write** do.
   can also use a status key (`triage`, `backlog`, `todo`, `in_progress`, `in_review`, `done`, `canceled`,
   `duplicate`), which maps to the team's matching status.
 - **Priorities** as a word (`urgent`, `high`, `medium`, `low`, `none`) or a number from 0 to 4.
+- **Models** as `{ provider, modelId, effort?, speed? }` with values from `list_models`. Issues report their own
+  `model` and the `effectiveModel` that applies (own, parent's or team default, with `source`); the `model` filter
+  of `list_issues` and `search_issues` takes `"provider/modelId"`, a model ID, a provider or `"none"`.
 
 Errors such as an unknown label or a status the workflow doesn't allow come back as a readable message,
 so the agent can correct itself and try again.

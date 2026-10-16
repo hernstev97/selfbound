@@ -161,7 +161,7 @@ const ATTRIBUTE = /\s+([^\s=/>"']+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'))?/y;
  * removed before values are checked. Anything this parser doesn't understand unambiguously is
  * rejected.
  */
-export function checkSvgText(raw: string): string | null {
+export function checkSvgText(raw: string, opts: { square?: boolean } = {}): string | null {
   if (!/<svg[\s>]/i.test(decodeEntities(raw))) return 'Only SVG and PNG are allowed (the file is not an SVG).';
   if (/<!DOCTYPE|<!ENTITY/i.test(raw)) return 'SVG with DOCTYPE or ENTITY is not allowed.';
   let i = 0;
@@ -227,6 +227,8 @@ export function checkSvgText(raw: string): string | null {
   }
   if (root === null) return 'Only SVG and PNG are allowed (the file is not an SVG).';
   if (open.length > 0) return 'The SVG is not well-formed (unclosed element).';
+  // Team logos are square; provider logos (models.dev) may be wide and are drawn as a fitted mask.
+  if (opts.square === false) return null;
   const viewBox = root.attrs.get('viewbox');
   if (viewBox) {
     const parts = viewBox.trim().split(/[\s,]+/).map(Number);
@@ -247,7 +249,7 @@ export function checkSvgText(raw: string): string | null {
  * Checks an uploaded logo. `declaredType` is the content type from the storage metadata (may be
  * missing); the content must match it.
  */
-export function checkLogo(bytes: Uint8Array, declaredType?: string | null): LogoCheck {
+export function checkLogo(bytes: Uint8Array, declaredType?: string | null, opts: { square?: boolean } = {}): LogoCheck {
   if (bytes.length === 0) return { ok: false, reason: 'The file is empty.' };
   if (bytes.length > LIMITS.logoMaxBytes) {
     return { ok: false, reason: `The logo is too large (at most ${LIMITS.logoMaxBytes / 1024} KB).` };
@@ -268,6 +270,15 @@ export function checkLogo(bytes: Uint8Array, declaredType?: string | null): Logo
   } catch {
     return { ok: false, reason: 'Only SVG and PNG are allowed.' };
   }
-  const reason = checkSvgText(text);
+  const reason = checkSvgText(text, opts);
   return reason ? { ok: false, reason } : { ok: true, contentType: 'image/svg+xml' };
+}
+
+/**
+ * URL of a logo (team or model provider): our own endpoint GET /logo/<storageId> (convex/http.ts) with
+ * a strict Content-Security-Policy, not the raw storage URL.
+ */
+export function logoUrl(storageId: string) {
+  const site = (process.env.CONVEX_SITE_URL ?? '').replace(/\/+$/, '');
+  return `${site}/logo/${storageId}`;
 }

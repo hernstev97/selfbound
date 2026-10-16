@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import { addDays } from '../convex/lib/dates';
+import { reduceCatalog } from '../convex/lib/modelsCatalog';
 import { dayWindow, minuteWindow, RATE_PER_MINUTE } from '../convex/ops/agents';
+import modelsDev from './lib/fixtures/models-dev.json';
 import { berlinDay, createOne, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
 // MCP endpoint over HTTP (t.fetch → convex/http.ts → internal.mcp.call), with real agent keys.
@@ -78,6 +80,7 @@ describe('MCP over HTTP', () => {
       'list_projects',
       'list_labels',
       'list_statuses',
+      'list_models',
       'list_inbox',
       'search_articles',
       'list_articles',
@@ -710,5 +713,114 @@ describe('MCP: knowledge', () => {
     const until = berlinDay(Date.now() + 3 * 86_400_000);
     expect((await mcp.call('update_issue', { requestId: 'inbox-snooze-2', identifier, snoozedUntil: until })).ok).toBe(true);
     expect((await mcp.call('list_inbox')).value).toEqual({ count: 0, unread: 0, entries: [] });
+  });
+});
+
+describe('desired model (XLR8-93)', () => {
+  const OPUS = { provider: 'anthropic', modelId: 'claude-opus-5-5' };
+  const SONNET = { provider: 'anthropic', modelId: 'claude-sonnet-5-5' };
+  async function withModels(owner: Client) {
+    const providers = reduceCatalog(modelsDev).map((p) => ({ ...p, hash: 'seed' }));
+    await owner.mutation(api.models.seedForTest, { providers, enable: [OPUS, SONNET, { provider: 'openai', modelId: 'gpt-6-sol' }] });
+  }
+
+  test('list_models, create and update with a model, effective model with its source', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    await withModels(owner);
+    await owner.mutation(api.teams.update, { teamId: f.orb, defaultModel: { ...SONNET, effort: 'high' } });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+
+    const listed = (await mcp.call('list_models')).value;
+    expect(listed.models.map((m: Json) => m.name)).toEqual(['Claude Sonnet 5.5', 'Claude Opus 5.5', 'GPT-6 Sol']);
+    expect(listed.models[1]).toEqual({
+      provider: 'anthropic',
+      providerName: 'Anthropic',
+      modelId: 'claude-opus-5-5',
+      name: 'Claude Opus 5.5',
+      efforts: ['low', 'medium', 'high', 'xhigh', 'max'],
+      speeds: ['standard', 'fast'],
+      context: 1_000_000,
+      output: 128_000,
+      releaseDate: '2026-09-22',
+    });
+    expect(listed.teamDefaults).toEqual([{ team: 'ORB', model: { ...SONNET, name: 'Claude Sonnet 5.5', effort: 'high', speed: 'standard' } }]);
+    expect((await mcp.call('list_models', { provider: 'openai' })).value.count).toBe(1);
+
+    const created = await mcp.call('create_issues', {
+      requestId: 'model-create-1',
+      issues: [
+        { team: 'ORB', title: 'Parent', model: { ...OPUS, effort: 'xhigh', speed: 'fast' } },
+        { team: 'ORB', title: 'Team default' },
+        { team: 'NOVA', title: 'Nothing' },
+      ],
+    });
+    expect(created.ok, created.error).toBe(true);
+    const [parent, plain, none] = created.value.created;
+    expect(parent.model).toEqual({ ...OPUS, name: 'Claude Opus 5.5', effort: 'xhigh', speed: 'fast' });
+    expect(parent.effectiveModel).toMatchObject({ modelId: 'claude-opus-5-5', source: 'issue' });
+    expect(plain.model).toBeUndefined();
+    expect(plain.effectiveModel).toEqual({ ...SONNET, name: 'Claude Sonnet 5.5', effort: 'high', speed: 'standard', source: 'team', from: 'ORB' });
+    expect(none.effectiveModel).toBeUndefined();
+
+    const child = await mcp.call('create_issues', { requestId: 'model-create-2', issues: [{ team: 'NOVA', title: 'Child', parent: parent.identifier }] });
+    expect(child.value.created[0].effectiveModel).toMatchObject({ modelId: 'claude-opus-5-5', effort: 'xhigh', source: 'parent', from: parent.identifier });
+
+    // Invalid combinations are rejected with the valid values.
+    const bad = await mcp.call('update_issue', { identifier: none.identifier, model: { ...OPUS, effort: 'none' } });
+    expect(bad.error).toMatch(/^invalid: Effort "none" is not valid for Claude Opus 5\.5\. Valid: low, medium, high, xhigh, max\./);
+    const unknown = await mcp.call('update_issue', { identifier: none.identifier, model: { provider: 'anthropic', modelId: 'claude-9' } });
+    expect(unknown.error).toMatch(/Unknown model "anthropic\/claude-9".*list_models/);
+
+    // update_issue with expected: a changed model is a conflict, not overwritten.
+    const updated = await mcp.call('update_issue', { identifier: none.identifier, model: { provider: 'openai', modelId: 'gpt-6-sol', speed: 'pro' }, expected: { model: null } });
+    expect(updated.value.changed).toEqual(['model']);
+    const conflict = await mcp.call('update_issue', { identifier: none.identifier, model: OPUS, expected: { model: null } });
+    expect(conflict.value.conflicts).toEqual([expect.objectContaining({ field: 'model', expected: null })]);
+    const issue = (await mcp.call('get_issue', { identifier: none.identifier })).value;
+    expect(issue.model).toEqual({ provider: 'openai', modelId: 'gpt-6-sol', name: 'GPT-6 Sol', speed: 'pro' });
+    // `expected` takes the model as get_issue returned it.
+    const asSeen = await mcp.call('update_issue', { identifier: none.identifier, model: { ...OPUS, effort: 'low' }, expected: { model: issue.model } });
+    expect(asSeen.ok, asSeen.error).toBe(true);
+    expect(asSeen.value.changed).toEqual(['model']);
+    await mcp.call('update_issue', { identifier: none.identifier, model: { provider: 'openai', modelId: 'gpt-6-sol', speed: 'pro' } });
+    expect(issue.recentHistory[0]).toMatchObject({ field: 'model', to: 'openai/gpt-6-sol?speed=pro' });
+    // null removes the own model; the issue then inherits again (here: nothing).
+    expect((await mcp.call('update_issue', { identifier: none.identifier, model: null })).value.changed).toEqual(['model']);
+    expect((await mcp.call('get_issue', { identifier: none.identifier })).value.effectiveModel).toBeUndefined();
+
+    // An agent's model change shows up in the owner's inbox.
+    const inbox = (await mcp.call('list_inbox')).value.entries.find((e: Json) => e.identifier === plain.identifier);
+    expect(inbox).toBeDefined();
+    await mcp.call('update_issue', { identifier: 'ORB-1', model: OPUS });
+    const entry = (await mcp.call('list_inbox')).value.entries.find((e: Json) => e.identifier === 'ORB-1');
+    expect(entry.changes[0]).toMatchObject({ field: 'model', to: 'anthropic/claude-opus-5-5' });
+  });
+
+  test('list_issues and search_issues filter by the effective model', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    await withModels(owner);
+    await owner.mutation(api.teams.update, { teamId: f.nova, defaultModel: SONNET });
+    const parent = await createOne(owner, f.orb, { title: 'Sync engine', model: { ...OPUS, effort: 'max' } });
+    await createOne(owner, f.orb, { title: 'Sync child', parentId: parent.id });
+    await createOne(owner, f.orb, { title: 'Sync without model' });
+    await createOne(owner, f.nova, { title: 'Sync on the default' });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const titles = async (args: Json) => {
+      const res = await mcp.call('list_issues', args);
+      expect(res.ok, res.error).toBe(true);
+      return res.value.issues.map((i: Json) => i.title).sort();
+    };
+    expect(await titles({ model: 'anthropic/claude-opus-5-5' })).toEqual(['Sync child', 'Sync engine']);
+    expect(await titles({ model: 'claude-sonnet-5-5' })).toEqual(['Sync on the default']);
+    expect(await titles({ model: 'anthropic' })).toEqual(['Sync child', 'Sync engine', 'Sync on the default']);
+    expect(await titles({ model: 'none' })).toEqual(['Sync without model']);
+    expect(await titles({ model: 'none', team: 'NOVA' })).toEqual([]);
+    expect((await mcp.call('list_issues', { model: 'acme/nothing' })).error).toMatch(/Unknown model "acme\/nothing"/);
+    const search = await mcp.call('search_issues', { q: 'sync', model: 'anthropic/claude-opus-5-5' });
+    expect(search.value.issues.map((i: Json) => i.title).sort()).toEqual(['Sync child', 'Sync engine']);
   });
 });

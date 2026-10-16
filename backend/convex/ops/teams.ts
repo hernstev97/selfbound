@@ -5,7 +5,8 @@ import { fail, invalid, notFound } from '../lib/errors';
 import type { LogoVariant } from '../lib/validators';
 import { ensureTeamStates } from '../lib/workflow';
 import { isOwnerKind, TEAM_KEY_RE, type ProjectState } from '../shared/constants';
-import { checkHue, checkName, getTeam } from './validate';
+import { sameChoice, type ModelChoice } from '../shared/models';
+import { checkHue, checkModel, checkName, getTeam } from './validate';
 
 // Teams, projects, labels and label groups.
 // Only the owner changes teams and logos. The import (actor 'import') may create and
@@ -105,7 +106,15 @@ export async function createTeam(
 export async function updateTeam(
   ctx: MutationCtx,
   actor: Actor,
-  args: { teamId: Id<'teams'>; key?: string; name?: string; hue?: number; dormant?: boolean; wiki?: 'on' | 'only' | null },
+  args: {
+    teamId: Id<'teams'>;
+    key?: string;
+    name?: string;
+    hue?: number;
+    dormant?: boolean;
+    wiki?: 'on' | 'only' | null;
+    defaultModel?: ModelChoice | null;
+  },
 ) {
   assertCanManageTeams(actor);
   const team = await getTeam(ctx, args.teamId);
@@ -129,6 +138,10 @@ export async function updateTeam(
     if (args.wiki === null) await assertWikiEmpty(ctx, team);
     if (args.wiki === 'only') await assertNoOpenWork(ctx, team);
     patch.wiki = args.wiki ?? undefined;
+  }
+  if (args.defaultModel !== undefined) {
+    const model = args.defaultModel === null ? undefined : await checkModel(ctx, args.defaultModel, { keep: team.defaultModel });
+    if (!sameChoice(model, team.defaultModel)) patch.defaultModel = model;
   }
   await ctx.db.patch('teams', team._id, { ...patch, updatedAt: Date.now() });
   return { teamId: team._id };

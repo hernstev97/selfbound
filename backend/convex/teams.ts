@@ -6,8 +6,9 @@ import { invalid, notFound } from './lib/errors';
 import { checkLogo } from './lib/logo';
 import { assertWritable } from './lib/testSwitches';
 import { logoVariantValidator } from './lib/validators';
+import { isProviderLogo } from './ops/models';
 import * as ops from './ops/teams';
-import { actorValidator } from './schema';
+import { actorValidator, modelChoiceValidator } from './schema';
 import { LIMITS } from './shared/constants';
 
 // Teams and team logos. Only the owner (see isOwnerKind) changes teams and logos; the check
@@ -28,6 +29,7 @@ export const create = ownerWriteMutation({
  * The key can only change while the team has no issues. `dormant` = inactive team.
  * `wiki`: 'on' = knowledge base next to the issues, 'only' = knowledge base only (only without open
  * issues and active recurrences), null = none (only without pages).
+ * `defaultModel`: the model for issues that set none (XLR8-93), null = none.
  */
 export const update = ownerWriteMutation({
   args: {
@@ -37,6 +39,7 @@ export const update = ownerWriteMutation({
     hue: v.optional(v.number()),
     dormant: v.optional(v.boolean()),
     wiki: v.optional(v.union(v.literal('on'), v.literal('only'), v.null())),
+    defaultModel: v.optional(v.union(modelChoiceValidator, v.null())),
   },
   handler: async (ctx, args) => await ops.updateTeam(ctx, ctx.actor, args),
 });
@@ -119,9 +122,11 @@ export const logoFile = internalQuery({
     const storageId = ctx.db.system.normalizeId('_storage', args.storageId);
     if (!storageId) return null;
     const teams = await ctx.db.query('teams').take(500);
-    if (!teams.some((t) => t.logoId === storageId || t.logoDarkId === storageId)) return null;
+    const team = teams.some((t) => t.logoId === storageId || t.logoDarkId === storageId);
+    // Model provider logos (models.dev, XLR8-93) are served the same way; they need not be square.
+    if (!team && !(await isProviderLogo(ctx, storageId))) return null;
     const meta = await ctx.db.system.get('_storage', storageId);
-    return meta ? { storageId, contentType: meta.contentType ?? null } : null;
+    return meta ? { storageId, contentType: meta.contentType ?? null, square: team } : null;
   },
 });
 

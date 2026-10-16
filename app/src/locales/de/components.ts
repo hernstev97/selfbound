@@ -331,4 +331,9 @@ export default {
   'Open on X': 'Auf X öffnen',
   // Properties.svelte, Sidebar.svelte
   'Snoozed until {date}': 'Zurückgestellt bis {date}',
+  // Properties.svelte, CreateDialog.svelte (model, XLR8-93)
+  Inherited: 'Geerbt',
+  'From parent {key}': 'Vom Eltern-Issue {key}',
+  'Default of {team}': 'Standard von {team}',
+  'Choose model': 'Modell wählen',
 } satisfies Dictionary;

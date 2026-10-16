@@ -31,8 +31,8 @@
       "n": 20
     },
     "P1|large|bundle.bytes (initial, brotli)": {
-      "median": 129255,
-      "p95": 129255,
+      "median": 136300,
+      "p95": 136300,
       "n": 1
     },
     "P1|large|click.row (opens issue)": {
@@ -46,9 +46,9 @@
       "n": 30
     },
     "P1|large|cold.bytes": {
-      "median": 330488,
-      "p95": 330488,
-      "n": 20
+      "median": 240014,
+      "p95": 266258,
+      "n": 3
     },
     "P1|large|cold.fcp": {
       "median": 76,
@@ -156,14 +156,14 @@
       "n": 30
     },
     "P1|large|memory.domNodes (loaded)": {
-      "median": 1881,
-      "p95": 1881,
-      "n": 3
+      "median": 1860,
+      "p95": 1860,
+      "n": 1
     },
     "P1|large|memory.domNodes (after 20× detail)": {
-      "median": 2337,
-      "p95": 2337,
-      "n": 3
+      "median": 2360,
+      "p95": 2360,
+      "n": 1
     },
     "P1|large|memory.heapMB (loaded)": {
       "median": 11.89,
@@ -326,9 +326,9 @@
       "n": 20
     },
     "P1|large|warm.bytes": {
-      "median": 11400,
+      "median": 8700,
       "p95": 11400,
-      "n": 20
+      "n": 3
     },
     "P1|large|warm.fcp": {
       "median": 56,
@@ -725,5 +725,6 @@
       "p95": 25.94,
       "n": 60
     }
-  }
+  },
+  "sizesFrom": "2026-10-15T22-12-26 (quick, commit b24fa65)"
 }

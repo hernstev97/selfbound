@@ -1,6 +1,7 @@
 import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
+import { encodeChoice, type ModelChoice } from '../shared/models';
 
 // Inbox: one open entry per issue (`inboxEntries`, removedAt missing). The entry is a note about
 // the issue, not part of it: creating, reading and removing entries never change the issue
@@ -58,6 +59,7 @@ function valueOf(field: string, value: unknown): Change['value'] {
   if (typeof value === 'object') {
     const o = value as Record<string, unknown>;
     if (field === 'teamId') return typeof o.identifier === 'string' ? o.identifier : undefined;
+    if (field === 'model') return typeof o.provider === 'string' && typeof o.modelId === 'string' ? encodeChoice(o as ModelChoice) : undefined;
     if (field.startsWith('relation')) return typeof o.otherId === 'string' ? `${o.type}:${o.direction}:${o.otherId}` : undefined;
     if (typeof o.preview === 'string') return o.preview;
   }

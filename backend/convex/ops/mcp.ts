@@ -10,6 +10,17 @@ import type { IssuePatch, NewIssue } from '../lib/validators';
 import { teamStates, type State } from '../lib/workflow';
 import { CLOSED_STATUSES, identifierOf, isOpen, LEGACY_OWNER_KIND, OPEN_STATUSES, OWNER_KIND, STATUSES, type Priority, type Status } from '../shared/constants';
 import {
+  effectiveModel,
+  encodeChoice,
+  modelFilterMatches,
+  modelKey,
+  normalizeChoice,
+  sameChoice,
+  speedsOf,
+  STANDARD_SPEED,
+  type ModelChoice,
+} from '../shared/models';
+import {
   activeStates,
   allowedTargets,
   defaultState,
@@ -25,8 +36,10 @@ import { listOpen } from './inbox';
 import { timeZoneOf } from './instance';
 import { openEntry } from './inboxChanges';
 import { issueArticles } from './links';
+import { enabledModels } from './models';
 import { moveIssuesToTeamCore } from './move';
 import { profileRow } from './profile';
+import { modelRow } from './validate';
 import {
   addSourcesCore,
   appendArticleBodyCore,
@@ -78,7 +91,8 @@ class Lookup {
   private projectList?: Doc<'projects'>[];
   private sprintCache = new Map<Id<'sprints'>, Doc<'sprints'> | null>();
   private agentCache = new Map<string, string>();
-  private parentCache = new Map<Id<'issues'>, string | null>();
+  private parentCache = new Map<Id<'issues'>, Doc<'issues'> | null>();
+  private modelCache = new Map<string, Doc<'models'> | null>();
   private ownerCache?: string;
 
   private readonly ctx: QueryCtx;
@@ -164,12 +178,39 @@ class Lookup {
     return identifierOf((await this.team(issue.teamId))?.key ?? '?', issue.number);
   }
 
-  async parentIdentifier(parentId: Id<'issues'>) {
-    if (!this.parentCache.has(parentId)) {
-      const parent = await this.ctx.db.get('issues', parentId);
-      this.parentCache.set(parentId, parent ? await this.identifier(parent) : null);
-    }
+  async parentDoc(parentId: Id<'issues'>) {
+    if (!this.parentCache.has(parentId)) this.parentCache.set(parentId, await this.ctx.db.get('issues', parentId));
     return this.parentCache.get(parentId) ?? null;
+  }
+
+  async parentIdentifier(parentId: Id<'issues'>) {
+    const parent = await this.parentDoc(parentId);
+    return parent ? await this.identifier(parent) : null;
+  }
+
+  async modelRow(choice: Pick<ModelChoice, 'provider' | 'modelId'>) {
+    const key = modelKey(choice.provider, choice.modelId);
+    if (!this.modelCache.has(key)) this.modelCache.set(key, await modelRow(this.ctx, choice.provider, choice.modelId));
+    return this.modelCache.get(key) ?? null;
+  }
+
+  /** A model choice for agents: IDs, the name, effort if set, and the speed (standard if none is set). */
+  async modelOut(choice: ModelChoice) {
+    const row = await this.modelRow(choice);
+    return {
+      provider: choice.provider,
+      modelId: choice.modelId,
+      ...(row ? { name: row.name } : {}),
+      ...(choice.effort ? { effort: choice.effort } : {}),
+      speed: choice.speed ?? STANDARD_SPEED,
+      ...(!row || row.removedAt !== undefined ? { inCatalog: false } : {}),
+    };
+  }
+
+  /** Own model, else the parent's, else the team default (shared/models.ts effectiveModel). */
+  async effectiveModel(issue: Doc<'issues'>) {
+    const parent = !issue.model && issue.parentId ? await this.parentDoc(issue.parentId) : null;
+    return effectiveModel(issue.model, parent?.model, (await this.team(issue.teamId))?.defaultModel);
   }
 
   /**
@@ -264,6 +305,12 @@ class Lookup {
       const parent = await this.parentIdentifier(issue.parentId);
       if (parent) out.parent = parent;
     }
+    if (issue.model) out.model = await this.modelOut(issue.model);
+    const effective = await this.effectiveModel(issue);
+    if (effective) {
+      const from = effective.source === 'parent' ? await this.parentIdentifier(issue.parentId!) : effective.source === 'team' ? team?.key : undefined;
+      out.effectiveModel = { ...(await this.modelOut(effective.choice)), source: effective.source, ...(from ? { from } : {}) };
+    }
     if (issue.deletedAt !== undefined) out.deleted = true;
     return out;
   }
@@ -311,11 +358,33 @@ function englishWarnings(warnings: BudgetWarning[], lookup: Lookup) {
 
 // ---------------------------------------------------------------- Reading
 
+/**
+ * The `model` filter of list_issues and search_issues: checks that it names something known (an
+ * enabled model, a team default, a catalog provider or model, or "none") and returns the test on an
+ * issue's effective model.
+ */
+async function modelFilter(ctx: QueryCtx, lookup: Lookup, filter: string | undefined) {
+  if (filter === undefined) return undefined;
+  const known = [...(await enabledModels(ctx)), ...(await lookup.teams()).flatMap((t) => (t.defaultModel ? [t.defaultModel] : []))];
+  const slash = filter.indexOf('/');
+  const ok =
+    filter.toLowerCase() === 'none' ||
+    known.some((m) => modelFilterMatches(filter, m)) ||
+    (await ctx.db
+      .query('modelProviders')
+      .withIndex('by_provider', (q) => q.eq('provider', filter))
+      .first()) !== null ||
+    (slash > 0 && (await lookup.modelRow({ provider: filter.slice(0, slash), modelId: filter.slice(slash + 1) })) !== null);
+  if (!ok) fail('not_found', `Unknown model "${filter}". Use "provider/modelId", a model ID or a provider from list_models, or "none".`, { model: filter });
+  return async (issue: Doc<'issues'>) => modelFilterMatches(filter, (await lookup.effectiveModel(issue))?.choice);
+}
+
 async function searchIssues(ctx: QueryCtx, args: ToolArgs['search_issues']) {
   const lookup = new Lookup(ctx);
   const team = args.team ? await lookup.teamByKey(args.team) : undefined;
   const limit = args.limit ?? 20;
   const text = args.q;
+  const byModel = await modelFilter(ctx, lookup, args.model);
   const titles = await ctx.db
     .query('issues')
     .withSearchIndex('search_title', (q) => (team ? q.search('title', text).eq('teamId', team._id) : q.search('title', text)))
@@ -326,6 +395,7 @@ async function searchIssues(ctx: QueryCtx, args: ToolArgs['search_issues']) {
     if (!issue || out.length >= limit || seen.has(issue._id) || issue.deletedAt !== undefined) return;
     if (team && issue.teamId !== team._id) return;
     if (args.includeClosed === false && !isOpen(issue.status)) return;
+    if (byModel && !(await byModel(issue))) return;
     seen.add(issue._id);
     out.push({ ...(await lookup.brief(issue)), match });
   };
@@ -365,6 +435,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
     if (matches.length === 0) fail('not_found', `Unknown project "${args.project}". Call list_projects for valid names.`);
     projectIds = matches.map((p) => p._id);
   }
+  const byModel = await modelFilter(ctx, lookup, args.model);
 
   const teams = await lookup.teams();
   // Dormant and knowledge-only teams are not part of today's work.
@@ -402,7 +473,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
         return issue.sprintId === activeSprint!._id;
     }
   };
-  const matches = (issue: Doc<'issues'>) =>
+  const matchesFields = (issue: Doc<'issues'>) =>
     issue.deletedAt === undefined &&
     (!team || issue.teamId === team._id) &&
     (!filter || filter.matches(issue)) &&
@@ -410,6 +481,8 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
     (!projectIds || (issue.projectId !== undefined && projectIds.includes(issue.projectId))) &&
     (args.snoozed === undefined || (issue.snoozedUntil !== undefined) === args.snoozed) &&
     preset(issue);
+  // The model is checked last: it may read the parent.
+  const matches = async (issue: Doc<'issues'>) => matchesFields(issue) && (!byModel || (await byModel(issue)));
 
   let scanned = 0;
   let truncated = false;
@@ -493,7 +566,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
     for (const source of sources) {
       if (budget() === 0) break;
       for (const issue of await source()) {
-        if (!seen.has(issue._id) && matches(issue)) {
+        if (!seen.has(issue._id) && (await matches(issue))) {
           seen.add(issue._id);
           result.push(issue);
         }
@@ -526,7 +599,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
                 .withIndex('by_team_priority', (q) => q.eq('teamId', t._id).eq('priority', priority).eq('status', status))
                 .take(budget()),
             );
-            for (const issue of rows) if (matches(issue)) level.push(issue);
+            for (const issue of rows) if (await matches(issue)) level.push(issue);
           }
         }
         result.push(...level.sort(order));
@@ -546,7 +619,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
             break;
           }
           scanned++;
-          if (matches(issue)) closed.push(issue);
+          if (await matches(issue)) closed.push(issue);
           if (closed.length > limit - result.length) break;
         }
       }
@@ -585,6 +658,9 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
       return typeof value === 'object' && value !== null && 'identifier' in value ? (value as { identifier: string }).identifier : value;
     case 'priority':
       return typeof value === 'number' ? PRIORITY_NAMES[value as Priority] : value;
+    case 'model':
+      // History keeps the object, inbox entries the string form; agents get the string form.
+      return typeof value === 'object' && 'provider' in value ? encodeChoice(value as ModelChoice) : value;
     case 'stateId':
       return typeof value === 'string' ? ((await lookup.stateName(value as Id<'workflowStates'>)) ?? value) : value;
     case 'deleted':
@@ -595,6 +671,33 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
     default:
       return value;
   }
+}
+
+/** The enabled models with their valid values, and the team defaults (XLR8-93). */
+async function listModelsTool(ctx: QueryCtx, args: ToolArgs['list_models']) {
+  const lookup = new Lookup(ctx);
+  const models = (await enabledModels(ctx))
+    .filter((m) => !args.provider || m.provider.toLowerCase() === args.provider.toLowerCase())
+    .map((m) => ({
+      provider: m.provider,
+      providerName: m.providerName,
+      modelId: m.modelId,
+      name: m.name,
+      efforts: m.efforts,
+      speeds: speedsOf(m),
+      ...(m.context ? { context: m.context } : {}),
+      ...(m.output ? { output: m.output } : {}),
+      ...(m.releaseDate ? { releaseDate: m.releaseDate } : {}),
+      ...(m.removed ? { inCatalog: false } : {}),
+    }));
+  const teamDefaults = [];
+  for (const team of await lookup.teams()) if (team.defaultModel) teamDefaults.push({ team: team.key, model: await lookup.modelOut(team.defaultModel) });
+  return {
+    count: models.length,
+    models,
+    teamDefaults,
+    note: 'Set an issue\'s model with create_issues or update_issue (`model: { provider, modelId, effort?, speed? }`). An issue without its own model uses its parent\'s, else its team\'s default; without any, whoever runs the issue picks the model. Models with inCatalog: false have left models.dev: issues keep them, but they cannot be newly assigned.',
+  };
 }
 
 /** No inbox entry is waiting for the owner: never was one, removed, or read (a new agent change makes it unread again). */
@@ -1164,6 +1267,8 @@ export async function runReadTool(ctx: QueryCtx, tool: ToolName, args: unknown, 
       return await listStatuses(ctx, args as ToolArgs['list_statuses']);
     case 'list_inbox':
       return await listInboxTool(ctx, args as ToolArgs['list_inbox']);
+    case 'list_models':
+      return await listModelsTool(ctx, args as ToolArgs['list_models']);
     default:
       return fail('invalid', `${tool} is not a read tool.`);
   }
@@ -1209,6 +1314,7 @@ async function createIssuesToolCore(ctx: MutationCtx, actor: Actor, args: ToolAr
       ...(item.estimate !== undefined ? { estimate: item.estimate } : {}),
       ...(item.dueDate ? { dueDate: item.dueDate } : {}),
       ...(parentId ? { parentId } : {}),
+      ...(item.model ? { model: item.model } : {}),
     });
   }
   const result = await createIssuesCore(ctx, actor, { issues, requestId: args.requestId });
@@ -1283,6 +1389,10 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       }
       check('parent', ok, expected.parent, currentParent);
     }
+    if (expected.model !== undefined) {
+      const want = expected.model === null ? null : normalizeChoice(expected.model);
+      check('model', sameChoice(want, issue.model), expected.model, issue.model ? await lookup.modelOut(issue.model) : null);
+    }
     const blocked = new Set(conflicts.map((c) => c.field));
 
     const patch: IssuePatch = {};
@@ -1301,6 +1411,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
     if (args.parent !== undefined && !blocked.has('parent')) {
       patch.parentId = args.parent === null ? null : (await issueByIdentifier(ctx, args.parent))._id;
     }
+    if (args.model !== undefined && !blocked.has('model')) patch.model = args.model;
 
     const before = issue;
     if (Object.keys(patch).length > 0) await applyPatch(ctx, actor, issue._id, patch, undefined, now, args.requestId);
@@ -1316,6 +1427,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       dueDate: 'dueDate',
       snoozedUntil: 'snoozedUntil',
       parentId: 'parent',
+      model: 'model',
     } as const;
     for (const [field, name] of Object.entries(FIELD_NAMES) as [keyof typeof FIELD_NAMES, string][]) {
       if (JSON.stringify(before[field] ?? null) !== JSON.stringify(after[field] ?? null)) changed.push(name);

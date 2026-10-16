@@ -3,6 +3,7 @@ import type { QueryCtx } from '../_generated/server';
 import { isDay } from '../lib/dates';
 import { fail, invalid, notFound } from '../lib/errors';
 import { LIMITS } from '../shared/constants';
+import { choiceProblem, MODEL_LIMITS, normalizeChoice, sameModel, type ModelChoice } from '../shared/models';
 
 // Field checks shared by create, update, recurrences and MCP.
 
@@ -128,4 +129,37 @@ export async function getIssue(ctx: QueryCtx, id: Id<'issues'>, opts: { allowDel
     invalid('The issue is in the trash. Restore it first.', { issueId: id });
   }
   return issue;
+}
+
+/** The catalog row of a model, or null. */
+export async function modelRow(ctx: QueryCtx, provider: string, modelId: string): Promise<Doc<'models'> | null> {
+  if (!provider || !modelId || provider.length > MODEL_LIMITS.provider || modelId.length > MODEL_LIMITS.modelId) return null;
+  return await ctx.db
+    .query('models')
+    .withIndex('by_provider_model', (q) => q.eq('provider', provider).eq('modelId', modelId))
+    .unique();
+}
+
+/**
+ * A desired model (XLR8-93): enabled in the settings and still in the catalog, effort and speed among
+ * the model's values. The model the issue (or team) already has (`keep`) stays allowed after it was
+ * disabled or left the catalog, like an archived label; so does, on undo, the model the last change
+ * replaced (`undo`). Effort and speed are always checked against the last known catalog values.
+ * Returns the stored form (`normalizeChoice`).
+ */
+export async function checkModel(
+  ctx: QueryCtx,
+  choice: ModelChoice,
+  opts: { keep?: ModelChoice | null; undo?: ModelChoice | null } = {},
+): Promise<ModelChoice> {
+  const model = normalizeChoice(choice);
+  const row = await modelRow(ctx, model.provider, model.modelId);
+  const hint = ' Call list_models for the enabled models and their values.';
+  if (row && !sameModel(model, opts.keep) && !sameModel(model, opts.undo)) {
+    if (row.removedAt !== undefined) invalid(`${row.name} is no longer in the models.dev catalog.`, { model: model.modelId });
+    if (!row.enabled) invalid(`${row.name} is not enabled. Enable it under Settings › Models.`, { model: model.modelId });
+  }
+  const problem = choiceProblem(model, row ? { name: row.name, efforts: row.efforts ?? [], modes: row.modes ?? [] } : undefined);
+  if (problem) invalid(problem + (row ? '' : hint), { model: model.modelId });
+  return model;
 }

@@ -161,6 +161,18 @@ export const prReviewSummaryValidator = v.union(v.literal('approved'), v.literal
 /** Calendar day as a string "YYYY-MM-DD" in the instance time zone (instanceSettings). */
 const day = v.string();
 
+/**
+ * Desired model of an issue or a team default (XLR8-93, shared/models.ts): a model of the catalog
+ * (`models`), optionally with effort and speed. Missing effort or speed = the agent decides; the speed
+ * `standard` is never stored.
+ */
+export const modelChoiceValidator = v.object({
+  provider: v.string(),
+  modelId: v.string(),
+  effort: v.optional(v.string()),
+  speed: v.optional(v.string()),
+});
+
 export default defineSchema({
   teams: defineTable({
     key: v.string(), // "KIU", immutable after the first issue
@@ -181,6 +193,8 @@ export default defineSchema({
     ),
     // Knowledge base: 'on' = next to the issues, 'only' = knowledge base only. Missing = none.
     wiki: v.optional(wikiModeValidator),
+    // Model for the team's issues that set none themselves and whose parent sets none. Missing = none.
+    defaultModel: v.optional(modelChoiceValidator),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -252,6 +266,8 @@ export default defineSchema({
     snoozedUntil: v.optional(day),
     parentId: v.optional(v.id('issues')),
     sprintId: v.optional(v.id('sprints')),
+    // Desired model (XLR8-93). Missing = inherited from the parent or the team default, else none.
+    model: v.optional(modelChoiceValidator),
     rank: v.string(), // order in the backlog (fractional-indexing)
     createdBy: actorValidator,
     // Legacy inbox markers. Inbox entries live in `inboxEntries` now; these two stay in the schema
@@ -712,6 +728,52 @@ export default defineSchema({
   })
     .index('by_key', ['key'])
     .index('by_fetched', ['fetchedAt']),
+
+  // The models.dev catalog in slim form (XLR8-93), one row per model. Written by the daily sync
+  // (models.ts), which only rewrites providers whose content changed. `enabled` is the owner's choice
+  // and the only field the sync never touches. A model that left the catalog keeps its row with
+  // `removedAt`, so issues that use it still show it.
+  models: defineTable({
+    provider: v.string(), // models.dev provider ID, e.g. "anthropic"
+    providerName: v.string(), // here too, so the enabled models are read without their providers
+    modelId: v.string(), // e.g. "claude-opus-5-5"; may contain "/"
+    name: v.string(),
+    family: v.optional(v.string()),
+    efforts: v.optional(v.array(v.string())), // valid effort values; missing = no effort setting
+    modes: v.optional(v.array(v.string())), // speeds besides standard, e.g. "fast"
+    context: v.optional(v.number()), // context window in tokens
+    output: v.optional(v.number()),
+    releaseDate: v.optional(v.string()), // YYYY-MM-DD or YYYY-MM
+    enabled: v.optional(v.boolean()),
+    removedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  })
+    .index('by_provider_model', ['provider', 'modelId'])
+    .index('by_enabled', ['enabled'])
+    .searchIndex('search_name', { searchField: 'name', filterFields: ['provider'] }),
+
+  // Logos of the catalog's providers (models.dev/logos/<provider>.svg), fetched by the sync and checked
+  // like team logos, served through GET /logo/<storageId>. Separate from `modelProviders`, so the
+  // enabled models' logos are read without rows the sync rewrites. Missing `storageId` = models.dev has
+  // none, or it did not pass the check.
+  modelLogos: defineTable({
+    provider: v.string(),
+    storageId: v.optional(v.id('_storage')),
+    etag: v.optional(v.string()),
+    checkedAt: v.number(),
+  })
+    .index('by_provider', ['provider'])
+    .index('by_storage', ['storageId']),
+
+  // Providers of the catalog: name, number of models and the hash of their slim form at the last sync.
+  modelProviders: defineTable({
+    provider: v.string(),
+    name: v.string(),
+    count: v.number(),
+    hash: v.string(),
+    removedAt: v.optional(v.number()),
+    updatedAt: v.number(),
+  }).index('by_provider', ['provider']),
 
   // Operational status for the ops page: last backup, audits etc.
   opsStatus: defineTable({

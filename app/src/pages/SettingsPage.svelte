@@ -15,6 +15,7 @@
   import Projects from './settings/Projects.svelte';
   import Labels from './settings/Labels.svelte';
   import Agents from './settings/Agents.svelte';
+  import Models from './settings/Models.svelte';
   import Recurrences from './settings/Recurrences.svelte';
   import Ops from './settings/Ops.svelte';
   import Github from './settings/Github.svelte';
@@ -64,6 +65,8 @@
       <Labels />
     {:else if section === 'agents'}
       <Agents />
+    {:else if section === 'models'}
+      <Models />
     {:else if section === 'recurrences'}
       <Recurrences />
     {:else if section === 'github'}
