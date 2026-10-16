@@ -40,14 +40,14 @@ This document is the contract between the backend and the UI. It describes the t
 
 | Table | Contents | Key indexes |
 |---|---|---|
-| `teams` | `key`, name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none), `defaultModel?` (model choice for issues that set none, [models](#models-desired-model-per-issue)) | `by_key` |
+| `teams` | `key`, `previousKeys?` (keys before a rename, oldest first, reserved for this team), name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none), `defaultModel?` (model choice for issues that set none, [models](#models-desired-model-per-issue)) | `by_key` |
 | `workflowStates` | A team's statuses: name, `type` (triage, backlog, unstarted, started, completed, canceled), `position` (within the type), `color?`, `description?`, `isDuplicate?`, `legacyKey?` (old key of the default statuses), `archivedAt?` | `by_team` |
 | `projects` | Belongs to exactly one team. Name, `state`, `order` | `by_team` |
 | `labelGroups` | Name, `exclusive` (single choice), `hue`, optional `teamId` | |
 | `labels` | Name, `hue`, optional `groupId`, optional `teamId` (missing = workspace label), `archived` | |
 | `counters` | `seq`, `team:<teamId>`, `sprint`: the last value handed out for each | `by_name` |
 | `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `snoozedUntil` (snooze), `parentId`, `sprintId`, `model?` (`{ provider, modelId, effort?, speed? }`, [models](#models-desired-model-per-issue)), `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_snoozed`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
-| `identifierAliases` | Old identifier (upper case, "ACME-106") → issue | `by_key`, `by_issue` |
+| `identifierAliases` | Old identifier (upper case, "ACME-106") → issue, written by team moves and the import. A renamed team key needs no rows: `teams.previousKeys` | `by_key`, `by_issue` |
 | `issueBodies` | Markdown, `version`, `updatedAt`, `updatedBy` | `by_issue` |
 | `bodySearch` | Search text of the description: the first 8000 characters (`BODY_SEARCH_CHARS`). Written only through `ops/bodies.ts`, together with `issueBodies` | `by_issue`, search `search_text` |
 | `bodyRevisions` | Earlier versions of a description with full text: overwritten by the import (`import_overwrite`) or a Linear version not applied because of a conflict (`import_conflict`), `version`, `at`, `actor`, `runId` | `by_issue` |
@@ -103,7 +103,7 @@ This document is the contract between the backend and the UI. It describes the t
 3. **`updatedAt`** changes on EVERY change to the issue document, including description, comment, relation, rank, sprint and reviewed. The client detects changes through it. Only exception: data migrations (`migrations.ts`) that store the same information in a new form.
 4. **History:** every change writes `history`, with the actor taken from the verified identity. A new issue has exactly one row `field: 'created'`, even if it is added to a sprint right away.
 5. **Sprint:** for every sprint S that is **not closed**: `issue.sprintId === S` if and only if there is exactly one `sprintItems` entry for (S, issue) without `removedAt`. **Closed sprints are frozen:** nothing changes or deletes their entries any more (no moving, no detaching, not even permanently deleting the issue). Every entry without `removedAt` has an `outcome`, and if `issue.sprintId` still points to the closed sprint, such an entry exists there. Not the other way round: a reopened issue may have been carried over or detached, and a permanently deleted one is missing (the entry then points to an `issueId` with no issue). Exception: entries of imported Linear cycles are reconciled by the import. Only `ops/sprints.ts` writes `sprintId` and entries. At most one sprint is `active`. Checked in the tests after every operation and nightly by a cron.
-6. **Team key** matches `TEAM_KEY_RE` (2–6 characters, upper-case letters and digits, starting with a letter), is unique, and can no longer be changed once the team has issues.
+6. **Team key** matches `TEAM_KEY_RE` (2–6 characters, upper-case letters and digits, starting with a letter) and is unique, counting the old keys of all teams (`teams.previousKeys`). Renaming the key of a team with issues (owner only) appends the old key to `previousKeys`; the team may take one of its own old keys back, which removes it from the list. Issues, pages and links store IDs, so a rename writes only the team document. Identifiers with an old key resolve as `<current key>-<number>` (numbers are never reused within a team; `lib/identifiers.ts` `resolveIssue`).
 7. **Labels:** at most one label per issue from each group with `exclusive: true`. Team labels only on issues of that team. Archived labels cannot be **newly** assigned; labels already on the issue stay allowed during any other label change, and `issues.revert` may bring back what the last label change removed (undo).
 8. **Project** belongs to the issue's team. **Parent** exists, is not in the trash, and no cycle is created.
 9. **Status:** `issue.stateId` belongs to the issue's team, and `issue.status === statusOfState(state)`. Only `ops/issues.ts` (create, `applyPatch`), `ops/move.ts`, the import, the seed and the migration write both fields. Checked by `migrations.workflowVerify`.
@@ -126,7 +126,7 @@ Permissions that depend on the actor:
 
 | What | Who |
 |---|---|
-| Create, change, reorder teams | owner, `import` |
+| Create, change, reorder teams | owner, `import` (renaming the key of a team with issues: owner only) |
 | Set and remove logos | owner only |
 | Create and revoke agent keys | owner only |
 | Edit and remove comments | owner for all, otherwise only the author |
@@ -190,7 +190,7 @@ All require sign-in (exception: `health.status`). A test calls every exported pu
 | `issues.detail` (query) | `{ id }` | `null` or `{ id, identifier, body: { markdown, version, updatedAt, updatedBy }, comments` (the **newest 100** not removed, at most about 1 million characters, in chronological order)`, commentsHasMore` (older ones exist: `comments.page`)`, relations: [{ id, type, direction: 'out'|'in', createdAt, other: { id, identifier, title, status, teamId, deleted } }], pullRequests: [PR & { via, closes }], history` (newest 100 first)`, sprints: [sprintItem & { sprint: { _id, number, name, state } }] }` |
 | `issues.revisions` (query) | `{ id }` | earlier descriptions from `bodyRevisions`, newest first, at most 20: `[{ id, markdown` (full text)`, version, reason: 'import_overwrite'|'import_conflict', at, actor }]` |
 | `issues.search` (query) | `{ q, limit? ≤ 50 (default 20) }` | `[{ id, identifier, title, status, teamId, match: 'title'|'description'|'comment', snippet? }]`: title hits first, then description, then comment hits; no trash, no duplicates. Descriptions via `bodySearch` (the first 8000 characters) |
-| `issues.resolve` (query) | `{ identifier }`: "ACME-106", "acme106", an old identifier or an issue ID | `{ id, identifier }` or `null` |
+| `issues.resolve` (query) | `{ identifier }`: "ACME-106", "acme106", an old identifier (team move, import, or a key the team had before a rename) or an issue ID | `{ id, identifier }` or `null` |
 | `issues.create` | `{ issues: NewIssue[1..50], requestId? }` | `{ issues: [{ id, identifier }], warnings }` |
 | `issues.update` | `{ ids: Id[1..500], patch: IssuePatch, expect?: IssuePatch[]` (one per issue)`, requestId? }` | `{ updatedAt, changed` (number of changed issues)`, warnings }` |
 | `issues.revert` | `{ items: [{ id, patch, expect }][1..500], requestId? }` | `{ updatedAt, changed }` |
@@ -308,7 +308,7 @@ Relations: no self-reference, no second relation of the same type between the sa
 | Function | Arguments | Returns |
 |---|---|---|
 | `teams.create` | `{ key, name, hue?, dormant?, wiki?: 'on' \| 'only' }` (key is upper-cased) | `{ teamId, key }` |
-| `teams.update` | `{ teamId, key?, name?, hue?, dormant?, wiki?: 'on' \| 'only' \| null, defaultModel?: ModelChoice \| null }` (`'only'` only without open issues and active recurrences, `null` only without pages; `defaultModel` checked like an issue's model) | `{ teamId }` |
+| `teams.update` | `{ teamId, key?, name?, hue?, dormant?, wiki?: 'on' \| 'only' \| null, defaultModel?: ModelChoice \| null }` (`key`: free, not an old key of another team; with issues only by the owner, the old key goes to `previousKeys`; `'only'` only without open issues and active recurrences, `null` only without pages; `defaultModel` checked like an issue's model) | `{ teamId }` |
 | `teams.reorder` | `{ teamIds }` (missing ones go to the end) | `{ count }` |
 | `teams.generateLogoUploadUrl` | – | upload URL (string) |
 | `teams.setLogo` (action) | `{ teamId, storageId, variant: 'light'|'dark' }` | `{ teamId, contentType }` |
@@ -475,7 +475,7 @@ Pages per team. In code `wiki`/`article`; in the UI "Knowledge", "Page", "Topic"
 
 **Limits:** 200,000 characters of text, 2000 pages per team in the list, 20 levels, 500 pages per delete operation, 100 sources and 20 topics per page, 500 topics per team (`WIKI` in `shared/constants.ts`).
 
-**Links** (`ops/links.ts`, `shared/links.ts`): every write path for a text calls `syncArticleLinks`, just like `syncFileRefs` (description via `ops/bodies.ts`, adding/editing/removing comments, import, Linear files, page text). From issue texts, links to `/wiki/<id>` (`ARTICLE_PATH`) and the older `/wissen/<id>` count; from pages, also links `/issue/ACME-106` and bare identifiers of known teams (upper case, not inside code; "UTF-8" doesn't count). The `issueId` is stored, so a team move breaks nothing. An issue text without "/wissen/" and without old links costs one index query. Permanently deleting an issue or a page removes the links in both directions. Existing texts are not scanned retroactively.
+**Links** (`ops/links.ts`, `shared/links.ts`): every write path for a text calls `syncArticleLinks`, just like `syncFileRefs` (description via `ops/bodies.ts`, adding/editing/removing comments, import, Linear files, page text). From issue texts, links to `/wiki/<id>` (`ARTICLE_PATH`) and the older `/wissen/<id>` count; from pages, also links `/issue/ACME-106` and bare identifiers of known teams (upper case, not inside code; "UTF-8" doesn't count; a team's old keys count too). The `issueId` is stored, so a team move breaks nothing. An issue text without "/wissen/" and without old links costs one index query. Permanently deleting an issue or a page removes the links in both directions. Existing texts are not scanned retroactively.
 
 **Permanent deletion** (`purgeArticle`): text, search text, revisions, sources and image references; Linear links get `purgedAt`; a tombstone is written to `articleTombstones`. Sub-pages that were not deleted with it move to the top level.
 
@@ -539,7 +539,7 @@ If a mutation fails on write conflicts (Convex retried several times and gave up
 `internal.github.applyDelivery({ deliveryId, event, payload })` in one transaction:
 
 1. `githubDeliveries.by_delivery`: already there → `{ duplicate: true }`, no effect.
-2. `analyzePullRequestEvent` (`lib/github.ts`) with the team keys and only those old identifiers that appear in the PR. The payload is first reduced to the fields that are read (GitHub fields such as `_links` are not valid Convex values).
+2. `analyzePullRequestEvent` (`lib/github.ts`) with the team keys (current and `previousKeys`) and only those old identifiers that appear in the PR. The payload is first reduced to the fields that are read (GitHub fields such as `_links` are not valid Convex values).
 3. Create or update `pullRequests` by (`repo`, `number`). An older delivery (`updated_at`) overwrites nothing; `merged` stays `merged`.
 4. Create `issuePullRequests` per identifier; existing ones are only raised from `closes: false` to `true`, never removed. History `pull_request` with actor `github`.
 5. On merge, i.e. only on the **transition** of the stored PR state to `merged`: all links of the PR with `closes` → status `done` via `applyPatch` (actor `github`). Never for `done`, `canceled`, `duplicate` or issues in the trash. Further deliveries for an already merged PR (including a "Redeliver" after the 30-day list has expired, or a merged PR imported from Linear) close nothing; an issue reopened in the meantime stays open.

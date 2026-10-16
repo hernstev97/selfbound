@@ -1,6 +1,6 @@
 <script lang="ts">
-  // One team: name, key (only while it has no issues), color, dormant, light/dark logos with a
-  // preview on light and dark ground at 16/20/32 px. Upload: upload URL → file → check on the
+  // One team: name, key (renaming a team with issues asks first; old identifiers keep working),
+  // color, dormant, light/dark logos with a preview on light and dark ground at 16/20/32 px. Upload: upload URL → file → check on the
   // server (SVG/PNG, square, ≤ 256 KB, SVG without scripts); errors show at the field.
   import { ICON, type TeamBadge, type TeamId } from '@selfbound/core';
   import { t, tn } from '@selfbound/core/i18n';
@@ -11,6 +11,7 @@
   import HuePicker from './HuePicker.svelte';
   import Workflow from './Workflow.svelte';
   import TeamModel from './TeamModel.svelte';
+  import Dialog from './Dialog.svelte';
   import { admin } from './admin.ts';
   import type { LogoVariant } from '@selfbound/core/app/admin';
 
@@ -18,13 +19,19 @@
   const metaSlice = fromSlice(app.store.meta);
   const versionSlice = fromSlice(app.store.version);
   const team = $derived(metaSlice.current?.teams.find((x) => x.key === teamKey) ?? null);
-  const issueCount = $derived.by(() => {
+  const issues = $derived.by(() => {
     void versionSlice.current;
-    if (!team) return 0;
-    let n = 0;
-    for (const i of app.store.all()) if (i.teamId === team._id) n++;
-    return n;
+    if (!team) return { count: 0, last: 0 };
+    let count = 0;
+    let last = 0;
+    for (const i of app.store.all()) {
+      if (i.teamId !== team._id) continue;
+      count++;
+      last = Math.max(last, i.number);
+    }
+    return { count, last };
   });
+  const issueCount = $derived(issues.count);
 
   let busy = $state<LogoVariant | null>(null);
   let errors = $state<Record<LogoVariant, string | null>>({ light: null, dark: null });
@@ -47,10 +54,22 @@
     if (!error) app.toasts.show(t('Logo for {name} set', { name: team.name }));
   }
 
+  /** New key waiting for confirmation (the team has issues, so every identifier changes). */
+  let renaming = $state<string | null>(null);
+
   function setKey(next: string) {
     if (!team) return;
-    void admin.updateTeam(team._id as TeamId, { key: next.toUpperCase() }).then((r) => {
-      if (r) app.nav.go({ name: 'settings', section: 'teams', sub: next.toUpperCase() }, { replace: true });
+    const key = next.trim().toUpperCase();
+    if (key === team.key) return;
+    if (issueCount > 0) renaming = key;
+    else rename(key);
+  }
+
+  function rename(key: string) {
+    renaming = null;
+    if (!team) return;
+    void admin.updateTeam(team._id as TeamId, { key }).then((r) => {
+      if (r) app.nav.go({ name: 'settings', section: 'teams', sub: key }, { replace: true });
     });
   }
   const WIKI_MODES = [[null, t('Off')], ['on', t('Alongside issues')], ['only', t('Knowledge only')]] as const;
@@ -75,12 +94,8 @@
       <InlineText value={team.name} label={t('Name')} testid="team-name" save={(v) => admin.updateTeam(team!._id as TeamId, { name: v })} />
     </div>
     <div class="card-row">
-      <span class="t">{t('Key')}<div class="sub">{issueCount > 0 ? t('Fixed once the team has issues (identifiers stay stable).') : t('2–6 characters, capital letters and digits.')}</div></span>
-      {#if issueCount > 0}
-        <span class="mono value" data-testid="team-key">{team.key}</span>
-      {:else}
-        <InlineText value={team.key} label={t('Key')} testid="team-key" mono maxlength={6} save={setKey} />
-      {/if}
+      <span class="t">{t('Key')}<div class="sub">{issueCount > 0 ? t('Part of every identifier. After a rename, old identifiers keep working.') : t('2–6 characters, capital letters and digits.')}</div>{#if team.previousKeys?.length}<div class="sub" data-testid="team-previous-keys">{t('Previously: {keys}', { keys: team.previousKeys.join(', ') })}</div>{/if}</span>
+      <InlineText value={team.key} label={t('Key')} testid="team-key" mono maxlength={6} save={setKey} />
     </div>
     <div class="card-row">
       <span class="t">{t('Color')}<div class="sub">{t('For the placeholder without a logo.')}</div></span>
@@ -130,4 +145,16 @@
       </div>
     {/each}
   </div>
+{/if}
+
+{#if renaming && team}
+  {@const n = issues.last || 12}
+  <Dialog title={t('Rename {old} to {new}?', { old: team.key, new: renaming })} close={() => (renaming = null)} testid="team-rename-dialog">
+    <p class="dialog-text">{tn(issueCount, '{count} issue gets a new identifier, {old} becomes {new}.', '{count} issues get new identifiers, {old} becomes {new}.', { old: `${team.key}-${n}`, new: `${renaming}-${n}` })}</p>
+    <p class="dialog-text">{t('Old identifiers keep working: links, bookmarks, mentions, branch names, pull requests and agents still find the issues. {old} stays reserved for this team. Texts that mention {old} are not rewritten.', { old: team.key })}</p>
+    <div class="dialog-foot">
+      <button class="btn ghost" onclick={() => (renaming = null)}>{t('Cancel')}</button>
+      <button class="btn primary" data-testid="team-rename-confirm" onclick={() => rename(renaming!)}>{t('Rename key')}</button>
+    </div>
+  </Dialog>
 {/if}

@@ -495,7 +495,7 @@
   const mentions: EditorMentions = {
     teamKeys() {
       const meta = app.store.meta.get();
-      if (teamKeys?.meta !== meta) teamKeys = { meta, keys: new Set(meta?.teams.map((team) => team.key) ?? []) };
+      if (teamKeys?.meta !== meta) teamKeys = { meta, keys: new Set(meta?.teams.flatMap((team) => [team.key, ...(team.previousKeys ?? [])]) ?? []) };
       return teamKeys.keys;
     },
     info: (key) => mentionInfo(app.store, key),

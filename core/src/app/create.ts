@@ -163,7 +163,8 @@ export class CreateController {
       if (found !== undefined) ctx.priority = found;
     }
     if (params.team) {
-      const team = meta?.teams.find((t) => t.key === params.team.toUpperCase());
+      const key = this.app.store.currentTeamKey(params.team.toUpperCase());
+      const team = meta?.teams.find((t) => t.key === key);
       if (team) ctx.teamId = team._id;
     }
     if (params.label) {

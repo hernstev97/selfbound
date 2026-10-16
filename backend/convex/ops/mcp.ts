@@ -107,8 +107,11 @@ class Lookup {
   async team(teamId: Id<'teams'>) {
     return (await this.teams()).find((t) => t._id === teamId) ?? null;
   }
+  /** By current key, else by a key from before a rename (agents may still know the old one). */
   async teamByKey(key: string) {
-    const team = (await this.teams()).find((t) => t.key === key.toUpperCase());
+    const upper = key.toUpperCase();
+    const teams = await this.teams();
+    const team = teams.find((t) => t.key === upper) ?? teams.find((t) => t.previousKeys?.includes(upper));
     if (!team) fail('not_found', `Unknown team "${key}". Call list_teams for valid keys.`, { team: key });
     return team;
   }
@@ -760,6 +763,9 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     }
   }
   const reviewedByOwner = await isReviewedByOwner(ctx, id);
+  // Moves and imports leave alias rows; a renamed team's old keys give the same number.
+  const renamed = ((await lookup.team(issue.teamId))?.previousKeys ?? []).map((k) => identifierOf(k, issue.number));
+  const previousIdentifiers = [...new Set([...aliases.map((a) => a.key), ...renamed])];
   return {
     id,
     ...(await lookup.brief(issue)),
@@ -774,7 +780,7 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     // legacy-xlr8: deprecated name of reviewedByOwner (same value), kept because agents rely on it
     reviewedBySteven: reviewedByOwner,
     ...(await allowedStatuses(lookup, issue)),
-    ...(aliases.length ? { previousIdentifiers: aliases.map((a) => a.key) } : {}),
+    ...(previousIdentifiers.length ? { previousIdentifiers } : {}),
     description: { markdown: body?.markdown ?? '', version: body?.version ?? 0 },
     comments: await Promise.all(
       visibleComments
@@ -875,7 +881,7 @@ async function listTeams(ctx: QueryCtx, args: ToolArgs['list_teams']) {
   return {
     teams: teams
       .filter((t) => args.includeDormant !== false || !t.dormant)
-      .map((t) => ({ key: t.key, name: t.name, dormant: t.dormant, wiki: t.wiki ?? null })),
+      .map((t) => ({ key: t.key, name: t.name, dormant: t.dormant, wiki: t.wiki ?? null, ...(t.previousKeys?.length ? { previousKeys: t.previousKeys } : {}) })),
   };
 }
 

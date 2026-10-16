@@ -1,7 +1,7 @@
 // Navigation: current page, browser history and URL. The list holds filters and display; the
 // navigator writes them into the URL.
 import { Slice } from '../observable.ts';
-import { labelIdsFrom, pagePath, readLocation, samePage, writeLocation, type Location, type Page } from '../route.ts';
+import { labelIdsFrom, pagePath, readLocation, samePage, withCurrentTeamKeys, writeLocation, type Location, type Page } from '../route.ts';
 import type { Filters, Grouping, Ordering, ViewRoute } from '../types.ts';
 import { VIEWS } from '../views.ts';
 import type { App } from './index.ts';
@@ -62,10 +62,14 @@ export class Navigator {
       this.#apply(readLocation(new URL(this.win!.location.href)), true);
     };
     this.win.addEventListener('popstate', onPop);
+    const stopRenames = this.#followRenames();
     // Reloaded on an overlay entry: the overlay is closed, so leave the entry.
     if (isOverlayState(this.win.history.state)) this.#leaveOverlayEntry();
     this.#apply(readLocation(new URL(this.win.location.href)), false);
-    return () => this.win?.removeEventListener('popstate', onPop);
+    return () => {
+      this.win?.removeEventListener('popstate', onPop);
+      stopRenames();
+    };
   }
 
   #apply(loc: Location, fromHistory: boolean) {
@@ -81,7 +85,29 @@ export class Navigator {
     }
     if (fromHistory) this.#depth = Math.max(0, this.#depth - 1);
     this.#show(page, { filters: this.#labelIds(loc.filters), quick: loc.quick, group: loc.group, sub: loc.sub, order: loc.order, layout: loc.layout });
-    if (!fromHistory) this.syncUrl('replace');
+    // Also from history if #show replaced an old team key: the address shows the current one.
+    if (!fromHistory || !samePage(this.page.get(), page)) this.syncUrl('replace');
+  }
+
+  /** The current key for team keys from before a rename (old bookmarks, saved views, links). */
+  #currentKeys(page: Page, opts: GoOptions): [Page, GoOptions] {
+    const store = this.app.store;
+    if (store.renamedKeys().size === 0) return [page, opts];
+    const current = (key: string) => store.currentTeamKey(key);
+    const next = withCurrentTeamKeys(page, current);
+    const team = opts.filters?.team;
+    if (!team?.some((k) => current(k) !== k)) return [next, opts];
+    return [next, { ...opts, filters: { ...opts.filters!, team: [...new Set(team.map(current))] } }];
+  }
+
+  /** A rename arriving later (meta from the server, another device): move to the current key. */
+  #followRenames() {
+    return this.app.store.meta.subscribe(() => {
+      const page = this.page.get();
+      const view = this.app.main.view.get();
+      const [target, opts] = this.#currentKeys(page, { filters: view.filters, quick: view.quick });
+      if (target !== page || opts.filters !== view.filters) this.go(target, { ...opts, replace: true });
+    });
   }
 
   /**
@@ -117,6 +143,7 @@ export class Navigator {
   }
 
   #show(page: Page, opts: GoOptions = {}) {
+    [page, opts] = this.#currentKeys(page, opts);
     this.app.closeOverlays();
     if (page.name === 'view') {
       this.app.main.setRoute(page.view, opts);

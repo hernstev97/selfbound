@@ -3,7 +3,7 @@ import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { readCounter, SEQ, setCounter, takeCounter, teamCounter } from '../lib/counters';
 import { hashText, sameValue, stable } from '../lib/equal';
-import { aliasKey } from '../lib/identifiers';
+import { aliasKey, teamByKey } from '../lib/identifiers';
 import { lastRank, rankBetween } from '../lib/rank';
 import { ensureTeamStates, stateFields, type State as WorkflowState } from '../lib/workflow';
 import { bucketOf, identifierOf, LIMITS, type Priority, type Status } from '../shared/constants';
@@ -196,11 +196,9 @@ async function importTeam(s: State, p: ImportTeam): Promise<Outcome> {
   if (team && link?.hash === hash) return 'unchanged';
   let adopted = false;
   if (!team) {
-    // The owner already created a team with this key: adopt it instead of creating a duplicate.
-    team = await ctx.db
-      .query('teams')
-      .withIndex('by_key', (q) => q.eq('key', p.key.toUpperCase()))
-      .first();
+    // The owner already created a team with this key (or renamed one away from it): adopt it
+    // instead of creating a duplicate.
+    team = await teamByKey(ctx, p.key.toUpperCase());
     adopted = team !== null;
   }
   if (!team) {

@@ -142,6 +142,14 @@ describe('search (identifiers with 2–6 characters)', () => {
     expect(search.exact(q)?.key).toBe(key);
   });
 
+  test('a key from before a rename finds the issue under its current key', () => {
+    const renamed = new IssueSearch();
+    renamed.prepare(1, [...issues, ...all], new Map([['OLD', 'ACME']]));
+    expect(renamed.exact('old-106')?.key).toBe('ACME-106');
+    expect(renamed.exact('OLD106')?.key).toBe('ACME-106');
+    expect(renamed.exact('old-999')).toBeNull();
+  });
+
   test('candidates: keys with digits are all tried', () => {
     expect(identifierCandidates('ab12')).toEqual(['AB-12', 'AB1-2']);
     expect(identifierCandidates('acme-106')).toEqual(['ACME-106']);

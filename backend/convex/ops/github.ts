@@ -81,9 +81,12 @@ export function reduceGithubPayload(event: string, payload: unknown): Json {
 
 const CANDIDATE_RE = /([A-Za-z][A-Za-z0-9]{1,5})-(\d{1,6})/g;
 
-/** Team keys and the old identifiers that actually occur in the PR (instead of all aliases). */
+/**
+ * Team keys (including those from before a rename, resolveIssue maps them) and the old identifiers
+ * that actually occur in the PR (instead of all aliases).
+ */
 async function knownKeys(ctx: QueryCtx, payload: Json): Promise<KnownKeys> {
-  const teams = (await ctx.db.query('teams').take(500)).map((t) => t.key);
+  const teams = (await ctx.db.query('teams').take(500)).flatMap((t) => [t.key, ...(t.previousKeys ?? [])]);
   const pr = isObj(payload.pull_request) ? payload.pull_request : {};
   const head = isObj(pr.head) ? pr.head : {};
   const text = [head.ref, pr.title, pr.body].filter((s): s is string => typeof s === 'string').join('\n');

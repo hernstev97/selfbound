@@ -13,8 +13,9 @@ marked **write** do.
 ## How agents refer to things
 
 - **Issues** by identifier, such as `ACME-42`. Spelling is forgiving (`acme42` and `acme 42` work), and
-  old identifiers of issues that moved to another team still resolve.
-- **Teams** by key, such as `ACME`.
+  old identifiers still resolve: those of issues that moved to another team, and those with a team's old key
+  after a rename.
+- **Teams** by key, such as `ACME`. After a rename the old key works too; `list_teams` shows it as `previousKeys`.
 - **Labels, projects and statuses** by name, case-insensitive. Each team has its own statuses; agents
   can also use a status key (`triage`, `backlog`, `todo`, `in_progress`, `in_review`, `done`, `canceled`,
   `duplicate`), which maps to the team's matching status.

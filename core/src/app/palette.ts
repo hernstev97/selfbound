@@ -79,6 +79,9 @@ const TITLES: Record<PaletteKind, [string, string]> = {
   article: [msg('Link wiki page'), msg('Search page (title or text) …')],
 };
 
+/** Search words of a team: its key and the keys it had before a rename. */
+const teamWords = (team: { key: string; previousKeys?: string[] }) => [team.key, ...(team.previousKeys ?? [])].join(' ');
+
 /** Weekday names Monday … Sunday in the given locale (2024-01-01 was a Monday). */
 function weekdayNames(locale: string): string[] {
   const format = new Intl.DateTimeFormat(locale, { weekday: 'long' });
@@ -745,7 +748,7 @@ export class PaletteController {
         const current = draft ? draft.teamId : oneTeam;
         // Wiki-only teams take no issues.
         for (const team of [...(meta?.teams ?? [])].filter((x) => x.wiki !== 'only').sort((a, b) => Number(a.dormant) - Number(b.dormant))) {
-          add({ id: `t:${team._id}`, label: team.name, detail: team.key, team: this.app.list.teamBadge(team._id), checked: current === team._id, keywords: team.key }, () => {
+          add({ id: `t:${team._id}`, label: team.name, detail: team.key, team: this.app.list.teamBadge(team._id), checked: current === team._id, keywords: teamWords(team) }, () => {
             if (target.kind === 'draft') this.app.create.update({ teamId: team._id });
             else this.requestMove(target.ids, team._id);
           });
@@ -785,7 +788,7 @@ export class PaletteController {
     const current = this.app.currentTeam();
     for (const team of [...(this.app.store.meta.get()?.teams ?? [])].sort((a, b) => Number(a.dormant) - Number(b.dormant))) {
       const id = `st:${team._id}`;
-      items.push({ id, label: team.name, detail: team.dormant ? t('{key} · dormant', { key: team.key }) : team.key, team: this.app.list.teamBadge(team._id), checked: team.key === current, keywords: team.key });
+      items.push({ id, label: team.name, detail: team.dormant ? t('{key} · dormant', { key: team.key }) : team.key, team: this.app.list.teamBadge(team._id), checked: team.key === current, keywords: teamWords(team) });
       run.set(id, () => this.app.switchTeam(team.key));
     }
     return { items, run, multi: false };
@@ -850,7 +853,7 @@ export class PaletteController {
     // Accept into another team (status backlog).
     const otherTeam = t('Into another team');
     for (const team of (this.app.store.meta.get()?.teams ?? []).filter((t) => !t.dormant && t.wiki !== 'only' && !issues.every((i) => i.teamId === t._id))) {
-      items.push({ id: `mt:${team._id}`, label: t('Accept into {team}', { team: team.name }), detail: team.key, team: this.app.list.teamBadge(team._id), keywords: `team ${team.key}`, section: otherTeam });
+      items.push({ id: `mt:${team._id}`, label: t('Accept into {team}', { team: team.name }), detail: team.key, team: this.app.list.teamBadge(team._id), keywords: `team ${teamWords(team)}`, section: otherTeam });
       run.set(`mt:${team._id}`, () => {
         this.app.edit.patch(target.ids, { status: 'backlog' }, { label: t('Accepted'), quiet: true });
         this.app.edit.moveTeam(target.ids, team._id);
@@ -910,7 +913,7 @@ export class PaletteController {
     // Navigation to teams and views
     for (const team of this.app.store.meta.get()?.teams ?? []) {
       const id = `t:${team.key}`;
-      items.push({ id, label: t('Go to team: {team}', { team: team.name }), detail: team.key, keywords: team.key, team: this.app.list.teamBadge(team._id) });
+      items.push({ id, label: t('Go to team: {team}', { team: team.name }), detail: team.key, keywords: teamWords(team), team: this.app.list.teamBadge(team._id) });
       run.set(id, () => this.app.nav.goView({ kind: 'active', team: team.key }));
     }
     return { items, run, multi: false };
@@ -989,7 +992,7 @@ export class PaletteController {
       }
     }
     if (flat || field === 'priority') for (const p of PRIORITY_ORDER) add({ id: `fp:${p}`, label: `${pre(msg('Priority'))}${PRIORITY_LABEL[p]}`, icon: PRIORITY_ICON[p], checked: f.priority.includes(p as Priority), keywords: `prio ${PRIORITY_KEYWORDS[p]}` }, () => list.toggleFilter('priority', p));
-    if (flat || field === 'team') for (const tm of meta?.teams ?? []) add({ id: `ft:${tm.key}`, label: `${pre(msg('Team'))}${tm.name}`, detail: tm.key, team: list.teamBadge(tm._id), checked: f.team.includes(tm.key), keywords: tm.key }, () => list.toggleFilter('team', tm.key));
+    if (flat || field === 'team') for (const tm of meta?.teams ?? []) add({ id: `ft:${tm.key}`, label: `${pre(msg('Team'))}${tm.name}`, detail: tm.key, team: list.teamBadge(tm._id), checked: f.team.includes(tm.key), keywords: teamWords(tm) }, () => list.toggleFilter('team', tm.key));
     if (flat || field === 'label') for (const l of meta?.labels ?? []) add({ id: `fl:${l._id}`, label: `${pre(msg('Label'))}${l.name}`, dot: l.hue, checked: f.label.includes(l._id) }, () => list.toggleFilter('label', l._id));
     if (flat || field === 'project') {
       add({ id: 'fpr:none', label: `${pre(msg('Project'))}${t('No project')}`, icon: ICON.projects, checked: f.project.includes('none') }, () => list.toggleFilter('project', 'none'));
@@ -1036,7 +1039,7 @@ export class PaletteController {
 
   #issueItems(kind: PaletteKind, query: string): MenuItem[] {
     const store = this.app.store;
-    this.#search.prepare(store.version.get(), store.all());
+    this.#search.prepare(store.version.get(), store.all(), store.renamedKeys());
     // Pickers leave out the issue they act on; search and the command menu find every issue (also the focused one).
     const exclude = new Set(this.#target.kind === 'issues' && kind !== 'search' && kind !== 'command' ? this.#target.ids : []);
     const hits = query ? this.#search.search(query, MAX_ITEMS) : kind === 'search' ? this.recent() : this.recent().filter((i) => !exclude.has(i._id));

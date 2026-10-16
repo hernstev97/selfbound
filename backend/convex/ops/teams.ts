@@ -3,6 +3,7 @@ import type { MutationCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { fail, invalid, notFound } from '../lib/errors';
 import type { LogoVariant } from '../lib/validators';
+import { teamByPreviousKey } from '../lib/identifiers';
 import { ensureTeamStates } from '../lib/workflow';
 import { isOwnerKind, TEAM_KEY_RE, type ProjectState } from '../shared/constants';
 import { sameChoice, type ModelChoice } from '../shared/models';
@@ -30,12 +31,17 @@ function normalizeKey(key: string) {
   return upper;
 }
 
+/** Free = no other team uses the key now or used it before (its old identifiers point there). */
 async function assertKeyFree(ctx: MutationCtx, key: string, except?: Id<'teams'>) {
   const existing = await ctx.db
     .query('teams')
     .withIndex('by_key', (q) => q.eq('key', key))
     .first();
   if (existing && existing._id !== except) invalid(`The key ${key} is already taken.`);
+  const former = await teamByPreviousKey(ctx, key);
+  if (former && former._id !== except) {
+    invalid(`The key ${key} was used by ${former.name} before: old identifiers like ${key}-1 still lead there.`, { teamId: former._id });
+  }
 }
 
 async function hasIssues(ctx: MutationCtx, teamId: Id<'teams'>) {
@@ -122,13 +128,16 @@ export async function updateTeam(
   if (args.key !== undefined) {
     const key = normalizeKey(args.key);
     if (key !== team.key) {
-      // The key stays editable as long as the team has no issues (a knowledge-only team usually
-      // has none). Pages reference the team ID, not the key.
-      if (await hasIssues(ctx, team._id)) {
-        invalid(`The key ${team.key} can no longer be changed: the team already has issues.`);
-      }
       await assertKeyFree(ctx, key, team._id);
+      // Issues, pages and links store the team ID, so only identifiers change. With issues, the old
+      // key stays with the team, so "OLD-12" keeps resolving. Taking back an old key releases it.
+      const previous = (team.previousKeys ?? []).filter((k) => k !== key);
+      if (await hasIssues(ctx, team._id)) {
+        if (!isOwnerKind(actor.kind)) fail('access_denied', 'Only the owner can rename the key of a team with issues.');
+        previous.push(team.key);
+      }
       patch.key = key;
+      patch.previousKeys = previous.length ? previous : undefined;
     }
   }
   if (args.name !== undefined) patch.name = checkName(args.name, 'The team');

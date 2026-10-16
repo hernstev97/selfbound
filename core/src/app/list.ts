@@ -750,7 +750,7 @@ export class ListController {
   displayFor(route: ViewRoute): Display {
     const def = VIEWS[route.kind];
     const base = def.display(route);
-    const saved = readJson<Partial<Display>>(`selfbound:display:${viewKey(route)}`);
+    const saved = this.#readView<Partial<Display>>('selfbound:display:', route);
     if (!saved) return base;
     const grouping = saved.grouping && def.groupings.includes(saved.grouping) ? saved.grouping : base.grouping;
     return {
@@ -885,13 +885,25 @@ export class ListController {
     for (const id of ids) this.#keep.add(id);
   }
 
+  /** Saved per view; after a team key rename, what was saved under an old key until the view saves again. */
+  #readView<T>(prefix: string, route: ViewRoute): T | null {
+    const saved = readJson<T>(prefix + viewKey(route));
+    if (saved !== null || !route.team) return saved;
+    const team = this.app.store.meta.get()?.teams.find((t) => t.key === route.team);
+    for (const old of [...(team?.previousKeys ?? [])].reverse()) {
+      const before = readJson<T>(prefix + viewKey({ ...route, team: old }));
+      if (before !== null) return before;
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------- Groups
 
   #collapsedFor(route: ViewRoute): Set<string> {
     const key = viewKey(route);
     let set = this.#collapsed.get(key);
     if (!set) {
-      set = new Set(readJson<string[]>(`selfbound:collapsed:${key}`) ?? []);
+      set = new Set(this.#readView<string[]>('selfbound:collapsed:', route) ?? []);
       this.#collapsed.set(key, set);
     }
     return set;

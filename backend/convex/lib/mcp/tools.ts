@@ -574,7 +574,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   list_teams: {
     title: 'List teams',
     description:
-      'List teams with key, name, whether they are dormant (inactive) and their knowledge area (`wiki`: "on" next to issues, "only" knowledge without issues, null none). Use the key in other tools.',
+      'List teams with key, name, whether they are dormant (inactive) and their knowledge area (`wiki`: "on" next to issues, "only" knowledge without issues, null none). Use the key in other tools. A renamed team lists its old keys in `previousKeys`; identifiers and team references with an old key still work.',
     annotations: READ,
   },
   list_projects: {

@@ -219,6 +219,7 @@ export default {
   'Knowledge only': 'Nur Wissen',
   'The key needs 2 to 6 characters: capital letters and digits, starting with a letter.': 'Das Kürzel braucht 2 bis 6 Zeichen: Großbuchstaben und Ziffern, am Anfang ein Buchstabe.',
   'The key {key} is already taken.': 'Das Kürzel {key} ist schon vergeben.',
+  '{key} was the key of {team}: old identifiers like {example} still lead there.': '{key} war das Kürzel von {team}: alte Kennungen wie {example} führen weiter dorthin.',
   'The dialog could not be loaded completely. Please try again.': 'Der Dialog konnte nicht vollständig geladen werden. Bitte noch einmal versuchen.',
   'Team {key} created, but the logo is missing: {error}': 'Team {key} angelegt, aber das Logo fehlt: {error}',
   'Team {key} created': 'Team {key} angelegt',

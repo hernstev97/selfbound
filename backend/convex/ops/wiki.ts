@@ -5,6 +5,7 @@ import { dayInZone, DAY_MS } from '../lib/dates';
 import { hashText, sameValue, stable } from '../lib/equal';
 import { fail, invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
+import { teamByKey } from '../lib/identifiers';
 import { rankBetween } from '../lib/rank';
 import { hasAllTerms, searchTerms, snippet } from '../lib/search';
 import type { SourceInput, SourcePatch } from '../lib/validators';
@@ -968,10 +969,7 @@ const IMPORT_ACTOR: Actor = { kind: 'import' };
  * added the first time.
  */
 export async function importDocument(ctx: MutationCtx, args: ImportDocumentArgs) {
-  const team = await ctx.db
-    .query('teams')
-    .withIndex('by_key', (q) => q.eq('key', args.teamKey.trim().toUpperCase()))
-    .unique();
+  const team = await teamByKey(ctx, args.teamKey.trim().toUpperCase());
   if (!team) notFound(`Team ${args.teamKey}`);
   let enabledWiki = false;
   if (!team.wiki) {
