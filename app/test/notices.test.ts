@@ -1,5 +1,7 @@
 // Third-party notices (vite.notices.ts) and the source link (vite.plugins.ts sourceUrl), SELF-83.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { collectNotices, licenseAllowed, mergeNotices, type Notice, packageOf, parseGrammarNotice, renderNotices } from '../vite.notices.ts';
@@ -47,6 +49,22 @@ describe('collectNotices', () => {
     expect(byKind('grammar')[0]).toMatchObject({ name: 'kotlin', license: 'MIT' });
     expect(notices.every((n) => licenseAllowed(n.license))).toBe(true);
   });
+  it('keeps every shipped version of a package, each with its own license', () => {
+    const root = mkdtempSync(join(tmpdir(), 'selfbound-notices-'));
+    const pkg = (version: string, license: string) => {
+      const dir = join(root, 'node_modules/.pnpm', `dup@${version}`, 'node_modules/dup');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'package.json'), JSON.stringify({ name: 'dup', version, license }));
+      return join(dir, 'index.js');
+    };
+    const notices = collectNotices([pkg('1.0.0', 'MIT'), pkg('2.0.0', 'BUSL-1.1')]);
+    expect(notices.map((n) => `${n.version} ${n.license}`).sort()).toEqual(['1.0.0 MIT', '2.0.0 BUSL-1.1']);
+  });
+  it('reports what it cannot attribute instead of skipping it', () => {
+    const problems: string[] = [];
+    collectNotices(['\0some-plugin/virtual.js', '/nowhere/node_modules/ghost/index.js'], problems);
+    expect(problems).toHaveLength(2);
+  });
   it('credits Vite for its injected helpers, without the licenses of its own dependencies', () => {
     const [vite] = collectNotices(['\0vite/preload-helper.js']);
     expect(vite).toMatchObject({ name: 'vite', license: 'MIT' });
@@ -75,7 +93,7 @@ describe('sourceUrl', () => {
     expect(sourceUrl({ SELFBOUND_SOURCE_URL: ' https://git.example.org/fork/ ' })).toBe('https://git.example.org/fork');
   });
   it('rejects values that are not a plain http(s) URL', () => {
-    for (const bad of ['javascript:alert(1)', 'git@github.com:x/y.git', 'https://x.example/"onmouseover=1', 'https://x.example/a b']) expect(() => sourceUrl({ SELFBOUND_SOURCE_URL: bad })).toThrow(/SELFBOUND_SOURCE_URL/);
+    for (const bad of ['javascript:alert(1)', 'git@github.com:x/y.git', 'https://x.example/"onmouseover=1', 'https://x.example/a b', 'https://x.example/$`', 'https://x.example/a\\b']) expect(() => sourceUrl({ SELFBOUND_SOURCE_URL: bad })).toThrow(/SELFBOUND_SOURCE_URL/);
   });
   it('the sign-in page carries the placeholder and the link to the notices', () => {
     const html = readFileSync(`${app}welcome.html`, 'utf8');

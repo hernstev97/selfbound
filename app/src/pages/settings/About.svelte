@@ -15,7 +15,7 @@
 <div class="card-list" data-testid="about">
   <div class="card-row">
     <span class="t">{t('License')}<div class="sub">GNU Affero General Public License v3.0 (AGPL-3.0)</div></span>
-    <a class="btn small" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer"><span class="icon">{@html ICON.open}</span>{t('Read')}</a>
+    <a class="btn small" href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer"><span class="icon">{@html ICON.open}</span>{tc('verb', 'Read')}</a>
   </div>
   <div class="card-row">
     <span class="t">{t('Source code')}<div class="sub">{t('Everyone who uses this instance can get its source code here. If you run a changed version, the link points to your changes (instance setting sourceUrl).')}<br /><span class="mono" data-testid="about-source-url">{source}</span></div></span>

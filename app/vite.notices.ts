@@ -4,7 +4,7 @@
 // /third-party-notices.json (machine-readable, and how the second build merges into the first). The
 // build fails when a shipped license is not on the AGPL-3.0-compatible allowlist below.
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 
@@ -112,10 +112,14 @@ export function parseGrammarNotice(notice: string): Map<string, { license: strin
   return out;
 }
 
-/** Notices for the module ids of one build. */
-export function collectNotices(ids: Iterable<string>): Notice[] {
+/**
+ * Notices for the module ids of one build. `problems` collects what cannot be attributed: a package
+ * without package.json, a virtual module of unknown origin.
+ */
+export function collectNotices(ids: Iterable<string>, problems: string[] = []): Notice[] {
   const notices = new Map<string, Notice>();
-  const packageDirs = new Map<string, string>();
+  // By directory: a build can ship two versions of one package, each with its own license.
+  const packageDirs = new Set<string>();
   const themes = new Set<string>();
   const grammars = new Set<string>();
   for (const raw of ids) {
@@ -123,7 +127,11 @@ export function collectNotices(ids: Iterable<string>): Notice[] {
     if (helper) {
       // The helper's package as the app's build resolves it (vite, and rolldown next to it).
       const vite = realpathSync(fileURLToPath(new URL('./node_modules/vite', import.meta.url)));
-      packageDirs.set(helper, helper === 'vite' ? vite : join(vite, '..', 'rolldown'));
+      packageDirs.add(helper === 'vite' ? vite : join(vite, '..', 'rolldown'));
+      continue;
+    }
+    if (raw.startsWith('\0')) {
+      problems.push(`virtual module of unknown origin: ${raw.slice(1)}`);
       continue;
     }
     const id = raw.split('?')[0]!.replaceAll('\\', '/');
@@ -132,9 +140,11 @@ export function collectNotices(ids: Iterable<string>): Notice[] {
     const theme = id.startsWith(THEMES_DIR) ? /^([a-z0-9-]+)\/[^/]+$/.exec(id.slice(THEMES_DIR.length))?.[1] : undefined;
     if (theme) themes.add(theme);
     const pkg = packageOf(id);
-    if (pkg && existsSync(join(pkg.dir, 'package.json'))) packageDirs.set(pkg.name, pkg.dir);
+    if (!pkg) continue;
+    if (existsSync(join(pkg.dir, 'package.json'))) packageDirs.add(pkg.dir);
+    else problems.push(`no package.json for ${pkg.name} (${id})`);
   }
-  for (const dir of packageDirs.values()) {
+  for (const dir of packageDirs) {
     const notice = packageNotice(dir);
     notices.set(`package:${notice.name}@${notice.version}`, notice);
   }
@@ -193,30 +203,36 @@ export function renderNotices(notices: Notice[], sourceUrl: string): string {
  * sign-in page is built second, into the app's output).
  */
 export function thirdPartyNotices(options: { sourceUrl: string; merge?: boolean }): Plugin {
+  let root = '';
   let outDir = '';
+  // CSS from packages is inlined into CSS assets; its JS stub renders to nothing, so record it here.
+  const cssIds = new Set<string>();
   return {
     name: 'selfbound-third-party-notices',
     apply: 'build',
     configResolved(config) {
-      outDir = join(config.root, config.build.outDir);
+      root = config.root;
+      outDir = resolve(config.root, config.build.outDir);
+    },
+    transform(_code, id) {
+      if (/\.css($|\?)/.test(id) && packageOf(id)) cssIds.add(id);
+      return null;
     },
     generateBundle(_options, bundle) {
-      const ids = new Set<string>();
+      const ids = new Set<string>(cssIds);
       for (const file of Object.values(bundle)) {
         if (file.type === 'chunk') {
           for (const [id, module] of Object.entries(file.modules)) if (module.renderedLength > 0) ids.add(id);
         } else {
-          for (const id of file.originalFileNames) ids.add(id);
+          // Relative to the project root
+          for (const id of file.originalFileNames) ids.add(resolve(root, id));
         }
       }
       const earlier = options.merge && existsSync(join(outDir, JSON_FILE)) ? (JSON.parse(readFileSync(join(outDir, JSON_FILE), 'utf8')) as Notice[]) : [];
-      const notices = mergeNotices(earlier, collectNotices(ids));
-      const bad = notices.filter((n) => !licenseAllowed(n.license));
-      if (bad.length) {
-        this.error(
-          `Shipped third-party code with a license that is missing or not on the allowlist (app/vite.notices.ts):\n${bad.map((n) => `  ${n.kind} ${n.name}${n.version ? `@${n.version}` : ''}: ${n.license || 'none'}`).join('\n')}`,
-        );
-      }
+      const problems: string[] = [];
+      const notices = mergeNotices(earlier, collectNotices(ids, problems));
+      problems.push(...notices.filter((n) => !licenseAllowed(n.license)).map((n) => `${n.kind} ${n.name}${n.version ? `@${n.version}` : ''}: license ${n.license || 'none'}`));
+      if (problems.length) this.error(`Shipped third-party code without an acceptable license (app/vite.notices.ts):\n${problems.map((p) => `  ${p}`).join('\n')}`);
       this.emitFile({ type: 'asset', fileName: JSON_FILE, source: `${JSON.stringify(notices)}\n` });
       this.emitFile({ type: 'asset', fileName: TEXT_FILE, source: renderNotices(notices, options.sourceUrl) });
     },

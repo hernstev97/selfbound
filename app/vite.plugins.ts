@@ -145,7 +145,7 @@ export const DEFAULT_SOURCE_URL = 'https://github.com/hernstev97/selfbound';
 /** Where users of this instance get its source code: `SELFBOUND_SOURCE_URL` (instance field sourceUrl), else upstream. */
 export function sourceUrl(env: Record<string, string | undefined>): string {
   const value = env.SELFBOUND_SOURCE_URL?.trim() || DEFAULT_SOURCE_URL;
-  if (!/^https?:\/\/[^\s"'<>&]+$/.test(value)) throw new Error(`SELFBOUND_SOURCE_URL must be an http(s) URL like https://github.com/you/selfbound, got "${value}"`);
+  if (!/^https?:\/\/[^\s"'<>&$`\\]+$/.test(value)) throw new Error(`SELFBOUND_SOURCE_URL must be an http(s) URL like https://github.com/you/selfbound, got "${value}"`);
   return value.replace(/\/+$/, '');
 }
 
@@ -154,6 +154,6 @@ export function sourceLinks(url: string): Plugin {
   return {
     name: 'selfbound-source-links',
     config: () => ({ define: { __SELFBOUND_SOURCE_URL__: JSON.stringify(url) } }),
-    transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%SELFBOUND_SOURCE_URL%', url) },
+    transformIndexHtml: { order: 'pre', handler: (html) => html.replaceAll('%SELFBOUND_SOURCE_URL%', () => url) },
   };
 }
