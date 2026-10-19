@@ -23,7 +23,7 @@ function fixture(): ExportTables {
   tables.workflowStates = [row('st1', { teamId: 'team1', name: 'In Progress', type: 'started', position: 0, createdAt: T0, updatedAt: T0 })];
   tables.labels = [row('lab1', { name: 'Bug', hue: 10 })];
   tables.projects = [row('proj1', { teamId: 'team1', name: 'Launch', state: 'active', order: 0, updatedAt: T0 })];
-  tables.sprints = [row('spr1', { number: 1, name: 'Sprint 1', goal: 'Ship', startDate: '2026-10-19', endDate: '2026-10-30', state: 'active', source: 'selfbound', updatedAt: T0 })];
+  tables.sprints = [row('spr1', { number: 1, name: 'Sprint 1', goal: 'a\\|b', startDate: '2026-10-19', endDate: '2026-10-30', state: 'active', source: 'selfbound', updatedAt: T0 })];
   const issue = { teamId: 'team1', bucket: 0, rank: 'a0', labelIds: ['lab1'], status: 'in_progress', priority: 2, createdBy: owner, createdAt: T0, updatedAt: T0 };
   tables.issues = [
     row('iss1', { ...issue, seq: 1, number: 1, title: 'Fix the login / sign-in', stateId: 'st1', projectId: 'proj1', sprintId: 'spr1', dueDate: '2026-10-23' }),
@@ -130,6 +130,8 @@ describe('buildExport', () => {
     expect(text(entries, 'markdown/knowledge/ACME/Guide/Setup.md')).toContain(`![x](../../../../files/images/${TOKEN}.png)`);
     expect(entries.has('markdown/knowledge/ACME/Guide/Setup (2).md')).toBe(true);
     expect(text(entries, 'markdown/README.md')).toContain('| Issues | 2 (+1 in the trash) |');
+    // Table cells: pipes and backslashes escaped (sprint goal "a\|b" stays one cell).
+    expect(text(entries, 'markdown/README.md')).toContain('| a\\\\\\|b |');
   });
 
   test('files that cannot be read are listed, image links then keep the instance URL', async () => {

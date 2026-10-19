@@ -351,7 +351,8 @@ export function articleMarkdown(article: Doc<'articles'>, index: ExportIndex, pa
 }
 
 function table(head: string[], rows: string[][]): string {
-  const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  // Backslashes first, so a text ending in "\" cannot undo the escaped pipe after it.
+  const cell = (s: string) => s.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
   return [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.map(cell).join(' | ')} |`)].join('\n');
 }
 
