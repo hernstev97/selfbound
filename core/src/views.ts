@@ -254,7 +254,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
     closedOption: false,
     snoozed: 'show',
     get emptyText() {
-      return t('All issues of this sprint are done or canceled. You can complete it.');
+      return t('All issues of this sprint are done or canceled. You can close it.');
     },
   },
   project: {

@@ -718,7 +718,7 @@ change reaches you: after it, an old name is simply ignored. Decision record:
 | GitHub Recent Deliveries shows **401** | secret differs between GitHub and backend | set the secret in both again, then "Redeliver" |
 | GitHub shows **500** or a timeout | backend problem | Convex dashboard → Logs, then "Redeliver" in GitHub; duplicates have no effect |
 | A merged PR does not close the issue | identifier only in title/body without "Fixes", issue canceled/duplicate, or the PR was merged before (import or redelivery) | intended: only the first merge closes. Complete the issue by hand or add "Fixes ACME-…" to the PR body |
-| "No access" after sign-in | Convex rejects the Clerk token: `CLERK_JWT_ISSUER_DOMAIN` differs from the token's issuer, the Clerk JWT template `convex` is missing, or the backend was not redeployed after changing `CLERK_JWT_ISSUER_DOMAIN` | fix the issuer or template, then `node tooling/cloud.mjs deploy` |
+| "No access" after sign-in | Convex rejects the Clerk token: `CLERK_JWT_ISSUER_DOMAIN` differs from the token's issuer, the Clerk JWT template `convex` is missing, or the backend was not redeployed after changing `CLERK_JWT_ISSUER_DOMAIN` | fix the issuer or the template; after changing `CLERK_JWT_ISSUER_DOMAIN`, redeploy (`node tooling/cloud.mjs deploy`) |
 | App stays empty after sign-in (no "No access") | your `tokenIdentifier` is not in `SELFBOUND_OWNER_IDS` (often the issuer part after a Clerk domain change): every query fails with `access_denied` | fix `SELFBOUND_OWNER_IDS`; takes effect right away |
 | `/health` does not answer | backend not running (locally: not started) | locally `pnpm dev`; in the cloud check Convex status |
 | Import fails | see [Importing from Linear](#importing-from-linear) | run `push` again |

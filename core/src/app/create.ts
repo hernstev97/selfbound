@@ -374,7 +374,7 @@ export class CreateController {
     });
     if (more) {
       const next = { ...d, id: emptyDraft().id, title: '', description: '', updatedAt: Date.now() };
-      this.state.set({ ...s, open: true, draft: next, createMore: true, error: null, focusTick: s.focusTick + 1 });
+      this.state.set({ ...s, open: true, draft: next, error: null, focusTick: s.focusTick + 1 });
     } else {
       this.state.set({ ...s, open: false, draft: emptyDraft(), error: null });
     }
