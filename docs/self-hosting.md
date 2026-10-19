@@ -203,6 +203,8 @@ sign-in after an update, so a different browser does not choose it:
   ([operations.md](operations.md#installable-app-and-push-notifications)).
 - GitHub pull requests: token, webhook secret, webhooks ([operations.md](operations.md#github)).
 - Nightly encrypted backups with a restore test ([backup.md](backup.md)).
+- Your data as JSON and Markdown at any time: Settings → Data export, or the script in
+  [backup.md](backup.md#data-export-json-and-markdown).
 
 ## Updating
 

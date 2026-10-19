@@ -142,3 +142,29 @@ The run summary shows which step failed:
 - **Encryption:** the secret `AGE_RECIPIENTS` is missing or contains no `age1…` key.
 
 In every case **no unencrypted file** was stored, and older backups stay as they are.
+
+## Data export (JSON and Markdown)
+
+The backup above is for restoring the instance. To get your data out in a form you can read and take
+elsewhere, use the data export: **Settings → Data export** downloads `selfbound-export-<date>.zip` with
+
+- `json/`: every table with your data as stored, trash included, plus `manifest.json` (format
+  `selfbound-export`, version 1). Complete, so a later version can import it again.
+- `markdown/`: one file per issue (description, comments, history) and per knowledge page, with an
+  overview in `README.md`.
+- `files/`: images and team logos; the Markdown links point at them.
+
+Not in the export: agent keys, connector tokens and push devices. What exactly is in it:
+[backend.md](architecture/backend.md#data-export).
+
+**Automatically**, without the app: the script builds the same ZIP from a Convex export, for example from
+a decrypted nightly backup (step 4 above):
+
+```sh
+node tooling/export/index.mjs --from ~/selfbound-restore/selfbound-backup-*/backup.zip
+```
+
+Without `--from` it exports the local backend first. For your own deployment, take a Convex export with
+its deploy key (`npx convex export --include-file-storage --path snapshot.zip` in `backend/`) and pass that
+file. The result lands in `~/.local/share/selfbound/exports/` (`--out` for another folder). It holds your
+data unencrypted: keep it somewhere safe.

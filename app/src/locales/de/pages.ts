@@ -418,6 +418,29 @@ export default {
   Settings: 'Einstellungen',
   'This section does not exist.': 'Diesen Bereich gibt es nicht.',
   'Go to settings': 'Zu den Einstellungen',
+  // settings/DataExport.svelte
+  'Data export': 'Datenexport',
+  'Export all data': 'Alle Daten exportieren',
+  'Download everything in this instance as one ZIP file: a complete JSON copy that a later version can import again, and readable Markdown with one file per issue and per knowledge page.':
+    'Lade alles aus dieser Instanz als eine ZIP-Datei herunter: eine vollständige JSON-Kopie, die eine spätere Version wieder einspielen kann, und lesbares Markdown mit einer Datei pro Issue und pro Wissensseite.',
+  'Teams, issues with descriptions, comments and history, projects, sprints, labels, recurring issues, knowledge pages, images and logos, including the trash. Not included: agent keys, connections and push devices.':
+    'Teams, Issues mit Beschreibung, Kommentaren und Verlauf, Projekte, Sprints, Labels, wiederkehrende Issues, Wissensseiten, Bilder und Logos, auch aus dem Papierkorb. Nicht enthalten: Agenten-Schlüssel, Verbindungen und Push-Geräte.',
+  Export: 'Exportieren',
+  'Exporting …': 'Exportiere …',
+  'Reading data …': 'Lese Daten …',
+  'Reading data … {count} rows': 'Lese Daten … {count} Zeilen',
+  'Loading files … {done} of {total}': 'Lade Dateien … {done} von {total}',
+  'Packing the ZIP …': 'Packe die ZIP …',
+  'Export failed': 'Export fehlgeschlagen',
+  'Downloaded: {size} MB. Issues: {issues}, pages: {pages}, files: {files}.': 'Heruntergeladen: {size} MB. Issues: {issues}, Seiten: {pages}, Dateien: {files}.',
+  '{count} file could not be loaded; the export lists it in json/manifest.json.': [
+    '{count} Datei ließ sich nicht laden; der Export nennt sie in json/manifest.json.',
+    '{count} Dateien ließen sich nicht laden; der Export nennt sie in json/manifest.json.',
+  ],
+  'Automatic export': 'Automatischer Export',
+  Script: 'Skript',
+  'The same ZIP can be built from a Convex export, for example from the nightly backup:': 'Dieselbe ZIP lässt sich aus einem Convex-Export bauen, zum Beispiel aus dem nächtlichen Backup:',
+  'Details are in docs/backup.md.': 'Details stehen in docs/backup.md.',
   // settings/Priorities.svelte
   Priorities: 'Prioritäten',
   'No limit': 'Keine Grenze',
