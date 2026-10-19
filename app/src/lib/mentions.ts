@@ -2,10 +2,13 @@
 // Everything comes from the issues already in the store, so a mention costs a map lookup and no
 // request. Only an identifier the store does not know (an old alias) is asked once from the server.
 import { statusIcon, workflowsOf, type Issue, type IssueId, type Meta, type Status } from '@selfbound/core';
+import { t } from '@selfbound/core/i18n';
 
 /** What the chips need from the store (`app.store` fits; tests pass a small fake). */
 export interface MentionSource {
   byKey(key: string): Issue | undefined;
+  /** Team keys from before a rename → current key. */
+  renamedKeys(): ReadonlyMap<string, string>;
   readonly meta: { get(): Meta | null; subscribe(listener: () => void): () => void };
   readonly sync: { get(): { phase: string }; subscribe(listener: () => void): () => void };
   onChange(listener: (ids: ReadonlySet<IssueId>) => void): () => void;
@@ -65,9 +68,23 @@ export function askAlias(source: MentionSource, key: string, done: () => void) {
     .finally(() => asking.delete(upper));
 }
 
-/** Title and status for the hover text and screen readers. */
-export function mentionLabel(m: Mention) {
-  return `${m.key} · ${m.title} (${m.stateName})`;
+/**
+ * What a typed identifier shows: the team key swapped for the current one after a rename (`XLR8-72` →
+ * `SELF-72`), the rest as typed. Only for a found issue; the store maps every earlier key of a chain (A→B→C) to the current one.
+ * Hook for moved issues (`BOX-3` showing `BEAR-32`): return `m.key` for an alias hit here.
+ */
+export function shownKey(source: MentionSource, typed: string, m: Mention | null) {
+  if (!m) return typed;
+  const dash = typed.indexOf('-');
+  const current = dash > 0 ? source.renamedKeys().get(typed.slice(0, dash).toUpperCase()) : undefined;
+  // Not when the issue moved teams since (found through an alias under another key): that text stays.
+  return current && m.key.toUpperCase() === `${current}-${Number(typed.slice(dash + 1))}`.toUpperCase() ? current + typed.slice(dash) : typed;
+}
+
+/** Title and status for the hover text and screen readers; names the typed form when the text shows another. */
+export function mentionLabel(m: Mention, typed?: string) {
+  const label = `${m.key} · ${m.title} (${m.stateName})`;
+  return typed ? `${label} · ${t('written as {typed}', { typed })}` : label;
 }
 
 const keyOf = (a: HTMLAnchorElement) => /\/issue\/([^/?#]+)/.exec(a.getAttribute('href') ?? '')?.[1]?.toUpperCase() ?? '';
@@ -78,13 +95,29 @@ const keyOf = (a: HTMLAnchorElement) => /\/issue\/([^/?#]+)/.exec(a.getAttribute
  * text. Returns the cleanup.
  */
 export function decorateMentions(root: HTMLElement, source: MentionSource): (() => void) | undefined {
-  const links = [...root.querySelectorAll<HTMLAnchorElement>('a.xlink-issue')].map((a) => ({ a, key: keyOf(a), id: '' as string, sig: '' }));
+  const links = [...root.querySelectorAll<HTMLAnchorElement>('a.xlink-issue')].map((a) => {
+    // The typed identifier (data-typed survives a second run on the same DOM); only a typed one is swapped,
+    // an explicit link keeps its own text.
+    const text = [...a.childNodes].find((n): n is Text => n.nodeType === Node.TEXT_NODE) ?? null;
+    return { a, key: keyOf(a), id: '' as string, sig: '', text, typed: a.hasAttribute('data-bare') ? (a.dataset.typed ?? text?.nodeValue ?? '') : '' };
+  });
   if (!links.length) return;
+
+  /** Text of a bare mention: the current key or, when nothing is shown for it, as typed. */
+  const show = (link: (typeof links)[number], m: Mention | null) => {
+    if (!link.text || !link.typed) return '';
+    const shown = shownKey(source, link.typed, m);
+    if (link.text.nodeValue !== shown) link.text.nodeValue = shown;
+    if (shown === link.typed) delete link.a.dataset.typed;
+    else link.a.dataset.typed = link.typed;
+    return shown === link.typed ? '' : link.typed;
+  };
 
   const paint = (link: (typeof links)[number]) => {
     const { a } = link;
     const m = mentionInfo(source, link.key);
     link.id = m?.id ?? '';
+    const typed = show(link, m);
     if (!m) {
       link.sig = '';
       a.querySelector('.mention-icon')?.remove();
@@ -106,7 +139,7 @@ export function decorateMentions(root: HTMLElement, source: MentionSource): (() 
     const cls = mentionClass(m.status);
     a.classList.toggle('mention-done', cls === 'mention-done');
     a.classList.toggle('mention-canceled', cls === 'mention-canceled');
-    const label = mentionLabel(m);
+    const label = mentionLabel(m, typed);
     a.dataset.title = label;
     a.setAttribute('aria-label', label);
     const sig = `${m.status}|${m.color}`;

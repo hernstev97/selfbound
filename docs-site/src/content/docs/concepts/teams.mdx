@@ -78,8 +78,9 @@ The old key keeps working:
 
 - **Links and bookmarks** with an old identifier open the issue, and the address changes to the new identifier.
   Team pages under the old key, such as `/team/OPS/backlog`, lead to the new key.
-- **Mentions** in descriptions, comments and knowledge pages are not rewritten. They keep saying `OPS-24`, but
-  still link to the issue and show its status.
+- **Mentions** in descriptions, comments and knowledge pages show the new key: a mention typed as `OPS-24` reads
+  `ACME-24`, with the issue's status. Hover shows the typed form. Only the display changes; the saved text, its
+  versions, search and what agents read stay as written. Rename the key back and the mentions read `OPS-24` again.
 - **Search, the command menu and agents** find issues under their old identifiers. Agents can also still name
   the team by its old key.
 - **Branch names and pull requests** with an old identifier still link to the issue and close it on merge, see
