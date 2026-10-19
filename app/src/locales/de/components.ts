@@ -297,8 +297,8 @@ export default {
   'View code changes on GitHub': 'Code-Änderungen auf GitHub ansehen',
   '{count} file on GitHub': ['{count} Datei auf GitHub', '{count} Dateien auf GitHub'],
   'Review requested from {names}': 'Review angefragt bei {names}',
-  'GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).':
-    'GitHub-Zugang ist nicht eingerichtet: Selfbound kennt nur Titel und Stand aus dem Webhook. Beschreibung, Checks, Kommentare und Aktionen brauchen {token} im Backend (docs/operations.md).',
+  'GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend.':
+    'GitHub-Zugang ist nicht eingerichtet: Selfbound kennt nur Titel und Stand aus dem Webhook. Beschreibung, Checks, Kommentare und Aktionen brauchen {token} im Backend.',
   'As of {when}.': 'Stand von {when}.',
   'Loading from GitHub …': 'Wird von GitHub geladen …',
   Log: 'Log',
@@ -320,7 +320,7 @@ export default {
   'Show all': 'Ganz anzeigen',
   'Comment on GitHub': 'Kommentar auf GitHub',
   'Write a comment on GitHub …': 'Kommentar auf GitHub schreiben …',
-  'appears on GitHub under your name': 'erscheint auf GitHub unter deinem Namen',
+  'posted with the GitHub token of this instance': 'wird mit dem GitHub-Token dieser Instanz gepostet',
   'Sending …': 'Wird gesendet …',
   'Last fetched from GitHub: {when}': 'Stand von GitHub: {when}',
   'updating …': 'wird aktualisiert …',

@@ -123,7 +123,7 @@
   ];
   const IMAGE_ITEM: Item = { id: 'image', label: t('Image'), hint: '', words: 'image photo screenshot picture bild foto', run: () => pickImages(imageField ?? api, upload!) };
   // Wiki: link to a wiki page, only offered when some team has a wiki.
-  const PAGE_ITEM: Item = { id: 'page', label: t('Link wiki page'), hint: '[[', words: 'wiki page link docs wissen seite verlinken doku', run: () => linkPage() };
+  const PAGE_ITEM: Item = { id: 'page', label: t('Link knowledge page'), hint: '[[', words: 'wiki page link docs wissen seite verlinken doku', run: () => linkPage() };
   const wikiOn = () => app.store.meta.get()?.teams.some((t) => t.wiki) ?? false;
 
   /** Pick a page (palette), then insert `[Title](<app>/wiki/<id>)` at the cursor. */

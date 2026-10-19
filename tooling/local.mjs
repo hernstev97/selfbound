@@ -24,8 +24,9 @@ import { envVar } from './lib/env.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
+// The last occurrence wins, so `pnpm dev --seed large` overrides the `--seed small` in the script.
 function opt(name, fallback) {
-  const i = argv.indexOf(`--${name}`);
+  const i = argv.lastIndexOf(`--${name}`);
   return i >= 0 && argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : fallback;
 }
 const flag = (name) => argv.includes(`--${name}`);

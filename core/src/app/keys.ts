@@ -69,7 +69,7 @@ export class KeyController {
     // Create dialog
     if (app.create.isOpen()) {
       if (combo === 'escape') return consume(e, () => app.create.close());
-      if (combo === 'mod+enter') return consume(e, () => app.create.submit(false));
+      if (combo === 'mod+enter') return consume(e, () => app.create.submit());
       if (combo === 'mod+shift+enter') return consume(e, () => app.create.submit(true));
       return;
     }

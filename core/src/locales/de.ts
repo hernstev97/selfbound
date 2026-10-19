@@ -36,7 +36,7 @@ export default {
   Inbox: 'Eingang',
   'All issues': 'Alle Issues',
   Active: 'Aktiv',
-  'Complete sprint': 'Sprint abschließen',
+  'Close sprint': 'Sprint abschließen',
   'Edit sprint': 'Sprint bearbeiten',
   Project: 'Projekt',
   Trash: 'Papierkorb',
@@ -58,7 +58,7 @@ export default {
   Status: 'Status',
   Team: 'Team',
   Priority: 'Priorität',
-  'Planned / added later': 'Geplant / Nachträglich',
+  'Planned / added late': 'Geplant / Nachträglich',
   None: 'Keine',
   Manual: 'Manuell',
   'Last updated': 'Zuletzt geändert',
@@ -95,7 +95,7 @@ export default {
   Reversed: 'Umgekehrt',
   'Biggest group first': 'Größte Gruppe zuerst',
   Planned: 'Geplant',
-  'Added later': 'Nachträglich hinzugekommen',
+  'Added late': 'Nachträglich',
 
   // bodyEdit.ts
   'someone else': 'jemand anderem',
@@ -245,7 +245,7 @@ export default {
   'Toggle light/dark': 'Hell/Dunkel umschalten',
   'Toggle perf overlay': 'Mess-Overlay ein/aus',
   'Test switch: server rejects changes': 'Testschalter: Server lehnt Änderungen ab',
-  '{team} has no wiki yet. Turn it on in the team settings.': '{team} hat noch kein Wissen. Einschalten in den Einstellungen des Teams.',
+  '{team} has no knowledge area yet. Turn it on in the team settings.': '{team} hat noch kein Wissen. Einschalten in den Einstellungen des Teams.',
 
   // app/palette.ts
   Model: 'Modell',
@@ -285,7 +285,7 @@ export default {
   Downgrade: 'Herabstufen',
   'Which issue drops one level?': 'Welches Issue bekommt eine Stufe weniger?',
   'Switch team': 'Team wechseln',
-  'Link wiki page': 'Wissensseite verlinken',
+  'Link knowledge page': 'Wissensseite verlinken',
   'Search page (title or text) …': 'Seite suchen (Titel oder Text) …',
   Label: 'Label',
   'Create label “{name}”': 'Label „{name}“ anlegen',
@@ -574,7 +574,7 @@ export default {
   'Decision: back to backlog': 'Entscheidung: Zurück in den Backlog',
   'Decision: cancel': 'Entscheidung: Abbrechen',
   'Clear decision': 'Entscheidung entfernen',
-  'Complete sprint now': 'Sprint jetzt abschließen',
+  'Close sprint now': 'Sprint jetzt abschließen',
 
   // app/wiki.ts
   'Page not saved': 'Seite nicht gespeichert',

@@ -102,7 +102,7 @@ function goWiki(a: App) {
   const team = a.store.meta.get()?.teams.find((x) => x.key === key);
   if (!team) return;
   if (!team.wiki) {
-    a.toasts.show(t('{team} has no wiki yet. Turn it on in the team settings.', { team: team.name }), { label: t('Settings'), run: () => a.openTeamSettings(team.key) });
+    a.toasts.show(t('{team} has no knowledge area yet. Turn it on in the team settings.', { team: team.name }), { label: t('Settings'), run: () => a.openTeamSettings(team.key) });
     return;
   }
   a.nav.go({ name: 'wiki', team: team.key });
@@ -242,7 +242,7 @@ export const ACTIONS: Action[] = [
       void a.loadSprints().then((s) => s.editing.set(true));
     },
   },
-  { id: 'sprint.close', label: msg('Complete sprint'), section: 'Sprint', icon: 'check', keywords: 'sprint complete finish end close abschluss abschließen ende beenden', when: hasActive, run: (a) => a.nav.goView({ kind: 'close', team: null }) },
+  { id: 'sprint.close', label: msg('Close sprint'), section: 'Sprint', icon: 'check', keywords: 'sprint complete finish end close abschluss abschließen ende beenden', when: hasActive, run: (a) => a.nav.goView({ kind: 'close', team: null }) },
   {
     id: 'sprint.add',
     label: msg('Add to the sprint'),

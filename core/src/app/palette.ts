@@ -76,7 +76,7 @@ const TITLES: Record<PaletteKind, [string, string]> = {
   repeat: [msg('Repeat'), msg('e.g. monday, monthly 1 …')],
   downgrade: [msg('Downgrade'), msg('Which issue drops one level?')],
   switchTeam: [msg('Switch team'), msg('Team …')],
-  article: [msg('Link wiki page'), msg('Search page (title or text) …')],
+  article: [msg('Link knowledge page'), msg('Search page (title or text) …')],
 };
 
 /** Search words of a team: its key and the keys it had before a rename. */

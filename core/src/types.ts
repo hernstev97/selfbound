@@ -185,7 +185,7 @@ export interface NewIssue {
  */
 export type ViewKind = 'inbox' | 'snoozed' | 'triage' | 'all' | 'active' | 'backlog' | 'trash' | 'sprint' | 'project' | 'plan' | 'planned' | 'close';
 
-/** scope = planned / added later (active sprint); due, created, updated = date buckets */
+/** scope = planned / added late (active sprint); due, created, updated = date buckets */
 export type Grouping = 'status' | 'team' | 'priority' | 'label' | 'labelGroup' | 'creator' | 'estimate' | 'model' | 'due' | 'project' | 'sprint' | 'parent' | 'created' | 'updated' | 'scope' | 'none';
 /** Order of the groups: the natural order, reversed, or the biggest group first */
 export type GroupOrder = 'asc' | 'desc' | 'size';

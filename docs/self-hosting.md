@@ -15,7 +15,7 @@ pnpm dev
 `pnpm dev` (`node tooling/local.mjs --seed small --app dev`) starts an anonymous local Convex backend on
 `127.0.0.1:13410` (HTTP endpoints on `13411`), configures a local test sign-in (`tooling/dev-auth.mjs`),
 loads a small set of sample data and starts the app at `http://127.0.0.1:5412`. Stop with Ctrl+C.
-`--seed large` loads more data and `--reset` reseeds; all options are listed at the top of
+`pnpm dev --seed large` loads more data and `--reset` reseeds; all options are listed at the top of
 `tooling/local.mjs`.
 
 ## What you need
@@ -172,10 +172,12 @@ The app is named `app.html` instead of `index.html` because many hosts (Vercel i
    from step 1.4.
 2. You land in the app with an empty workspace. Create a team to start, or import from Linear
    ([architecture/import.md](architecture/import.md)).
-3. **"No access"** after signing in means the backend rejected your identity: check that
-   `SELFBOUND_OWNER_IDS` contains exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>` (same issuer spelling, no
-   trailing slash). A change to `SELFBOUND_OWNER_IDS` takes effect right away. After changing
-   `CLERK_JWT_ISSUER_DOMAIN`, redeploy the backend: `auth.config.ts` is evaluated when functions are pushed.
+3. **"No access"** after signing in means Convex rejected the Clerk token: `CLERK_JWT_ISSUER_DOMAIN` must be
+   exactly the Clerk Frontend API URL (no trailing slash), and Clerk needs a JWT template named `convex`. After
+   changing `CLERK_JWT_ISSUER_DOMAIN`, redeploy the backend: `auth.config.ts` is evaluated when functions are pushed.
+   An **empty app** without that notice means the token is valid but not on the allowlist: check that
+   `SELFBOUND_OWNER_IDS` contains exactly `<CLERK_JWT_ISSUER_DOMAIN>|<your user id>` (same issuer spelling).
+   A change to `SELFBOUND_OWNER_IDS` takes effect right away.
 
 The UI language follows the browser (English or German) and can be changed in Settings → General.
 

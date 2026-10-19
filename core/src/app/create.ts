@@ -319,7 +319,7 @@ export class CreateController {
     this.state.set({ ...s, createMore: !s.createMore });
   }
 
-  /** Ctrl Enter: create. `more` (Ctrl Shift Enter): the dialog stays open, properties stay. */
+  /** Ctrl Enter: create, following the "Create more" switch. `more` (Ctrl Shift Enter): the dialog stays open, properties stay. */
   submit(more = this.state.get().createMore) {
     const s = this.state.get();
     const d = s.draft;

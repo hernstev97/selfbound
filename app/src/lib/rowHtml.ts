@@ -23,7 +23,7 @@ function fixedTexts() {
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
     plannedTip: esc(t('In the planned sprint')),
-    late: esc(t('added later')),
+    late: esc(t('added late')),
     restore: esc(t('Restore')),
     updated: esc(t('Updated')),
     created: esc(t('Created')),

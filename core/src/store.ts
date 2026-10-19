@@ -164,7 +164,7 @@ export class IssueStore {
   readonly sync = new Slice<SyncState>({ phase: 'empty', pending: 0, connected: false, offline: false, visible: false, text: '' });
   /** Increases on every real change to the set of issues. */
   readonly version = new Slice(0);
-  /** Kind of entries in the active sprint: planned / added later */
+  /** Kind of entries in the active sprint: planned / added late */
   readonly sprintKinds = new Slice<ReadonlyMap<IssueId, SprintItemKind>>(new Map());
   /** Names for the activity feed by actor: agent ID → name, and OWNER_KIND → the owner's display name (once set) */
   readonly agents = new Slice<ReadonlyMap<string, string>>(new Map());

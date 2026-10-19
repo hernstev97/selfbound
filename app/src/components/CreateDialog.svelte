@@ -1,6 +1,6 @@
 <script lang="ts">
   // Create dialog: team, title, description, property chips with the same pickers.
-  // Ctrl Enter creates, Ctrl Shift Enter creates and stays open ("Create more").
+  // Ctrl Enter creates (and stays open while "Create more" is on), Ctrl Shift Enter always stays open.
   import { ICON, PRIORITY_ICON, PRIORITY_LABEL, statusIcon, dayLabel, formatShortcut, issueModel, modelInfo, modelLabel, type PaletteKind } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { leave } from '../lib/motion.ts';

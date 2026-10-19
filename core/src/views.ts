@@ -243,7 +243,7 @@ export const VIEWS: Record<ViewKind, ViewDef> = {
   close: {
     kind: 'close',
     get label() {
-      return t('Complete sprint');
+      return t('Close sprint');
     },
     icon: 'sprint',
     includes: (i, ctx) => notDeleted(i) && ctx.activeSprintId !== null && i.sprintId === ctx.activeSprintId && OPEN.has(i.status) && !i.pending,
@@ -343,7 +343,7 @@ export const GROUPING_LABEL: Record<Grouping, string> = translated({
   parent: 'Parent issue',
   created: 'Created',
   updated: 'Updated',
-  scope: 'Planned / added later',
+  scope: 'Planned / added late',
   none: 'None',
 });
 

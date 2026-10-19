@@ -20,7 +20,8 @@ import type { ConvexClient } from 'convex/browser';
 import { Slice } from './observable.ts';
 
 /**
- * `denied`: signed in at Clerk, but the backend rejects the account (not in SELFBOUND_OWNER_IDS).
+ * `denied`: signed in at Clerk, but Convex rejects the token (issuer or JWT template wrong). A token that is
+ *   valid but not in SELFBOUND_OWNER_IDS is not `denied`: the queries fail with access_denied instead.
  * `cached`: signed in last time (marker), Clerk has not confirmed yet; the app shows the cache.
  * `offline`: not signed in and Clerk unreachable.
  */
