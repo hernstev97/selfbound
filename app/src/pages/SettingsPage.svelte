@@ -21,6 +21,7 @@
   import Ops from './settings/Ops.svelte';
   import Github from './settings/Github.svelte';
   import Notifications from './settings/Notifications.svelte';
+  import DataExport from './settings/DataExport.svelte';
   import About from './settings/About.svelte';
 
   const pageSlice = fromSlice(app.nav.page);
@@ -77,6 +78,8 @@
       <Github />
     {:else if section === 'ops'}
       <Ops />
+    {:else if section === 'export'}
+      <DataExport />
     {:else if section === 'about'}
       <About />
     {:else}

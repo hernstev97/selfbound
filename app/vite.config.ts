@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => {
         output: {
           // Everything startup needs in ONE chunk (compresses better, one request).
           codeSplitting: {
-            groups: [{ name: 'start', test: /node_modules\/\.pnpm\/(convex|svelte)@|\/core\/src\/(?!app\/(sprints|admin|repeat|wiki)\.ts|sprintlogic\.ts|wikiTree\.ts|locales\/)|\/backend\/convex\/(_generated\/|shared\/(?!(?:pullRequests|embeds)\.ts))/, priority: 10 }],
+            groups: [{ name: 'start', test: /node_modules\/\.pnpm\/(convex|svelte)@|\/core\/src\/(?!app\/(sprints|admin|repeat|wiki)\.ts|sprintlogic\.ts|wikiTree\.ts|locales\/|export\/)|\/backend\/convex\/(_generated\/|shared\/(?!(?:pullRequests|embeds|export)\.ts))/, priority: 10 }],
           },
         },
       },

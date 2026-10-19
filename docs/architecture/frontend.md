@@ -53,6 +53,7 @@ Svelte binds slices through `fromSlice(slice).current` (`app/src/slice.svelte.ts
 | `app/sprints.ts` | SprintController (own chunk, `app.loadSprints()`): header numbers of the current sprint, planning, decisions when closing, overview `/sprints`, sprint mutations, drag and drop; registers the keys of the sprint pages (→ ← Tab, 1/2/3/0, Ctrl Enter) |
 | `app/admin.ts` | Settings (`@selfbound/core/app/admin`, only in the settings chunk): teams, logos, projects, labels, groups, agent keys, recurrences, priority limits; site URL and MCP command |
 | `app/repeat.ts` | “Repeat …”: template from an issue (small chunk) |
+| `export/*` | Data export (`@selfbound/core/export/index`, own chunk, loaded on click in Settings → Data export): reads the tables (`collect.ts`), builds JSON, Markdown (`markdown.ts`) and the ZIP (`zip.ts`). Also run by `tooling/export/index.mjs` under Node, so: no parameter properties or other non-erasable TypeScript, no imports without extension ([backend.md](backend.md#data-export)) |
 | `app/wiki.ts`, `wikiTree.ts` | WikiController (own chunk, `app.loadWiki()`): a team's wiki, page, trash, dragging in the tree ([below](#wiki-appwikits-pageswiki)) |
 | `bodyEdit.ts` | `BodyEditSession`: editing a versioned text (autosave, draft, conflict), for the description and wiki pages |
 | `budget.ts` | Priority limits: open Urgent/High per team, the limits in effect (`limitsOf`), label and tooltip, which changes would go over a limit (`limitHits`, `budgetCheck`) |
@@ -308,7 +309,7 @@ Browsers that used the app before 2026-10-15 still hold the old `xlr8:*` keys. N
 | `/sprint/close` | Closing the current sprint with a decision per open issue |
 | `/sprints` | All sprints (current, in planning, closed, imported Linear cycles) with goal, date range, points, share added late |
 | `/trash`, `/drafts` | Trash, drafts |
-| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `priorities` (priority limits), `agents`, `models` (enabled models of the catalog), `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
+| `/settings[/<section>[/<team>]]` | Settings: `profile` (name and picture, crop dialog), `general`, `appearance`, `notifications`, `teams` (`/settings/teams/ACME`: one team with logos), `projects`, `labels`, `recurrences`, `priorities` (priority limits), `export` (data export), `agents`, `models` (enabled models of the catalog), `github` (connection, repos, webhooks), `ops`. The old German ids (`allgemein`, `darstellung`, `benachrichtigungen`, `projekte`, `wiederholungen`, `agenten`, `betrieb`) still work as aliases |
 | `/new?title=…&priority=high&status=todo&team=KIU&label=Bug&project=…&estimate=3&due=tomorrow` | Create with prefilled fields |
 | `/share?title=…&text=…&url=…` | Share from another app (Web Share Target): creates an issue in the inbox, then `/inbox` |
 | `/oauth/consent?request=…` | Consent page for connectors (claude.ai, ChatGPT), outside the app shell; old path `/oauth/freigabe?anfrage=…` still works |

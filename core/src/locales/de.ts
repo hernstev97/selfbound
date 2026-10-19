@@ -222,6 +222,7 @@ export default {
   'Settings: Time zone': 'Einstellungen: Zeitzone',
   'Time zone not saved': 'Zeitzone nicht gespeichert',
   'Ops: View status': 'Betrieb: Zustand ansehen',
+  'Export all data': 'Alle Daten exportieren',
   'Recently opened issues …': 'Zuletzt geöffnete Issues …',
   'Search issues': 'Issues suchen',
   'Back to list': 'Zurück zur Liste',

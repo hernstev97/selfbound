@@ -26,6 +26,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `convex/githubPr.ts`, `convex/ops/githubPr.ts`, `convex/lib/githubApi.ts`, `convex/lib/githubMedia.ts`, `convex/shared/pullRequests.ts` | Pull requests in Selfbound: fetching via the GitHub API, view, actions, media proxy, webhooks in all repos ([below](#githubpr-pull-requests-in-selfbound)) |
 | `convex/importer.ts`, `convex/ops/import.ts` | Linear import: staging → tables ([`import.md`](import.md)) |
 | `convex/opsStatus.ts` | Reports for the ops page (backup) |
+| `convex/dataExport.ts`, `convex/shared/export.ts` | Data export for the owner ([below](#data-export)): which tables, what is left out, pages for the app |
 | `convex/migrations.ts` | One-off data migrations (internal, safe to rerun), e.g. `workflowBackfill`/`workflowVerify` ([statuses](#statuses-per-team)), `inboxBackfill` ([inbox](#inbox)) |
 | `convex/inbox.ts`, `convex/ops/inbox.ts`, `convex/ops/inboxChanges.ts` | Inbox entries: list, read, remove, undo, cleanup (`inbox.ts`); what makes an entry and how changes are grouped (`inboxChanges.ts`, called from `record`) ([below](#inbox)) |
 | `convex/shared/workflow.ts`, `convex/lib/workflow.ts` | Statuses per team: types, ordering, status kind, strict order (also run in the browser); loading, creating and resolving in the backend |
@@ -513,7 +514,21 @@ Action errors: `ConvexError { code, message, status }` with an English message; 
 |---|---|---|
 | `ops.status` (query) | – | `{ backup: { value: { ok, at, bytes, sha256, tables, documents, files, run }, at } | null, lastImport` ({ run, status, phase, startedAt, finishedAt, counts, deviations, error })`, agents: [Agent & { callsToday }]` (Agent: `keyPrefix`, or `null` for connectors, `connector: { app } | null`, `revokedReason`)`, connectors: { enabled, url }, connectorsArmedUntil, github: { event, receivedAt } | null` (last accepted delivery)`, sprintAudit: { value: { ok, problems, sprints, items, startedAt, error? }, at } | null, seed, storage` (file storage, see [images](#files-images))`, testSwitches, rejectWrites }` |
 | `admin.setRejectWrites` | `{ value }` | `{ rejectWrites }` (only with `SELFBOUND_TEST_SWITCHES=1`) |
+| `dataExport.page` (query) | `{ table, cursor }` (`cursor` null for the first page) | `{ rows, cursor, isDone }`: up to 1000 rows of one table from `EXPORT_TABLES` (`shared/export.ts`) as stored, at most 4 MiB read per page; other tables → `invalid`. Agents without `keyHash`/`keyPrefix` ([data export](#data-export)) |
+| `dataExport.fileUrls` (query) | `{ storageIds }` (at most 100) | `[{ storageId, url }]`, `url` null for a deleted file |
 | `seed.status`, `seed.reset`, `seed.insertBase`, `seed.insertIssues`, `seed.insertLinks`, `seed.finish` | see `convex/seed.ts` | owner only AND only with `SELFBOUND_ALLOW_SEED=1` |
+
+### Data export
+
+Settings → Data export (SELF-46) and `tooling/export/index.mjs` build the same ZIP from the same core (`core/src/export`, no dependencies):
+
+- `json/<table>.json`: the rows of every table in `EXPORT_TABLES` as stored, trash included, one row per line. `json/manifest.json`: `format` (`selfbound-export`), `version` (1), `exportedAt`, `source` (`app` or `snapshot`), rows per table, the stored files with path, `storageId` and image `token`, and `missingFiles`. Complete and versioned for a later re-import (not built yet).
+- `markdown/`: `README.md` (overview), `issues/<TEAM>/<ID> <title>.md` (frontmatter, description, relations, sub-issues, pull requests, comments, history with names instead of ids), `knowledge/<TEAM>/…` (folders follow the page tree), `trash/…`. English, image links point at `files/`.
+- `files/images/<token>.<ext>` (referenced images; orphans waiting for cleanup are left out), `files/logos/<KEY>[-dark].<ext>`.
+
+Left out: secrets (`agents.keyHash`/`keyPrefix`, OAuth, push subscriptions), derived search text and links, caches (embeds, models catalog, PR details, check runs), running state (counters, inbox, idempotency, rate windows, push outbox, import staging) and ops data. A new table that holds user data goes into `EXPORT_TABLES`; a field that must never leave the instance goes into `OMIT` there.
+
+The app reads table by table (`dataExport.page`, each page its own query, so no function nears the read limits) and fetches files through storage URLs (`dataExport.fileUrls`). That is not one consistent snapshot: changes made while the export runs may be in it partly. The script reads a `convex export` instead, which is consistent.
 
 ## HTTP endpoints (`convex/http.ts`)
 
