@@ -1,27 +1,53 @@
 ---
 title: Export your data
-description: How to get your data out of Selfbound today, through a database export, the nightly backups or an AI agent, and the export that is planned.
+description: How to get your data out of Selfbound, with the data export in Settings (JSON and Markdown in one ZIP), a script for automation, a database export, the nightly backups or an AI agent.
 sidebar:
   order: 4
 ---
-import { Aside, Steps } from '@astrojs/starlight/components';
-import Planned from '../../../components/Planned.astro';
+import { Aside } from '@astrojs/starlight/components';
 
-Your data lives in your own Convex deployment, so you can always get all of it out. There is no export button in the app yet. Today you have three ways, depending on what you need.
+Your data is yours, and you can get all of it out at any time. The quickest way is **Settings → Data export**. There are four ways in total, depending on what you need.
 
 | You want | Use |
 |---|---|
-| Everything, complete, in one file | [Database export](#export-the-whole-database) |
-| A daily copy you can restore | [Nightly backups](#nightly-backups) |
+| Everything, readable and complete, in one ZIP | [Data export](#data-export-in-settings) |
+| The same ZIP without opening the app | [The export script](#automate-the-export) |
+| A copy in Convex's own format, or one you can restore | [Database export](#export-the-whole-database) and [nightly backups](#nightly-backups) |
 | Some issues or pages as Markdown or a list | [An AI agent](#ask-an-agent) |
 
-<Planned issue="SELF-46" title="Export in Settings">
-An export of everything as JSON and as a ZIP of Markdown files, started from Settings, is planned. Until it exists, use one of the ways below.
-</Planned>
+## Data export in Settings
+
+Open **Settings → Data export** and choose **Export**. Your browser reads all data and downloads `selfbound-export-<date>.zip`. The ZIP has three folders:
+
+- **`json/`** is the complete copy. Every table that holds your data is one file (`json/issues.json` and so on) with the rows as stored, trash included, one row per line. `json/manifest.json` records the format (`selfbound-export`), the version (1), the time of the export, the number of rows per table and every stored file with its path. Files that could not be read are listed under `missingFiles`, so you can see whether the copy is complete.
+- **`markdown/`** is the readable copy. `README.md` gives an overview of teams, statuses, projects, labels, sprints and recurring issues. Every issue is one file with its properties, description, relations, sub-issues, pull requests, comments and history. Every knowledge page is one file too, in folders that follow the page tree. Deleted issues and pages are under `trash/`. Images link to the files in the ZIP.
+- **`files/`** holds the images from descriptions, comments and pages, and the team logos.
+
+The app reads the data table by table while you wait, so changes made during the export may be in it only partly. For a consistent copy, use the script below.
+
+**Not exported:** agent key hashes and prefixes, OAuth data of connected AI tools, and push subscriptions of your devices. Derived data such as search indexes, caches and running state (counters, inbox, rate limits) are left out too, because Selfbound rebuilds them.
+
+<Aside type="note">
+**Re-import is not available yet.** The JSON is complete and versioned so that a later version can import it. Until then, the ZIP is for reading and keeping, not for restoring. To restore an instance, use a [nightly backup](#nightly-backups).
+</Aside>
+
+<Aside type="caution">
+The ZIP contains all your data unencrypted. Store it somewhere safe and delete copies you no longer need.
+</Aside>
+
+## Automate the export
+
+The script `tooling/export/index.mjs` in the Selfbound repository builds the same ZIP from a Convex export, without the app. Use it for scheduled exports or for the decrypted nightly backup:
+
+```sh
+node tooling/export/index.mjs --from ~/selfbound-export.zip
+```
+
+`--from` takes a ZIP made with `convex export --include-file-storage` (see below). Without that option, the export has no images and the manifest lists them under `missingFiles`. Without `--from`, the script exports the local development backend first. The result lands in `~/.local/share/selfbound/exports/`; `--out <folder>` chooses another folder. Because it reads a Convex export, this copy is consistent.
 
 ## Export the whole database
 
-Convex can export a deployment as a ZIP file. This is the same export the nightly backup uses, and it contains everything: issues with descriptions, comments and history, teams, labels, projects, sprints, knowledge pages, and the uploaded images and team logos.
+Convex can export a deployment as a ZIP file. This is the export the nightly backup uses, and it contains everything: issues with descriptions, comments and history, teams, labels, projects, sprints, knowledge pages, and the uploaded images and team logos.
 
 You need a checkout of the Selfbound repository with dependencies installed, and a production deploy key from the Convex dashboard. With your instance set up as in [Self-hosting](/start/self-hosting/) (deploy key in `~/.config/selfbound/convex-deploy-key`), run:
 
