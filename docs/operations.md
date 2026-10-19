@@ -529,6 +529,18 @@ It sets the priority to none, updates `updatedAt` and writes a `priority` histor
 "System". Includes the trash, can run repeatedly, and reschedules itself above 500 issues (without
 `apply` it returns a `cursor` for the next call).
 
+**Pull request status (optional, SELF-100):** the pull requests page and its sidebar count read a small
+status row per PR (`pullRequestStatus`) that every fetch from GitHub writes. PRs fetched before that
+deploy have none yet; the page then reads their larger details until their next fetch. To write the rows
+at once:
+
+```sh
+node tooling/cloud.mjs run migrations:prStatusBackfill
+```
+
+It reads the stored details (25 per page, rescheduling itself), writes only missing or different rows,
+changes nothing on GitHub and can run repeatedly.
+
 ## Images and videos
 
 **YouTube and X cards:** a link alone on a line becomes a card. The backend fetches the data from

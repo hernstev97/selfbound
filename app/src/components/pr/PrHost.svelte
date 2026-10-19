@@ -1,6 +1,6 @@
 <script lang="ts">
-  // Issue page with a pull request beside it. Wraps the issue page (Shell.svelte); with no pull
-  // request open it holds only the issue. The pull request sits on the right; its width can be
+  // Issue page (or the pull requests page, `list`) with a pull request beside it. Wraps the issue
+  // page (Shell.svelte); with no pull request open it holds only the issue. The pull request sits on the right; its width can be
   // dragged at the divider (or ←/→ on the divider) and is remembered. On phones and in narrow
   // windows pull requests open as their own page (IssuePullRequests), so there is nothing to split.
   import '../../styles/pr.css';
@@ -9,7 +9,8 @@
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
 
-  let { children }: { children: Snippet } = $props();
+  // `list`: the pull requests page; the issue page's split rules (`split-detail`) do not apply to it.
+  let { children, list = false }: { children: Snippet; list?: boolean } = $props();
 
   // The view itself loads on first open (its own chunk). Deliberately not through lib/pages.ts:
   // a lazy chunk that imports the start module splits up the start chunk.
@@ -78,7 +79,7 @@
 </script>
 
 <div class={['pr-host', target && 'open', dragging && 'dragging']} bind:this={box} style:--pr-w={width ? `${width}px` : null} data-testid="pr-host">
-  <div class={['pr-host-issue', target && 'split-detail']}>{@render children()}</div>
+  <div class={['pr-host-issue', target && !list && 'split-detail']}>{@render children()}</div>
   {#if target}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
     <div

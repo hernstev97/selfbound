@@ -1,6 +1,7 @@
-// Sample PRs for the local test data: three PRs on two issues, with description, checks,
-// comments and reviews, as a fetch from GitHub would store them. No real repo, no real people;
-// images as data: SVGs so nothing loads from the network.
+// Sample PRs for the local test data: six PRs on six issues, one per group of the pull requests
+// page (ready, checks failing, running, blocked, draft, merged), with description, checks, comments and
+// reviews, as a fetch from GitHub would store them. No real repo, no real people; images as data:
+// SVGs so nothing loads from the network.
 //
 // Runs with Node type stripping (scripts/seed.ts): only imports with a file extension, only `import type`.
 
@@ -33,11 +34,15 @@ function check(key: string, name: string, state: PrCheck['state'], at: number, e
   return { key, name, source: 'check', app: 'GitHub Actions', state, url: `https://github.com/${REPO}/actions/runs/1/job/${key.split(':')[1]}`, startedAt: at - 4 * MIN, ...(state === 'pending' ? {} : { completedAt: at }), ...extra };
 }
 
-/** `issues`: the generated issues (seq, teamKey, status); two matching ones are picked. */
+/** `issues`: the generated issues (seq, teamKey, status); matching ones are picked. */
 export function samplePullRequests(issues: { seq: number; teamKey: string; status: string }[], now: number): SamplePullRequest[] {
   const pick = (status: string, skip: number[] = []) => issues.find((i) => i.teamKey === 'ORB' && i.status === status && !skip.includes(i.seq))?.seq ?? issues.find((i) => !skip.includes(i.seq))!.seq;
   const first = pick('in_progress');
   const second = pick('in_review', [first]);
+  const third = pick('in_review', [first, second]);
+  const fourth = pick('todo', [first, second, third]);
+  const fifth = pick('in_progress', [first, second, third, fourth]);
+  const sixth = pick('in_progress', [first, second, third, fourth, fifth]);
   const base = { mergeMethods: ['merge', 'squash', 'rebase'] as PrDetail['mergeMethods'], deleteBranchOnMerge: false, requestedReviewers: [], labels: [] };
 
   return [
@@ -135,6 +140,85 @@ export function samplePullRequests(issues: { seq: number; teamKey: string; statu
         checks: [check('check:9101', 'CI / check', 'success', now - 55 * MIN)],
       },
       items: [{ key: 'review:603', kind: 'review', author: mira, reviewState: 'changes_requested', html: '<p>Please add a test for identifiers with digits in the team key.</p>', createdAt: now - 4 * HOUR, url: `https://github.com/${REPO}/pull/130#pullrequestreview-603` }],
+    },
+    {
+      // Ready to merge, linked to two issues.
+      issueSeqs: [third, fourth],
+      closes: true,
+      pr: { repo: REPO, number: 131, title: 'Board: drag cards between columns', url: `https://github.com/${REPO}/pull/131`, state: 'open', branch: 'orb-3-board-drag', author: alex.login, updatedAt: now - 35 * MIN, headSha: 'b0a7d5c3e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0' },
+      detail: {
+        ...base,
+        bodyHtml: '<p>Cards move between columns by drag and drop; the status follows the column.</p>',
+        author: alex,
+        createdAt: now - 2 * 24 * HOUR,
+        baseRef: 'main',
+        headRef: 'orb-3-board-drag',
+        headRepo: REPO,
+        headSha: 'b0a7d5c3e1f2a4b6c8d0e2f4a6b8c0d2e4f6a8b0',
+        draft: false,
+        mergeState: 'clean',
+        additions: 162,
+        deletions: 41,
+        changedFiles: 6,
+        commits: 3,
+        headBranchDeletable: true,
+        checks: [
+          check('check:9201', 'CI / check', 'success', now - 40 * MIN),
+          check('check:9202', 'CI / e2e', 'success', now - 38 * MIN),
+          { key: 'status:Vercel', name: 'Vercel', source: 'status', app: 'Vercel', state: 'success', url: 'https://vercel.com/acme', summary: 'Preview ready', completedAt: now - 39 * MIN },
+        ],
+      },
+      items: [{ key: 'review:604', kind: 'review', author: mira, reviewState: 'approved', html: '<p>Works well on the phone too.</p>', createdAt: now - 36 * MIN, url: `https://github.com/${REPO}/pull/131#pullrequestreview-604` }],
+    },
+    {
+      // Checks still running.
+      issueSeqs: [fifth],
+      closes: true,
+      pr: { repo: REPO, number: 132, title: 'Inbox: group changes from the same agent', url: `https://github.com/${REPO}/pull/132`, state: 'open', branch: 'orb-5-inbox-groups', author: alex.login, updatedAt: now - 6 * MIN, headSha: 'd1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0' },
+      detail: {
+        ...base,
+        bodyHtml: '<p>Several changes by one agent within ten minutes become one inbox entry.</p>',
+        author: alex,
+        createdAt: now - 3 * HOUR,
+        baseRef: 'main',
+        headRef: 'orb-5-inbox-groups',
+        headRepo: REPO,
+        headSha: 'd1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0',
+        draft: false,
+        mergeState: 'unstable',
+        additions: 74,
+        deletions: 18,
+        changedFiles: 4,
+        commits: 2,
+        headBranchDeletable: true,
+        checks: [check('check:9301', 'CI / check', 'pending', now - 2 * MIN), check('check:9302', 'CI / typecheck', 'success', now - 4 * MIN)],
+      },
+      items: [],
+    },
+    {
+      // Draft: work in progress, whatever the checks say.
+      issueSeqs: [sixth],
+      closes: false,
+      pr: { repo: REPO, number: 126, title: 'Sync: retry failed buckets', url: `https://github.com/${REPO}/pull/126`, state: 'draft', branch: 'orb-6-sync-retry', author: alex.login, updatedAt: now - 5 * HOUR, headSha: 'e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0' },
+      detail: {
+        ...base,
+        bodyHtml: '<p>Not ready yet: the retry still needs a backoff.</p>',
+        author: alex,
+        createdAt: now - 30 * HOUR,
+        baseRef: 'main',
+        headRef: 'orb-6-sync-retry',
+        headRepo: REPO,
+        headSha: 'e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0',
+        draft: true,
+        mergeState: 'draft',
+        additions: 25,
+        deletions: 3,
+        changedFiles: 2,
+        commits: 1,
+        headBranchDeletable: true,
+        checks: [check('check:9401', 'CI / check', 'failure', now - 5 * HOUR)],
+      },
+      items: [],
     },
   ];
 }

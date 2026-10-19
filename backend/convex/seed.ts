@@ -11,6 +11,8 @@ import { BODY_SEARCH_CHARS } from './ops/bodies';
 import { openCreatedEntry } from './ops/inboxChanges';
 import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import { applyProvider, setModelEnabled } from './ops/models';
+import { writeStatus } from './ops/githubPr';
+import { prStatusOf } from './shared/pullRequests';
 import schema, {
   actorValidator,
   prDetailDataValidator,
@@ -323,6 +325,7 @@ export const insertPullRequests = ownerMutation({
         data: detail,
         summary: { comments: items.filter((i) => i.kind !== 'review').length, ...(review ? { review } : {}) },
       });
+      await writeStatus(ctx, prId, prStatusOf(detail, review));
       for (const item of items) await ctx.db.insert('pullRequestItems', { prId, ...item });
     }
     return { prs: args.prs.length };

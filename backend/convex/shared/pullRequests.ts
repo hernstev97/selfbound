@@ -189,6 +189,124 @@ export function checkCounts(checks: readonly PrCheck[]) {
   return { total: checks.length, failed, pending };
 }
 
+// ---------------------------------------------------------------- Pull requests page (SELF-100)
+
+/**
+ * Group of a PR on the pull requests page, by what comes next. In display order:
+ * ready · checks failing · checks running · blocked (open, checks fine, but something else stops the
+ * merge) · draft · done (merged or closed in the last DONE_WINDOW_MS).
+ */
+export type PrGroup = 'ready' | 'failing' | 'running' | 'blocked' | 'draft' | 'done';
+export const PR_GROUPS: readonly PrGroup[] = ['ready', 'failing', 'running', 'blocked', 'draft', 'done'];
+
+/** Why an open PR with fine checks is not ready. `unknown`: no state from GitHub yet. */
+export type PrBlocker = 'conflicts' | 'changes_requested' | 'rules' | 'unknown';
+
+/** Merged and closed PRs stay on the page this long (by `updatedAt`). */
+export const DONE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** The part of a PR's fetched state the grouping reads (table pullRequestStatus). */
+export interface PrStatus {
+  draft: boolean;
+  mergeState: PrMergeState;
+  /** listCheckCounts: a canceled check counts as failed */
+  checks: { total: number; failed: number; pending: number };
+  /** latest review decision per reviewer, combined */
+  review?: 'approved' | 'changes_requested';
+}
+
+/** What the grouping reads: the stored state and the fetched status (null = never fetched). */
+export interface PrGroupInput {
+  state: PrState;
+  status: PrStatus | null;
+}
+
+/**
+ * Check counts for the page: a canceled check counts as failed, because the PR needs a new run
+ * before it can be merged (the fetch keeps only the newest run per name).
+ */
+export function listCheckCounts(checks: readonly PrCheck[]) {
+  let failed = 0;
+  let pending = 0;
+  for (const c of checks) {
+    if (c.state === 'failure' || c.state === 'cancelled') failed++;
+    else if (c.state === 'pending') pending++;
+  }
+  return { total: checks.length, failed, pending };
+}
+
+/** The status of a fetched state (pullRequestDetails `data` and `summary.review`). */
+export function prStatusOf(detail: Pick<PrDetail, 'draft' | 'mergeState' | 'checks'>, review?: 'approved' | 'changes_requested'): PrStatus {
+  return { draft: detail.draft, mergeState: detail.mergeState, checks: listCheckCounts(detail.checks), ...(review ? { review } : {}) };
+}
+
+export function sameStatus(a: PrStatus, b: PrStatus) {
+  return (
+    a.draft === b.draft &&
+    a.mergeState === b.mergeState &&
+    a.checks.total === b.checks.total &&
+    a.checks.failed === b.checks.failed &&
+    a.checks.pending === b.checks.pending &&
+    a.review === b.review
+  );
+}
+
+/** Reasons why an open, non-draft PR cannot be merged yet (empty: nothing in the way). Same rules as the merge button in the PR view. */
+export function prBlockers(input: PrGroupInput): PrBlocker[] {
+  const status = input.status;
+  if (!status) return ['unknown'];
+  const out: PrBlocker[] = [];
+  if (status.mergeState === 'dirty') out.push('conflicts');
+  if (status.review === 'changes_requested') out.push('changes_requested');
+  if (status.mergeState === 'blocked') out.push('rules');
+  return out;
+}
+
+/**
+ * The group of a PR. Drafts stay drafts whatever their checks say (work in progress, nothing to
+ * merge); for the others failing checks come before running ones, and only a PR with all checks
+ * successful, neutral or skipped, no requested changes and no conflicts or rules in the way is ready.
+ */
+export function prGroup(input: PrGroupInput): PrGroup {
+  const status = input.status;
+  if (input.state === 'merged' || input.state === 'closed') return 'done';
+  if (input.state === 'draft' || status?.draft || status?.mergeState === 'draft') return 'draft';
+  if (status?.checks.failed) return 'failing';
+  if (status?.checks.pending) return 'running';
+  return prBlockers(input).length ? 'blocked' : 'ready';
+}
+
+/** A row of the pull requests page (`githubPr.list`). */
+export interface PrListItem {
+  id: string;
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  state: PrState;
+  updatedAt: number;
+  group: PrGroup;
+  /** IDs of the linked issues (at least one); the app shows them from its own store */
+  issueIds: string[];
+  /** missing until the first fetch */
+  checks?: { total: number; failed: number; pending: number };
+  blockers?: PrBlocker[];
+  review?: 'approved' | 'changes_requested';
+}
+
+/** Result of `githubPr.list`: rows sorted by group (PR_GROUPS), then newest change first. */
+export interface PrList {
+  items: PrListItem[];
+  /** GITHUB_TOKEN set: refreshing is possible */
+  configured: boolean;
+}
+
+/** Result of `githubPr.attention`: the sidebar count is ready + failing. */
+export interface PrAttention {
+  ready: number;
+  failing: number;
+}
+
 /** Path of the full view: /pr/<owner>/<name>/<number> */
 export function prPath(repo: string, number: number) {
   return `/pr/${repo}/${number}`;

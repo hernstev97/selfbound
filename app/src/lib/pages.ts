@@ -27,6 +27,8 @@ export const pages = {
   /** Issue page with the frame for a PR beside it; the PR view loads PrHost only when opened */
   issueHost: once(() => Promise.all([issuePage(), import('../components/pr/PrHost.svelte')]).then(([page, host]) => ({ Page: page.default, Host: host.default }))),
   pr: once(() => import('../pages/PrPage.svelte')),
+  /** Pull requests page: page and core logic (app.loadPulls) as separate chunks */
+  pulls: once(() => Promise.all([import('../pages/PullsPage.svelte'), app.loadPulls()]).then(([m]) => m)),
   projects: once(() => import('../pages/ProjectsPage.svelte')),
   drafts: once(() => import('../pages/DraftsPage.svelte')),
   /** Wiki: page and core logic (app.loadWiki) as separate chunks */

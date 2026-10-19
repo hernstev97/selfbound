@@ -81,6 +81,8 @@ const entries = (a: App, ids: readonly IssueId[]) => ids.map((id) => a.store.get
 const inboxTargets = (a: App) => (inboxPage(a) || a.menu.state.get() !== null) && entries(a, a.targets()).length > 0;
 const someUnread = (a: App, ids: readonly IssueId[]) => entries(a, ids).some(unread);
 const inboxAll = (a: App) => (inboxPage(a) ? entries(a, a.list.visibleIds()) : []);
+// Pull requests page (own chunk): J/K and Enter move through its rows.
+const pullsPage = (a: App) => a.nav.page.get().name === 'pulls' && !!a.pullsLoaded();
 const manualOrder = (a: App) => listFocus(a) && a.list.view.get().display.ordering === 'rank' && a.list.view.get().display.grouping === 'none';
 
 // Edit text without the mouse: on an issue page (or on the right of a split list; in the inbox E
@@ -272,6 +274,11 @@ export const ACTIONS: Action[] = [
   { id: 'nav.first', label: msg('First issue'), section: 'Navigation', keys: ['home'], hidden: true, when: listPage, run: (a) => a.list.focusEdge(false) },
   { id: 'nav.last', label: msg('Last issue'), section: 'Navigation', keys: ['end'], hidden: true, when: listPage, run: (a) => a.list.focusEdge(true) },
   { id: 'go.inbox', label: msg('Go to: Inbox'), section: 'Navigation', keys: ['g i'], icon: 'inbox', top: true, keywords: 'inbox eingang', run: (a) => a.nav.goView({ kind: 'inbox', team: null }) },
+  { id: 'go.pulls', label: msg('Go to: Pull requests'), section: 'Navigation', keys: ['g p'], icon: 'pr', keywords: 'pull requests prs github merge review checks ci', run: (a) => a.nav.go({ name: 'pulls' }) },
+  { id: 'pulls.down', label: msg('Next pull request'), section: 'Navigation', keys: ['j', 'arrowdown'], hidden: true, when: pullsPage, run: (a) => a.pulls.step(1) },
+  { id: 'pulls.up', label: msg('Previous pull request'), section: 'Navigation', keys: ['k', 'arrowup'], hidden: true, when: pullsPage, run: (a) => a.pulls.step(-1) },
+  { id: 'pulls.open', label: msg('Open pull request'), section: 'Navigation', keys: ['enter'], hidden: true, when: (a) => pullsPage(a) && a.pulls.state.get().focus !== null, run: (a) => a.pulls.open(undefined, { toggle: false }) },
+  { id: 'pulls.done', label: msg('Show or hide merged and closed pull requests'), section: 'View', icon: 'pr', keywords: 'pull requests done merged closed erledigt gemergt geschlossen', when: (a) => pullsPage(a) && a.pulls.state.get().groups.some((g) => g.group === 'done'), run: (a) => a.pulls.toggleDone() },
   { id: 'go.snoozed', label: msg('Go to: Snoozed'), section: 'Navigation', keys: ['g h'], icon: 'snooze', keywords: 'snoozed zurückgestellt wiedervorlage later hidden', run: (a) => a.nav.goView({ kind: 'snoozed', team: a.contextTeam() }) },
   { id: 'go.triage', label: msg('Go to: Triage'), section: 'Navigation', keys: ['g t'], icon: 'triage', keywords: 'triage', run: (a) => a.nav.goView({ kind: 'triage', team: null }) },
   { id: 'go.all', label: msg('Go to: All issues'), section: 'Navigation', keys: ['g a'], icon: 'issues', top: true, keywords: 'all alle', run: (a) => a.nav.goView({ kind: 'all', team: null }) },

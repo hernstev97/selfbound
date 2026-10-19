@@ -27,6 +27,8 @@ import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import {
   cacheResolved as saveResolved,
   claimRefresh,
+  prAttention,
+  prList,
   claimResign as claimResignOp,
   mediaTarget as findMedia,
   prSummaries,
@@ -36,7 +38,7 @@ import {
   updateSigned as saveSigned,
 } from './ops/githubPr';
 import { mergeMethodValidator, prItemValidator, prDetailDataValidator, prStateValidator } from './schema';
-import type { GithubConnection, PrSummary, PrView } from './shared/pullRequests';
+import type { GithubConnection, PrAttention, PrList, PrSummary, PrView } from './shared/pullRequests';
 import { envVar } from './lib/legacyEnv';
 
 // Pull requests in Selfbound: view, summaries, fetching through the GitHub API, actions (merge,
@@ -57,6 +59,18 @@ export const view = ownerQuery({
 export const summaries = ownerQuery({
   args: { prIds: v.array(v.id('pullRequests')) },
   handler: async (ctx, args): Promise<PrSummary[]> => await prSummaries(ctx, args.prIds),
+});
+
+/** Pull requests page: all PRs linked to an issue, by what comes next (shared/pullRequests.ts prGroup). */
+export const list = ownerQuery({
+  args: {},
+  handler: async (ctx): Promise<PrList> => await prList(ctx, Date.now()),
+});
+
+/** Sidebar count of the pull requests page: ready to merge and checks failing. Only open PRs, so no clock. */
+export const attention = ownerQuery({
+  args: {},
+  handler: async (ctx): Promise<PrAttention> => await prAttention(ctx),
 });
 
 export const status = ownerQuery({

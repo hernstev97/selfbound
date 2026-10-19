@@ -121,3 +121,121 @@ test('Full view via the button and as a URL; Back leads to the issue', async ({ 
   await page.goto('/pr/acme/orbit-app/9999');
   await expect(page.getByTestId('pr-missing')).toBeVisible();
 });
+
+// ---------------------------------------------------------------- Pull requests page (SELF-100)
+
+const prRow = (page: import('@playwright/test').Page, number: number) => page.locator(`[data-testid="pull-row"][data-pr="acme/orbit-app#${number}"]`);
+const group = (page: import('@playwright/test').Page, name: string) => page.locator(`[data-testid="pulls-group"][data-group="${name}"]`);
+
+test('Pull requests page: entry right under the inbox with the count of ready and failing PRs; grouped by next step', async ({ page }) => {
+  await open(page);
+  const entry = page.getByTestId('nav-pulls');
+  await expect(entry).toBeVisible();
+  expect(await page.getByTestId('nav-inbox').evaluate((el) => (el.nextElementSibling as HTMLElement | null)?.dataset.testid)).toBe('nav-pulls');
+  // #131 is ready to merge, #128 has a failing check; running, blocked and draft ones do not count.
+  await expect(page.getByTestId('pulls-count')).toHaveText('2');
+  await expect(page.getByTestId('pulls-count')).toHaveAttribute('title', '1 ready to merge · 1 with failing checks');
+
+  await entry.click();
+  await expect(page).toHaveURL(/\/pulls$/);
+  await expect(entry).toHaveClass(/active/);
+  await expect(page.getByTestId('pulls-group')).toHaveCount(6);
+  expect(await page.getByTestId('pulls-group').evaluateAll((els) => els.map((el) => (el as HTMLElement).dataset.group))).toEqual(['ready', 'failing', 'running', 'blocked', 'draft', 'done']);
+  await expect(group(page, 'ready').getByTestId('pull-row')).toHaveCount(1);
+  // A PR with two issues appears once, with both issues as chips.
+  await expect(prRow(page, 131).getByTestId('pull-issue')).toHaveCount(2);
+  await expect(prRow(page, 131).getByTestId('pull-issue').first()).toHaveText(keyOf(samples[3]!.issueSeqs[0]!));
+  await expect(group(page, 'failing')).toContainText('#128');
+  await expect(prRow(page, 128).getByTestId('pull-checks')).toHaveText('1 failed');
+  await expect(prRow(page, 132).getByTestId('pull-checks')).toHaveText('1 running');
+  await expect(prRow(page, 130).getByTestId('pull-blocker')).toHaveText(['Conflicts', 'Changes requested']);
+  await expect(group(page, 'draft')).toContainText('#126');
+  // Done collapsed; open it, it stays open after a reload.
+  await expect(prRow(page, 121)).toHaveCount(0);
+  await page.getByTestId('pulls-done-toggle').click();
+  await expect(prRow(page, 121)).toContainText('Merged');
+  await page.reload();
+  await expect(prRow(page, 121)).toBeVisible();
+  await page.getByTestId('pulls-done-toggle').click();
+  await expect(prRow(page, 121)).toHaveCount(0);
+  // Without a token: a note instead of a reload button.
+  await expect(page.getByTestId('pulls-unconfigured')).toBeVisible();
+});
+
+test('Pull requests page: a click opens the PR beside the list, J/K follow, Enter opens it full size, Back and Esc', async ({ page }) => {
+  await page.goto('/pulls');
+  await expect(prRow(page, 128)).toBeVisible();
+  await expect(page).toHaveTitle(/^Pull requests · Selfbound/);
+  await prRow(page, 128).locator('.pull-title').click();
+  const pane = page.getByTestId('pr-pane');
+  await expect(pane.getByTestId('pr-title')).toContainText('Team cards: show sprint progress');
+  await expect(page).toHaveURL(/\/pulls$/);
+  await expect(prRow(page, 128)).toHaveClass(/active/);
+  // A second click closes it.
+  await prRow(page, 128).locator('.pull-title').click();
+  await expect(pane).toHaveCount(0);
+
+  // Keyboard: the clicked row has the focus; K moves up, Enter opens it beside the list, J moves on with it.
+  await page.mouse.move(2, 890);
+  await expect(prRow(page, 128)).toHaveClass(/focused/);
+  await page.keyboard.press('k');
+  await expect(prRow(page, 131)).toHaveClass(/focused/);
+  await page.keyboard.press('Enter');
+  await expect(pane.getByTestId('pr-title')).toContainText('Board: drag cards between columns');
+  await page.keyboard.press('j');
+  await expect(pane.getByTestId('pr-title')).toContainText('Team cards: show sprint progress');
+  await page.keyboard.press('Escape');
+  await expect(pane).toHaveCount(0);
+  await page.keyboard.press('Enter');
+  await expect(pane.getByTestId('pr-title')).toContainText('Team cards');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/pr\/acme\/orbit-app\/128$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/pulls$/);
+  await expect(prRow(page, 128)).toBeVisible();
+  await expect(page.getByTestId('pr-pane')).toHaveCount(0);
+
+  // G P from anywhere.
+  await open(page);
+  await page.keyboard.press('g');
+  await page.keyboard.press('p');
+  await expect(page).toHaveURL(/\/pulls$/);
+
+  // An issue chip opens the issue.
+  await prRow(page, 131).getByTestId('pull-issue').first().click();
+  await expect(page).toHaveURL(new RegExp(`/issue/${keyOf(samples[3]!.issueSeqs[0]!)}$`));
+});
+
+test('Pull requests page: after a click on a row link, J moves on and Enter opens the focused PR, not the clicked link', async ({ page }) => {
+  await page.goto('/pulls');
+  await prRow(page, 131).locator('.pull-key').click();
+  const pane = page.getByTestId('pr-pane');
+  await expect(pane.getByTestId('pr-title')).toContainText('Board: drag cards between columns');
+  await page.keyboard.press('j');
+  await expect(pane.getByTestId('pr-title')).toContainText('Team cards: show sprint progress');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/pr\/acme\/orbit-app\/128$/);
+});
+
+test('Pull requests page: a focused button keeps its focus when the list updates (Enter toggles Done back)', async ({ page }) => {
+  await page.goto('/pulls');
+  await prRow(page, 128).locator('.pull-title').click();
+  await expect(prRow(page, 128)).toHaveClass(/focused/);
+  await page.getByTestId('pulls-done-toggle').click();
+  await expect(prRow(page, 121)).toBeVisible();
+  await expect(page.getByTestId('pulls-done-toggle')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(prRow(page, 121)).toHaveCount(0);
+});
+
+test.describe('Pull requests page in a narrow window', () => {
+  test.use({ viewport: { width: 1000, height: 800 } });
+  test('a click opens the PR as its own page, Back returns to the list', async ({ page }) => {
+    await page.goto('/pulls');
+    await prRow(page, 130).locator('.pull-title').click();
+    await expect(page).toHaveURL(/\/pr\/acme\/orbit-app\/130$/);
+    await expect(page.getByTestId('pr-conflict')).toBeVisible();
+    await page.goBack();
+    await expect(prRow(page, 130)).toBeVisible();
+  });
+});

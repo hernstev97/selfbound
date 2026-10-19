@@ -3,7 +3,25 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { capChecks, mergeChecks, PR_LIMITS, type PrSnapshot } from '../lib/githubApi';
 import { clipHtml, clipItemsHtml, rewriteMedia, type MediaEntry, type MediaState } from '../lib/githubMedia';
-import { checkCounts, type PrDetail, type PrItem, type PrSummary, type PrView } from '../shared/pullRequests';
+import {
+  checkCounts,
+  DONE_WINDOW_MS,
+  PR_GROUPS,
+  prBlockers,
+  prGroup,
+  prStatusOf,
+  sameStatus,
+  type PrAttention,
+  type PrDetail,
+  type PrGroup,
+  type PrGroupInput,
+  type PrItem,
+  type PrList,
+  type PrListItem,
+  type PrStatus,
+  type PrSummary,
+  type PrView,
+} from '../shared/pullRequests';
 import { closeIssuesOnMerge, detailOf, githubConfigured } from './github';
 
 // Pull requests in Selfbound: read state from the GitHub API and store it.
@@ -115,6 +133,128 @@ export async function prSummaries(ctx: QueryCtx, prIds: Id<'pullRequests'>[]): P
   return out;
 }
 
+// ---------------------------------------------------------------- Pull requests page (SELF-100)
+
+/**
+ * Open (and draft) PRs read per state, newest change first. Webhooks come from all repos, so many of
+ * them may be unlinked (dependency updates); those cost one small document and an empty index read.
+ */
+export const LIST_OPEN_MAX = 1000;
+/** Merged (and closed) PRs changed in the last DONE_WINDOW_MS, read per state. */
+export const LIST_DONE_MAX = 500;
+const LINKS_MAX = 100;
+
+/**
+ * IDs of the issues linked to a PR, without issues in the trash. Empty: the PR is not on the page.
+ * Reading the issues makes the page follow a linked issue that is deleted or restored.
+ */
+async function linkedIssueIds(ctx: QueryCtx, prId: Id<'pullRequests'>): Promise<Id<'issues'>[]> {
+  const links = await ctx.db
+    .query('issuePullRequests')
+    .withIndex('by_pr', (q) => q.eq('prId', prId))
+    .take(LINKS_MAX);
+  const out: Id<'issues'>[] = [];
+  for (const id of new Set(links.map((l) => l.issueId))) {
+    const issue = await ctx.db.get('issues', id);
+    if (issue && issue.deletedAt === undefined) out.push(id);
+  }
+  return out;
+}
+
+async function statusRow(ctx: QueryCtx, prId: Id<'pullRequests'>) {
+  return await ctx.db
+    .query('pullRequestStatus')
+    .withIndex('by_pr', (q) => q.eq('prId', prId))
+    .unique();
+}
+
+/**
+ * Writes a PR's status (pullRequestStatus) if it changed, so the pull requests page and its count
+ * rerun only when a group can change. Called by every successful fetch (storeSnapshot).
+ */
+export async function writeStatus(ctx: MutationCtx, prId: Id<'pullRequests'>, status: PrStatus) {
+  const row = await statusRow(ctx, prId);
+  if (row && sameStatus(row, status)) return;
+  const doc = { prId, draft: status.draft, mergeState: status.mergeState, checks: status.checks, ...(status.review ? { review: status.review } : {}) };
+  if (row) await ctx.db.replace('pullRequestStatus', row._id, doc);
+  else await ctx.db.insert('pullRequestStatus', doc);
+}
+
+/** A PR's status; for one fetched before the table existed, from its details until the next fetch writes the row. */
+async function statusOf(ctx: QueryCtx, prId: Id<'pullRequests'>): Promise<PrStatus | null> {
+  const row = await statusRow(ctx, prId);
+  if (row) return { draft: row.draft, mergeState: row.mergeState, checks: row.checks, ...(row.review ? { review: row.review } : {}) };
+  const detail = await detailOf(ctx, prId);
+  return detail?.data ? prStatusOf(detail.data, detail.summary?.review) : null;
+}
+
+/** Linked PRs in the given open states with their status and group. Unlinked PRs cost one index read. */
+async function openLinked(ctx: QueryCtx, states: readonly ('open' | 'draft')[]) {
+  const out: { pr: Doc<'pullRequests'>; issueIds: Id<'issues'>[]; input: PrGroupInput; group: PrGroup }[] = [];
+  for (const state of states) {
+    const prs = await ctx.db
+      .query('pullRequests')
+      .withIndex('by_state_updated', (q) => q.eq('state', state))
+      .order('desc')
+      .take(LIST_OPEN_MAX);
+    for (const pr of prs) {
+      const issueIds = await linkedIssueIds(ctx, pr._id);
+      if (!issueIds.length) continue;
+      const input: PrGroupInput = { state: pr.state, status: await statusOf(ctx, pr._id) };
+      out.push({ pr, issueIds, input, group: prGroup(input) });
+    }
+  }
+  return out;
+}
+
+const listBase = (pr: Doc<'pullRequests'>) => ({ id: pr._id, repo: pr.repo, number: pr.number, title: pr.title, url: pr.url, state: pr.state, updatedAt: pr.updatedAt });
+
+/** All PRs linked to at least one issue: open ones by group, merged and closed ones of the last 14 days. */
+export async function prList(ctx: QueryCtx, now: number): Promise<PrList> {
+  const items: PrListItem[] = [];
+  for (const { pr, issueIds, input, group } of await openLinked(ctx, ['open', 'draft'])) {
+    const blockers = group === 'draft' ? [] : prBlockers(input);
+    items.push({
+      ...listBase(pr),
+      group,
+      issueIds,
+      ...(input.status ? { checks: input.status.checks } : {}),
+      ...(blockers.length ? { blockers } : {}),
+      ...(input.status?.review ? { review: input.status.review } : {}),
+    });
+  }
+  // `now` comes from the query (Date.now()): a row past the window stays until the next change reruns it.
+  const since = now - DONE_WINDOW_MS;
+  for (const state of ['merged', 'closed'] as const) {
+    // updatedAt is never before the merge, so this finds every candidate; a comment on an old PR moves
+    // updatedAt, hence the window counts from mergedAt where it is known (closing time is not stored).
+    const prs = await ctx.db
+      .query('pullRequests')
+      .withIndex('by_state_updated', (q) => q.eq('state', state).gte('updatedAt', since))
+      .order('desc')
+      .take(LIST_DONE_MAX);
+    for (const pr of prs) {
+      if ((pr.mergedAt ?? pr.updatedAt) < since) continue;
+      const issueIds = await linkedIssueIds(ctx, pr._id);
+      if (issueIds.length) items.push({ ...listBase(pr), group: 'done', issueIds });
+    }
+  }
+  const rank = new Map(PR_GROUPS.map((g, i) => [g, i]));
+  items.sort((a, b) => rank.get(a.group)! - rank.get(b.group)! || b.updatedAt - a.updatedAt);
+  return { items, configured: githubConfigured() };
+}
+
+/** Sidebar count: linked PRs that are ready to merge or have failing checks. Drafts never count, so they are not read. Reads only small documents. */
+export async function prAttention(ctx: QueryCtx): Promise<PrAttention> {
+  let ready = 0;
+  let failing = 0;
+  for (const { group } of await openLinked(ctx, ['open'])) {
+    if (group === 'ready') ready++;
+    else if (group === 'failing') failing++;
+  }
+  return { ready, failing };
+}
+
 /** What an action needs to know about a PR (repo, number, state, latest state, media key). */
 export async function prTarget(ctx: QueryCtx, prId: Id<'pullRequests'>) {
   const pr = await ctx.db.get('pullRequests', prId);
@@ -215,6 +355,8 @@ export async function storeSnapshot(ctx: MutationCtx, args: StoreArgs, now = Dat
         ...fetchingDone,
       });
     else await ctx.db.insert('pullRequestDetails', { prId: args.prId, media: [], fetchedAt: args.fetchedAt, error });
+    // The state stays, but a check result a webhook delivery put into it since must reach the status too.
+    if (row?.data) await writeStatus(ctx, args.prId, prStatusOf(row.data, row.summary?.review));
     return { stored: true, retry: false, closed: [] as string[] };
   }
 
@@ -259,6 +401,7 @@ export async function storeSnapshot(ctx: MutationCtx, args: StoreArgs, now = Dat
   };
   if (row) await ctx.db.patch('pullRequestDetails', row._id, fields);
   else await ctx.db.insert('pullRequestDetails', { prId: args.prId, ...defined(fields) });
+  await writeStatus(ctx, args.prId, prStatusOf(data, snap.summary.review));
   if (retry && !pendingRefresh) await ctx.scheduler.runAfter(MERGE_RETRY_MS, internal.githubPr.refreshOne, { prId: args.prId, since: now });
 
   // ---- Reconcile items: insert new, replace changed, delete vanished

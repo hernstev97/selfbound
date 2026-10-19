@@ -112,6 +112,15 @@ export const prCheckValidator = v.object({
   startedAt: v.optional(v.number()),
   completedAt: v.optional(v.number()),
 });
+export const prMergeStateValidator = v.union(
+  v.literal('clean'),
+  v.literal('dirty'),
+  v.literal('blocked'),
+  v.literal('behind'),
+  v.literal('unstable'),
+  v.literal('draft'),
+  v.literal('unknown'),
+);
 /** PrDetail without `fetchedAt` and `error` (those live on the document, even before there is any data). */
 export const prDetailDataValidator = v.object({
   bodyHtml: v.string(),
@@ -124,15 +133,7 @@ export const prDetailDataValidator = v.object({
   headRepo: v.optional(v.string()),
   headSha: v.string(),
   draft: v.boolean(),
-  mergeState: v.union(
-    v.literal('clean'),
-    v.literal('dirty'),
-    v.literal('blocked'),
-    v.literal('behind'),
-    v.literal('unstable'),
-    v.literal('draft'),
-    v.literal('unknown'),
-  ),
+  mergeState: prMergeStateValidator,
   additions: v.number(),
   deletions: v.number(),
   changedFiles: v.number(),
@@ -537,7 +538,9 @@ export default defineSchema({
   })
     .index('by_repo_number', ['repo', 'number'])
     // Check and status events often name only the commit.
-    .index('by_repo_head', ['repo', 'headSha']),
+    .index('by_repo_head', ['repo', 'headSha'])
+    // Pull requests page (githubPr.list, githubPr.attention): open ones, and recently merged or closed ones.
+    .index('by_state_updated', ['state', 'updatedAt']),
 
   // A PR's state from the GitHub API (ops/githubPr.ts), one document per PR. Created on the first
   // fetch, or already when a fetch is scheduled (then only `refreshAt`, without `data`).
@@ -571,6 +574,20 @@ export default defineSchema({
   })
     .index('by_pr', ['prId'])
     .index('by_media_key', ['mediaKey']),
+
+  // What the pull requests page and its sidebar count need of a PR's fetched state (SELF-100,
+  // shared/pullRequests.ts PrStatus). Written by the fetch (storeSnapshot) only when it changes, so
+  // the always-on count neither reads the large pullRequestDetails document nor reruns on its
+  // bookkeeping writes (refreshAt, fetchingSince, viewedAt). Missing until the first fetch after
+  // its introduction; readers then use pullRequestDetails. A cache, not exported.
+  pullRequestStatus: defineTable({
+    prId: v.id('pullRequests'),
+    draft: v.boolean(),
+    mergeState: prMergeStateValidator,
+    // listCheckCounts: a canceled check counts as failed
+    checks: v.object({ total: v.number(), failed: v.number(), pending: v.number() }),
+    review: v.optional(prReviewSummaryValidator),
+  }).index('by_pr', ['prId']),
 
   // Check runs from `check_run` webhook deliveries, only for known PRs. A fine-grained token cannot
   // read check runs through the API; GitHub Actions comes through the Actions API, third-party apps

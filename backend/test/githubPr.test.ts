@@ -3,8 +3,9 @@ import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import { signBody } from '../convex/lib/github';
 import { mapPullRequest, PR_LIMITS, type PrSnapshot } from '../convex/lib/githubApi';
+import { writeStatus } from '../convex/ops/githubPr';
 import { readOpsStatus } from '../convex/ops/maintenance';
-import type { PrItem } from '../convex/shared/pullRequests';
+import { prStatusOf, type PrCheckState, type PrDetail, type PrItem, type PrMergeState } from '../convex/shared/pullRequests';
 import { createOne, expectCode, fixture, getIssue, setup, type T } from './helpers';
 import { fakeGithub, prJson, prRoutes, repoJson, REPO, SHA, TOKEN, user } from './lib/githubFake';
 
@@ -256,6 +257,9 @@ describe('fetch and view', () => {
 
     const [summary] = await owner.query(api.githubPr.summaries, { prIds: [prId] });
     expect(summary).toMatchObject({ id: prId, mergeState: 'clean', checks: { total: 2, failed: 0, pending: 0 }, review: 'approved', comments: 1 });
+    // The fetch also stores the small status the pull requests page reads.
+    const status = () => t.run(async (ctx) => await ctx.db.query('pullRequestStatus').withIndex('by_pr', (q) => q.eq('prId', prId)).unique());
+    expect(await status()).toMatchObject({ draft: false, mergeState: 'clean', checks: { total: 2, failed: 0, pending: 0 }, review: 'approved' });
 
     // no new fetch within 60 s
     const before = fake.calls.length;
@@ -538,6 +542,179 @@ describe('merge transition (fetch and webhook)', () => {
   });
 });
 
+describe('pull requests page (githubPr.list, githubPr.attention)', () => {
+  const HOUR = 60 * 60 * 1000;
+  const NOW = Date.parse('2026-10-08T12:00:00Z');
+
+  function data(checks: PrCheckState[], mergeState: PrMergeState = 'clean', draft = false): Omit<PrDetail, 'fetchedAt' | 'error'> {
+    return {
+      bodyHtml: '',
+      author: { login: 'alex-example', bot: false },
+      createdAt: NOW - 48 * HOUR,
+      baseRef: 'main',
+      headRef: 'feature/x',
+      headSha: SHA,
+      draft,
+      mergeState,
+      additions: 1,
+      deletions: 0,
+      changedFiles: 1,
+      commits: 1,
+      labels: [],
+      requestedReviewers: [],
+      checks: checks.map((state, n) => ({ key: `check:${n}`, name: `CI ${n}`, source: 'check' as const, state })),
+      mergeMethods: ['merge'],
+      deleteBranchOnMerge: false,
+      headBranchDeletable: false,
+    };
+  }
+
+  async function addPr(
+    t: T,
+    pr: { number: number; state: 'open' | 'draft' | 'merged' | 'closed'; hoursAgo: number; issues: Id<'issues'>[]; mergedHoursAgo?: number },
+    detail?: { data: Omit<PrDetail, 'fetchedAt' | 'error'>; review?: 'approved' | 'changes_requested'; statusRow?: false },
+  ) {
+    return await t.run(async (ctx) => {
+      const prId = await ctx.db.insert('pullRequests', {
+        repo: REPO,
+        number: pr.number,
+        title: `PR ${pr.number}`,
+        url: `https://github.com/${REPO}/pull/${pr.number}`,
+        state: pr.state,
+        branch: `orb-${pr.number}`,
+        updatedAt: NOW - pr.hoursAgo * HOUR,
+        ...(pr.mergedHoursAgo !== undefined ? { mergedAt: NOW - pr.mergedHoursAgo * HOUR } : {}),
+      });
+      for (const issueId of pr.issues) await ctx.db.insert('issuePullRequests', { issueId, prId, via: 'branch', closes: true });
+      if (detail) {
+        await ctx.db.insert('pullRequestDetails', {
+          prId,
+          media: [],
+          fetchedAt: NOW - HOUR,
+          data: detail.data,
+          summary: { comments: 0, ...(detail.review ? { review: detail.review } : {}) },
+        });
+        // As a fetch stores it; without it (fetched before the table existed) the page reads the details.
+        if (detail.statusRow !== false) await writeStatus(ctx, prId, prStatusOf(detail.data, detail.review));
+      }
+      return prId;
+    });
+  }
+
+  test('linked PRs only, once each with all issues, grouped by what comes next, newest first; done for 14 days', async () => {
+    const { t, owner } = init();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb);
+    const b = await createOne(owner, f.orb);
+    const c = await createOne(owner, f.nova);
+    const gone = await createOne(owner, f.orb);
+
+    await addPr(t, { number: 1, state: 'open', hoursAgo: 5, issues: [a.id, b.id] }, { data: data(['success', 'skipped']), review: 'approved' });
+    await addPr(t, { number: 12, state: 'open', hoursAgo: 1, issues: [c.id] }, { data: data([], 'behind') });
+    await addPr(t, { number: 2, state: 'open', hoursAgo: 2, issues: [c.id] }, { data: data(['failure', 'pending'], 'dirty') });
+    await addPr(t, { number: 13, state: 'open', hoursAgo: 3, issues: [b.id] }, { data: data(['cancelled']), statusRow: false });
+    await addPr(t, { number: 3, state: 'open', hoursAgo: 4, issues: [a.id] }, { data: data(['success', 'pending']) });
+    await addPr(t, { number: 4, state: 'open', hoursAgo: 6, issues: [c.id] }, { data: data(['success'], 'dirty'), review: 'changes_requested', statusRow: false });
+    await addPr(t, { number: 10, state: 'open', hoursAgo: 7, issues: [a.id] });
+    await addPr(t, { number: 5, state: 'draft', hoursAgo: 1, issues: [b.id] }, { data: data(['failure'], 'draft', true) });
+    await addPr(t, { number: 14, state: 'open', hoursAgo: 2, issues: [b.id] }, { data: data(['success'], 'clean', true) });
+    await addPr(t, { number: 7, state: 'merged', hoursAgo: 72, mergedHoursAgo: 72, issues: [a.id] });
+    // Merged a month ago, commented on yesterday: not in the 14 days.
+    await addPr(t, { number: 15, state: 'merged', hoursAgo: 20, mergedHoursAgo: 30 * 24, issues: [a.id] });
+    await addPr(t, { number: 9, state: 'closed', hoursAgo: 24, issues: [b.id] });
+    // Not on the page: unlinked, done longer than 14 days ago, linked only to an issue in the trash.
+    await addPr(t, { number: 6, state: 'open', hoursAgo: 1, issues: [] }, { data: data(['success']) });
+    await addPr(t, { number: 8, state: 'merged', hoursAgo: 15 * 24, issues: [a.id] });
+    await addPr(t, { number: 11, state: 'open', hoursAgo: 1, issues: [gone.id] }, { data: data(['success']) });
+    await owner.mutation(api.issues.remove, { ids: [gone.id] });
+
+    const list = await owner.query(api.githubPr.list, {});
+    expect(list.configured).toBe(true);
+    expect(list.items.map((i) => [i.number, i.group])).toEqual([
+      [12, 'ready'],
+      [1, 'ready'],
+      [2, 'failing'],
+      [13, 'failing'],
+      [3, 'running'],
+      [4, 'blocked'],
+      [10, 'blocked'],
+      [5, 'draft'],
+      [14, 'draft'],
+      [9, 'done'],
+      [7, 'done'],
+    ]);
+    const byNumber = new Map(list.items.map((i) => [i.number, i]));
+    expect(byNumber.get(1)!.issueIds).toEqual([a.id, b.id]);
+    expect(byNumber.get(1)!.review).toBe('approved');
+    expect(byNumber.get(1)!.checks).toEqual({ total: 2, failed: 0, pending: 0 });
+    expect(byNumber.get(13)!.checks).toEqual({ total: 1, failed: 1, pending: 0 });
+    // Failing with conflicts: the conflicts still show on the row.
+    expect(byNumber.get(2)!.blockers).toEqual(['conflicts']);
+    expect(byNumber.get(4)!.blockers).toEqual(['conflicts', 'changes_requested']);
+    expect(byNumber.get(10)!.blockers).toEqual(['unknown']);
+    expect(byNumber.get(10)!.checks).toBeUndefined();
+    expect(byNumber.get(5)!.blockers).toBeUndefined();
+    expect(byNumber.get(7)!.checks).toBeUndefined();
+
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 2, failing: 2 });
+
+    // The count reads the small status rows, not the details: details alone (no row) only for #13 and #4.
+    const rows = await t.run(async (ctx) => (await ctx.db.query('pullRequestStatus').collect()).length);
+    expect(rows).toBe(8);
+
+    // Restoring the issue brings its PR back; merging a ready one moves it to done and out of the count.
+    await owner.mutation(api.issues.restore, { ids: [gone.id] });
+    await t.run(async (ctx) => {
+      const pr = (await ctx.db.query('pullRequests').withIndex('by_repo_number', (q) => q.eq('repo', REPO).eq('number', 12)).unique())!;
+      await ctx.db.patch('pullRequests', pr._id, { state: 'merged', updatedAt: NOW });
+    });
+    const after = await owner.query(api.githubPr.list, {});
+    expect(after.items.filter((i) => i.group === 'ready').map((i) => i.number)).toEqual([11, 1]);
+    expect(after.items.find((i) => i.number === 12)!.group).toBe('done');
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 2, failing: 2 });
+  });
+
+  test('a failed fetch keeps the state but brings a newer check result into the status; the backfill writes missing rows', async () => {
+    const { t, owner } = init();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb);
+    const prId = await addPr(t, { number: 1, state: 'open', hoursAgo: 1, issues: [a.id] }, { data: data(['success']) });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 1, failing: 0 });
+    // A check_run delivery puts a failed check into the details right away (webhook path, unchanged).
+    await t.run(async (ctx) => {
+      const row = (await ctx.db.query('pullRequestDetails').withIndex('by_pr', (q) => q.eq('prId', prId)).unique())!;
+      await ctx.db.patch('pullRequestDetails', row._id, { data: { ...row.data!, checks: [...row.data!.checks, { key: 'check:9', name: 'CI 9', source: 'check', state: 'failure' }] } });
+    });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 1, failing: 0 });
+    // The fetch that follows fails: the status still follows the stored state.
+    await t.mutation(internal.githubPr.store, { prId, fetchedAt: NOW, mediaKey: 'k'.repeat(43), error: 'GitHub is unreachable.' });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 0, failing: 1 });
+
+    // Fetched before the status table existed: the backfill writes the row, and again changes nothing.
+    await addPr(t, { number: 2, state: 'open', hoursAgo: 2, issues: [a.id] }, { data: data(['pending']), statusRow: false });
+    const rows = () => t.run(async (ctx) => (await ctx.db.query('pullRequestStatus').collect()).map((r) => r.checks));
+    expect(await rows()).toHaveLength(1);
+    expect(await t.mutation(internal.migrations.prStatusBackfill, {})).toEqual({ scanned: 2, written: 2, done: true });
+    expect(await rows()).toEqual([
+      { total: 2, failed: 1, pending: 0 },
+      { total: 1, failed: 0, pending: 1 },
+    ]);
+    await t.mutation(internal.migrations.prStatusBackfill, {});
+    expect(await rows()).toHaveLength(2);
+  });
+
+  test('without a token: list says so, grouping uses what is stored', async () => {
+    const { t, owner } = init();
+    delete process.env.GITHUB_TOKEN;
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb);
+    await addPr(t, { number: 1, state: 'open', hoursAgo: 1, issues: [a.id] });
+    const list = await owner.query(api.githubPr.list, {});
+    expect(list).toEqual({ configured: false, items: [expect.objectContaining({ number: 1, group: 'blocked', blockers: ['unknown'], issueIds: [a.id] })] });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 0, failing: 0 });
+  });
+});
+
 describe('actions', () => {
   test('merge: PUT with head commit, delete branch, fetch; errors with a readable message', async () => {
     const { t, owner } = init();
@@ -618,6 +795,8 @@ describe('actions', () => {
     for (const client of [t, stranger]) {
       await expectCode(client.query(api.githubPr.view, { repo: REPO, number: 7 }), 'access_denied');
       await expectCode(client.query(api.githubPr.summaries, { prIds: [prId] }), 'access_denied');
+      await expectCode(client.query(api.githubPr.list, {}), 'access_denied');
+      await expectCode(client.query(api.githubPr.attention, {}), 'access_denied');
       await expectCode(client.query(api.githubPr.status, {}), 'access_denied');
       await expectCode(client.query(api.githubPr.connection, {}), 'access_denied');
       await expectCode(client.action(api.githubPr.refresh, { prIds: [prId] }), 'access_denied');

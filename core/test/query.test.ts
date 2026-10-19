@@ -247,6 +247,8 @@ describe('routing by path', () => {
     ['/new', { name: 'new' }],
     ['/pr/acme/widgets/57', { name: 'pr', repo: 'acme/widgets', number: 57 }],
     ['/pr/acme/acme.dev/3', { name: 'pr', repo: 'acme/acme.dev', number: 3 }],
+    ['/pulls', { name: 'pulls' }],
+    ['/pulls/x', { name: 'home' }],
     ['/pr/acme/widgets', { name: 'home' }],
     ['/pr/acme/widgets/abc', { name: 'home' }],
     ['/does/not/exist', { name: 'home' }],

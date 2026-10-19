@@ -1,5 +1,5 @@
 /* Pull requests: list on the issue, issue | PR frame, view as a page or beside the issue.
-   Loaded with the issue page (list, frame) or the PR view, not in the startup bundle. */
+   Loaded with the issue page (list, frame), the PR view or the pull requests page, not in the startup bundle. */
 
 /* ---------------------------------------------------------------- Colors */
 
@@ -661,5 +661,220 @@
   .img-viewer,
   .img-viewer-stage img {
     animation: none;
+  }
+}
+
+/* ---------------------------------------------------------------- Pull requests page (/pulls) */
+
+.pulls-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  container: pulls / inline-size;
+}
+.pulls-scroll > .empty {
+  height: 100%;
+}
+.pulls-content {
+  padding: 4px 8px 80px;
+}
+.pulls-note {
+  margin: 12px 12px 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+}
+.pulls-note a {
+  color: var(--accent-text);
+}
+.pulls-group {
+  padding-top: 8px;
+}
+/* Same look as a list's group header (.group-box), static instead of positioned. */
+.pulls-head {
+  width: 100%;
+  margin: 0;
+  padding-left: 10px;
+  font-size: inherit;
+  text-align: left;
+}
+button.pulls-head {
+  padding-left: 0;
+}
+.pulls-head .group-chevron {
+  margin-left: 2px;
+}
+.pulls-dot {
+  width: 8px;
+  height: 8px;
+  margin: 0 4px 0 6px;
+  border-radius: 50%;
+  background: var(--tint);
+}
+.pulls-head-note {
+  color: var(--text-faint);
+  font-size: var(--fs-mini);
+  font-weight: 450;
+}
+
+.pull-row {
+  display: grid;
+  grid-template-columns: 16px auto minmax(0, 1fr) auto auto;
+  grid-template-areas: 'icon key title extra age';
+  align-items: center;
+  column-gap: 10px;
+  min-height: 44px;
+  padding: 4px 16px 4px 20px;
+  border-radius: var(--radius);
+  cursor: default;
+  --icon-cut: var(--bg-panel);
+}
+.pull-row:hover,
+.pull-row.focused {
+  background: var(--bg-row-hover);
+  --icon-cut: var(--bg-row-hover);
+}
+.pull-row.active {
+  background: var(--bg-active);
+  --icon-cut: var(--bg-active);
+}
+.pull-icon {
+  grid-area: icon;
+}
+.pull-key {
+  grid-area: key;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.pull-key:hover {
+  color: var(--text);
+}
+.pull-owner {
+  color: var(--text-faint);
+}
+.pull-title {
+  grid-area: title;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-strong);
+  font-weight: 510;
+}
+/* Wide: key and extras are cells of the row; narrow: one wrapping line below the title. */
+.pull-sub {
+  display: contents;
+}
+.pull-extra {
+  grid-area: extra;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+/* Issue chips: the look of issue mentions in texts (md.css), status icon first. */
+.pull-issue {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px 0 4px;
+  border-radius: 5px;
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--accent-text);
+  font-size: var(--fs-small);
+  font-weight: 510;
+  text-decoration: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.pull-issue:hover {
+  background: color-mix(in oklch, var(--accent) 22%, transparent);
+}
+.pull-issue .icon,
+.pull-issue .icon svg {
+  width: 14px;
+  height: 14px;
+}
+.pull-issue.mention-done,
+.pull-issue.mention-canceled {
+  color: var(--text-muted);
+  background: color-mix(in oklch, var(--text-muted) 10%, transparent);
+}
+.pull-issue.mention-canceled {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.pull-more {
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+.pill.pull-blocker {
+  height: 22px;
+  padding: 0 8px;
+}
+.pill.pull-blocker.conflicts,
+.pill.pull-blocker.changes_requested {
+  color: var(--danger-text);
+}
+.pull-row .pr-review {
+  display: inline-grid;
+  place-items: center;
+  color: var(--status-review);
+}
+.pull-checks {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pull-age {
+  grid-area: age;
+  min-width: 64px;
+  text-align: right;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Narrow (phone, or the list beside a PR): title on the first line, the rest below it. */
+@container pulls (max-width: 640px) {
+  .pull-row {
+    grid-template-columns: 16px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'icon title age'
+      '. sub sub';
+    row-gap: 4px;
+    padding: 8px 12px 8px 14px;
+  }
+  .pull-sub {
+    grid-area: sub;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+    min-width: 0;
+  }
+  .pull-extra {
+    display: contents;
+  }
+  .pull-owner {
+    display: none;
+  }
+  .pull-age {
+    min-width: 0;
+  }
+}
+@media (max-width: 768px) {
+  .pulls-content {
+    padding: 4px 4px 120px;
   }
 }

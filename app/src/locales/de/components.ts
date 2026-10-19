@@ -144,6 +144,9 @@ export default {
   '{pending} of {total} checks running': '{pending} von {total} Checks laufen',
   'The check passed': ['Der Check war erfolgreich', 'Alle {count} Checks erfolgreich'],
   'Pull requests': 'Pull Requests',
+  // Sidebar.svelte (pull requests count)
+  '{count} ready to merge': '{count} bereit zum Mergen',
+  '{count} with failing checks': '{count} mit roten Checks',
   'Open beside the issue': 'Neben dem Issue öffnen',
   [ctx('verb', 'Open')]: 'Öffnen',
   Approved: 'Genehmigt',

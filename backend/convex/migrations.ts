@@ -9,6 +9,8 @@ import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import { canonicalTimeZone } from './lib/dates';
 import { storedTimeZone, writeTimeZone } from './ops/instance';
 import { removeTestTeam as removeTestTeamOp } from './ops/testData';
+import { writeStatus } from './ops/githubPr';
+import { prStatusOf } from './shared/pullRequests';
 import { CLOSED_STATUSES } from './shared/constants';
 import { stateForStatus, statusOfState } from './shared/workflow';
 
@@ -254,5 +256,26 @@ export const setInstanceTimeZone = internalMutation({
     if (args.timeZone === undefined) return { timeZone: await storedTimeZone(ctx), applied: false };
     if (!canonicalTimeZone(args.timeZone)) throw new Error(`Unknown time zone "${args.timeZone}".`);
     return { ...(await writeTimeZone(ctx, args.timeZone)), applied: true };
+  },
+});
+
+/**
+ * Pull requests page (SELF-100): a status row (pullRequestStatus) for every PR fetched before the
+ * table existed, from its stored details. Optional: without it the page reads those details until
+ * the PR's next fetch. Writes only missing or different rows, so it may run any number of times.
+ * Reschedules itself page by page (details can be large, hence few per page).
+ */
+export const prStatusBackfill = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query('pullRequestDetails').paginate({ cursor: args.cursor ?? null, numItems: 25, maximumBytesRead: MAX_BYTES });
+    let written = 0;
+    for (const row of page.page) {
+      if (!row.data) continue;
+      await writeStatus(ctx, row.prId, prStatusOf(row.data, row.summary?.review));
+      written++;
+    }
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.migrations.prStatusBackfill, { cursor: page.continueCursor });
+    return { scanned: page.page.length, written, done: page.isDone };
   },
 });
