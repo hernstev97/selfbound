@@ -571,7 +571,7 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
 
   async function addPr(
     t: T,
-    pr: { number: number; state: 'open' | 'draft' | 'merged' | 'closed'; hoursAgo: number; issues: Id<'issues'>[] },
+    pr: { number: number; state: 'open' | 'draft' | 'merged' | 'closed'; hoursAgo: number; issues: Id<'issues'>[]; mergedHoursAgo?: number },
     detail?: { data: Omit<PrDetail, 'fetchedAt' | 'error'>; review?: 'approved' | 'changes_requested'; statusRow?: false },
   ) {
     return await t.run(async (ctx) => {
@@ -583,6 +583,7 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
         state: pr.state,
         branch: `orb-${pr.number}`,
         updatedAt: NOW - pr.hoursAgo * HOUR,
+        ...(pr.mergedHoursAgo !== undefined ? { mergedAt: NOW - pr.mergedHoursAgo * HOUR } : {}),
       });
       for (const issueId of pr.issues) await ctx.db.insert('issuePullRequests', { issueId, prId, via: 'branch', closes: true });
       if (detail) {
@@ -617,7 +618,9 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
     await addPr(t, { number: 10, state: 'open', hoursAgo: 7, issues: [a.id] });
     await addPr(t, { number: 5, state: 'draft', hoursAgo: 1, issues: [b.id] }, { data: data(['failure'], 'draft', true) });
     await addPr(t, { number: 14, state: 'open', hoursAgo: 2, issues: [b.id] }, { data: data(['success'], 'clean', true) });
-    await addPr(t, { number: 7, state: 'merged', hoursAgo: 72, issues: [a.id] });
+    await addPr(t, { number: 7, state: 'merged', hoursAgo: 72, mergedHoursAgo: 72, issues: [a.id] });
+    // Merged a month ago, commented on yesterday: not in the 14 days.
+    await addPr(t, { number: 15, state: 'merged', hoursAgo: 20, mergedHoursAgo: 30 * 24, issues: [a.id] });
     await addPr(t, { number: 9, state: 'closed', hoursAgo: 24, issues: [b.id] });
     // Not on the page: unlinked, done longer than 14 days ago, linked only to an issue in the trash.
     await addPr(t, { number: 6, state: 'open', hoursAgo: 1, issues: [] }, { data: data(['success']) });

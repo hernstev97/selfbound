@@ -97,14 +97,20 @@ describe('page', () => {
     expect(app.pulls.state.get().loaded).toBe(false);
   });
 
-  test('more than ten open PRs: only the first ten; without a token no refresh; the reload button forces it', async () => {
+  test('more than ten open PRs: only the first ten; the reload button goes through all of them in batches; without a token nothing', async () => {
     const { client, app } = await setup();
     const many = { configured: true, items: Array.from({ length: 14 }, (_, i) => item(i + 1, 'ready')) };
     await openPage(client, app, many);
     expect((refreshes(client)[0]![1] as { prIds: string[] }).prIds).toHaveLength(10);
 
-    await app.pulls.refresh(undefined, true);
-    expect((refreshes(client)[1]![1] as { maxAgeMs: number }).maxAgeMs).toBe(0);
+    client.action.mockResolvedValueOnce({ refreshed: 10 }).mockResolvedValueOnce({ refreshed: 3, error: 'Rate limit' });
+    expect(await app.pulls.reload()).toBe('Rate limit');
+    const batches = refreshes(client).slice(1).map((c) => c[1] as { prIds: string[]; maxAgeMs: number });
+    expect(batches.map((b) => [b.prIds.length, b.maxAgeMs])).toEqual([
+      [10, 0],
+      [4, 0],
+    ]);
+    expect(batches[1]!.prIds).toEqual(['pr11', 'pr12', 'pr13', 'pr14']);
 
     const other = await setup();
     await openPage(other.client, other.app, { ...LIST, configured: false });

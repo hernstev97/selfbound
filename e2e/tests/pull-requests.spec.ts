@@ -206,6 +206,17 @@ test('Pull requests page: a click opens the PR beside the list, J/K follow, Ente
   await expect(page).toHaveURL(new RegExp(`/issue/${keyOf(samples[3]!.issueSeqs[0]!)}$`));
 });
 
+test('Pull requests page: after a click on a row link, J moves on and Enter opens the focused PR, not the clicked link', async ({ page }) => {
+  await page.goto('/pulls');
+  await prRow(page, 131).locator('.pull-key').click();
+  const pane = page.getByTestId('pr-pane');
+  await expect(pane.getByTestId('pr-title')).toContainText('Board: drag cards between columns');
+  await page.keyboard.press('j');
+  await expect(pane.getByTestId('pr-title')).toContainText('Team cards: show sprint progress');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/pr\/acme\/orbit-app\/128$/);
+});
+
 test.describe('Pull requests page in a narrow window', () => {
   test.use({ viewport: { width: 1000, height: 800 } });
   test('a click opens the PR as its own page, Back returns to the list', async ({ page }) => {

@@ -84,12 +84,16 @@
     app.openIssue(id as IssueId);
   }
 
-  // J/K: keep the focused row in view.
+  // J/K: keep the focused row in view. A link of another row that still has the browser focus (after a
+  // click) lets go, otherwise Enter would follow that link instead of opening the focused row.
   let scroller = $state<HTMLElement>();
   $effect(() => {
     const id = s.focus;
     if (!id || !scroller) return;
-    scroller.querySelector<HTMLElement>(`[data-pr-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' });
+    const row = scroller.querySelector<HTMLElement>(`[data-pr-id="${CSS.escape(id)}"]`);
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && scroller.contains(active) && !row?.contains(active)) active.blur();
+    row?.scrollIntoView({ block: 'nearest' });
   });
 
   let reloading = $state(false);
@@ -97,8 +101,8 @@
     if (reloading) return;
     reloading = true;
     try {
-      const result = await app.pulls.refresh(undefined, true);
-      if (result?.error) app.toasts.show(t('Pull requests not updated'), undefined, 'error', result.error);
+      const error = await app.pulls.reload();
+      if (error) app.toasts.show(t('Pull requests not updated'), undefined, 'error', error);
     } catch (error) {
       app.toasts.error(t('Pull requests not updated'), error);
     } finally {

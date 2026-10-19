@@ -135,11 +135,14 @@ export async function prSummaries(ctx: QueryCtx, prIds: Id<'pullRequests'>[]): P
 
 // ---------------------------------------------------------------- Pull requests page (SELF-100)
 
-/** Open (and draft) PRs read per state, newest change first. Far more than one person has open. */
-export const LIST_OPEN_MAX = 200;
-/** Merged (and closed) PRs of the last DONE_WINDOW_MS read per state. */
-export const LIST_DONE_MAX = 100;
-const LINKS_MAX = 20;
+/**
+ * Open (and draft) PRs read per state, newest change first. Webhooks come from all repos, so many of
+ * them may be unlinked (dependency updates); those cost one small document and an empty index read.
+ */
+export const LIST_OPEN_MAX = 1000;
+/** Merged (and closed) PRs changed in the last DONE_WINDOW_MS, read per state. */
+export const LIST_DONE_MAX = 500;
+const LINKS_MAX = 100;
 
 /**
  * IDs of the issues linked to a PR, without issues in the trash. Empty: the PR is not on the page.
@@ -220,14 +223,18 @@ export async function prList(ctx: QueryCtx, now: number): Promise<PrList> {
       ...(input.status?.review ? { review: input.status.review } : {}),
     });
   }
+  // `now` comes from the query (Date.now()): a row past the window stays until the next change reruns it.
   const since = now - DONE_WINDOW_MS;
   for (const state of ['merged', 'closed'] as const) {
+    // updatedAt is never before the merge, so this finds every candidate; a comment on an old PR moves
+    // updatedAt, hence the window counts from mergedAt where it is known (closing time is not stored).
     const prs = await ctx.db
       .query('pullRequests')
       .withIndex('by_state_updated', (q) => q.eq('state', state).gte('updatedAt', since))
       .order('desc')
       .take(LIST_DONE_MAX);
     for (const pr of prs) {
+      if ((pr.mergedAt ?? pr.updatedAt) < since) continue;
       const issueIds = await linkedIssueIds(ctx, pr._id);
       if (issueIds.length) items.push({ ...listBase(pr), group: 'done', issueIds });
     }

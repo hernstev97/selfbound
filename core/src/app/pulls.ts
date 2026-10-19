@@ -31,6 +31,8 @@ const EMPTY: PullsState = { loaded: false, configured: false, groups: [], focus:
 const DONE_OPEN_KEY = 'selfbound:pullsDoneOpen';
 /** One refresh per visit for at most this many open PRs from the top (githubPr.refresh takes at most 10). */
 export const REFRESH_COUNT = 10;
+/** The reload button goes through the open PRs in batches of REFRESH_COUNT, at most this many (GitHub's rate limit). */
+export const RELOAD_MAX = 50;
 /** The server fetches only PRs fetched longer ago than this; webhooks keep them current otherwise. */
 export const REFRESH_MAX_AGE_MS = 120_000;
 
@@ -87,18 +89,29 @@ export class PullsController {
 
   /**
    * Fetch the open PRs at the top again: one call for up to REFRESH_COUNT PRs (GitHub's rate limit),
-   * never one per row; the server skips those fetched within REFRESH_MAX_AGE_MS. `force`: the reload button.
+   * never one per row; the server skips those fetched within REFRESH_MAX_AGE_MS.
    */
-  refresh(list = this.#watch?.slice.get(), force = false) {
-    if (!list?.configured) return Promise.resolve(null);
-    const prIds = list.items
-      .filter((i) => i.group !== 'done')
-      .slice(0, REFRESH_COUNT)
-      .map((i) => i.id as Id<'pullRequests'>);
-    if (!prIds.length) return Promise.resolve(null);
-    const done = this.app.store.act(api.githubPr.refresh, { prIds, maxAgeMs: force ? 0 : REFRESH_MAX_AGE_MS });
-    if (!force) done.catch(() => {});
-    return done;
+  refresh(list = this.#watch?.slice.get()) {
+    const prIds = this.#openIds(list).slice(0, REFRESH_COUNT);
+    if (!prIds.length) return;
+    this.app.store.act(api.githubPr.refresh, { prIds, maxAgeMs: REFRESH_MAX_AGE_MS }).catch(() => {});
+  }
+
+  /** The reload button: all open PRs now (up to RELOAD_MAX), batch after batch. Returns the first error. */
+  async reload(): Promise<string | null> {
+    const prIds = this.#openIds(this.#watch?.slice.get()).slice(0, RELOAD_MAX);
+    let error: string | null = null;
+    for (let i = 0; i < prIds.length; i += REFRESH_COUNT) {
+      const result = await this.app.store.act(api.githubPr.refresh, { prIds: prIds.slice(i, i + REFRESH_COUNT), maxAgeMs: 0 });
+      error ??= result.error ?? null;
+    }
+    return error;
+  }
+
+  /** Open and draft PRs in display order; none without a token (nothing can be fetched). */
+  #openIds(list: PrList | undefined) {
+    if (!list?.configured) return [];
+    return list.items.filter((i) => i.group !== 'done').map((i) => i.id as Id<'pullRequests'>);
   }
 
   #visible() {
