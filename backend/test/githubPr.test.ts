@@ -674,6 +674,35 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
     expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 2, failing: 2 });
   });
 
+  test('a failed fetch keeps the state but brings a newer check result into the status; the backfill writes missing rows', async () => {
+    const { t, owner } = init();
+    const f = await fixture(owner);
+    const a = await createOne(owner, f.orb);
+    const prId = await addPr(t, { number: 1, state: 'open', hoursAgo: 1, issues: [a.id] }, { data: data(['success']) });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 1, failing: 0 });
+    // A check_run delivery puts a failed check into the details right away (webhook path, unchanged).
+    await t.run(async (ctx) => {
+      const row = (await ctx.db.query('pullRequestDetails').withIndex('by_pr', (q) => q.eq('prId', prId)).unique())!;
+      await ctx.db.patch('pullRequestDetails', row._id, { data: { ...row.data!, checks: [...row.data!.checks, { key: 'check:9', name: 'CI 9', source: 'check', state: 'failure' }] } });
+    });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 1, failing: 0 });
+    // The fetch that follows fails: the status still follows the stored state.
+    await t.mutation(internal.githubPr.store, { prId, fetchedAt: NOW, mediaKey: 'k'.repeat(43), error: 'GitHub is unreachable.' });
+    expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 0, failing: 1 });
+
+    // Fetched before the status table existed: the backfill writes the row, and again changes nothing.
+    await addPr(t, { number: 2, state: 'open', hoursAgo: 2, issues: [a.id] }, { data: data(['pending']), statusRow: false });
+    const rows = () => t.run(async (ctx) => (await ctx.db.query('pullRequestStatus').collect()).map((r) => r.checks));
+    expect(await rows()).toHaveLength(1);
+    expect(await t.mutation(internal.migrations.prStatusBackfill, {})).toEqual({ scanned: 2, written: 2, done: true });
+    expect(await rows()).toEqual([
+      { total: 2, failed: 1, pending: 0 },
+      { total: 1, failed: 0, pending: 1 },
+    ]);
+    await t.mutation(internal.migrations.prStatusBackfill, {});
+    expect(await rows()).toHaveLength(2);
+  });
+
   test('without a token: list says so, grouping uses what is stored', async () => {
     const { t, owner } = init();
     delete process.env.GITHUB_TOKEN;

@@ -87,8 +87,12 @@
   // J/K: keep the focused row in view. A link of another row that still has the browser focus (after a
   // click) lets go, otherwise Enter would follow that link instead of opening the focused row.
   let scroller = $state<HTMLElement>();
+  let shownFocus: string | null = null;
   $effect(() => {
     const id = s.focus;
+    // Every list update replaces the state; act only when the focus moved (a Tab-focused link or the Done toggle keeps its focus).
+    if (id === shownFocus) return;
+    shownFocus = id;
     if (!id || !scroller) return;
     const row = scroller.querySelector<HTMLElement>(`[data-pr-id="${CSS.escape(id)}"]`);
     const active = document.activeElement;

@@ -355,6 +355,8 @@ export async function storeSnapshot(ctx: MutationCtx, args: StoreArgs, now = Dat
         ...fetchingDone,
       });
     else await ctx.db.insert('pullRequestDetails', { prId: args.prId, media: [], fetchedAt: args.fetchedAt, error });
+    // The state stays, but a check result a webhook delivery put into it since must reach the status too.
+    if (row?.data) await writeStatus(ctx, args.prId, prStatusOf(row.data, row.summary?.review));
     return { stored: true, retry: false, closed: [] as string[] };
   }
 

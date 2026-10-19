@@ -217,6 +217,17 @@ test('Pull requests page: after a click on a row link, J moves on and Enter open
   await expect(page).toHaveURL(/\/pr\/acme\/orbit-app\/128$/);
 });
 
+test('Pull requests page: a focused button keeps its focus when the list updates (Enter toggles Done back)', async ({ page }) => {
+  await page.goto('/pulls');
+  await prRow(page, 128).locator('.pull-title').click();
+  await expect(prRow(page, 128)).toHaveClass(/focused/);
+  await page.getByTestId('pulls-done-toggle').click();
+  await expect(prRow(page, 121)).toBeVisible();
+  await expect(page.getByTestId('pulls-done-toggle')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(prRow(page, 121)).toHaveCount(0);
+});
+
 test.describe('Pull requests page in a narrow window', () => {
   test.use({ viewport: { width: 1000, height: 800 } });
   test('a click opens the PR as its own page, Back returns to the list', async ({ page }) => {
