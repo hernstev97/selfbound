@@ -30,7 +30,7 @@ jobs:
       - name: Check the branch name
         run: |
           types='feat|fix|docs|refactor|perf|test|chore|ci'
-          # <type>/<slug>, where the slug may start with an issue (xlr8-48-…, 123-…): lower case, digits, hyphens.
+          # <type>/<slug>, where the slug may start with an issue (self-48-…, 123-…): lower case, digits, hyphens.
           if printf '%s' "$HEAD_REF" | grep -Eq "^($types)/[a-z0-9]+(-[a-z0-9]+)*$" && [ "${#HEAD_REF}" -le 80 ]; then
             exit 0
           fi
@@ -41,7 +41,7 @@ jobs:
           {
             echo "::error title=Branch name::The branch name does not follow the rule."
             echo "Branch names describe the work: <type>/<issue>-<slug>, or <type>/<slug> without an issue."
-            echo "Types: feat, fix, docs, refactor, perf, test, chore, ci. Example: feat/xlr8-48-github-issues-import"
+            echo "Types: feat, fix, docs, refactor, perf, test, chore, ci. Example: feat/self-48-github-issues-import"
             echo "No tool, user or account names as prefix, no e-mail addresses. Details: CONTRIBUTING.md"
           } >&2
           exit 1
