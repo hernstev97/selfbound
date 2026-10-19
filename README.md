@@ -59,7 +59,9 @@ knowledge pages. Selfbound has one user; its teams are never groups of people. W
 - Import from Linear
 
 The interface keeps all data of a workspace in memory and renders from there; the performance budget is
-100 ms p95 for interactions at 10,000 issues, checked in CI (`perf/README.md`).
+100 ms p95 for interactions at 10,000 issues. CI runs a quick check on every push (core actions under
+250 ms p95 on shared runners, start bundle and DOM nodes at most 5 % above the baseline); the full budget
+is measured on an idle machine (`perf/README.md`).
 
 ## Stack
 

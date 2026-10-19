@@ -9,6 +9,7 @@
   import { NOTIFY_EVENTS, type NotifyKind } from '@selfbound/backend/shared/notifyEvents';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
+  import { DOCS } from '../../lib/docs.ts';
   import { currentSubscription, disablePush, enablePush, pushSupport } from '../../lib/pwa/push.ts';
 
   const config = useQuery(api.push.config, {});
@@ -93,7 +94,7 @@
         {:else if config.current === undefined}
           {t('Loading …')}
         {:else if !configured}
-          {t('Not set up on the server (VAPID key missing, see docs/operations.md).')}
+          {t('Not set up on the server (VAPID key missing).')} <a href={DOCS.push} target="_blank" rel="noopener noreferrer">{t('How to set it up')}</a>
         {:else if permission === 'denied'}
           {t('Blocked in the browser. Allow notifications for this page in the site settings.')}
         {:else if on}

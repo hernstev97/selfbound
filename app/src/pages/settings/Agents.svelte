@@ -11,6 +11,7 @@
   import { mcpCommand, siteUrl } from '@selfbound/core/app/admin';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
+  import { DOCS } from '../../lib/docs.ts';
   import Dialog from './Dialog.svelte';
   import { CONVEX_URL, SITE_URL_ENV, admin } from './admin.ts';
 
@@ -67,7 +68,7 @@
     {#if connectors === undefined}
       <span class="sub">{t('Loading …')}</span>
     {:else if !connectors.enabled || !connectors.url}
-      <span class="sub" data-testid="connector-off">{t('Not enabled on this backend (SELFBOUND_APP_URL is missing, see docs/operations.md).')}</span>
+      <span class="sub" data-testid="connector-off">{t('Not enabled on this backend (SELFBOUND_APP_URL is missing).')} <a href={DOCS.connectors} target="_blank" rel="noopener noreferrer">{t('How to set it up')}</a></span>
     {:else}
       <ol class="steps sub">
         <li>{t('Press "Connect connector". Selfbound then accepts new connections for 15 minutes.')}</li>

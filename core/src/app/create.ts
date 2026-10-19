@@ -319,7 +319,7 @@ export class CreateController {
     this.state.set({ ...s, createMore: !s.createMore });
   }
 
-  /** Ctrl Enter: create. `more` (Ctrl Shift Enter): the dialog stays open, properties stay. */
+  /** Ctrl Enter: create, following the "Create more" switch. `more` (Ctrl Shift Enter): the dialog stays open, properties stay. */
   submit(more = this.state.get().createMore) {
     const s = this.state.get();
     const d = s.draft;
@@ -374,7 +374,7 @@ export class CreateController {
     });
     if (more) {
       const next = { ...d, id: emptyDraft().id, title: '', description: '', updatedAt: Date.now() };
-      this.state.set({ ...s, open: true, draft: next, createMore: true, error: null, focusTick: s.focusTick + 1 });
+      this.state.set({ ...s, open: true, draft: next, error: null, focusTick: s.focusTick + 1 });
     } else {
       this.state.set({ ...s, open: false, draft: emptyDraft(), error: null });
     }

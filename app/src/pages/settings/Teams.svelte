@@ -52,7 +52,7 @@
   <h1 class="page-title">{t('Teams')}</h1>
   <button class="btn small" data-testid="team-add" onclick={() => (adding = !adding)}><span class="icon">{@html ICON.plus}</span>{t('New team')}</button>
 </div>
-<p class="page-lead">{t('Same order as in the sidebar. Dormant teams are listed there under "More". Upload logos in the team.')}</p>
+<p class="page-lead">{t('Same order as in the sidebar. Dormant teams are listed there under "Inactive". Upload logos in the team.')}</p>
 
 {#if adding}
   <form class="card-list form" onsubmit={create} data-testid="team-form">

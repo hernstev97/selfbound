@@ -31,7 +31,14 @@ function deployKey() {
   const expected = prodDeployment();
   const keyFile = deployKeyFile();
   // One handle for check and read: the file cannot be swapped in between.
-  const fd = openSync(keyFile, 'r');
+  let fd;
+  try {
+    fd = openSync(keyFile, 'r');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    console.error(`Aborted: no deploy key at ${keyFile}. Create a production deploy key in the Convex dashboard and save it there with mode 600 (docs/self-hosting.md, section "2. Convex"), or point SELFBOUND_CONVEX_DEPLOY_KEY_FILE to it.`);
+    process.exit(2);
+  }
   let key;
   try {
     const mode = fstatSync(fd).mode & 0o777;

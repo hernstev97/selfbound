@@ -419,6 +419,30 @@ describe('create dialog', () => {
     expect(created).toEqual([expect.objectContaining({ title: 'First', priority: 2 }), expect.objectContaining({ title: 'Second', priority: 2 })]);
   });
 
+  test('Ctrl Enter follows the "Create more" switch', async () => {
+    const { client, app } = await setup(3);
+    client.push('issues:bucket', { bucket: 0 }, [doc(0)]);
+    await flush();
+    app.nav.goView({ kind: 'backlog', team: 'PX' });
+    client.mutation.mockImplementation(async () => ({ issues: [{ id: 'iX', identifier: 'PX-9' }], warnings: [] }));
+    const ctrlEnter = (shiftKey = false) => ({ key: 'Enter', code: 'Enter', ctrlKey: true, metaKey: false, altKey: false, shiftKey, isComposing: false, repeat: false, timeStamp: 0, target: null, preventDefault: vi.fn(), stopPropagation: vi.fn() }) as unknown as KeyboardEvent;
+    app.create.open();
+    // Ctrl Shift Enter stays open once, without turning the switch on.
+    app.create.update({ title: 'Zero' });
+    app.keys.onKeyDown(ctrlEnter(true));
+    expect(app.create.isOpen()).toBe(true);
+    expect(app.create.state.get().createMore).toBe(false);
+    app.create.toggleCreateMore();
+    app.create.update({ title: 'First' });
+    app.keys.onKeyDown(ctrlEnter());
+    expect(app.create.isOpen()).toBe(true);
+    app.create.toggleCreateMore();
+    app.create.update({ title: 'Second' });
+    app.keys.onKeyDown(ctrlEnter());
+    expect(app.create.isOpen()).toBe(false);
+    expect(calls(client, 'issues:create')).toHaveLength(3);
+  });
+
   test('the draft survives navigating away; Esc with content becomes a saved draft', async () => {
     const { app } = await setup(0);
     app.nav.goView({ kind: 'all', team: null });

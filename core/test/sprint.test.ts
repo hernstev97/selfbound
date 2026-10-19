@@ -19,11 +19,12 @@ describe('date range', () => {
     expect(nextMonday('2026-10-09')).toBe('2026-10-12'); // Friday
     expect(nextMonday('2026-10-12')).toBe('2026-10-19'); // Monday
     expect(nextMonday('2026-10-11')).toBe('2026-10-12'); // Sunday
-    expect(defaultSprintRange('2026-10-09')).toEqual({ startDate: '2026-10-12', endDate: '2026-10-25' });
+    expect(defaultSprintRange('2026-10-09')).toEqual({ startDate: '2026-10-12', endDate: '2026-10-25', follows: null });
     // Sprint 5 runs Oct 19 – Nov 1: sprint 6 starts on Nov 2, not overlapping on Oct 12.
-    expect(defaultSprintRange('2026-10-09', [{ endDate: '2026-11-01' }, { endDate: '2026-10-18' }])).toEqual({ startDate: '2026-11-02', endDate: '2026-11-15' });
+    const five = { name: 'Sprint 5', endDate: '2026-11-01' };
+    expect(defaultSprintRange('2026-10-09', [five, { name: 'Sprint 4', endDate: '2026-10-18' }])).toEqual({ startDate: '2026-11-02', endDate: '2026-11-15', follows: five });
     // End in the past: the next Monday again.
-    expect(defaultSprintRange('2026-10-09', [{ endDate: '2026-10-01' }])).toEqual({ startDate: '2026-10-12', endDate: '2026-10-25' });
+    expect(defaultSprintRange('2026-10-09', [{ endDate: '2026-10-01' }])).toEqual({ startDate: '2026-10-12', endDate: '2026-10-25', follows: null });
   });
   test('remaining days', () => {
     expect(remainingLabel({ startDate: '2026-10-05', endDate: '2026-10-18', state: 'active' }, '2026-10-09')).toBe('10 days left');

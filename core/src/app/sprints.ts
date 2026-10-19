@@ -61,8 +61,8 @@ export interface PlanState {
   teams: { badge: TeamBadge; label: string; over: boolean; urgent: number; high: number; overUrgent: boolean; overHigh: boolean }[];
   /** The limits (null = none) and their description */
   limits: { urgent: number | null; high: number | null; title: string };
-  /** Defaults for a new sprint */
-  defaults: { name: string; startDate: string; endDate: string };
+  /** Defaults for a new sprint; `after`: name of the open sprint it starts after (else next Monday) */
+  defaults: { name: string; startDate: string; endDate: string; after: string | null };
 }
 
 export interface CloseState {
@@ -177,7 +177,7 @@ export class SprintController {
     const running = meta?.sprints.find((s) => s.state === 'active');
     const budget = priorityBudget(this.app.store.all());
     const limits = limitsOf(meta);
-    const { startDate, endDate } = defaultSprintRange(undefined, (meta?.sprints ?? []).filter((s) => s.state === 'active' || s.state === 'planning'));
+    const { startDate, endDate, follows } = defaultSprintRange(undefined, (meta?.sprints ?? []).filter((s) => s.state === 'active' || s.state === 'planning'));
     const nextNumber = Math.max(0, ...(meta?.sprints.map((s) => s.number) ?? [0])) + 1;
     const next: PlanState = {
       sprint: doc ? this.#summary(doc) : null,
@@ -203,7 +203,7 @@ export class SprintController {
           };
         }),
       limits: { urgent: limits.urgent.max, high: limits.high.max, title: limitsSummary(limits) },
-      defaults: { name: `Sprint ${nextNumber}`, startDate, endDate },
+      defaults: { name: `Sprint ${nextNumber}`, startDate, endDate, after: follows?.name ?? null },
     };
     const prev = this.plan.get();
     return prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
@@ -473,5 +473,5 @@ for (const action of [
   { id: 'close.backlog', label: msg('Decision: back to backlog'), section: 'Sprint', keys: ['2'], icon: 'backlog', when: closePage, run: (a) => a.sprints.decide('backlog') },
   { id: 'close.cancel', label: msg('Decision: cancel'), section: 'Sprint', keys: ['3'], icon: 'close', when: closePage, run: (a) => a.sprints.decide('canceled') },
   { id: 'close.clear', label: msg('Clear decision'), section: 'Sprint', keys: ['0', 'backspace'], icon: 'undo', when: closePage, run: (a) => a.sprints.decide(null) },
-  { id: 'close.submit', label: msg('Complete sprint now'), section: 'Sprint', keys: ['mod+enter'], icon: 'check', when: (a) => kind(a) === 'close' && a.sprints.closing.get()?.summary.missing === 0, run: (a) => void a.sprints.close(a.sprints.retroDraft) },
+  { id: 'close.submit', label: msg('Close sprint now'), section: 'Sprint', keys: ['mod+enter'], icon: 'check', when: (a) => kind(a) === 'close' && a.sprints.closing.get()?.summary.missing === 0, run: (a) => void a.sprints.close(a.sprints.retroDraft) },
 ] as Parameters<typeof registerAction>[0][]) registerAction(action);

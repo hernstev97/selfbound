@@ -15,6 +15,7 @@
   import PrHtml from './PrHtml.svelte';
   import ImageViewer, { type ViewerImage } from './ImageViewer.svelte';
   import { CHECK_LABEL, METHOD_LABEL, STATE_LABEL, checksText, mergeHint, reviewLabel } from './prText.ts';
+  import { DOCS } from '../../lib/docs.ts';
 
   interface Props {
     repo: string;
@@ -241,7 +242,8 @@
 
       {#if !view.configured}
         <div class="pr-notice" data-testid="pr-unconfigured">
-          {#each parts(t('GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend (docs/operations.md).', { token: slot('token') })) as part, i (i)}{#if i % 2}<code>GITHUB_TOKEN</code>{:else}{part}{/if}{/each}
+          {#each parts(t('GitHub access is not set up: Selfbound only knows the title and state from the webhook. Description, checks, comments and actions need {token} in the backend.', { token: slot('token') })) as part, i (i)}{#if i % 2}<code>GITHUB_TOKEN</code>{:else}{part}{/if}{/each}
+          <a href={DOCS.github} target="_blank" rel="noopener noreferrer">{t('How to set it up')}</a>
         </div>
       {:else if detail?.error}
         <div class="pr-notice error" data-testid="pr-error">{detail.error} <span class="muted">{t('As of {when}.', { when: relativeTime(detail.fetchedAt) })}</span></div>
@@ -368,7 +370,7 @@
             }}
           />
           <div class="comment-box-foot">
-            <span>{shellSlice.current.mobile ? '' : `${t('Ctrl Enter to send')} · `}{t('appears on GitHub under your name')}</span>
+            <span>{shellSlice.current.mobile ? '' : `${t('Ctrl Enter to send')} · `}{t('posted with the GitHub token of this instance')}</span>
             <button class="btn small primary" data-testid="pr-comment-send" disabled={!draft.trim() || busy !== null} onclick={() => void comment()}>{busy === 'comment' ? t('Sending …') : t('Comment')}</button>
           </div>
         </div>

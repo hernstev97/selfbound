@@ -204,7 +204,7 @@ const listIssues = object({
         '"overdue" = open issues with a due date before today;',
         '"in_progress" = issues in a started status (e.g. In Progress, In Review);',
         '"done_today" = issues completed today;',
-        '"triage" = issues in triage (the inbox);',
+        '"triage" = issues in a triage status (incoming, not yet accepted; the inbox is separate, see list_inbox);',
         '"sprint" = issues in the currently active sprint.',
         'Days are calendar days in the instance\'s time zone (Settings → Time zone).',
       ].join(' '),
@@ -568,7 +568,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   get_current_sprint: {
     title: 'Get current sprint',
     description:
-      'Get the active sprint (spans all teams): name, goal, dates, capacity, points done/total and its issues split into planned and added later. If no sprint is active, returns the sprint in planning, if any.',
+      'Get the active sprint (spans all teams): name, goal, dates, capacity, points done/total and its issues split into planned and added late. If no sprint is active, returns the sprint in planning, if any.',
     annotations: READ,
   },
   list_teams: {

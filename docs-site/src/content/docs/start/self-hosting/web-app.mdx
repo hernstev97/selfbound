@@ -46,7 +46,7 @@ What the script does:
   site. Vercel builds nothing itself.
 
 `node tooling/deploy-web.mjs --build` stops after building into `deploy/web/` and uploads nothing. It
-still expects all instance settings, including the two Vercel fields.
+does not need the two Vercel fields.
 
 ## Hosting elsewhere
 
@@ -117,7 +117,9 @@ click **Sign in**. Clerk recognizes the session and sends you to the app.
 
 ### "No access" or an empty app after sign-in
 
-Both mean that the backend does not accept your sign-in. Work through these checks:
+Both mean that the backend does not accept your sign-in. **No access** points to the issuer or the JWT
+template (Convex rejects the token); an empty app without that notice points to the owner list. Work through
+these checks:
 
 - **The issuer.** `CLERK_JWT_ISSUER_DOMAIN` on Convex must be exactly your Clerk Frontend API URL, for
   example `https://clerk.selfbound.example.com`, without a trailing slash. If you changed it, redeploy the

@@ -57,7 +57,7 @@ Responses are lean: identifier, title, status (name within the team) and `status
 | `list_inbox` | read | The owner's open inbox entries, newest first: issue brief, `kind` (`created`/`changed`/`snoozed`), `unread`, who created it, and the latest change per field (`field`, `to`, `by`, `at`). Agents cannot read or remove entries | `unreadOnly?`, `limit?` (default 50, max 100) |
 | `move_issues` | write | Move 1–50 issues to another team (one transaction) | `identifiers[]` (old identifiers work too), `team`, `requestId?` |
 | `add_comment` | write | Comment (Markdown) | `requestId`, `identifier`, `body` |
-| `get_current_sprint` | read | Active sprint (otherwise the next planned one): goal, date range, points done/total, planned and added later | – |
+| `get_current_sprint` | read | Active sprint (otherwise the next planned one): goal, date range, points done/total, planned and added late | – |
 | `list_teams` | read | Teams with key, name, dormant flag, `wiki`; a renamed team also `previousKeys` | `includeDormant?` (default true) |
 | `list_projects` | read | Projects with team and state | `team?`, `includeClosed?` |
 | `list_labels` | read | Labels with group (single choice?) and scope (workspace/team) | `team?` |

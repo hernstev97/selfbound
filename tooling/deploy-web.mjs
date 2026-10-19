@@ -83,7 +83,9 @@ function filesIn(dir) {
 }
 
 function main() {
-  const instance = requireInstance(['convexDeployment', 'appUrl', 'clerkPublishableKey', 'vercelProject', 'vercelScope']);
+  const buildOnly = process.argv.includes('--build');
+  // A build-only run uploads nothing, so it needs no Vercel settings.
+  const instance = requireInstance(['convexDeployment', 'appUrl', 'clerkPublishableKey', ...(buildOnly ? [] : ['vercelProject', 'vercelScope'])]);
   const production = productionEnv(instance);
 
   // 1. Build. Set VITE_DEV_TOKEN empty: the process environment wins over app/.env.local.
@@ -120,7 +122,7 @@ function main() {
   writeFileSync(join(out, 'vercel.json'), `${JSON.stringify(vercelConfig(base, instance), null, 2)}\n`);
   console.log(`Built into ${out}`);
 
-  if (process.argv.includes('--build')) return;
+  if (buildOnly) return;
 
   // 4. Upload (static, no build on Vercel).
   if (!existsSync(join(out, '.vercel', 'project.json'))) {

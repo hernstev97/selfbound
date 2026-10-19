@@ -104,7 +104,7 @@
         <label class="card-row"><span class="t">{t('End')}</span><input class="input" type="date" data-testid="plan-end" bind:value={endDate} /></label>
         <label class="card-row col"><span class="t">{t('Goal')} <span class="sub">{t('1–3 sentences, optional')}</span></span><textarea class="input" rows="2" data-testid="plan-goal" bind:value={goal} placeholder={t('What should be achieved by the end?')}></textarea></label>
         <div class="card-row">
-          <span class="t sub">{plan.suggestion?.capacity ? t('Capacity: suggested {points} points (average of recent sprints)', { points: points(plan.suggestion.capacity) }) : t('Default: two weeks from next Monday')}</span>
+          <span class="t sub">{plan.suggestion?.capacity ? t('Capacity: suggested {points} points (average of recent sprints)', { points: points(plan.suggestion.capacity) }) : plan.defaults.after ? t('Default: two weeks from the day after {name} ends', { name: plan.defaults.after }) : t('Default: two weeks from next Monday')}</span>
           <button class="btn primary" type="submit" data-testid="plan-create-submit" disabled={creating}>{t('Create sprint')}</button>
         </div>
       </form>

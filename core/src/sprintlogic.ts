@@ -34,13 +34,14 @@ export function nextMonday(day = today()) {
 /**
  * Default for a new sprint: 14 days from the day after the last active or planned sprint (`open`)
  * ends, so nothing overlaps; without one (or if that day is in the past) from next Monday. Same
- * rule as `suggestedStart` in the backend.
+ * rule as `suggestedStart` in the backend. `follows`: the open sprint the range starts after, if any.
  */
-export function defaultSprintRange(day = today(), open: readonly { endDate: string }[] = []) {
-  const lastEnd = open.reduce<string | null>((max, s) => (max === null || s.endDate > max ? s.endDate : max), null);
-  const after = lastEnd ? addDays(lastEnd, 1) : null;
-  const start = after && after >= day ? after : nextMonday(day);
-  return { startDate: start, endDate: addDays(start, 13) };
+export function defaultSprintRange<S extends { endDate: string }>(day = today(), open: readonly S[] = []) {
+  const last = open.reduce<S | null>((max, s) => (max === null || s.endDate > max.endDate ? s : max), null);
+  const after = last ? addDays(last.endDate, 1) : null;
+  const follows = after && after >= day ? last : null;
+  const start = follows && after ? after : nextMonday(day);
+  return { startDate: start, endDate: addDays(start, 13), follows };
 }
 
 /** "Oct 6 – Oct 19" */
@@ -69,7 +70,7 @@ export interface SprintTotals {
   donePoints: number;
   planned: number;
   late: number;
-  /** Share added later, in percent (integer) */
+  /** Share added late, in percent (integer) */
   lateShare: number;
   /** Issues without an estimate */
   unestimated: number;

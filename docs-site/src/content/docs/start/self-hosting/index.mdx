@@ -5,7 +5,7 @@ sidebar:
   label: Overview
   order: 0
 ---
-import { Aside, Steps } from '@astrojs/starlight/components';
+import { Steps } from '@astrojs/starlight/components';
 import Planned from '../../../../components/Planned.astro';
 
 Each Selfbound instance belongs to one owner and runs on accounts you control: a Convex project for the
@@ -76,11 +76,6 @@ can also be overridden with an environment variable.
 | `mcpHosts` | `SELFBOUND_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | optional custom address for MCP |
 | `redirectHosts` | `SELFBOUND_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
 | `branchPrefix` | `VITE_SELFBOUND_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
-
-<Aside type="caution">
-The example file contains `mcp.selfbound.example.com` in `mcpHosts`. Set `mcpHosts` to `[]` unless you set up
-a custom MCP address (see [Connect an agent](/agents/connect/)).
-</Aside>
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Deploy keys
 and tokens never go into it.

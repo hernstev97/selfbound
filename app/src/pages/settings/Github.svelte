@@ -6,6 +6,7 @@
   import { fullDate, relativeTime } from '@selfbound/core';
   import { app } from '../../app-instance.ts';
   import { useQuery } from '../../lib/live.svelte.ts';
+  import { DOCS } from '../../lib/docs.ts';
 
   const connection = useQuery(api.githubPr.connection, {});
   const c = $derived(connection.current);
@@ -39,7 +40,7 @@
         >{c.configured ? (c.login ? t('Connected as {login}', { login: c.login }) : t('Token configured')) : t('Not connected')}
         <div class="sub">
           {#if !c.configured}
-            {t('The backend has no')} <code>GITHUB_TOKEN</code> {t('(fine-grained token, see docs/operations.md, section "GitHub webhook").')}
+            {t('The backend has no')} <code>GITHUB_TOKEN</code> {t('(fine-grained token).')} <a href={DOCS.github} target="_blank" rel="noopener noreferrer">{t('How to set it up')}</a>
           {:else if c.error}
             {c.error}
           {:else if c.checkedAt}

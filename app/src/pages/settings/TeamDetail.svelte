@@ -120,7 +120,7 @@
       <HuePicker hue={team.hue} testid="team-hue" pick={(h) => admin.updateTeam(team!._id as TeamId, { hue: h })} />
     </div>
     <div class="card-row">
-      <span class="t">{t('Dormant')}<div class="sub">{t('Dormant teams are listed in the sidebar under "More" and are left out of sprint planning.')}</div></span>
+      <span class="t">{t('Dormant')}<div class="sub">{t('Dormant teams are listed in the sidebar under "Inactive" and are left out of sprint planning.')}</div></span>
       <button class={['toggle', team.dormant && 'on']} role="switch" aria-checked={team.dormant} aria-label={t('Dormant')} data-testid="team-dormant" onclick={() => admin.updateTeam(team!._id as TeamId, { dormant: !team!.dormant })}></button>
     </div>
     <div class="card-row">

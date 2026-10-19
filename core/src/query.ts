@@ -12,7 +12,7 @@ import type { Filters, GroupInfo, GroupOrder, Grouping, Issue, IssueId, ListRow,
 
 /** Extras for groupings that do not follow from the issue itself. */
 export interface ListExtras {
-  /** Active sprint: planned / added later */
+  /** Active sprint: planned / added late */
   kinds?: ReadonlyMap<IssueId, SprintItemKind>;
   /** Team groups: budget text and whether it is exceeded, per team id */
   budget?: ReadonlyMap<string, { label: string; over: boolean; title: string }>;
@@ -391,7 +391,7 @@ function groupSpec(by: Grouping, meta: Meta | null, dark: boolean, extras: ListE
         key: (i) => (kinds?.get(i._id) === 'late' ? 'late' : 'planned'),
         order: (keys) => [
           ...(keys.has('planned') ? [{ by, value: 'planned', label: t('Planned') }] : []),
-          ...(keys.has('late') ? [{ by, value: 'late', label: t('Added later') }] : []),
+          ...(keys.has('late') ? [{ by, value: 'late', label: t('Added late') }] : []),
         ],
       };
     }

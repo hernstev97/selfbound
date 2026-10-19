@@ -4,9 +4,7 @@
   "clerkPublishableKey": "pk_live_REPLACE_ME",
   "vercelProject": "selfbound",
   "vercelScope": "your-vercel-team",
-  "mcpHosts": [
-    "mcp.selfbound.example.com"
-  ],
+  "mcpHosts": [],
   "redirectHosts": [],
   "branchPrefix": "your-github-login",
   "siteUrl": "https://example.com",
