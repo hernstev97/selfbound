@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@clerk/clerk-js": "6.34.1",
-    "@clerk/ui": "1.36.0",
+    "@clerk/clerk-js": "6.39.0",
+    "@clerk/ui": "1.40.0",
     "@fontsource-variable/atkinson-hyperlegible-next": "5.3.0",
     "@fontsource-variable/cascadia-code": "5.3.0",
     "@fontsource-variable/figtree": "5.3.0",
@@ -31,8 +31,8 @@
     "@selfbound/core": "workspace:*",
     "@web-kits/audio": "0.2.0",
     "convex": "1.46.0",
-    "dompurify": "3.4.16",
-    "marked": "18.1.0",
+    "dompurify": "3.4.17",
+    "marked": "18.1.1",
     "prosemirror-commands": "1.7.2",
     "prosemirror-dropcursor": "1.8.4",
     "prosemirror-gapcursor": "1.4.1",
@@ -57,6 +57,6 @@
     "tm-grammars": "1.32.22",
     "typescript": "6.0.3",
     "vite": "8.3.4",
-    "vitest": "5.0.3"
+    "vitest": "5.0.4"
   }
 }
