@@ -394,7 +394,20 @@ export default {
   Link: 'Link',
   Placeholder: 'Platzhalter',
   [ctx('code', 'Comment')]: 'Kommentar',
+  // settings/About.svelte
+  About: 'Über',
+  'Selfbound is free software: you may use, study, share and change it under the GNU Affero General Public License v3.0.':
+    'Selfbound ist freie Software: Du darfst sie unter der GNU Affero General Public License v3.0 nutzen, untersuchen, weitergeben und verändern.',
+  License: 'Lizenz',
+  Read: 'Lesen',
+  'Source code': 'Quellcode',
+  'Everyone who uses this instance can get its source code here. If you run a changed version, the link points to your changes (instance setting sourceUrl).':
+    'Alle, die diese Instanz nutzen, bekommen hier ihren Quellcode. Wer eine veränderte Version betreibt, lässt den Link auf die eigenen Änderungen zeigen (Instanz-Einstellung sourceUrl).',
+  'Third-party licenses': 'Drittanbieter-Lizenzen',
+  'Libraries, fonts, color themes and syntax grammars in this build, with their licenses.': 'Bibliotheken, Schriften, Farbthemen und Syntax-Grammatiken in diesem Build, mit ihren Lizenzen.',
+  Version: 'Version',
   // settings/sections.ts, SettingsNav.svelte, SettingsPage.svelte
+  Selfbound: 'Selfbound',
   Account: 'Konto',
   Workspace: 'Arbeitsbereich',
   'Agents and ops': 'Agenten und Betrieb',

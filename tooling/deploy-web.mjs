@@ -40,6 +40,8 @@ export function productionEnv(instance) {
     SELFBOUND_PUBLIC_URL: instance.appUrl,
     // Optional prefix for suggested git branch names (instance field branchPrefix); empty = none.
     VITE_SELFBOUND_BRANCH_PREFIX: instance.branchPrefix ?? '',
+    // Source link in the app and on the sign-in page (instance field sourceUrl); empty = upstream repository.
+    SELFBOUND_SOURCE_URL: instance.sourceUrl ?? '',
   };
 }
 

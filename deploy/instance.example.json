@@ -8,5 +8,6 @@
   "redirectHosts": [],
   "branchPrefix": "your-github-login",
   "siteUrl": "https://example.com",
-  "siteVercelProject": "selfbound-landing"
+  "siteVercelProject": "selfbound-landing",
+  "sourceUrl": "https://github.com/hernstev97/selfbound"
 }

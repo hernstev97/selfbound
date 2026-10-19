@@ -109,6 +109,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately 
 ## License
 
 [GNU Affero General Public License v3.0](LICENSE). If you run a modified version as a service for
-others, you must offer them its source code.
+others, you must offer them its source code: set `sourceUrl` so the app's source link points to it.
+Third-party licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Copyright © 2026 Steven Hernandez and contributors.

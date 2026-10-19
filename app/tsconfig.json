@@ -12,5 +12,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node", "vite/client", "svelte"]
   },
-  "include": ["src", "test", "vite.config.ts", "vite.plugins.ts", "vite.welcome.config.ts", "vitest.config.ts"]
+  "include": ["src", "test", "vite.config.ts", "vite.plugins.ts", "vite.notices.ts", "vite.welcome.config.ts", "vitest.config.ts"]
 }

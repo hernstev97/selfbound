@@ -2,7 +2,7 @@ import type { IconName } from '@selfbound/core';
 import { translated } from '@selfbound/core/i18n';
 
 /** Section groups of the settings (extension point: an entry here plus a case in SettingsPage). */
-const GROUP = translated({ account: 'Account', workspace: 'Workspace', agents: 'Agents and ops' });
+const GROUP = translated({ account: 'Account', workspace: 'Workspace', agents: 'Agents and ops', selfbound: 'Selfbound' });
 
 /** Section labels, keyed by section id (the id is also the URL path: /settings/{id}). */
 export const SECTION_LABEL: Record<string, string> = translated({
@@ -19,6 +19,7 @@ export const SECTION_LABEL: Record<string, string> = translated({
   models: 'Models',
   github: 'GitHub',
   ops: 'Ops',
+  about: 'About',
 });
 
 type Item = { id: string; icon: IconName };
@@ -55,4 +56,5 @@ export const SECTIONS = [
     { id: 'github', icon: 'github' },
     { id: 'ops', icon: 'gauge' },
   ]),
+  group('selfbound', [{ id: 'about', icon: 'page' }]),
 ];

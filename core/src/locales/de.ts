@@ -218,6 +218,7 @@ export default {
   'The picture is too large (at most {size} KB).': 'Das Bild ist zu groß (höchstens {size} KB).',
   'Picture not removed': 'Bild nicht entfernt',
   'Settings: Recurrences': 'Einstellungen: Wiederholungen',
+  'Settings: About': 'Einstellungen: Über',
   'Settings: Time zone': 'Einstellungen: Zeitzone',
   'Time zone not saved': 'Zeitzone nicht gespeichert',
   'Ops: View status': 'Betrieb: Zustand ansehen',

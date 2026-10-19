@@ -29,7 +29,7 @@ In practice:
 | Change Selfbound and run it as a service for other people | Offer them the source code of the version you run, including your changes |
 | Pass on copies of Selfbound, changed or not | Keep the license and make the source code available to the recipients |
 
-One simple way to meet the network clause is a public fork of the repository with your changes, linked from your instance.
+Selfbound links its source code under Settings › About and in the footer of the sign-in page. By default the link points to this repository. If you run a changed version, publish your changes (a public fork works) and set `sourceUrl` in your instance settings, or `SELFBOUND_SOURCE_URL` at build time, to that repository. The link then points to your code. See [Self-hosting](/start/self-hosting/).
 
 ## Your contributions
 
@@ -41,4 +41,7 @@ Some parts of Selfbound come from other projects and keep their own licenses:
 
 - **Color themes:** the built-in VS Code themes (Catppuccin, Dracula, Nord, Tokyo Night, Gruvbox, Solarized, GitHub and others) are unmodified originals under the MIT License. Each theme folder contains its license, and [SOURCES.md](https://github.com/hernstev97/selfbound/blob/main/app/src/themes/SOURCES.md) lists where each one comes from.
 - **Fonts:** the selectable fonts (Inter, Geist, JetBrains Mono, Fira Code and others) come from Fontsource packages under the SIL Open Font License 1.1.
+- **Syntax grammars:** the grammars for code highlighting come through Shiki from VS Code and other editor extensions, under the MIT License.
 - **Libraries:** the npm packages Selfbound depends on keep their own licenses.
+
+Every build lists all third-party material it ships, with the license texts, at `/third-party-notices.txt` (linked from Settings › About and the sign-in page). The build stops if something it would ship has no license or one that does not fit the AGPL-3.0. See [THIRD_PARTY_NOTICES.md](https://github.com/hernstev97/selfbound/blob/main/THIRD_PARTY_NOTICES.md).
