@@ -88,6 +88,7 @@ for (const width of WIDTHS) {
       const { child } = await fixtures();
       const pages = [
         '/inbox',
+        '/pulls',
         '/triage',
         '/all?group=none&order=created',
         '/team/ORB',

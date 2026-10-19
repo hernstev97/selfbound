@@ -37,9 +37,14 @@
     plan: { name: 'view', view: { kind: 'plan', team: null, sprint: null } } as Page,
     trash: view('trash'),
     drafts: { name: 'drafts' } as Page,
+    pulls: { name: 'pulls' } as Page,
     settings: { name: 'settings', section: 'general' } as Page,
   };
   const sprintPage = $derived(sb.sprint || !sb.planning ? P.sprint : P.plan);
+  const pullCount = $derived(sb.pulls.ready + sb.pulls.failing);
+  const pullTitle = $derived(
+    [sb.pulls.ready ? t('{count} ready to merge', { count: sb.pulls.ready }) : '', sb.pulls.failing ? t('{count} with failing checks', { count: sb.pulls.failing }) : ''].filter(Boolean).join(' · '),
+  );
   const teamPages = (key: string) => ({ triage: view('triage', key), issues: view('active', key), backlog: view('backlog', key), projects: { name: 'projects', team: key } as Page, wiki: { name: 'wiki', team: key } as Page, settings: { name: 'settings', section: 'teams', sub: key } as Page });
 
   // The list comes first on startup: the cards of the other teams follow one frame after the first
@@ -166,6 +171,10 @@
     <a class={['nav-item', sb.active === 'inbox' && 'active']} href={pagePath(P.inbox)} onclick={(e) => go(e, P.inbox)} data-testid="nav-inbox" title={tip(t('Inbox'), 'go.inbox')}>
       <span class="icon mi ui-inbox"></span><span class="label">{t('Inbox')}</span>
       {#if sb.inbox > 0}<span class="count" data-testid="inbox-count">{sb.inbox}</span>{/if}
+    </a>
+    <a class={['nav-item', sb.active === 'pulls' && 'active']} href={pagePath(P.pulls)} onclick={(e) => go(e, P.pulls)} data-testid="nav-pulls" title={tip(t('Pull requests'), 'go.pulls')}>
+      <span class="icon mi ui-pr"></span><span class="label">{t('Pull requests')}</span>
+      {#if pullCount > 0}<span class="count" data-testid="pulls-count" title={pullTitle}>{pullCount}</span>{/if}
     </a>
     <a class={['nav-item', sb.active === 'triage' && 'active']} href={pagePath(P.triage)} onclick={(e) => go(e, P.triage)} data-testid="nav-triage" title={tip(t('Triage'), 'go.triage')}>
       <span class="icon mi ui-triage"></span><span class="label">{t('Triage')}</span>

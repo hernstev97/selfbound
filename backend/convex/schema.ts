@@ -537,7 +537,9 @@ export default defineSchema({
   })
     .index('by_repo_number', ['repo', 'number'])
     // Check and status events often name only the commit.
-    .index('by_repo_head', ['repo', 'headSha']),
+    .index('by_repo_head', ['repo', 'headSha'])
+    // Pull requests page (githubPr.list, githubPr.attention): open ones, and recently merged or closed ones.
+    .index('by_state_updated', ['state', 'updatedAt']),
 
   // A PR's state from the GitHub API (ops/githubPr.ts), one document per PR. Created on the first
   // fetch, or already when a fetch is scheduled (then only `refreshAt`, without `data`).

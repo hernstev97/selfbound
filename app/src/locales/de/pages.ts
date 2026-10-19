@@ -2,6 +2,23 @@
 import { ctx, type Dictionary } from '@selfbound/core/i18n';
 
 export default {
+  // PullsPage.svelte
+  'Ready to merge': 'Bereit zum Mergen',
+  'Checks failing': 'Checks rot',
+  'Checks running': 'Checks laufen',
+  Blocked: 'Blockiert',
+  'Merged or closed': 'Gemergt oder geschlossen',
+  'Blocked by rules': 'Durch Regeln blockiert',
+  'Not loaded from GitHub yet': 'Noch nicht von GitHub geladen',
+  '{count} failed': '{count} fehlgeschlagen',
+  '{count} running': ['{count} läuft', '{count} laufen'],
+  '{count} passed': '{count} erfolgreich',
+  'Pull requests not updated': 'Pull Requests nicht aktualisiert',
+  'No pull requests are linked to an issue yet. A pull request is linked when its branch name, title or description contains an issue identifier such as {example}.':
+    'Noch ist kein Pull Request mit einem Issue verknüpft. Ein Pull Request wird verknüpft, wenn sein Branch-Name, Titel oder seine Beschreibung eine Issue-ID wie {example} enthält.',
+  'How linking works': 'So funktioniert das Verknüpfen',
+  'Without a GitHub token Selfbound knows only title and state, so checks and reviews are missing.': 'Ohne GitHub-Token kennt Selfbound nur Titel und Zustand, deshalb fehlen Checks und Reviews.',
+  'last 14 days': 'letzte 14 Tage',
   // settings/Profile.svelte, settings/AvatarCrop.svelte
   Profile: 'Profil',
   'Your name and picture appear in the activity of issues, in comments, in the inbox and in what agents read through MCP. Agents keep their own names.':

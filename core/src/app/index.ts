@@ -8,9 +8,11 @@
 //   toasts   notices                              prefs    color scheme, font, sounds
 //   cues     events for UI sounds
 //   perf     measurement overlay                  sprints  sprint view, planning, completion
+//   pulls    pull requests page (own chunk)
 //
 // Lists: `main` is the page's list; `side` the second column of sprint planning.
 // `list` is the one in use (keyboard, targets), otherwise always `main`.
+import { api } from '@selfbound/backend/api';
 import type { ConvexClient } from 'convex/browser';
 import { Auth } from '../auth.ts';
 import { Slice } from '../observable.ts';
@@ -29,6 +31,7 @@ import { Navigator } from './nav.ts';
 import { PaletteController } from './palette.ts';
 import { Perf } from './perf.ts';
 import { Prefs, type SidebarTeamSize } from './prefs.ts';
+import type { PullsController } from './pulls.ts';
 import type { SprintController } from './sprints.ts';
 import type { WikiController } from './wiki.ts';
 import { Cues } from './cues.ts';
@@ -89,6 +92,8 @@ export interface SidebarState {
   inbox: number;
   /** Snoozed issues; the entry shows only when there are some */
   snoozed: number;
+  /** Linked pull requests the owner can act on now (githubPr.attention): ready to merge, checks failing */
+  pulls: { ready: number; failing: number };
   triage: number;
   drafts: number;
   /** Name of the active sprint */
@@ -141,14 +146,14 @@ export class App {
   readonly create: CreateController;
   readonly keys: KeyController;
   readonly shell = new Slice<ShellState>({ page: 'home', issue: 'ok', peek: false, split: false, canSplit: false, mobile: false, sidebarHidden: false });
-  readonly sidebar = new Slice<SidebarState>({ active: '', inbox: 0, snoozed: 0, triage: 0, drafts: 0, sprint: null, planning: false, current: null, teams: [], dormant: [], teamsCollapsed: false, dormantCollapsed: false, teamSize: 'small' });
+  readonly sidebar = new Slice<SidebarState>({ active: '', inbox: 0, snoozed: 0, pulls: { ready: 0, failing: 0 }, triage: 0, drafts: 0, sprint: null, planning: false, current: null, teams: [], dormant: [], teamsCollapsed: false, dormantCollapsed: false, teamSize: 'small' });
   /** Team card numbers by team key, recomputed in batches (STATS_DELAY) */
   readonly teamStats = new Slice<Readonly<Record<string, TeamStats>>>({});
   readonly displayOpen = new Slice(false);
   /** "Add team" dialog (sidebar, O N, command menu) */
   readonly newTeamOpen = new Slice(false);
   readonly mobileDrawer = new Slice(false);
-  /** Pull request next to the open issue; null = closed. Only on the issue page. */
+  /** Pull request next to the open issue or the pull requests page; null = closed. */
   readonly prSplit = new Slice<{ repo: string; number: number } | null>(null);
   readonly mobile = new Slice(false);
   /** Window wide enough for the split view */
@@ -157,6 +162,8 @@ export class App {
   #disposers: (() => void)[] = [];
   #sidebarHidden = false;
   #statsTimer: ReturnType<typeof setTimeout> | null = null;
+  #pullCounts: SidebarState['pulls'] = { ready: 0, failing: 0 };
+  #watchingPulls = false;
 
   constructor(options: AppOptions) {
     this.debug = options.debug;
@@ -384,6 +391,53 @@ export class App {
     return this.#wikiLoading;
   }
 
+  #pulls: PullsController | null = null;
+  #pullsLoading: Promise<PullsController> | null = null;
+
+  /** Pull requests page; available after `loadPulls()` (own chunk). */
+  get pulls(): PullsController {
+    if (!this.#pulls) throw new Error('Pull requests are not loaded yet (app.loadPulls())');
+    return this.#pulls;
+  }
+
+  pullsLoaded(): PullsController | null {
+    return this.#pulls;
+  }
+
+  loadPulls(): Promise<PullsController> {
+    this.#pullsLoading ??= import('./pulls.ts').then(
+      ({ PullsController }) => {
+        this.#pulls = new PullsController(this);
+        this.#pulls.onPage(this.nav.page.get());
+        return this.#pulls;
+      },
+      (error: unknown) => {
+        this.#pullsLoading = null;
+        throw error;
+      },
+    );
+    return this.#pullsLoading;
+  }
+
+  /**
+   * Sidebar count of the pull requests page (`githubPr.attention`). Started when idle after the first
+   * list (main.ts), so the start subscribes to nothing more; the server counts, the client loads no PR.
+   */
+  watchPullCounts() {
+    if (this.#watchingPulls) return;
+    this.#watchingPulls = true;
+    const { slice, release } = this.store.watch(api.githubPr.attention, {});
+    const stop = slice.subscribe(() => {
+      const value = slice.get();
+      this.#pullCounts = value ? { ready: value.ready, failing: value.failing } : { ready: 0, failing: 0 };
+      this.#updateSidebar();
+    });
+    this.#disposers.push(() => {
+      stop();
+      release();
+    });
+  }
+
   /** The list in use. */
   get list(): ListController {
     return this.pane.get() === 'side' && !this.side.idle ? this.side : this.main;
@@ -443,7 +497,7 @@ export class App {
     const name = this.nav.page.get().name;
     if (name === 'issue') return page ? [page] : [];
     // Wiki and PR pages: status and other issue shortcuts must not hit a (hidden) issue of the list.
-    if (name === 'wiki' || name === 'article' || name === 'pr') return [];
+    if (name === 'wiki' || name === 'article' || name === 'pr' || name === 'pulls') return [];
     return this.list.targets();
   }
 
@@ -503,6 +557,7 @@ export class App {
   /** Called by the navigator after each page change. */
   onPage(page: Page) {
     if (this.#redirectWikiOnly(page)) return;
+    const before = this.shell.get().page;
     // Do not leave focus on the clicked link/button, otherwise Enter/Space trigger it again
     // instead of the new page's shortcuts.
     if (typeof document !== 'undefined') {
@@ -524,10 +579,13 @@ export class App {
     // Same for the wiki: own chunk, loaded on wiki pages only.
     if (this.#wiki) this.#wiki.onPage(page);
     else if (page.name === 'wiki' || page.name === 'article') void this.loadWiki();
+    if (this.#pulls) this.#pulls.onPage(page);
+    else if (page.name === 'pulls') void this.loadPulls();
     this.mobileDrawer.set(false);
     if (page.name === 'issue') this.#checkIssuePage();
     else this.detail.closePage();
-    if (page.name !== 'issue') this.prSplit.set(null);
+    // The PR beside the issue or the pull requests page stays only on that page (J/K between issues: IssuePullRequests decides).
+    if ((page.name !== 'issue' && page.name !== 'pulls') || page.name !== before) this.prSplit.set(null);
     this.detail.onLayout();
     if (page.name === 'view') {
       // Back from an issue that is not (or no longer) in the list: put the focus back into the list.
@@ -557,6 +615,7 @@ export class App {
     if (page.name === 'wiki') return `${t('Knowledge')} · ${page.team} · Selfbound`;
     if (page.name === 'article') return `${t('Knowledge')} · Selfbound`;
     if (page.name === 'pr') return `${page.repo.split('/')[1] ?? page.repo}#${page.number} · Selfbound`;
+    if (page.name === 'pulls') return `${t('Pull requests')} · Selfbound`;
     if (page.name === 'sprints') return 'Sprints · Selfbound';
     return 'Selfbound';
   }
@@ -715,6 +774,7 @@ export class App {
       active,
       inbox,
       snoozed,
+      pulls: this.#pullCounts,
       triage,
       drafts: this.create.draftCount(),
       sprint: sprint?.name ?? null,

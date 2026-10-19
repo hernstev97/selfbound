@@ -3,7 +3,23 @@ import type { Doc, Id } from '../_generated/dataModel';
 import type { MutationCtx, QueryCtx } from '../_generated/server';
 import { capChecks, mergeChecks, PR_LIMITS, type PrSnapshot } from '../lib/githubApi';
 import { clipHtml, clipItemsHtml, rewriteMedia, type MediaEntry, type MediaState } from '../lib/githubMedia';
-import { checkCounts, type PrDetail, type PrItem, type PrSummary, type PrView } from '../shared/pullRequests';
+import {
+  checkCounts,
+  DONE_WINDOW_MS,
+  listCheckCounts,
+  PR_GROUPS,
+  prBlockers,
+  prGroup,
+  type PrAttention,
+  type PrDetail,
+  type PrGroup,
+  type PrGroupInput,
+  type PrItem,
+  type PrList,
+  type PrListItem,
+  type PrSummary,
+  type PrView,
+} from '../shared/pullRequests';
 import { closeIssuesOnMerge, detailOf, githubConfigured } from './github';
 
 // Pull requests in Selfbound: read state from the GitHub API and store it.
@@ -113,6 +129,96 @@ export async function prSummaries(ctx: QueryCtx, prIds: Id<'pullRequests'>[]): P
     });
   }
   return out;
+}
+
+// ---------------------------------------------------------------- Pull requests page (SELF-100)
+
+/** Open (and draft) PRs read per state, newest change first. Far more than one person has open. */
+export const LIST_OPEN_MAX = 200;
+/** Merged (and closed) PRs of the last DONE_WINDOW_MS read per state. */
+export const LIST_DONE_MAX = 100;
+const LINKS_MAX = 20;
+
+/**
+ * IDs of the issues linked to a PR, without issues in the trash. Empty: the PR is not on the page.
+ * Reading the issues makes the page follow a linked issue that is deleted or restored.
+ */
+async function linkedIssueIds(ctx: QueryCtx, prId: Id<'pullRequests'>): Promise<Id<'issues'>[]> {
+  const links = await ctx.db
+    .query('issuePullRequests')
+    .withIndex('by_pr', (q) => q.eq('prId', prId))
+    .take(LINKS_MAX);
+  const out: Id<'issues'>[] = [];
+  for (const id of new Set(links.map((l) => l.issueId))) {
+    const issue = await ctx.db.get('issues', id);
+    if (issue && issue.deletedAt === undefined) out.push(id);
+  }
+  return out;
+}
+
+/** Linked PRs in the given open states with their fetched state and group. Unlinked PRs cost one index read and no detail. */
+async function openLinked(ctx: QueryCtx, states: readonly ('open' | 'draft')[]) {
+  const out: { pr: Doc<'pullRequests'>; issueIds: Id<'issues'>[]; row: Doc<'pullRequestDetails'> | null; input: PrGroupInput; group: PrGroup }[] = [];
+  for (const state of states) {
+    const prs = await ctx.db
+      .query('pullRequests')
+      .withIndex('by_state_updated', (q) => q.eq('state', state))
+      .order('desc')
+      .take(LIST_OPEN_MAX);
+    for (const pr of prs) {
+      const issueIds = await linkedIssueIds(ctx, pr._id);
+      if (!issueIds.length) continue;
+      const row = await detailOf(ctx, pr._id);
+      const input: PrGroupInput = { state: pr.state, detail: row?.data ?? null, ...(row?.summary?.review ? { review: row.summary.review } : {}) };
+      out.push({ pr, issueIds, row, input, group: prGroup(input) });
+    }
+  }
+  return out;
+}
+
+const listBase = (pr: Doc<'pullRequests'>) => ({ id: pr._id, repo: pr.repo, number: pr.number, title: pr.title, url: pr.url, state: pr.state, updatedAt: pr.updatedAt });
+
+/** All PRs linked to at least one issue: open ones by group, merged and closed ones of the last 14 days. */
+export async function prList(ctx: QueryCtx, now: number): Promise<PrList> {
+  const items: PrListItem[] = [];
+  for (const { pr, issueIds, row, input, group } of await openLinked(ctx, ['open', 'draft'])) {
+    const blockers = group === 'draft' ? [] : prBlockers(input);
+    items.push({
+      ...listBase(pr),
+      group,
+      issueIds,
+      ...(row?.data ? { checks: listCheckCounts(row.data.checks) } : {}),
+      ...(blockers.length ? { blockers } : {}),
+      ...(input.review ? { review: input.review } : {}),
+      ...(row?.fetchedAt !== undefined ? { fetchedAt: row.fetchedAt } : {}),
+    });
+  }
+  const since = now - DONE_WINDOW_MS;
+  for (const state of ['merged', 'closed'] as const) {
+    const prs = await ctx.db
+      .query('pullRequests')
+      .withIndex('by_state_updated', (q) => q.eq('state', state).gte('updatedAt', since))
+      .order('desc')
+      .take(LIST_DONE_MAX);
+    for (const pr of prs) {
+      const issueIds = await linkedIssueIds(ctx, pr._id);
+      if (issueIds.length) items.push({ ...listBase(pr), group: 'done', issueIds });
+    }
+  }
+  const rank = new Map(PR_GROUPS.map((g, i) => [g, i]));
+  items.sort((a, b) => rank.get(a.group)! - rank.get(b.group)! || b.updatedAt - a.updatedAt);
+  return { items, configured: githubConfigured() };
+}
+
+/** Sidebar count: linked PRs that are ready to merge or have failing checks. Drafts never count, so they are not read. */
+export async function prAttention(ctx: QueryCtx): Promise<PrAttention> {
+  let ready = 0;
+  let failing = 0;
+  for (const { group } of await openLinked(ctx, ['open'])) {
+    if (group === 'ready') ready++;
+    else if (group === 'failing') failing++;
+  }
+  return { ready, failing };
 }
 
 /** What an action needs to know about a PR (repo, number, state, latest state, media key). */

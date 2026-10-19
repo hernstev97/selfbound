@@ -189,6 +189,101 @@ export function checkCounts(checks: readonly PrCheck[]) {
   return { total: checks.length, failed, pending };
 }
 
+// ---------------------------------------------------------------- Pull requests page (SELF-100)
+
+/**
+ * Group of a PR on the pull requests page, by what comes next. In display order:
+ * ready · checks failing · checks running · blocked (open, checks fine, but something else stops the
+ * merge) · draft · done (merged or closed in the last DONE_WINDOW_MS).
+ */
+export type PrGroup = 'ready' | 'failing' | 'running' | 'blocked' | 'draft' | 'done';
+export const PR_GROUPS: readonly PrGroup[] = ['ready', 'failing', 'running', 'blocked', 'draft', 'done'];
+
+/** Why an open PR with fine checks is not ready. `unknown`: no state from GitHub yet. */
+export type PrBlocker = 'conflicts' | 'changes_requested' | 'rules' | 'unknown';
+
+/** Merged and closed PRs stay on the page this long (by `updatedAt`). */
+export const DONE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** What the grouping reads: the stored state, the fetched state (null = never fetched) and the review decision. */
+export interface PrGroupInput {
+  state: PrState;
+  detail: Pick<PrDetail, 'draft' | 'mergeState' | 'checks'> | null;
+  review?: 'approved' | 'changes_requested';
+}
+
+/**
+ * Check counts for the page: a canceled check counts as failed, because the PR needs a new run
+ * before it can be merged (the fetch keeps only the newest run per name).
+ */
+export function listCheckCounts(checks: readonly PrCheck[]) {
+  let failed = 0;
+  let pending = 0;
+  for (const c of checks) {
+    if (c.state === 'failure' || c.state === 'cancelled') failed++;
+    else if (c.state === 'pending') pending++;
+  }
+  return { total: checks.length, failed, pending };
+}
+
+/** Reasons why an open, non-draft PR cannot be merged yet (empty: nothing in the way). Same rules as the merge button in the PR view. */
+export function prBlockers(input: PrGroupInput): PrBlocker[] {
+  if (!input.detail) return ['unknown'];
+  const out: PrBlocker[] = [];
+  if (input.detail.mergeState === 'dirty') out.push('conflicts');
+  if (input.review === 'changes_requested') out.push('changes_requested');
+  if (input.detail.mergeState === 'blocked') out.push('rules');
+  return out;
+}
+
+/**
+ * The group of a PR. Drafts stay drafts whatever their checks say (work in progress, nothing to
+ * merge); for the others failing checks come before running ones, and only a PR with all checks
+ * successful, neutral or skipped, no requested changes and no conflicts or rules in the way is ready.
+ */
+export function prGroup(input: PrGroupInput): PrGroup {
+  if (input.state === 'merged' || input.state === 'closed') return 'done';
+  if (input.state === 'draft' || input.detail?.draft || input.detail?.mergeState === 'draft') return 'draft';
+  if (input.detail) {
+    const counts = listCheckCounts(input.detail.checks);
+    if (counts.failed) return 'failing';
+    if (counts.pending) return 'running';
+  }
+  return prBlockers(input).length ? 'blocked' : 'ready';
+}
+
+/** A row of the pull requests page (`githubPr.list`). */
+export interface PrListItem {
+  id: string;
+  repo: string;
+  number: number;
+  title: string;
+  url: string;
+  state: PrState;
+  updatedAt: number;
+  group: PrGroup;
+  /** IDs of the linked issues (at least one); the app shows them from its own store */
+  issueIds: string[];
+  /** missing until the first fetch */
+  checks?: { total: number; failed: number; pending: number };
+  blockers?: PrBlocker[];
+  review?: 'approved' | 'changes_requested';
+  fetchedAt?: number;
+}
+
+/** Result of `githubPr.list`: rows sorted by group (PR_GROUPS), then newest change first. */
+export interface PrList {
+  items: PrListItem[];
+  /** GITHUB_TOKEN set: refreshing is possible */
+  configured: boolean;
+}
+
+/** Result of `githubPr.attention`: the sidebar count is ready + failing. */
+export interface PrAttention {
+  ready: number;
+  failing: number;
+}
+
 /** Path of the full view: /pr/<owner>/<name>/<number> */
 export function prPath(repo: string, number: number) {
   return `/pr/${repo}/${number}`;

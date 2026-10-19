@@ -55,6 +55,25 @@ Click a row to open the pull request beside the issue. On a narrow window or a p
 
 <Screenshot name="pr" alt="A pull request in Selfbound: title, state and branches, the change size, the list of checks with one failed, the mergeability line and the description" />
 
+## The pull requests page
+
+**Pull requests** in the sidebar, right under Inbox (<Kbd keys="g p" />), lists every pull request that is linked to at least one issue, sorted by what to do next. A pull request linked to several issues appears once, with all of them.
+
+| Group | What it means |
+|---|---|
+| **Ready to merge** | Open, not a draft, every check successful, neutral or skipped, no requested changes, and no conflicts or repository rules in the way |
+| **Checks failing** | At least one check failed or was canceled |
+| **Checks running** | No check failed, at least one is still running |
+| **Blocked** | The checks are fine, but something else stops the merge: **Conflicts**, **Changes requested**, **Blocked by rules**, or no state from GitHub yet |
+| **Draft** | Marked as a draft on GitHub, whatever its checks say |
+| **Merged or closed** | Merged or closed in the last 14 days; collapsed until you open it |
+
+Within a group the most recently changed pull request comes first. The number next to the sidebar entry counts only **Ready to merge** and **Checks failing**, the two groups where you can act right away.
+
+Each row shows the repository and number, the title, the linked issues with their status (click one to open the issue), what stops it if anything, the checks and when it last changed. Click a row to open the pull request beside the list; on a narrow window or a phone it opens as its own page. <Kbd keys="j" /> and <Kbd keys="k" /> move through the rows, <Kbd keys="enter" /> opens the focused one beside the list and, pressed again, full size. <Kbd keys="escape" /> closes the pull request beside the list. Merging stays in the pull request view.
+
+Opening the page refreshes up to ten open pull requests from GitHub whose state is older than two minutes. **Reload from GitHub** in the header fetches them right away. Pull requests without a linked issue do not appear; see [How pull requests are linked](#how-pull-requests-are-linked).
+
 ## The pull request view
 
 The view shows what you need to decide whether a pull request is ready, and lets you act on it.

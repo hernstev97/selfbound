@@ -117,6 +117,7 @@ export function fakeClient() {
     setAuth() {},
     mutation: vi.fn(async (_fn: unknown, _args: unknown, _opts?: unknown): Promise<unknown> => ({ updatedAt: 1, changed: 1, warnings: [] })),
     query: vi.fn(async (_fn: unknown, _args: unknown): Promise<unknown> => null),
+    action: vi.fn(async (_fn: unknown, _args: unknown): Promise<unknown> => ({ refreshed: 0 })),
   };
   return client;
 }

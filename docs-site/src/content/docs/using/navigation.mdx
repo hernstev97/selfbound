@@ -21,8 +21,9 @@ From top to bottom, the sidebar holds:
 - **The header**: the Selfbound button opens the [command menu](/using/command-menu/), the magnifier opens the
   issue search, and the pen opens the [create dialog](/using/creating-issues/). A dot on the pen means you
   have unsent drafts.
-- **Views across all teams**: Inbox and Triage (each with a count when something is waiting), All issues,
-  and the sprint entry. The sprint entry shows the name of the running sprint, or "Planning" while a
+- **Views across all teams**: Inbox, [Pull requests](/integrations/github/#the-pull-requests-page) (with a
+  count of pull requests that are ready to merge or have failing checks), Triage (with a count when
+  something is waiting), All issues, and the sprint entry. The sprint entry shows the name of the running sprint, or "Planning" while a
   sprint is being planned and none runs yet. **Drafts** appears here only while you have drafts.
 - **Current team**: a card for the team you are working in, with its numbers (sprint progress, or open
   issues by state), and below it the team's pages: Triage (only when issues are waiting), Issues,
@@ -76,6 +77,7 @@ key within about 1.2 seconds.
 | Keys | Goes to |
 |---|---|
 | <Kbd keys="g i" /> | Inbox |
+| <Kbd keys="g p" /> | Pull requests |
 | <Kbd keys="g t" /> | Triage |
 | <Kbd keys="g a" /> | All issues |
 | <Kbd keys="g e" /> | Active issues (of the team you are in, if any) |
@@ -125,6 +127,7 @@ with `ACME` as the team key:
 | `/team/ACME/projects` | the team's projects |
 | `/team/ACME/wiki` | the team's knowledge area |
 | `/issue/ACME-42` | one issue |
+| `/pulls` | pull requests linked to issues |
 | `/sprint`, `/sprints` | the running sprint, all sprints |
 | `/trash`, `/drafts`, `/settings` | trash, drafts, settings |
 

@@ -9,6 +9,7 @@
 //   /team/KIU/wiki         a team's wiki             /wiki/<id> page (permanent address, no team; the older
 //                          /wissen paths still parse, they are in links stored in issue texts, see backend/convex/shared/links.ts)
 //   /issue/KIU-106         issue (full page)
+//   /pulls                 pull requests linked to issues, by what comes next
 //   /pr/<owner>/<repo>/12  pull request, full size
 //   /sprint                active sprint             /sprint/plan[/<number>] planning, /sprint/close completion
 //   /sprints               all sprints
@@ -30,6 +31,7 @@ export type Page =
   | { name: 'view'; view: ViewRoute }
   | { name: 'issue'; key: string }
   | { name: 'pr'; repo: string; number: number }
+  | { name: 'pulls' }
   | { name: 'projects'; team: string }
   | { name: 'wiki'; team: string }
   | { name: 'article'; id: string }
@@ -100,6 +102,7 @@ export function parsePath(pathname: string): Page {
   if (a === 'sprints' && !b) return { name: 'sprints' };
   if (a === 'issue' && b) return { name: 'issue', key: b.toUpperCase() };
   if (a === 'pr' && b && c && d && /^\d{1,9}$/.test(d) && !e) return { name: 'pr', repo: `${b}/${c}`, number: Number(d) };
+  if (a === 'pulls' && !b) return { name: 'pulls' };
   if (a === 'new') return { name: 'new' };
   if (a === 'drafts') return { name: 'drafts' };
   // /wissen is the older German path, still found in stored links.
@@ -138,6 +141,8 @@ export function pagePath(page: Page): string {
       return `/issue/${page.key}`;
     case 'pr':
       return `/pr/${page.repo.split('/').map(encodeURIComponent).join('/')}/${page.number}`;
+    case 'pulls':
+      return '/pulls';
     case 'projects':
       return `/team/${page.team}/projects`;
     case 'wiki':

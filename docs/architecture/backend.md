@@ -62,7 +62,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `oauthClients`, `oauthRequests`, `oauthTokens` | OAuth for connectors: registered clients, authorization requests until the code is redeemed, access and refresh tokens (hashes only). See [`mcp.md`](mcp.md#oauth-for-connectors) | `by_client`, `by_approved_created`; `by_public`, `by_code`, `by_client_status`, `by_expires`; `by_hash`, `by_agent`, `by_expires` |
 | `rateWindows` | Counter per agent and window (`m:<minute>`, `d:<day>`) | `by_agent_window` |
 | `requests` | Idempotency: `owner`, `requestId`, `argsHash`, `operation`, `result` | `by_owner_request`, `by_created` |
-| `pullRequests`, `issuePullRequests`, `githubDeliveries` | GitHub. `pullRequests.headSha`: last known head commit | `pullRequests.by_repo_number`, `by_repo_head` |
+| `pullRequests`, `issuePullRequests`, `githubDeliveries` | GitHub. `pullRequests.headSha`: last known head commit | `pullRequests.by_repo_number`, `by_repo_head`, `by_state_updated` (pull requests page) |
 | `pullRequestDetails`, `pullRequestItems`, `githubCheckRuns` | Pull requests in Selfbound ([below](#githubpr-pull-requests-in-selfbound)) | `by_pr`, `by_media_key`; `by_pr_created`, `by_pr_key`; `by_repo_sha`, `by_check`, `by_received` |
 | `recurrences`, `recurrenceRuns` | Recurring issues, one run per due date | `by_next`, `by_recurrence_date` |
 | `linearLinks`, `importStaging`, `importRuns`, `importConflicts` | Import. `linearLinks.base`: the last imported Linear values of an issue (three-way merge), `purgedAt`: permanently deleted in Selfbound. `importRuns.phase`/`cursor`/`maxNumbers`/`heartbeatAt`: progress of the run | `by_kind_linear`, `by_local`, `importRuns.by_status` |
@@ -482,12 +482,14 @@ Pages per team. In code `wiki`/`article`; in the UI "Knowledge", "Page", "Topic"
 
 ### githubPr (pull requests in Selfbound)
 
-Types in `shared/pullRequests.ts` (`PrView`, `PrDetail`, `PrItem`, `PrCheck`, `PrSummary`, `GithubConnection`). Access to GitHub only via `GITHUB_TOKEN` (the instance's fine-grained PAT, [`operations.md`](../operations.md#github)); the token never leaves the backend and appears in no message.
+Types in `shared/pullRequests.ts` (`PrView`, `PrDetail`, `PrItem`, `PrCheck`, `PrSummary`, `PrList`, `PrAttention`, `GithubConnection`). The grouping of the pull requests page is a pure function there (`prGroup`, `prBlockers`, `listCheckCounts`; drafts stay drafts, then failing before running, ready only with fine checks, no requested changes and no conflicts or rules, the same rule as the merge button), tested in `test/lib/pullRequestGroups.test.ts`. Access to GitHub only via `GITHUB_TOKEN` (the instance's fine-grained PAT, [`operations.md`](../operations.md#github)); the token never leaves the backend and appears in no message.
 
 | Function | Arguments | Returns |
 |---|---|---|
 | `githubPr.view` (query) | `{ repo, number }` | `PrView \| null` (null: PR unknown). `detail` is null until there has been a successful fetch; `error` is set even then |
 | `githubPr.summaries` (query) | `{ prIds }` (at most 20, more are cut off) | `PrSummary[]` in input order; unknown ones are missing |
+| `githubPr.list` (query) | – | `PrList`: `{ items: PrListItem[], configured }` for the pull requests page. PRs with at least one link to an issue not in the trash: open and draft ones (`by_state_updated`, at most 200 per state), merged and closed ones whose `updatedAt` is within 14 days (at most 100 per state). Each row has `group` (`prGroup`), `issueIds`, and for open ones `checks` (a canceled check counts as failed), `blockers`, `review`, `fetchedAt`. Sorted by group, then `updatedAt` descending. Reads the details only of linked open PRs |
+| `githubPr.attention` (query) | – | `{ ready, failing }`: linked open PRs (no drafts) in the groups "ready to merge" and "checks failing", for the sidebar count |
 | `githubPr.status` (query) | – | `{ configured }` |
 | `githubPr.refresh` (action) | `{ prIds, maxAgeMs? }` (at most 10; default 60 s) | `{ refreshed, error? }`. Only fetches PRs whose last fetch is older than `maxAgeMs` and that no other call is currently fetching (`fetchingSince`, valid for 30 s); sets `viewedAt` (at most every 5 min). Without a token `{ refreshed: 0, error }` |
 | `githubPr.merge` (action) | `{ prId, method: 'merge'\|'squash'\|'rebase', deleteBranch }` | `{ merged: true, branchDeleted, message? }`. Merges with `sha` = known head commit. Deletes the branch only if `headBranchDeletable`; if the repo deletes it itself (`deleteBranchOnMerge`), `branchDeleted: true` without a separate call. Then fetches the state right away: on return the PR is `merged` and the merge transition (below) has run |

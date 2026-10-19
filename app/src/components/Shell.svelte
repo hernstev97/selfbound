@@ -39,6 +39,8 @@
       <Lazy load={pages.issueHost}>{#snippet pending()}<DetailSkeleton />{/snippet}{#snippet children(m)}<m.Host><m.Page /></m.Host>{/snippet}</Lazy>
     {:else if shell.page === 'pr'}
       <Lazy load={pages.pr} />
+    {:else if shell.page === 'pulls'}
+      <Lazy load={pages.pulls} />
     {:else if shell.page === 'projects'}
       <Lazy load={pages.projects} />
     {:else if shell.page === 'wiki' || shell.page === 'article'}

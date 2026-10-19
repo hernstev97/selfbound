@@ -102,6 +102,8 @@ function boot() {
       loadSound();
       loadPwa();
       loadLook();
+      // Sidebar count of the pull requests page: one small subscription, after the first list.
+      if (convexUrl) app.watchPullCounts();
       void dropLegacyDatabases();
     });
   }
