@@ -420,6 +420,7 @@ export default {
   'Go to settings': 'Zu den Einstellungen',
   // settings/DataExport.svelte
   'Data export': 'Datenexport',
+  'Export all data': 'Alle Daten exportieren',
   'Download everything in this instance as one ZIP file: a complete JSON copy that a later version can import again, and readable Markdown with one file per issue and per knowledge page.':
     'Lade alles aus dieser Instanz als eine ZIP-Datei herunter: eine vollständige JSON-Kopie, die eine spätere Version wieder einspielen kann, und lesbares Markdown mit einer Datei pro Issue und pro Wissensseite.',
   'Teams, issues with descriptions, comments and history, projects, sprints, labels, recurring issues, knowledge pages, images and logos, including the trash. Not included: agent keys, connections and push devices.':

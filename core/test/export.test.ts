@@ -77,12 +77,13 @@ describe('export ZIP', () => {
     await expect(zip.add('a.txt', 'again')).rejects.toThrow(/Duplicate/);
   });
 
-  test('more than 65,535 entries get a ZIP64 directory', async () => {
-    const zip = new ZipWriter(T0);
-    for (let i = 0; i < 65_600; i++) await zip.add(`f${i}`, '');
-    const entries = unzip(zip.finish());
-    expect(entries.size).toBe(65_600);
-  }, 30_000);
+  test('65,535 entries and more get a ZIP64 directory', async () => {
+    for (const count of [65_535, 65_600]) {
+      const zip = new ZipWriter(T0);
+      for (let i = 0; i < count; i++) await zip.add(`f${i}`, '');
+      expect(unzip(zip.finish()).size).toBe(count);
+    }
+  }, 60_000);
 });
 
 describe('buildExport', () => {
@@ -139,11 +140,35 @@ describe('buildExport', () => {
   });
 });
 
+describe('odd data', () => {
+  test('duplicate issue numbers, a missing team, a page cycle and device names still export', async () => {
+    const tables = fixture() as unknown as Record<string, Record<string, unknown>[]>;
+    tables.teams![0]!.key = 'CON';
+    const first = tables.issues![0]!;
+    tables.issues!.push({ ...first, _id: 'iss4', seq: 4 }, { ...first, _id: 'iss5', seq: 5, teamId: 'gone', number: 9 });
+    tables.articles![0]!.parentId = 'a2'; // a1 → a2 → a1
+    tables.articles!.push({ ...tables.articles![0]!, _id: 'a4', parentId: undefined, title: 'aux.' });
+    const result = await buildExport(tables as unknown as ExportTables, { exportedAt: T0, source: 'app', readFiles: reader });
+    const names = [...unzip(result.parts).keys()];
+    expect(names).toContain('markdown/issues/CON_/CON-1 Fix the login sign-in.md');
+    expect(names).toContain('markdown/issues/CON_/CON-1 Fix the login sign-in (2).md');
+    // The identifier of an issue without its team is "?-9"; the "?" is no valid file name character.
+    expect(names).toContain('markdown/issues/unknown/-9 Fix the login sign-in.md');
+    expect(names).toContain('files/logos/CON_.svg');
+    expect(names).toContain('markdown/knowledge/CON_/aux_.md');
+    expect(names.filter((n) => n.startsWith('markdown/knowledge/')).length).toBe(4);
+  });
+});
+
 describe('names', () => {
   test('safe file names and relative links', () => {
     expect(safeName('a/b\\c:d*e?"f<g>h|i')).toBe('a b c d e f g h i');
     expect(safeName('  ..hidden ')).toBe('hidden');
     expect(safeName('///')).toBe('Untitled');
+    expect(safeName('v1.0. ')).toBe('v1.0');
+    expect(safeName('NUL')).toBe('NUL_');
+    expect(safeName('com1.txt')).toBe('com1.txt_');
+    expect(safeName('Cafe\u0301')).toBe('Café');
     expect(relativePath('markdown/issues/A/x.md', 'files/images/t.png')).toBe('../../../files/images/t.png');
     expect(relativePath('markdown/README.md', 'markdown/issues/A/x.md')).toBe('issues/A/x.md');
     expect(exportFileName(new Date(2026, 9, 5).getTime())).toBe('selfbound-export-2026-10-05.zip');

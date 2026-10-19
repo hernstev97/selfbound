@@ -6,7 +6,7 @@
 //   markdown/…              readable copy (markdown.ts)
 //   files/…                 images, team logos
 import { EXPORT_FORMAT, EXPORT_TABLES, EXPORT_VERSION, exportRow } from '@selfbound/backend/shared/export';
-import { ExportIndex, articleMarkdown, articlePaths, issueMarkdown, issuePath, readmeMarkdown } from './markdown.ts';
+import { ExportIndex, articleMarkdown, articlePaths, issueMarkdown, issuePaths, readmeMarkdown, safeName } from './markdown.ts';
 import type { ExportFile, ExportFileReader, ExportProgress, ExportTables } from './types.ts';
 import { ZipWriter } from './zip.ts';
 
@@ -22,13 +22,21 @@ const ext = (contentType: string | undefined) => (contentType && EXTENSION[conte
 /** The stored files of an export: referenced images (orphans waiting for cleanup are left out) and team logos. */
 export function exportFiles(tables: ExportTables): ExportFile[] {
   const files: ExportFile[] = [];
+  const paths = new Set<string>();
+  const add = (file: ExportFile) => {
+    // A path twice (the same token in two rows) would end the whole export; the first one wins.
+    if (paths.has(file.path)) return;
+    paths.add(file.path);
+    files.push(file);
+  };
   for (const f of tables.files) {
     if (f.deleteAfter !== undefined) continue;
-    files.push({ storageId: f.storageId, path: `files/images/${f.token}${ext(f.contentType)}`, contentType: f.contentType, token: f.token });
+    add({ storageId: f.storageId, path: `files/images/${f.token}${ext(f.contentType)}`, contentType: f.contentType, token: f.token });
   }
   for (const team of tables.teams) {
-    if (team.logoId) files.push({ storageId: team.logoId, path: `files/logos/${team.key}${ext(team.logoType)}`, contentType: team.logoType });
-    if (team.logoDarkId) files.push({ storageId: team.logoDarkId, path: `files/logos/${team.key}-dark${ext(team.logoType)}`, contentType: team.logoType });
+    const name = safeName(team.key); // CON, AUX … are valid team keys but no valid Windows file names
+    if (team.logoId) add({ storageId: team.logoId, path: `files/logos/${name}${ext(team.logoType)}`, contentType: team.logoType });
+    if (team.logoDarkId) add({ storageId: team.logoDarkId, path: `files/logos/${name}-dark${ext(team.logoType)}`, contentType: team.logoType });
   }
   return files;
 }
@@ -89,8 +97,9 @@ export async function buildExport(
   await zip.add('json/manifest.json', `${JSON.stringify(manifest, null, 2)}\n`);
 
   await zip.add('markdown/README.md', readmeMarkdown(index, { exportedAt: options.exportedAt, counts, files: stored.length, missingFiles: missingFiles.length }));
-  for (const issue of [...tables.issues].sort((a, b) => a.seq - b.seq)) {
-    const path = issuePath(issue, index);
+  const issueFiles = issuePaths(index);
+  for (const issue of tables.issues) {
+    const path = issueFiles.get(issue._id)!;
     await zip.add(path, issueMarkdown(issue, index, path));
   }
   const paths = articlePaths(index);

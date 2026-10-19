@@ -1,7 +1,7 @@
 // Data export for the owner (SELF-46): which tables an export contains and what never leaves the
 // instance. Shared by the export query (dataExport.ts), the app (core/src/export) and the script
 // tooling/export, which reads the same tables from a `convex export` snapshot.
-// No imports: Node runs this file directly (tooling/export/index.ts).
+// No imports: Node runs this file directly (tooling/export/index.mjs).
 
 /** Format name and version in `json/manifest.json`. A later re-import checks both. */
 export const EXPORT_FORMAT = 'selfbound-export';

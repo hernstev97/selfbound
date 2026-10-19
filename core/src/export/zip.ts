@@ -1,6 +1,6 @@
 // Minimal ZIP writer for the data export: no dependency, runs in the browser and in Node.
 // Text is deflated with CompressionStream where it exists, images are stored as they are.
-// ZIP64 only for the entry count (more than 65,535 files); archives over 4 GB are refused.
+// ZIP64 only for the entry count (65,535 files and more); archives over 4 GB are refused.
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -20,8 +20,12 @@ export function crc32(data: Uint8Array): number {
 
 async function deflateRaw(data: Uint8Array): Promise<Uint8Array | null> {
   if (typeof CompressionStream === 'undefined') return null;
-  const stream = new Blob([data as Uint8Array<ArrayBuffer>]).stream().pipeThrough(new CompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  try {
+    const stream = new Blob([data as Uint8Array<ArrayBuffer>]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  } catch {
+    return null; // browsers before deflate-raw (Chrome < 103): store instead
+  }
 }
 
 /** Date and time in MS-DOS form (local time, 2-second steps, from 1980). */
@@ -102,7 +106,8 @@ export class ZipWriter {
     const cdSize = this.#offset - start;
     if (this.#offset > MAX32) throw new Error('The export is larger than 4 GB.');
     const count = this.#entries.length;
-    if (count > 0xffff) {
+    // 0xffff itself means "see ZIP64" to readers, so it needs the record too.
+    if (count >= 0xffff) {
       const zip64 = this.#offset;
       const record = new DataView(new ArrayBuffer(56 + 20));
       record.setUint32(0, 0x06064b50, true);

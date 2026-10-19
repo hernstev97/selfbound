@@ -142,16 +142,31 @@ function frontmatter(fields: [string, unknown][]): string {
   return `---\n${lines.join('\n')}\n---\n`;
 }
 
-/** File or folder name from a title: no path or reserved characters, at most 80 characters. */
+const RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)(\..*)?$/i;
+
+/**
+ * File or folder name from a title that extracts on Windows, macOS and Linux: no path or reserved
+ * characters, no leading or trailing dots, no device names (CON, NUL …), NFC, at most 80 characters.
+ */
 export function safeName(title: string): string {
   const name = title
+    .normalize('NFC')
     .replace(/[\u0000-\u001f\u007f/\\:*?"<>|#^[\]]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^\.+/, '')
     .slice(0, 80)
-    .trim();
-  return name || 'Untitled';
+    .replace(/[\s.]+$/, '');
+  if (!name) return 'Untitled';
+  return RESERVED.test(name) ? `${name}_` : name;
+}
+
+/** Makes a path unique among `taken` (case-insensitive, as on Windows and macOS): "Name (2).md". */
+export function uniquePath(taken: Set<string>, folder: string, name: string, ext = '.md'): string {
+  let candidate = name;
+  for (let n = 2; taken.has(`${folder}/${candidate}${ext}`.toLowerCase()); n++) candidate = `${name} (${n})`;
+  taken.add(`${folder}/${candidate}${ext}`.toLowerCase());
+  return `${folder}/${candidate}${ext}`;
 }
 
 /** Relative link from one ZIP path to another. */
@@ -194,9 +209,16 @@ function historyValue(field: string, value: unknown, index: ExportIndex): string
   return short(JSON.stringify(value));
 }
 
-export function issuePath(issue: Doc<'issues'>, index: ExportIndex): string {
-  const team = index.teams.get(issue.teamId)?.key ?? 'unknown';
-  return `markdown/${issue.deletedAt ? 'trash/' : ''}issues/${team}/${index.identifier(issue)} ${safeName(issue.title)}.md`;
+/** Paths of all issue files, unique even for odd data (two issues with one number, a missing team). */
+export function issuePaths(index: ExportIndex): Map<string, string> {
+  const taken = new Set<string>();
+  const paths = new Map<string, string>();
+  for (const issue of [...index.tables.issues].sort((a, b) => a.seq - b.seq)) {
+    const team = safeName(index.teams.get(issue.teamId)?.key ?? 'unknown');
+    const folder = `markdown/${issue.deletedAt ? 'trash/' : ''}issues/${team}`;
+    paths.set(issue._id, uniquePath(taken, folder, safeName(`${index.identifier(issue)} ${issue.title}`)));
+  }
+  return paths;
 }
 
 export function issueMarkdown(issue: Doc<'issues'>, index: ExportIndex, path: string): string {
@@ -277,16 +299,17 @@ export function articlePaths(index: ExportIndex): Map<string, string> {
   const byId = new Map(index.tables.articles.map((a) => [a._id, a]));
   const taken = new Set<string>();
   const sorted = [...index.tables.articles].sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : a._creationTime - b._creationTime));
-  const resolve = (article: Doc<'articles'>, depth = 0): string => {
+  const visiting = new Set<string>();
+  const resolve = (article: Doc<'articles'>): string => {
     const known = paths.get(article._id);
     if (known) return known;
-    const parent = article.parentId && depth < 30 ? byId.get(article.parentId) : undefined;
-    const team = index.teams.get(article.teamId)?.key ?? 'unknown';
-    const folder = parent ? resolve(parent, depth + 1).replace(/\.md$/, '') : `markdown/${article.deletedAt ? 'trash/' : ''}knowledge/${team}`;
-    let name = safeName(article.title);
-    for (let n = 2; taken.has(`${folder}/${name}`.toLowerCase()); n++) name = `${safeName(article.title)} (${n})`;
-    taken.add(`${folder}/${name}`.toLowerCase());
-    const path = `${folder}/${name}.md`;
+    visiting.add(article._id);
+    // A parent that is missing, or part of a cycle (the schema forbids both), makes the page a root.
+    const parent = article.parentId && !visiting.has(article.parentId) ? byId.get(article.parentId) : undefined;
+    const team = safeName(index.teams.get(article.teamId)?.key ?? 'unknown');
+    const folder = parent ? resolve(parent).replace(/\.md$/, '') : `markdown/${article.deletedAt ? 'trash/' : ''}knowledge/${team}`;
+    visiting.delete(article._id);
+    const path = uniquePath(taken, folder, safeName(article.title));
     paths.set(article._id, path);
     return path;
   };

@@ -67,6 +67,20 @@ describe('data export', () => {
     expect(new Set(rows.map((r) => r._id)).size).toBe(count + 1);
   });
 
+  test('large texts: pages end at the byte limit, no row is lost', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const issue = await createOne(owner, f.orb);
+    // 50 texts of 190,000 characters: more than a query may read (8 MiB), so it needs several pages.
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 50; i++) await ctx.db.insert('bodyRevisions', { issueId: issue!.id, markdown: String(i % 10).repeat(190_000), version: i, reason: 'import_overwrite', at: i, actor: { kind: 'import' } });
+    });
+    const { rows, pages } = await readAll(owner, 'bodyRevisions');
+    expect(pages).toBeGreaterThan(1);
+    expect(rows).toHaveLength(50);
+    expect(new Set(rows.map((r) => r.version)).size).toBe(50);
+  });
+
   test('file URLs for stored files, null for deleted ones, batch limit', async () => {
     const { t, owner } = setup();
     const [kept, gone] = await t.run(async (ctx) => {
