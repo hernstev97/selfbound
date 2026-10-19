@@ -21,6 +21,7 @@
   import Ops from './settings/Ops.svelte';
   import Github from './settings/Github.svelte';
   import Notifications from './settings/Notifications.svelte';
+  import About from './settings/About.svelte';
 
   const pageSlice = fromSlice(app.nav.page);
   const page = $derived(pageSlice.current);
@@ -76,6 +77,8 @@
       <Github />
     {:else if section === 'ops'}
       <Ops />
+    {:else if section === 'about'}
+      <About />
     {:else}
       <div class="empty" style="padding: 48px 0">
         <div class="empty-text">{t('This section does not exist.')}</div>

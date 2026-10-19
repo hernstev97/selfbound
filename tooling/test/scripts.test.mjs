@@ -92,6 +92,8 @@ describe('deploy-web build environment', () => {
     const env = productionEnv({ convexDeployment: 'happy-otter-123', appUrl: 'https://selfbound.example.com', clerkPublishableKey: 'pk_live_x' });
     assert.equal(env.SELFBOUND_PUBLIC_URL, 'https://selfbound.example.com');
     assert.equal(env.VITE_SELFBOUND_BRANCH_PREFIX, '');
+    assert.equal(env.SELFBOUND_SOURCE_URL, '');
+    assert.equal(productionEnv({ convexDeployment: 'x', sourceUrl: 'https://git.example.org/fork' }).SELFBOUND_SOURCE_URL, 'https://git.example.org/fork');
     assert.equal(env.VITE_CONVEX_URL, 'https://happy-otter-123.convex.cloud');
     assert.deepEqual(Object.keys(env).filter((k) => /XLR8/i.test(k)), []);
     assert.deepEqual(Object.keys(BLANKED_ENV).sort(), ['VITE_DEV_TOKEN', 'VITE_SELFBOUND_TEST', 'VITE_XLR8_TEST']);

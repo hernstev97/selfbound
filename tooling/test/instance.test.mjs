@@ -26,6 +26,12 @@ describe('loadInstance', () => {
     assert.deepEqual(instance.redirectHosts, ['x.example', 'y.example']);
     assert.equal(instance.branchPrefix, 'jane');
   });
+  it('reads sourceUrl from the file or SELFBOUND_SOURCE_URL, without an old name', () => {
+    const path = file({ sourceUrl: 'https://git.example.org/fork' });
+    assert.equal(loadInstance({}, path).sourceUrl, 'https://git.example.org/fork');
+    assert.equal(loadInstance({ SELFBOUND_SOURCE_URL: 'https://env.example/fork' }, path).sourceUrl, 'https://env.example/fork');
+    assert.equal(loadInstance({ XLR8_SOURCE_URL: 'https://old.example/fork' }, file({})).sourceUrl, undefined);
+  });
   // legacy-xlr8: the old names keep working until the follow-up removes them
   it('still reads the old variable names, the new ones win', (t) => {
     t.mock.method(console, 'warn', () => undefined);

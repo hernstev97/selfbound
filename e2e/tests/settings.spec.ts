@@ -150,3 +150,18 @@ test('Loading older comments (comments.page)', async ({ page }) => {
   await page.getByTestId('comments-older').click();
   await expect.poll(async () => await page.getByTestId('comment').count()).toBeGreaterThan(before);
 });
+
+test('Settings › About: license, source link and third-party licenses, also from the command menu', async ({ page }) => {
+  await open(page, '/all');
+  await page.keyboard.press('Control+k');
+  await expect(page.getByTestId('palette-input')).toBeFocused();
+  await page.keyboard.type('Settings: About');
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/settings\/about$/);
+  const about = page.getByTestId('about');
+  await expect(about).toContainText('GNU Affero General Public License v3.0');
+  await expect(page.getByTestId('about-source')).toHaveAttribute('href', 'https://github.com/hernstev97/selfbound');
+  await expect(page.getByTestId('about-notices')).toHaveAttribute('href', '/third-party-notices.txt');
+  await expect(page.getByTestId('about-build')).not.toBeEmpty();
+  await expect(page.getByTestId('settings-nav-about')).toHaveClass(/active/);
+});

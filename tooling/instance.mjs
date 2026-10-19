@@ -17,6 +17,8 @@
 //   branchPrefix          VITE_SELFBOUND_BRANCH_PREFIX   your GitHub login (prefix of suggested branch names; optional)
 //   siteUrl               SELFBOUND_SITE_URL             https://example.com (public landing page, site/; optional)
 //   siteVercelProject     SELFBOUND_SITE_VERCEL_PROJECT  selfbound-landing (Vercel project of the landing page; optional)
+//   sourceUrl             SELFBOUND_SOURCE_URL           https://github.com/you/selfbound (source link in the app, AGPL-3.0 § 13; optional,
+//                                                        default: the upstream repository; set it when you run a changed version)
 //
 // legacy-xlr8: the old XLR8_* names (VITE_XLR8_BRANCH_PREFIX) and ~/.config/xlr8/ still work, with a warning.
 import { existsSync, readFileSync } from 'node:fs';
@@ -34,7 +36,7 @@ export function instanceFile(exists = existsSync, userFile = () => configFile('i
 
 const list = (value) => (Array.isArray(value) ? value : String(value ?? '').split(',')).map((s) => String(s).trim()).filter(Boolean);
 
-/** @returns {{ convexDeployment?: string, appUrl?: string, clerkPublishableKey?: string, vercelProject?: string, vercelScope?: string, branchPrefix?: string, siteUrl?: string, siteVercelProject?: string, mcpHosts: string[], redirectHosts: string[] }} */
+/** @returns {{ convexDeployment?: string, appUrl?: string, clerkPublishableKey?: string, vercelProject?: string, vercelScope?: string, branchPrefix?: string, siteUrl?: string, siteVercelProject?: string, sourceUrl?: string, mcpHosts: string[], redirectHosts: string[] }} */
 export function loadInstance(env = process.env, file = instanceFile()) {
   const json = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
   const pick = (name, key) => envVar(name, env) || json[key] || undefined;
@@ -48,6 +50,7 @@ export function loadInstance(env = process.env, file = instanceFile()) {
     branchPrefix: envVarPair('VITE_SELFBOUND_BRANCH_PREFIX', 'VITE_XLR8_BRANCH_PREFIX', env) || json.branchPrefix || undefined,
     siteUrl: pick('SITE_URL', 'siteUrl')?.replace(/\/$/, ''),
     siteVercelProject: pick('SITE_VERCEL_PROJECT', 'siteVercelProject'),
+    sourceUrl: env.SELFBOUND_SOURCE_URL || json.sourceUrl || undefined,
     mcpHosts: list(envVar('MCP_HOSTS', env) ?? json.mcpHosts),
     redirectHosts: list(envVar('REDIRECT_HOSTS', env) ?? json.redirectHosts),
   };

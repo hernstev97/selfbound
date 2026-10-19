@@ -76,6 +76,7 @@ can also be overridden with an environment variable.
 | `mcpHosts` | `SELFBOUND_MCP_HOSTS` | `["mcp.selfbound.example.com"]` | optional custom address for MCP |
 | `redirectHosts` | `SELFBOUND_REDIRECT_HOSTS` | `["old.example.org"]` | old domains that redirect to `appUrl` |
 | `branchPrefix` | `VITE_SELFBOUND_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
+| `sourceUrl` | `SELFBOUND_SOURCE_URL` | `https://github.com/jane/selfbound` | optional; source link in Settings › About and on the sign-in page (AGPL-3.0 § 13). Default: the upstream repository. Set it to your fork when you run a changed version |
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Deploy keys
 and tokens never go into it.

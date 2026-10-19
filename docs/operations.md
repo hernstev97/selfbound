@@ -39,6 +39,7 @@ with several worktrees; the old `~/.config/xlr8/` still works as a fallback). Ev
 | `branchPrefix` | `VITE_SELFBOUND_BRANCH_PREFIX` | `jane` | optional prefix of suggested Git branch names |
 | `siteUrl` | `SELFBOUND_SITE_URL` | `https://example.com` | optional, only for the public landing page (`site/`, [site/README.md](../site/README.md)): canonical and link-preview URLs |
 | `siteVercelProject` | `SELFBOUND_SITE_VERCEL_PROJECT` | `selfbound-landing` | optional, Vercel project of the landing page (`tooling/deploy-site.mjs`) |
+| `sourceUrl` | `SELFBOUND_SOURCE_URL` | `https://github.com/jane/selfbound` | optional; source link in Settings › About and on the sign-in page (AGPL-3.0 § 13). Default: the upstream repository. Set it to your fork when you run a changed version |
 
 Nothing in this file is secret: these values end up in the browser or in public DNS anyway. Secrets
 (deploy keys, tokens) never go into it.
@@ -72,6 +73,7 @@ not necessarily the other way round.
 | `VITE_SELFBOUND_BRANCH_PREFIX` | optional prefix for suggested Git branch names (from `branchPrefix`): `jane` gives `jane/acme-106-title`; without it `acme-106-title` |
 | `SELFBOUND_PUBLIC_URL` | public app URL for absolute URLs in `index.html` (og tags); read at build time only (from `appUrl`) |
 | `SELFBOUND_BUILD_ID` | optional build id for `/version.json` (default: random) |
+| `SELFBOUND_SOURCE_URL` | source link of the instance (from `sourceUrl`), shown in Settings › About and on the sign-in page; read at build time only. Default: the upstream repository |
 
 `VITE_DEV_TOKEN` and `VITE_SELFBOUND_TEST` are for local development and tests only; `deploy-web.mjs` clears them.
 

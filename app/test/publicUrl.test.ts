@@ -44,7 +44,8 @@ describe('publicUrlHtml', () => {
   it('index.html and welcome.html carry no hard-coded host', () => {
     for (const file of ['../index.html', '../welcome.html']) {
       const html = readFileSync(new URL(file, import.meta.url), 'utf8');
-      expect(html, file).not.toMatch(/(content|href)="https?:\/\//);
+      // The license text on gnu.org (sign-in footer) is the one external link.
+      expect(html, file).not.toMatch(/(content|href)="https?:\/\/(?!www\.gnu\.org\/licenses\/)/);
       expect(publicUrlHtml(html, undefined), file).not.toMatch(/<(meta|link)[^>]*(og:image|twitter:image|og:url|"canonical")/);
     }
   });
