@@ -3,8 +3,9 @@ import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import { signBody } from '../convex/lib/github';
 import { mapPullRequest, PR_LIMITS, type PrSnapshot } from '../convex/lib/githubApi';
+import { writeStatus } from '../convex/ops/githubPr';
 import { readOpsStatus } from '../convex/ops/maintenance';
-import type { PrCheckState, PrDetail, PrItem, PrMergeState } from '../convex/shared/pullRequests';
+import { prStatusOf, type PrCheckState, type PrDetail, type PrItem, type PrMergeState } from '../convex/shared/pullRequests';
 import { createOne, expectCode, fixture, getIssue, setup, type T } from './helpers';
 import { fakeGithub, prJson, prRoutes, repoJson, REPO, SHA, TOKEN, user } from './lib/githubFake';
 
@@ -256,6 +257,9 @@ describe('fetch and view', () => {
 
     const [summary] = await owner.query(api.githubPr.summaries, { prIds: [prId] });
     expect(summary).toMatchObject({ id: prId, mergeState: 'clean', checks: { total: 2, failed: 0, pending: 0 }, review: 'approved', comments: 1 });
+    // The fetch also stores the small status the pull requests page reads.
+    const status = () => t.run(async (ctx) => await ctx.db.query('pullRequestStatus').withIndex('by_pr', (q) => q.eq('prId', prId)).unique());
+    expect(await status()).toMatchObject({ draft: false, mergeState: 'clean', checks: { total: 2, failed: 0, pending: 0 }, review: 'approved' });
 
     // no new fetch within 60 s
     const before = fake.calls.length;
@@ -568,7 +572,7 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
   async function addPr(
     t: T,
     pr: { number: number; state: 'open' | 'draft' | 'merged' | 'closed'; hoursAgo: number; issues: Id<'issues'>[] },
-    detail?: { data: Omit<PrDetail, 'fetchedAt' | 'error'>; review?: 'approved' | 'changes_requested' },
+    detail?: { data: Omit<PrDetail, 'fetchedAt' | 'error'>; review?: 'approved' | 'changes_requested'; statusRow?: false },
   ) {
     return await t.run(async (ctx) => {
       const prId = await ctx.db.insert('pullRequests', {
@@ -589,6 +593,8 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
           data: detail.data,
           summary: { comments: 0, ...(detail.review ? { review: detail.review } : {}) },
         });
+        // As a fetch stores it; without it (fetched before the table existed) the page reads the details.
+        if (detail.statusRow !== false) await writeStatus(ctx, prId, prStatusOf(detail.data, detail.review));
       }
       return prId;
     });
@@ -605,9 +611,9 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
     await addPr(t, { number: 1, state: 'open', hoursAgo: 5, issues: [a.id, b.id] }, { data: data(['success', 'skipped']), review: 'approved' });
     await addPr(t, { number: 12, state: 'open', hoursAgo: 1, issues: [c.id] }, { data: data([], 'behind') });
     await addPr(t, { number: 2, state: 'open', hoursAgo: 2, issues: [c.id] }, { data: data(['failure', 'pending'], 'dirty') });
-    await addPr(t, { number: 13, state: 'open', hoursAgo: 3, issues: [b.id] }, { data: data(['cancelled']) });
+    await addPr(t, { number: 13, state: 'open', hoursAgo: 3, issues: [b.id] }, { data: data(['cancelled']), statusRow: false });
     await addPr(t, { number: 3, state: 'open', hoursAgo: 4, issues: [a.id] }, { data: data(['success', 'pending']) });
-    await addPr(t, { number: 4, state: 'open', hoursAgo: 6, issues: [c.id] }, { data: data(['success'], 'dirty'), review: 'changes_requested' });
+    await addPr(t, { number: 4, state: 'open', hoursAgo: 6, issues: [c.id] }, { data: data(['success'], 'dirty'), review: 'changes_requested', statusRow: false });
     await addPr(t, { number: 10, state: 'open', hoursAgo: 7, issues: [a.id] });
     await addPr(t, { number: 5, state: 'draft', hoursAgo: 1, issues: [b.id] }, { data: data(['failure'], 'draft', true) });
     await addPr(t, { number: 14, state: 'open', hoursAgo: 2, issues: [b.id] }, { data: data(['success'], 'clean', true) });
@@ -648,6 +654,10 @@ describe('pull requests page (githubPr.list, githubPr.attention)', () => {
     expect(byNumber.get(7)!.checks).toBeUndefined();
 
     expect(await owner.query(api.githubPr.attention, {})).toEqual({ ready: 2, failing: 2 });
+
+    // The count reads the small status rows, not the details: details alone (no row) only for #13 and #4.
+    const rows = await t.run(async (ctx) => (await ctx.db.query('pullRequestStatus').collect()).length);
+    expect(rows).toBe(8);
 
     // Restoring the issue brings its PR back; merging a ready one moves it to done and out of the count.
     await owner.mutation(api.issues.restore, { ids: [gone.id] });

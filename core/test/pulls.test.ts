@@ -32,13 +32,12 @@ function item(number: number, group: PrListItem['group'], extra: Partial<PrListI
     updatedAt: Date.now() - number * HOUR,
     group,
     issueIds: ['i1'],
-    fetchedAt: Date.now() - HOUR,
     ...extra,
   };
 }
 const LIST: PrList = {
   configured: true,
-  items: [item(1, 'ready'), item(2, 'failing'), item(3, 'running', { fetchedAt: Date.now() - 1000 }), item(4, 'draft'), item(5, 'done'), item(6, 'done')],
+  items: [item(1, 'ready'), item(2, 'failing'), item(3, 'running'), item(4, 'draft'), item(5, 'done'), item(6, 'done')],
 };
 
 const run = (app: App, id: string) => ACTIONS.find((a) => a.id === id)!.run(app);
@@ -84,8 +83,8 @@ describe('page', () => {
       ['draft', [4], false],
       ['done', [5, 6], true],
     ]);
-    // Fresh #3 and the done ones are left out; one call for all of them.
-    expect(refreshes(client).map((c) => c[1])).toEqual([{ prIds: ['pr1', 'pr2', 'pr4'], maxAgeMs: 120_000 }]);
+    // The open ones in one call (the server skips fresh ones), the done ones left out.
+    expect(refreshes(client).map((c) => c[1])).toEqual([{ prIds: ['pr1', 'pr2', 'pr3', 'pr4'], maxAgeMs: 120_000 }]);
     client.push('githubPr:list', {}, { ...LIST, items: LIST.items.slice(1) });
     await flush();
     expect(refreshes(client)).toHaveLength(1);
@@ -98,11 +97,14 @@ describe('page', () => {
     expect(app.pulls.state.get().loaded).toBe(false);
   });
 
-  test('more than ten stale PRs: only the first ten; without a token no refresh', async () => {
+  test('more than ten open PRs: only the first ten; without a token no refresh; the reload button forces it', async () => {
     const { client, app } = await setup();
     const many = { configured: true, items: Array.from({ length: 14 }, (_, i) => item(i + 1, 'ready')) };
     await openPage(client, app, many);
     expect((refreshes(client)[0]![1] as { prIds: string[] }).prIds).toHaveLength(10);
+
+    await app.pulls.refresh(undefined, true);
+    expect((refreshes(client)[1]![1] as { maxAgeMs: number }).maxAgeMs).toBe(0);
 
     const other = await setup();
     await openPage(other.client, other.app, { ...LIST, configured: false });

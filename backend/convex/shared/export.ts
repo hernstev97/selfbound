@@ -10,8 +10,8 @@ export const EXPORT_VERSION = 1;
 /**
  * The tables of an export, in the order they are read. Everything the owner wrote or set up,
  * trash included. Left out on purpose: secrets (OAuth, push subscriptions), derived search text
- * (bodySearch, articleSearch, articleLinks), caches (embeds, models catalog, PR details, check
- * runs), running state (counters, inbox, requests, rate windows, push outbox, import staging) and
+ * (bodySearch, articleSearch, articleLinks), caches (embeds, models catalog, PR details and status,
+ * check runs), running state (counters, inbox, requests, rate windows, push outbox, import staging) and
  * ops data. Add a table here only together with its omitted fields below.
  */
 export const EXPORT_TABLES = [

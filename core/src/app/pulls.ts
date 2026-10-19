@@ -31,7 +31,7 @@ const EMPTY: PullsState = { loaded: false, configured: false, groups: [], focus:
 const DONE_OPEN_KEY = 'selfbound:pullsDoneOpen';
 /** One refresh per visit for at most this many open PRs from the top (githubPr.refresh takes at most 10). */
 export const REFRESH_COUNT = 10;
-/** Only PRs fetched longer ago than this; webhooks keep them current otherwise. */
+/** The server fetches only PRs fetched longer ago than this; webhooks keep them current otherwise. */
 export const REFRESH_MAX_AGE_MS = 120_000;
 
 export class PullsController {
@@ -86,14 +86,13 @@ export class PullsController {
   }
 
   /**
-   * Fetch the open PRs at the top again if their state is older than REFRESH_MAX_AGE_MS: one call
-   * for up to REFRESH_COUNT PRs (GitHub's rate limit), never one per row. `force`: the reload button.
+   * Fetch the open PRs at the top again: one call for up to REFRESH_COUNT PRs (GitHub's rate limit),
+   * never one per row; the server skips those fetched within REFRESH_MAX_AGE_MS. `force`: the reload button.
    */
   refresh(list = this.#watch?.slice.get(), force = false) {
     if (!list?.configured) return Promise.resolve(null);
-    const now = Date.now();
     const prIds = list.items
-      .filter((i) => i.group !== 'done' && (force || i.fetchedAt === undefined || now - i.fetchedAt > REFRESH_MAX_AGE_MS))
+      .filter((i) => i.group !== 'done')
       .slice(0, REFRESH_COUNT)
       .map((i) => i.id as Id<'pullRequests'>);
     if (!prIds.length) return Promise.resolve(null);

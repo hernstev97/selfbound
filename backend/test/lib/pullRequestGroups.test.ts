@@ -4,6 +4,8 @@ import {
   PR_GROUPS,
   prBlockers,
   prGroup,
+  prStatusOf,
+  sameStatus,
   type PrCheck,
   type PrCheckState,
   type PrGroupInput,
@@ -14,9 +16,12 @@ import {
 // Grouping of the pull requests page (SELF-100): every combination of state, checks, review and
 // mergeability lands in exactly one group.
 
+type Review = 'approved' | 'changes_requested';
 const check = (state: PrCheckState, n = 0): PrCheck => ({ key: `check:${state}:${n}`, name: `CI ${n}`, source: 'check', state });
-const detail = (checks: PrCheckState[], mergeState: PrMergeState = 'clean', draft = false) => ({ draft, mergeState, checks: checks.map(check) });
-const input = (state: PrState, d: PrGroupInput['detail'], review?: PrGroupInput['review']): PrGroupInput => ({ state, detail: d, ...(review ? { review } : {}) });
+const checks = (states: PrCheckState[]) => states.map(check);
+/** The status a fetch would store for these checks. */
+const detail = (states: PrCheckState[], mergeState: PrMergeState = 'clean', draft = false, review?: Review) => prStatusOf({ draft, mergeState, checks: checks(states) }, review);
+const input = (state: PrState, status: PrGroupInput['status'], review?: Review): PrGroupInput => ({ state, status: status && review ? { ...status, review } : status });
 
 const STATES: PrState[] = ['open', 'draft', 'merged', 'closed'];
 const MERGE_STATES: PrMergeState[] = ['clean', 'dirty', 'blocked', 'behind', 'unstable', 'draft', 'unknown'];
@@ -71,14 +76,14 @@ describe('prGroup', () => {
     for (const state of STATES)
       for (const mergeState of MERGE_STATES)
         for (const review of REVIEWS)
-          for (const checks of CHECK_SETS)
+          for (const checkStates of CHECK_SETS)
             for (const draft of [false, true])
               for (const fetched of [true, false]) {
-                const i = input(state, fetched ? detail(checks, mergeState, draft) : null, review);
+                const i = input(state, fetched ? detail(checkStates, mergeState, draft) : null, review);
                 const group = prGroup(i);
                 expect(PR_GROUPS).toContain(group);
                 seen++;
-                const counts = fetched ? listCheckCounts(i.detail!.checks) : null;
+                const counts = fetched ? listCheckCounts(checks(checkStates)) : null;
                 if (state === 'merged' || state === 'closed') expect(group).toBe('done');
                 else if (state === 'draft' || (fetched && (draft || mergeState === 'draft'))) expect(group).toBe('draft');
                 else if (counts?.failed) expect(group).toBe('failing');
@@ -90,9 +95,20 @@ describe('prGroup', () => {
   });
 });
 
-describe('listCheckCounts', () => {
+describe('listCheckCounts, prStatusOf, sameStatus', () => {
   test('failed includes canceled; pending separate; total all', () => {
     expect(listCheckCounts(['success', 'failure', 'cancelled', 'pending', 'skipped', 'neutral'].map((s, n) => check(s as PrCheckState, n)))).toEqual({ total: 6, failed: 2, pending: 1 });
     expect(listCheckCounts([])).toEqual({ total: 0, failed: 0, pending: 0 });
+  });
+
+  test('the stored status holds only what the grouping reads; equal statuses are not written again', () => {
+    const a = detail(['success', 'pending'], 'unstable', false, 'approved');
+    expect(a).toEqual({ draft: false, mergeState: 'unstable', checks: { total: 2, failed: 0, pending: 1 }, review: 'approved' });
+    expect(detail(['success'])).not.toHaveProperty('review');
+    expect(sameStatus(a, detail(['pending', 'success'], 'unstable', false, 'approved'))).toBe(true);
+    expect(sameStatus(a, detail(['success', 'success'], 'unstable', false, 'approved'))).toBe(false);
+    expect(sameStatus(a, detail(['success', 'pending'], 'clean', false, 'approved'))).toBe(false);
+    expect(sameStatus(a, detail(['success', 'pending'], 'unstable', true, 'approved'))).toBe(false);
+    expect(sameStatus(a, detail(['success', 'pending'], 'unstable'))).toBe(false);
   });
 });

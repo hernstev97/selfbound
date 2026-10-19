@@ -205,11 +205,20 @@ export type PrBlocker = 'conflicts' | 'changes_requested' | 'rules' | 'unknown';
 /** Merged and closed PRs stay on the page this long (by `updatedAt`). */
 export const DONE_WINDOW_MS = 14 * 24 * 60 * 60 * 1000;
 
-/** What the grouping reads: the stored state, the fetched state (null = never fetched) and the review decision. */
+/** The part of a PR's fetched state the grouping reads (table pullRequestStatus). */
+export interface PrStatus {
+  draft: boolean;
+  mergeState: PrMergeState;
+  /** listCheckCounts: a canceled check counts as failed */
+  checks: { total: number; failed: number; pending: number };
+  /** latest review decision per reviewer, combined */
+  review?: 'approved' | 'changes_requested';
+}
+
+/** What the grouping reads: the stored state and the fetched status (null = never fetched). */
 export interface PrGroupInput {
   state: PrState;
-  detail: Pick<PrDetail, 'draft' | 'mergeState' | 'checks'> | null;
-  review?: 'approved' | 'changes_requested';
+  status: PrStatus | null;
 }
 
 /**
@@ -226,13 +235,30 @@ export function listCheckCounts(checks: readonly PrCheck[]) {
   return { total: checks.length, failed, pending };
 }
 
+/** The status of a fetched state (pullRequestDetails `data` and `summary.review`). */
+export function prStatusOf(detail: Pick<PrDetail, 'draft' | 'mergeState' | 'checks'>, review?: 'approved' | 'changes_requested'): PrStatus {
+  return { draft: detail.draft, mergeState: detail.mergeState, checks: listCheckCounts(detail.checks), ...(review ? { review } : {}) };
+}
+
+export function sameStatus(a: PrStatus, b: PrStatus) {
+  return (
+    a.draft === b.draft &&
+    a.mergeState === b.mergeState &&
+    a.checks.total === b.checks.total &&
+    a.checks.failed === b.checks.failed &&
+    a.checks.pending === b.checks.pending &&
+    a.review === b.review
+  );
+}
+
 /** Reasons why an open, non-draft PR cannot be merged yet (empty: nothing in the way). Same rules as the merge button in the PR view. */
 export function prBlockers(input: PrGroupInput): PrBlocker[] {
-  if (!input.detail) return ['unknown'];
+  const status = input.status;
+  if (!status) return ['unknown'];
   const out: PrBlocker[] = [];
-  if (input.detail.mergeState === 'dirty') out.push('conflicts');
-  if (input.review === 'changes_requested') out.push('changes_requested');
-  if (input.detail.mergeState === 'blocked') out.push('rules');
+  if (status.mergeState === 'dirty') out.push('conflicts');
+  if (status.review === 'changes_requested') out.push('changes_requested');
+  if (status.mergeState === 'blocked') out.push('rules');
   return out;
 }
 
@@ -242,13 +268,11 @@ export function prBlockers(input: PrGroupInput): PrBlocker[] {
  * successful, neutral or skipped, no requested changes and no conflicts or rules in the way is ready.
  */
 export function prGroup(input: PrGroupInput): PrGroup {
+  const status = input.status;
   if (input.state === 'merged' || input.state === 'closed') return 'done';
-  if (input.state === 'draft' || input.detail?.draft || input.detail?.mergeState === 'draft') return 'draft';
-  if (input.detail) {
-    const counts = listCheckCounts(input.detail.checks);
-    if (counts.failed) return 'failing';
-    if (counts.pending) return 'running';
-  }
+  if (input.state === 'draft' || status?.draft || status?.mergeState === 'draft') return 'draft';
+  if (status?.checks.failed) return 'failing';
+  if (status?.checks.pending) return 'running';
   return prBlockers(input).length ? 'blocked' : 'ready';
 }
 
@@ -268,7 +292,6 @@ export interface PrListItem {
   checks?: { total: number; failed: number; pending: number };
   blockers?: PrBlocker[];
   review?: 'approved' | 'changes_requested';
-  fetchedAt?: number;
 }
 
 /** Result of `githubPr.list`: rows sorted by group (PR_GROUPS), then newest change first. */
