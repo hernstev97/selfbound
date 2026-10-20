@@ -22,6 +22,7 @@ import {
   type Status,
 } from '../shared/constants';
 import type { ModelChoice } from '../shared/models';
+import { GITHUB_ISSUE } from '../lib/githubIssues';
 import { defaultState, statusOfState } from '../shared/workflow';
 import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
@@ -547,8 +548,8 @@ export async function restoreIssues(ctx: MutationCtx, actor: Actor, args: { ids:
 
 /**
  * Deletes an issue for good, with everything attached to it.
- * Exceptions: entries of closed sprints stay (frozen, with `points`), and a Linear
- * link is only marked `purgedAt`, so a later import does not create the issue again.
+ * Exceptions: entries of closed sprints stay (frozen, with `points`), and an import link
+ * (Linear or GitHub) is only marked `purgedAt`, so a later import does not create the issue again.
  */
 export async function purgeIssue(ctx: MutationCtx, issue: Doc<'issues'>, now: number) {
   const id = issue._id;
@@ -585,7 +586,7 @@ export async function purgeIssue(ctx: MutationCtx, issue: Doc<'issues'>, now: nu
     .query('linearLinks')
     .withIndex('by_local', (q) => q.eq('localId', id))
     .collect();
-  for (const link of links) if (link.kind === 'issue') await ctx.db.patch('linearLinks', link._id, { purgedAt: now });
+  for (const link of links) if (link.kind === 'issue' || link.kind === GITHUB_ISSUE) await ctx.db.patch('linearLinks', link._id, { purgedAt: now });
   for (const index of ['by_from', 'by_to'] as const) {
     const rows = await ctx.db
       .query('relations')

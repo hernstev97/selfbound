@@ -2,6 +2,8 @@
 
 The importer copies a Linear workspace into Selfbound. It only reads from Linear; nothing is ever written back.
 
+The GitHub Issues import shares the run and link tables with it and is described at the end: [Importing from GitHub](#importing-from-github).
+
 ## Overview
 
 1. **Fetch (local, `tooling/linear-import/`).** `node tooling/linear-import/index.ts fetch` reads your Linear data through the GraphQL API and writes a snapshot outside the repository.
@@ -266,3 +268,55 @@ node tooling/linear-import/index.ts document <copy.md> --team <KEY> [--project <
 Title from the H1; `Linear ID` (re-running does not duplicate); `Project in Linear` (default for `--project`); `Created`/`Updated` (become the page's `createdAt`/`updatedAt`); `URL` (becomes the source "Linear document (original)" with the access date). The text is everything after the first `---` line. On an unknown layout the tool stops. The console shows only lengths, timestamps and identifiers. Confirm by typing `import` (always with `--prod`).
 
 The backend (`importer:importArticle`, `importDocument` in `ops/wiki.ts`, actor `import`) turns on the team's knowledge area if it is off and records the page in `linearLinks` (kind `document`). A second run changes nothing (`unchanged`). A changed copy becomes a new version; the old text stays as a revision. Pages in the trash or permanently deleted pages stay where they are.
+
+## Importing from GitHub
+
+Copies the issues of GitHub repositories into one team. User-facing description: `docs-site/src/content/docs/integrations/import-github-issues.mdx`. Code: `backend/convex/githubImport.ts` (functions), `backend/convex/ops/githubImport.ts` (writing), `backend/convex/lib/githubIssues.ts` (mapping, closing keywords, run position; pure).
+
+```sh
+node tooling/cloud.mjs run githubImport:run '{"team": "ACME", "repos": ["owner/name"]}'   # production
+node tooling/convex.mjs run githubImport:run '{"team": "ACME", "repos": ["owner/name"]}'  # local backend
+node tooling/cloud.mjs run githubImport:status                                            # latest GitHub run
+```
+
+**Why a command and no Settings UI:** a self-hoster already runs `tooling/cloud.mjs run` during setup (e.g. `migrations:setInstanceTimeZone`), the import is usually done once, and the result shows on Settings → Ops. A UI (form, progress, i18n, e2e) pays off with continuous sync, which is not part of this.
+
+**Access:** the instance's `GITHUB_TOKEN` (the PR integration's token), REST API only, GET only. Needs "Issues: read" for issues and comments and "Pull requests: read" for PR links (without it the links are skipped and noted). The token never leaves the backend; there is no local fetch step as for Linear.
+
+**Run:** `githubImport.start` checks team and repos (at most 20, `owner/name` or a `https://github.com/` address), creates an `importRuns` row with `run: "github:<ISO time>"` and schedules `githubImport.step`. One import runs at a time, Linear or GitHub (same `importRuns` check, same stale check). Each step is an action that fetches ONE page and writes it with `githubImport.apply` (split into parts of at most ~2 MB), which stores the position in `cursor` (JSON: team, repos, phase, repo index, next page path, attempt) and schedules the next step. Phases, each over all repos in order:
+
+| Phase | Endpoint | Page size |
+|---|---|---|
+| `issues` | `GET /repos/{repo}/issues?state=all&sort=created&direction=asc` (PRs in the list are skipped) | 50 |
+| `pulls` | `GET /repos/{repo}/pulls?state=all&sort=created&direction=asc` | 100 |
+| `comments` | `GET /repos/{repo}/issues/comments?sort=created&direction=asc` (comments on PRs are skipped) | 100 |
+
+Before a repo's first issues page, `GET /repos/{repo}` gives GitHub's spelling of the name (`full_name`, e.g. `Acme/App`); it replaces the typed name in the cursor, so PRs match the rows the webhook stored and descriptions show the real name. Issues come first so that PRs and comments find the issues of every repo. Pagination follows the `next` link of the `Link` header (only `api.github.com` addresses; GitHub may switch to cursor URLs such as `/repositories/<id>/issues?after=…`). A repo with issues turned off (HTTP 410) is noted and skipped. A `next` link outside `api.github.com` is not followed (the token goes nowhere else); the rest of that list is skipped and noted.
+
+**Rate limits and errors:**
+
+- Rate limit (429, or 403 with `x-ratelimit-remaining: 0`, a `retry-after` header or "rate limit" in the message; `describeGithubError`, also used by the PR view): the run waits until `retry-after`, else `x-ratelimit-reset`, else one minute (at least 5 s), and fetches the same page again. Waits longer than 65 minutes fail the run with GitHub's explanation.
+- Fewer than 200 calls left (`x-ratelimit-remaining`): the next page waits for the reset, so the PR view keeps working during a large import.
+- While waiting, `heartbeatAt` holds the resume time, so `failStale` does not abort the run; `githubImport:status` shows it as `waitingUntil`.
+- GitHub unavailable (5xx, network): up to 3 retries after 5 s, 30 s and 2 min, then the run fails.
+- 401, 403, 404 on issues or comments: the run fails with a text that names the missing permission or repo (`describeGithubError`). Data imported so far stays; repeating the run continues without duplicates.
+
+**Records** (`linearLinks`, the shared link table; `linearId` holds the GitHub key):
+
+| kind | `linearId` | localId |
+|---|---|---|
+| `githubIssue` | `owner/repo#12` (lower case) | issue |
+| `githubComment` | GitHub comment ID | comment |
+| `githubPr` | `owner/repo#5>owner/repo#12` (PR → issue) | `issuePullRequests` row |
+
+**Mapping:**
+
+- New issues get the team's next number (`takeCounter`), `seq` and a rank at the end, `createdBy: import`, `reviewedAt` (no inbox entry), `createdAt` from GitHub, priority none. History `created` with `source: 'github'`.
+- State: open → the team's state for new issues (`defaultState`, without triage); closed with `state_reason` `completed` (or none) → done, `not_planned` → canceled, `duplicate` → duplicate. `completedAt` / `canceledAt` = `closed_at`.
+- Labels by name (case-insensitive): an active team label first, then a workspace label; missing ones become team labels with the GitHub color as hue (`hueOf`). Archived labels and a second label of a single-choice group are not assigned (noted). A missing label is created even when the merge then keeps Selfbound's labels.
+- Description: GitHub's text, then `---` and "Imported from [owner/repo#12](url) on GitHub, opened by login." Comments: `authorName` "login (GitHub)", actor `import`; `editedAt` from `updated_at` when it differs. Comments over 50,000 characters are cut (noted).
+- PRs: closing keywords as GitHub reads them (`close[sd]`, `fix(es|ed)`, `resolve[sd]`, followed by `#12`, `owner/repo#12` or the issue URL, also lists) in the PR's title and description, code excluded (`closingRefs`). Only targets imported before (any run) are linked. `pullRequests` is created if missing (an existing row from the webhook stays), `issuePullRequests` with `via: 'import'`, `closes: false`. A link that already existed (e.g. from the webhook) counts as unchanged.
+
+**Re-import:** same hash of the mapped GitHub data → untouched. Otherwise a three-way merge against `linearLinks.base` (`state`, `status`, `title`, `labelIds`, `descriptionHash`), as for Linear: title, labels and description with `merge`/`mergeImportedBody`; the status only when GitHub's state changed (a different default state in the team moves nothing). Taking a state sets the timestamps like the app (`statusTimestamps`, with GitHub's `closed_at`); a closed state also clears priority and snooze, as closing in the app does. Conflicts go to `importConflicts` ("ACME-12 (owner/repo#3): changed in Selfbound and on GitHub (title); the Selfbound value stays."). Issues moved to another team keep their team and labels; a run into a different team updates the issues where they are and copies nothing. A repo renamed on GitHub gets new keys: import it under its new name only into a team without its issues, or the issues come twice (`repoRename.ts` does not rewrite `githubIssue` keys). Purged issues (`purgedAt`, set by `purgeIssue` for `githubIssue` links too) are not recreated; deleted comments stay deleted; removed PR links are not restored.
+
+**Tests:** `backend/test/githubImport.test.ts` (convex-test, fake GitHub from `test/lib/githubFake.ts`: pagination, PR links, second run, merge, team move, purge, rate limits, retries, errors, several repos, repo spelling, pages written in parts) and `backend/test/lib/githubIssues.test.ts` (mapping, closing keywords, run position).

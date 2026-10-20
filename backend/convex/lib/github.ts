@@ -159,11 +159,11 @@ export function textIdentifiers(text: string | null | undefined, knownKeys: Know
 }
 
 // Magic words as on GitHub, case-insensitive, optionally followed by a colon.
-const MAGIC_RE = /(?<![A-Za-z0-9])(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)(?![A-Za-z0-9])[ \t]*:?[ \t]*/gi;
+export const MAGIC_RE = /(?<![A-Za-z0-9])(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)(?![A-Za-z0-9])[ \t]*:?[ \t]*/gi;
 // A list item: identifier or a Linear link to the issue.
 const ITEM_RE = new RegExp(`(?:https?://linear\\.app/[A-Za-z0-9_-]+/issue/)?${ID_CORE}(?:/[A-Za-z0-9_-]*)?`, 'y');
 // List separators: ", ", " and ", ", and ", " & ".
-const SEP_RE = /[ \t]*(?:,[ \t]*(?:and[ \t]+)?|[ \t]+and[ \t]+|[ \t]*&[ \t]*)/iy;
+export const SEP_RE = /[ \t]*(?:,[ \t]*(?:and[ \t]+)?|[ \t]+and[ \t]+|[ \t]*&[ \t]*)/iy;
 
 /**
  * Identifiers to close via magic word: "Fixes KIU-1", "closes: kiu-2", also
