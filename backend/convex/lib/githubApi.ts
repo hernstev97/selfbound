@@ -36,12 +36,24 @@ export type GithubErrorCode = 'unauthorized' | 'forbidden' | 'not_found' | 'conf
 export class GithubApiError extends Error {
   readonly status: number;
   readonly code: GithubErrorCode;
-  constructor(status: number, code: GithubErrorCode, message: string) {
+  /** rate_limited: when GitHub accepts calls again (ms), if it said so */
+  readonly retryAt?: number;
+  constructor(status: number, code: GithubErrorCode, message: string, retryAt?: number) {
     super(message);
     this.name = 'GithubApiError';
     this.status = status;
     this.code = code;
+    if (retryAt !== undefined) this.retryAt = retryAt;
   }
+}
+
+/** When a rate limit ends: `retry-after` (secondary limit) first, then `x-ratelimit-reset`. */
+export function retryAtOf(headers: { get(name: string): string | null } | undefined, now = Date.now()): number | undefined {
+  const retryAfter = Number(headers?.get('retry-after') ?? '');
+  if (Number.isFinite(retryAfter) && retryAfter > 0) return now + retryAfter * 1000;
+  const reset = Number(headers?.get('x-ratelimit-reset') ?? '');
+  if (Number.isFinite(reset) && reset > 0) return Math.max(now, reset * 1000);
+  return undefined;
 }
 
 /** What a call does and which fine-grained token permission it needs (for the error texts). */
@@ -203,7 +215,7 @@ export function githubClient(token: string, fetchImpl: FetchLike = (input, init)
     const data = await parse(response);
     const message = isObj(data) && typeof data.message === 'string' ? scrub(data.message, token) : undefined;
     const { code, message: text } = describeGithubError(response.status, call, message, response.headers);
-    throw new GithubApiError(response.status, code, text);
+    throw new GithubApiError(response.status, code, text, code === 'rate_limited' ? retryAtOf(response.headers) : undefined);
   }
 
   const client: GithubClient = {
