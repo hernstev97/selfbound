@@ -68,7 +68,7 @@ Only one import runs at a time (GitHub or Linear). If an import fails, for examp
 
 ### Rate limits
 
-GitHub allows a token 5,000 requests per hour. The import reads 50 issues or 100 comments or pull requests per request, so a repository with 1,000 issues and 3,000 comments needs about 50 requests. When GitHub's limit is reached, or fewer than 200 requests are left (so the pull request view keeps working), the import pauses until GitHub accepts requests again and then continues by itself. `githubImport:status` shows the time in `waitingUntil`.
+GitHub allows a token 5,000 requests per hour. The import reads 50 issues or 100 comments or pull requests per request, so a repository with 1,000 issues and 3,000 comments needs about 50 requests. When GitHub's limit is reached (including GitHub's short-term "secondary" limits), or fewer than 200 requests are left (so the pull request view keeps working), the import pauses until GitHub accepts requests again and then continues by itself. `githubImport:status` shows the time in `waitingUntil`.
 
 ## Import again later
 
@@ -78,6 +78,10 @@ You can repeat the import whenever you like, for example while you still use Git
 - **Changed only in Selfbound:** your value stays.
 - **Changed in both:** your value stays, and the report lists the issue and field under conflicts.
 
-New issues and comments on GitHub are added. Edited comments are updated unless you deleted them in Selfbound. Issues you deleted permanently in Selfbound do not come back, and pull request links you removed are not restored. Issues you moved to another team stay there.
+New issues and comments on GitHub are added. Edited comments are updated unless you deleted them in Selfbound. Issues you deleted permanently in Selfbound do not come back, and pull request links you removed are not restored. Issues you moved to another team stay there, and running the import into a different team updates the issues where they are instead of copying them.
+
+<Aside type="caution">
+Issues are matched by the repository's name. If you rename a repository on GitHub after importing it, a new import under the new name creates its issues again.
+</Aside>
 
 Continuous sync (GitHub changes arriving in Selfbound by themselves) is not available; run the import again to pick up changes.

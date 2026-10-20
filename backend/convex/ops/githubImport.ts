@@ -15,6 +15,7 @@ import {
   type GhPull,
   type GhState,
   type GithubCursor,
+  GITHUB_ISSUE,
 } from '../lib/githubIssues';
 import { teamByKey } from '../lib/identifiers';
 import { lastRank, rankBetween } from '../lib/rank';
@@ -39,6 +40,7 @@ import {
   type StepCounts,
 } from './import';
 import { syncArticleLinks } from './links';
+import { statusTimestamps } from './issues';
 import { assertIssuesAllowed } from './validate';
 
 // Import from GitHub Issues (docs/architecture/import.md, "Importing from GitHub").
@@ -55,7 +57,6 @@ import { assertIssuesAllowed } from './validate';
 // - Runs live in `importRuns` (one import at a time, Linear or GitHub); `cursor` holds the
 //   position as JSON. Deviations hold only repo names, numbers and identifiers.
 
-export const GITHUB_ISSUE = 'githubIssue';
 export const GITHUB_COMMENT = 'githubComment';
 export const GITHUB_PR = 'githubPr';
 export const RUN_PREFIX = 'github:';
@@ -108,7 +109,7 @@ export async function githubPlan(ctx: QueryCtx, runId: Id<'importRuns'>) {
   const c = readCursor(run);
   if (!c) return null;
   const repo = c.repos[c.repo]!;
-  return { cursor: run.cursor!, phase: c.phase, repo, path: c.path ?? firstPath(c.phase, repo), attempt: c.attempt };
+  return { cursor: run.cursor!, phase: c.phase, repo, path: c.path ?? firstPath(c.phase, repo), first: c.path === null, attempt: c.attempt };
 }
 
 /**
@@ -299,9 +300,13 @@ async function importIssue(s: S, gh: GhIssue): Promise<Outcome> {
       const d = merge(hasBase, old?.status, status, existing.status);
       if (d === 'conflict') conflicts.push('status');
       if (d === 'take') {
-        Object.assign(patch, stateFields(state), timestamps(status, gh.closedAt, now));
-        // Only open work carries a priority (as when closing in the app).
-        if (CLOSED_STATUSES.includes(status) && existing.priority !== 0) patch.priority = 0;
+        // As in the app (statusTimestamps), with GitHub's closing time.
+        Object.assign(patch, stateFields(state), statusTimestamps(existing, status, now), timestamps(status, gh.closedAt, now));
+        if (CLOSED_STATUSES.includes(status)) {
+          // Only open work carries a priority or a snooze (as when closing in the app).
+          if (existing.priority !== 0) patch.priority = 0;
+          if (existing.snoozedUntil !== undefined) patch.snoozedUntil = undefined;
+        }
       }
     }
   }
@@ -414,6 +419,7 @@ async function importPull(s: S, gh: GhPull) {
       .withIndex('by_issue', (q) => q.eq('issueId', issue._id))
       .take(200);
     let row = rows.find((r) => r.prId === pr._id);
+    const linked = row !== undefined;
     if (!row) {
       const id = await ctx.db.insert('issuePullRequests', { issueId: issue._id, prId: pr._id, via: 'import', closes: false });
       row = (await ctx.db.get('issuePullRequests', id))!;
@@ -425,7 +431,8 @@ async function importPull(s: S, gh: GhPull) {
       });
     }
     await ctx.db.insert('linearLinks', { kind: GITHUB_PR, linearId: key, localId: row._id, runId: s.runId });
-    count(s, 'pullRequest', 'created');
+    // Already linked (e.g. by the webhook): nothing new.
+    count(s, 'pullRequest', linked ? 'unchanged' : 'created');
   }
 }
 
@@ -442,7 +449,7 @@ export type GithubRows =
 export async function applyGithubPage(
   ctx: MutationCtx,
   runId: Id<'importRuns'>,
-  args: { cursor: string; page: GithubRows; done: boolean; next: string | null; notes: string[]; heartbeatAt?: number },
+  args: { cursor: string; page: GithubRows; done: boolean; next: string | null; notes: string[]; heartbeatAt?: number; repo?: string },
 ): Promise<{ finished: boolean } | null> {
   const run = await ctx.db.get('importRuns', runId);
   if (!run || run.status !== 'running' || run.cursor !== args.cursor) return null;
@@ -473,7 +480,9 @@ export async function applyGithubPage(
 
   const deviations = [...run.deviations];
   for (const text of s.notes) if (!deviations.includes(text) && deviations.length < 1000) deviations.push(text);
-  const following = args.done ? advanceCursor(c, args.next) : c;
+  // GitHub's spelling of the repo (as the webhook stores it) replaces the typed one.
+  const current = args.repo ? { ...c, repos: c.repos.map((r, i) => (i === c.repo ? args.repo! : r)) } : c;
+  const following = args.done ? advanceCursor(current, args.next) : c;
   const heartbeatAt = Math.max(now, args.heartbeatAt ?? now);
   if (!following) {
     await ctx.db.patch('importRuns', runId, { counts: s.counts, deviations, status: 'done', finishedAt: now, phase: 'done', cursor: null, heartbeatAt: now });

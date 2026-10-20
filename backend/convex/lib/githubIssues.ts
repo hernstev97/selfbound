@@ -177,6 +177,9 @@ export function closingRefs(text: string, repo: string): GhRef[] {
 /** Author of an imported comment, like "Jane Doe (Linear)" for the Linear import. */
 export const authorName = (login: string) => `${login} (GitHub)`;
 
+/** `linearLinks` kind of imported issues (also read when purging an issue). */
+export const GITHUB_ISSUE = 'githubIssue';
+
 /** Key of an imported issue in `linearLinks` (repo names are case-insensitive on GitHub). */
 export const issueKey = (repo: string, number: number) => `${repo.toLowerCase()}#${number}`;
 

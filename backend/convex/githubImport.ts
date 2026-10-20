@@ -3,7 +3,7 @@ import { internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from './_generated/server';
 import { assertWritable } from './lib/testSwitches';
-import { GithubApiError, githubClient, NOT_CONFIGURED, nextLink, type CallInfo } from './lib/githubApi';
+import { GithubApiError, githubClient, NOT_CONFIGURED, nextLink, repoPath, type CallInfo } from './lib/githubApi';
 import { mapComment, mapIssue, mapPull, pathOf, type GithubPhase } from './lib/githubIssues';
 import {
   applyGithubPage,
@@ -34,6 +34,8 @@ export const RESERVE = 200;
 export const MAX_WAIT_MS = 65 * 60_000;
 /** Retries per page when GitHub is unavailable (5xx, network), with these pauses. */
 export const RETRY_MS = [5_000, 30_000, 120_000];
+/** Shortest wait for a rate limit. */
+const MIN_WAIT_MS = 5_000;
 /** A mutation gets at most this much page data (GitHub texts can be 65,536 characters each). */
 const CHUNK_BYTES = 2_000_000;
 
@@ -71,6 +73,7 @@ export const apply = internalMutation({
     next: v.union(v.string(), v.null()),
     notes: v.array(v.string()),
     heartbeatAt: v.optional(v.number()),
+    repo: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { runId, page, ...rest } = args;
@@ -124,14 +127,23 @@ export const step = internalAction({
       const key = token();
       if (!key) return await failRun(ctx, runId, NOT_CONFIGURED);
       const notes: string[] = [];
+      const client = githubClient(key);
+      // GitHub's spelling of the repo ("Acme/App"), as the webhook stores PRs; asked once per repo.
+      let repo = next.repo;
       let response;
       try {
-        response = await githubClient(key).request<unknown>('GET', next.path, CALLS[next.phase](next.repo), { okStatuses: [410] });
+        if (next.phase === 'issues' && next.first) {
+          const info = await client.request<{ full_name?: unknown }>('GET', repoPath(next.repo), CALLS.issues(next.repo));
+          const name = info.data?.full_name;
+          if (typeof name === 'string' && name.toLowerCase() === next.repo.toLowerCase()) repo = name;
+        }
+        response = await client.request<unknown>('GET', next.path, CALLS[next.phase](repo), { okStatuses: [410] });
       } catch (error) {
         if (!(error instanceof GithubApiError)) throw error;
         const now = Date.now();
         if (error.code === 'rate_limited') {
-          const until = error.retryAt ?? now + 60_000;
+          // At least a few seconds, also when the backend's clock is past GitHub's reset time.
+          const until = Math.max(error.retryAt ?? now + 60_000, now + MIN_WAIT_MS);
           if (until - now > MAX_WAIT_MS) return await failRun(ctx, runId, error.message);
           await ctx.runMutation(internal.githubImport.pause, { runId, cursor: next.cursor, until, attempt: next.attempt });
           return;
@@ -156,9 +168,12 @@ export const step = internalAction({
       }
 
       const raw = response.status === 410 ? [] : Array.isArray(response.data) ? response.data : [];
-      if (response.status === 410) notes.push(`${next.repo}: issues are disabled on GitHub`);
-      const following = response.status === 410 ? undefined : nextLink(response.headers.get('link'));
+      if (response.status === 410) notes.push(`${repo}: issues are disabled on GitHub`);
+      const link = response.status === 410 ? null : response.headers.get('link');
+      const following = nextLink(link);
       const nextPath = following ? pathOf(following) : null;
+      // The token only goes to api.github.com; another address ends this repo's pages, noted.
+      if (!nextPath && /rel="next"/.test(link ?? '')) notes.push(`${repo}: GitHub sent a next page outside api.github.com, the rest of this list was not read`);
       // Leave room for the PR view: when few calls remain, wait for the reset.
       const remaining = Number(response.headers.get('x-ratelimit-remaining') ?? '');
       const reset = Number(response.headers.get('x-ratelimit-reset') ?? '');
@@ -166,10 +181,10 @@ export const step = internalAction({
 
       const rows =
         next.phase === 'issues'
-          ? raw.map((r) => mapIssue(next.repo, r))
+          ? raw.map((r) => mapIssue(repo, r))
           : next.phase === 'pulls'
-            ? raw.map((r) => mapPull(next.repo, r)).filter((p) => p && p.closes.length > 0)
-            : raw.map((r) => mapComment(next.repo, r));
+            ? raw.map((r) => mapPull(repo, r)).filter((p) => p && p.closes.length > 0)
+            : raw.map((r) => mapComment(repo, r));
       const parts = chunks(rows.filter((r) => r !== null));
       for (let i = 0; i < parts.length; i++) {
         const last = i === parts.length - 1;
@@ -181,6 +196,7 @@ export const step = internalAction({
           next: nextPath,
           notes: last ? notes : [],
           ...(last && waitUntil ? { heartbeatAt: waitUntil } : {}),
+          ...(repo !== next.repo ? { repo } : {}),
         });
       }
     } catch (error) {

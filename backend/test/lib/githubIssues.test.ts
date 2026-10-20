@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { retryAtOf } from '../../convex/lib/githubApi';
+import { describeGithubError, retryAtOf } from '../../convex/lib/githubApi';
 import {
   advanceCursor,
   closingRefs,
@@ -154,6 +154,12 @@ describe('helpers', () => {
     expect(retryAtOf(new Headers({ 'retry-after': '60', 'x-ratelimit-reset': '1' }), now)).toBe(now + 60_000);
     expect(retryAtOf(new Headers({ 'x-ratelimit-reset': String(now / 1000 + 300) }), now)).toBe(now + 300_000);
     expect(retryAtOf(new Headers(), now)).toBeUndefined();
+  });
+
+  test('a 403 with only retry-after is a (secondary) rate limit', () => {
+    const call = { what: 'Read issues', permission: 'Issues' };
+    expect(describeGithubError(403, call, 'You have triggered an abuse detection mechanism.', new Headers({ 'retry-after': '60' })).code).toBe('rate_limited');
+    expect(describeGithubError(403, call, 'Resource not accessible by personal access token', new Headers()).code).toBe('forbidden');
   });
 });
 

@@ -22,10 +22,10 @@ import {
   type Status,
 } from '../shared/constants';
 import type { ModelChoice } from '../shared/models';
+import { GITHUB_ISSUE } from '../lib/githubIssues';
 import { defaultState, statusOfState } from '../shared/workflow';
 import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
-import { GITHUB_ISSUE } from './githubImport';
 import { dropLinksTo, syncArticleLinks } from './links';
 import { record } from './history';
 import { purgeEntries } from './inbox';

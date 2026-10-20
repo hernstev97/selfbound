@@ -84,6 +84,7 @@ function repoData() {
 function routes(data = repoData(), extra: Record<string, unknown> = {}) {
   const page2 = `/repos/${REPO}/issues?state=all&sort=created&direction=asc&per_page=50&page=2`;
   return {
+    [`GET /repos/${REPO}`]: { full_name: REPO },
     [`GET ${ISSUES}`]: { status: 200, body: data.page1, headers: { link: `<${API}${page2}>; rel="next", <${API}${page2}>; rel="last"` } },
     [`GET ${page2}`]: data.page2,
     [`GET ${PULLS}`]: data.pulls,
@@ -238,6 +239,7 @@ describe('GitHub import', () => {
     // In Selfbound: rename #1 and #2.
     await owner.mutation(api.issues.update, { ids: [one!._id], patch: { title: 'Renamed here' } });
     await owner.mutation(api.issues.update, { ids: [two!._id], patch: { title: 'Renamed here too' } });
+    await owner.mutation(api.issues.update, { ids: [four!._id], patch: { snoozedUntil: '2026-11-01', priority: 2 } });
     // On GitHub: #1 gets a new title (conflict), #2 a new body (taken, title stays),
     // #4 is closed (taken), a comment is edited.
     const data = repoData();
@@ -255,7 +257,9 @@ describe('GitHub import', () => {
     expect(one2!.title).toBe('Renamed here');
     expect(two2!.title).toBe('Renamed here too');
     expect(await body(t, two2!._id)).toMatch(/^New body\n/);
-    expect(four2).toMatchObject({ status: 'done', completedAt: Date.parse('2026-10-10T10:00:00Z') });
+    expect(four2).toMatchObject({ status: 'done', completedAt: Date.parse('2026-10-10T10:00:00Z'), priority: 0 });
+    // Closed work keeps no snooze, as when closing in the app.
+    expect(four2!.snoozedUntil).toBeUndefined();
     const comment = await t.run(async (ctx) => await ctx.db.query('comments').filter((q) => q.eq(q.field('issueId'), one2!._id)).first());
     expect(comment?.body).toBe('Edited comment');
 
@@ -347,6 +351,7 @@ describe('GitHub import', () => {
     expect(noPulls.deviations.some((d) => d.startsWith('acme/app: pull requests not readable'))).toBe(true);
 
     stubGithub({
+      [`GET /repos/${LIB}`]: { full_name: LIB },
       [`GET /repos/${LIB}/issues?state=all&sort=created&direction=asc&per_page=50`]: { status: 410, body: { message: 'Issues are disabled for this repo' } },
       [`GET /repos/${LIB}/pulls?state=all&sort=created&direction=asc&per_page=100`]: [],
       [`GET /repos/${LIB}/issues/comments?sort=created&direction=asc&per_page=100`]: { status: 410, body: { message: 'Issues are disabled for this repo' } },
@@ -369,6 +374,7 @@ describe('GitHub import', () => {
   test('several repos in one team; PRs link across repos', async () => {
     const { t, teamId } = await setupTeam();
     const lib = {
+      [`GET /repos/${LIB}`]: { full_name: LIB },
       [`GET /repos/${LIB}/issues?state=all&sort=created&direction=asc&per_page=50`]: [
         { ...issueJson(1), html_url: `https://github.com/${LIB}/issues/1`, title: 'Lib issue' },
       ],
@@ -384,5 +390,101 @@ describe('GitHub import', () => {
     expect(issues.map((i) => i.title)).toEqual(['Issue 1', 'Issue 2', 'Issue 3', 'Issue 4', 'Lib issue']);
     const links = await t.run(async (ctx) => await ctx.db.query('issuePullRequests').collect());
     expect(links.map((l) => l.issueId).sort()).toEqual([issues[0]!._id, issues[4]!._id].sort());
+  });
+  test('uses the repo spelling from GitHub and the PR row the webhook made', async () => {
+    const { t, teamId } = await setupTeam();
+    const prId = await t.run(
+      async (ctx) =>
+        await ctx.db.insert('pullRequests', {
+          repo: 'Acme/App',
+          number: 5,
+          title: 'Fix the crash',
+          url: 'https://github.com/Acme/App/pull/5',
+          state: 'open',
+          branch: 'fix-crash',
+          updatedAt: Date.parse('2026-09-05T10:00:00Z'),
+        }),
+    );
+    const data = repoData();
+    stubGithub({
+      [`GET /repos/${REPO}`]: { full_name: 'Acme/App' },
+      [`GET ${ISSUES}`]: [...data.page1, ...data.page2],
+      [`GET /repos/Acme/App/pulls?state=all&sort=created&direction=asc&per_page=100`]: data.pulls,
+      [`GET /repos/Acme/App/issues/comments?sort=created&direction=asc&per_page=100`]: data.comments,
+    });
+    const summary = await runImport(t, { repos: [REPO] });
+    expect(summary.status).toBe('done');
+    const [one] = await teamIssues(t, teamId);
+    expect(await body(t, one!._id)).toContain('Imported from [Acme/App#1]');
+    const prs = await t.run(async (ctx) => await ctx.db.query('pullRequests').collect());
+    expect(prs.map((p) => p._id)).toEqual([prId]);
+    expect(summary.counts.comment).toMatchObject({ created: 2 });
+    // A second run with another spelling finds the same issues.
+    stubGithub({
+      [`GET /repos/ACME/APP`]: { full_name: 'Acme/App' },
+      [`GET /repos/ACME/APP/issues?state=all&sort=created&direction=asc&per_page=50`]: [...data.page1, ...data.page2],
+      [`GET /repos/Acme/App/pulls?state=all&sort=created&direction=asc&per_page=100`]: data.pulls,
+      [`GET /repos/Acme/App/issues/comments?sort=created&direction=asc&per_page=100`]: data.comments,
+    });
+    const again = await runImport(t, { repos: ['ACME/APP'] });
+    expect(again.counts.issue).toMatchObject({ created: 0, unchanged: 4 });
+  });
+
+  test('secondary limit with only retry-after, GitHub errors, too long a wait', async () => {
+    const { t } = await setupTeam();
+    let pulls = 0;
+    let comments = 0;
+    stubGithub(
+      routes(repoData(), {
+        [`GET ${PULLS}`]: () =>
+          pulls++ === 0
+            ? { status: 403, body: { message: 'You have triggered an abuse detection mechanism.' }, headers: { 'retry-after': '60', 'x-ratelimit-remaining': '4000' } }
+            : { body: repoData().pulls },
+        [`GET ${COMMENTS}`]: () => (comments++ === 0 ? { status: 502, body: { message: 'Bad Gateway' } } : { body: repoData().comments }),
+      }),
+    );
+    const summary = await runImport(t);
+    expect(summary.status).toBe('done');
+    expect(summary.counts.pullRequest).toMatchObject({ created: 1 });
+    expect(summary.counts.comment).toMatchObject({ created: 2 });
+    expect([pulls, comments]).toEqual([2, 2]);
+
+    const reset = Math.floor(Date.now() / 1000) + 2 * 3600;
+    stubGithub(routes(repoData(), { [`GET ${PULLS}`]: { status: 403, body: { message: 'API rate limit exceeded' }, headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(reset) } } }));
+    const long = await runImport(t);
+    expect(long.status).toBe('failed');
+    expect(long.error).toMatch(/^GitHub rate limit reached\. Try again in \d+ minutes\.$/);
+  });
+
+  test('a page with long texts is written in parts', async () => {
+    const { t, teamId } = await setupTeam();
+    const long = 'x'.repeat(60_000);
+    const page = Array.from({ length: 50 }, (_, i) => ({ ...issueJson(1), number: i + 1, title: `Long ${i + 1}`, body: long }));
+    stubGithub({ ...routes(), [`GET ${ISSUES}`]: page, [`GET ${COMMENTS}`]: [] });
+    const summary = await runImport(t);
+    expect(summary.status).toBe('done');
+    expect(summary.counts.issue).toMatchObject({ seen: 50, created: 50 });
+    const issues = await teamIssues(t, teamId);
+    expect(issues.map((i) => i.number)).toEqual(Array.from({ length: 50 }, (_, i) => i + 1));
+    expect((await body(t, issues[49]!._id)).startsWith(long)).toBe(true);
+  });
+
+  test('an issue moved to another team stays there with its labels', async () => {
+    const { t, owner, teamId } = await setupTeam();
+    const { teamId: other } = await owner.mutation(api.teams.create, { key: 'OTH', name: 'Other' });
+    stubGithub(routes());
+    await runImport(t);
+    const [one] = await teamIssues(t, teamId);
+    await owner.mutation(api.issues.moveTeam, { ids: [one!._id], teamId: other });
+    // Moving drops ACME's team labels; GitHub's new labels do not follow either.
+    const afterMove = await labelNames(t, (await teamIssues(t, other))[0]!);
+    const data = repoData();
+    data.page1[0] = { ...data.page1[0]!, title: 'New title', labels: [{ name: 'docs' }], state: 'closed', state_reason: 'completed', closed_at: '2026-10-10T10:00:00Z' };
+    stubGithub(routes(data));
+    const summary = await runImport(t);
+    expect(summary.status).toBe('done');
+    const moved = (await teamIssues(t, other))[0]!;
+    expect(moved).toMatchObject({ _id: one!._id, title: 'New title', status: 'done' });
+    expect(await labelNames(t, moved)).toEqual(afterMove);
   });
 });

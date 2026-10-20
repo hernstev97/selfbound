@@ -89,7 +89,9 @@ export function describeGithubError(
   now = Date.now(),
 ): { code: GithubErrorCode; message: string } {
   const remaining = headers?.get('x-ratelimit-remaining');
-  const rateLimited = status === 429 || ((status === 403 || status === 429) && (remaining === '0' || /rate limit/i.test(githubMessage ?? '')));
+  // Secondary limits ("abuse detection") may come with only `retry-after`.
+  const rateLimited =
+    status === 429 || (status === 403 && (remaining === '0' || !!headers?.get('retry-after') || /rate limit/i.test(githubMessage ?? '')));
   if (rateLimited) {
     const reset = Number(headers?.get('x-ratelimit-reset') ?? '');
     const retryAfter = Number(headers?.get('retry-after') ?? '');
