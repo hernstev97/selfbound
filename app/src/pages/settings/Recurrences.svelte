@@ -1,6 +1,6 @@
 <script lang="ts">
   // Recurring tasks: templates from which the hourly cron creates an issue on the due day
-  // (Europe/Berlin). Create them here or from an issue via "Repeat …".
+  // in the instance's time zone. Create them here or from an issue via "Repeat …".
   import { ICON, PRIORITY_ICON, PRIORITY_LABEL, dayLabel, type LabelId, type Priority, type TeamId } from '@selfbound/core';
   import { intlLocale, t } from '@selfbound/core/i18n';
   import { api } from '@selfbound/backend/api';
