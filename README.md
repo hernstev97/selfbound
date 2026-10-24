@@ -99,7 +99,8 @@ pnpm dev          # http://127.0.0.1:5412/
 ## Self-hosting
 
 Each instance belongs to one owner and uses its own Convex project, Clerk application and static host.
-See [docs/self-hosting.md](docs/self-hosting.md) and [docs/operations.md](docs/operations.md).
+After creating the Convex, Clerk and Vercel accounts, `node tooling/setup.mjs` sets up the rest (`--dry-run`
+shows what it would change). See [docs/self-hosting.md](docs/self-hosting.md) and [docs/operations.md](docs/operations.md).
 
 ## Contributing and security
 
