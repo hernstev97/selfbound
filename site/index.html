@@ -19,12 +19,12 @@
     <meta property="og:url" content="__SITE_URL__/" />
     <meta property="og:title" content="Selfbound · A keyboard-first issue tracker for solo developers and their AI agents" />
     <meta property="og:description" content="Fast, keyboard-first, open to AI agents over MCP. Self-hosted and open source." />
-    <meta property="og:image" content="__SITE_URL__/brand/og.png" />
+    <meta property="og:image" content="__SITE_URL__/brand/social.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Selfbound: the headline “The issue tracker for solo developers and their AI agents.” over a grid of dots." />
+    <meta property="og:image:alt" content="Selfbound: the headline “The issue tracker for solo developers and their AI agents.” above the app’s inbox with an issue an agent has just created. Sample data." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="__SITE_URL__/brand/og.png" />
+    <meta name="twitter:image" content="__SITE_URL__/brand/social.png" />
     <script type="module" src="/src/main.ts"></script>
     <!--analytics-->
   </head>
@@ -51,11 +51,13 @@
           </div>
         </div>
         <figure class="shot">
-          <picture>
-            <source media="(prefers-color-scheme: dark)" srcset="./src/assets/list-dark-1280.webp 1280w, ./src/assets/list-dark-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" />
-            <img src="./src/assets/list-light-1280.webp" srcset="./src/assets/list-light-1280.webp 1280w, ./src/assets/list-light-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" width="2560" height="1600" decoding="async" fetchpriority="low" alt="Selfbound issue list for one team, grouped by status, with the team sidebar on the left. Sample data." />
-          </picture>
-          <figcaption>Sample data.</figcaption>
+          <div class="stage">
+            <picture>
+              <source media="(prefers-color-scheme: dark)" srcset="./src/assets/list-dark-1280.webp 1280w, ./src/assets/list-dark-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" />
+              <img src="./src/assets/list-light-1280.webp" srcset="./src/assets/list-light-1280.webp 1280w, ./src/assets/list-light-2560.webp 2560w" sizes="(max-width: 1164px) calc(100vw - 44px), 1120px" width="2560" height="1600" decoding="async" fetchpriority="low" alt="Selfbound issue list for one team, grouped by status, with the team sidebar on the left. Sample data." />
+            </picture>
+          </div>
+          <figcaption>Sample data. <button class="demo-toggle" type="button" hidden>Pause demo</button></figcaption>
         </figure>
       </section>
 
