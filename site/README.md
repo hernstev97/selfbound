@@ -17,8 +17,14 @@ pnpm --filter @selfbound/site preview   # http://127.0.0.1:5403/
   WebGL 2 fragment shader with the Selfbound star; a still image with reduced motion or without WebGL 2).
 - `site.config.json`: `listed` (see below), `github` (repository) and `docs` (documentation site, base URL; a few links point to pages below it) are filled into the links of `index.html`.
 - Screenshots in `src/assets/` show the app with the sample data of `pnpm dev` (English UI), 1280 and
-  2560 px wide, dark and light. `public/` holds copies of the logo, mark and icons from
-  `app/public/`; refresh them there when the brand files change.
+  2560 px wide, dark and light. `src/assets/demo-light.mp4` and `demo-dark.mp4` are the product video without
+  its title and closing card (the page has both already): about 24 s, 1920 × 1200, no sound. `src/main.ts` loads
+  the one for the color scheme after the page has loaded, lays it over its first frame (`demo-*-1280.webp`,
+  `demo-*-1920.webp`, the hero still), plays it only while visible and not with reduced motion, and the button
+  under it pauses it. Record it with `e2e/tools/demo-video.mjs`, compress it with the `pr-media` skill's
+  `compress.sh medium`. `public/brand/social.png` is the link preview image (`e2e/tools/social-image.mjs`).
+  `public/` holds copies of the logo, mark and icons from `app/public/`; refresh them there when the brand
+  files change.
 
 ## Imprint, privacy policy and visitor statistics
 

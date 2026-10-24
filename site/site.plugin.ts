@@ -79,7 +79,7 @@ export function sitemapXml(s: SiteSettings): string | undefined {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>${s.url}/</loc></url></urlset>\n`;
 }
 
-const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 // The two scripts report to the same origin (/_vercel/insights/…, /_vercel/speed-insights/…).
 const CSP_ANALYTICS = CSP.replace("img-src", "connect-src 'self'; img-src");
 
