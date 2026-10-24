@@ -197,9 +197,19 @@ async function stepTools(ctx) {
   ok(ctx, 'pnpm and dependencies');
 }
 
+/** The instance file as an object; {} if there is none yet. One read, no separate existence check. */
+function readJson(file) {
+  try {
+    return JSON.parse(readFileSync(file, 'utf8'));
+  } catch (error) {
+    if (error.code === 'ENOENT') return {};
+    throw new SetupError(`Cannot read ${shownPath(file)}: ${error.message}`);
+  }
+}
+
 async function stepInstance(ctx) {
   const file = ctx.instanceFile;
-  const before = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+  const before = readJson(file);
   const now = ctx.instance;
   say(ctx, `  Settings file: ${shownPath(file)}`);
   const convexDeployment = await askValue(
