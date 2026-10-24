@@ -13,9 +13,10 @@
 // agent's terminal are drawn into the page by this script, the product itself is untouched. The agent's call
 // is a real MCP request with the seeded local key `Claude Code` (no network beyond 127.0.0.1). Frames come
 // from the Chrome DevTools screencast, which is sharper than Playwright's video recording.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,7 +29,8 @@ const opt = (name, fallback) => {
   const i = argv.indexOf(`--${name}`);
   return i >= 0 ? argv[i + 1] : fallback;
 };
-const out = opt('out', '/tmp/selfbound-demo');
+// Without --out a fresh private directory, never a fixed path in the shared temp folder.
+const out = opt('out') ?? mkdtempSync(join(tmpdir(), 'selfbound-demo-'));
 const schemes = opt('only') ? [opt('only')] : ['light', 'dark'];
 const base = opt('app', 'http://127.0.0.1:5412').replace(/\/$/, '');
 const shots = argv.includes('--shots');
