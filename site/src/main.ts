@@ -1,5 +1,5 @@
 // Landing page script: the background motion and the demo video. The content is HTML in index.html and
-// reads without this script; the screenshot in the hero stays the poster of the video.
+// reads without this script; the still in the hero is the first frame of the video and stays its poster.
 
 import './style.css';
 import demoDark from './assets/demo-dark.mp4';

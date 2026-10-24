@@ -8,7 +8,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.webp">
-    <img src="docs/images/demo-light.webp" alt="Demo, 30 seconds: moving through issues and changing a status from the keyboard, an agent creating an issue over MCP, the inbox, the pull requests page" width="900">
+    <img src="docs/images/demo-light.webp" alt="Product video, 28 seconds: list and board, a status change and undo from the keyboard, an agent creating an issue over MCP, the inbox and the pull requests page, with captions on what each part is for" width="900">
   </picture>
 </p>
 
