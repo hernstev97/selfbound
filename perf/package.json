@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit -p ."
   },
   "dependencies": {
-    "@playwright/test": "1.64.0",
+    "@playwright/test": "1.64.1",
     "@selfbound/backend": "workspace:*",
-    "convex": "1.46.0"
+    "convex": "1.47.0"
   },
   "devDependencies": {
     "@types/node": "^24.19.1",

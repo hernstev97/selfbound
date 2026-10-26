@@ -23,6 +23,6 @@
     "site:deploy": "node tooling/deploy-site.mjs"
   },
   "devDependencies": {
-    "convex": "1.46.0"
+    "convex": "1.47.0"
   }
 }
