@@ -16,7 +16,7 @@
     "test:integration": "node test/integration/run.mjs"
   },
   "dependencies": {
-    "convex": "1.46.0",
+    "convex": "1.47.0",
     "convex-helpers": "0.1.128",
     "fractional-indexing": "4.0.0"
   },
@@ -24,10 +24,10 @@
     "@edge-runtime/vm": "5.0.0",
     "@modelcontextprotocol/sdk": "1.32.1",
     "@types/node": "^24.19.1",
-    "convex-test": "0.0.61",
+    "convex-test": "0.0.62",
     "graphql": "17.0.2",
     "jose": "6.2.12",
     "typescript": "7.0.2",
-    "vitest": "5.0.4"
+    "vitest": "5.0.5"
   }
 }
