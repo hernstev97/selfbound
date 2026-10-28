@@ -365,6 +365,18 @@ const addComment = object({
   body: string({ description: `Comment in Markdown. ${VISUAL_BLOCKS}`, min: 1, max: LIMITS.commentMax }),
 });
 
+/** Base64 grows by 4/3; the slack covers a data URL prefix. */
+const IMAGE_DATA_MAX = Math.ceil(LIMITS.imageMaxBytes / 3) * 4 + 100;
+
+const uploadImage = object({
+  data: string({
+    description: 'The image as base64 or as a data URL ("data:image/png;base64,…"). PNG, JPEG, WebP or GIF; the content must match the type.',
+    min: 1,
+    max: IMAGE_DATA_MAX,
+  }),
+  filename: string({ description: 'File name, e.g. "login-after.png"; it becomes the alt text of the Markdown line.', min: 1, max: 200 }),
+});
+
 const getCurrentSprint = object({});
 
 const listTeams = object({
@@ -498,6 +510,7 @@ const SCHEMAS = {
   set_status: setStatus,
   move_issues: moveIssues,
   add_comment: addComment,
+  upload_image: uploadImage,
   get_current_sprint: getCurrentSprint,
   list_teams: listTeams,
   list_projects: listProjects,
@@ -564,6 +577,12 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
     description:
       'Add a Markdown comment to an issue, e.g. a progress report. requestId makes the call safe to retry without duplicate comments.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  upload_image: {
+    title: 'Upload image',
+    description:
+      'Upload an image (screenshot) and get its URL and a ready Markdown line `![name](url)`, then put that line into the Markdown of add_comment, update_issue (description) or create_issues. PNG, JPEG, WebP or GIF, at most 5 MB decoded, and the whole request must stay under 8 MB. Storage and bandwidth cost money: compress screenshots first (WebP or JPEG, ideally under 300 KB) and upload each image once. The image stays private in Selfbound (the URL contains a secret token and works without a key). An image that is not used in any text within 7 days is deleted. Every call stores a new file, so do not retry blindly after a success.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
   },
   get_current_sprint: {
     title: 'Get current sprint',

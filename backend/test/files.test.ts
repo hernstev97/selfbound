@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import { api, internal } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
 import { DAY_MS } from '../convex/lib/dates';
-import { checkImage, sniffImage } from '../convex/lib/image';
+import { checkImage, decodeBase64Image, imageMarkdownLine, sniffImage } from '../convex/lib/image';
 import { NEW_FILE_GRACE_MS, sweepFiles, UNREFERENCED_GRACE_MS } from '../convex/ops/files';
 import { purgeTrash } from '../convex/ops/issues';
 import { imageTokens, LIMITS } from '../convex/shared/constants';
@@ -53,6 +53,25 @@ describe('Checks', () => {
     expect(checkImage(new TextEncoder().encode('<html>'), 6, 'image/png').ok).toBe(false);
     expect(checkImage(PNG, 0, 'image/png').ok).toBe(false);
     expect(checkImage(PNG, LIMITS.imageMaxBytes + 1, 'image/png')).toMatchObject({ ok: false, reason: expect.stringContaining('too large') });
+  });
+
+  test('decodeBase64Image: plain base64 and data URLs, declared type, size before decoding', () => {
+    const b64 = Buffer.from(PNG).toString('base64');
+    expect(decodeBase64Image(b64)).toEqual({ ok: true, bytes: PNG, declaredType: undefined });
+    expect(decodeBase64Image(`  ${b64.slice(0, 8)}\n${b64.slice(8)}  `)).toMatchObject({ ok: true, bytes: PNG });
+    expect(decodeBase64Image(`data:image/png;base64,${b64}`)).toMatchObject({ ok: true, declaredType: 'image/png' });
+    expect(decodeBase64Image(`data:image/jpg;charset=x;base64,${b64}`)).toMatchObject({ ok: true, declaredType: 'image/jpeg' });
+    expect(decodeBase64Image(`data:;base64,${b64}`)).toMatchObject({ ok: true, declaredType: undefined });
+    expect(decodeBase64Image(`data:image/png,${b64}`)).toMatchObject({ ok: false });
+    expect(decodeBase64Image('')).toMatchObject({ ok: false });
+    expect(decodeBase64Image('abc$')).toMatchObject({ ok: false, reason: expect.stringContaining('base64') });
+    expect(decodeBase64Image('A'.repeat(Math.ceil(((LIMITS.imageMaxBytes + 3) / 3) * 4)))).toMatchObject({ ok: false, reason: expect.stringContaining('too large') });
+  });
+
+  test('imageMarkdownLine: file name without extension and without characters that break Markdown', () => {
+    expect(imageMarkdownLine('login-after.png', 'https://x/img/t')).toBe('![login-after](https://x/img/t)');
+    expect(imageMarkdownLine('C:\\shots\\a [1] (x).WebP', 'https://x/img/t')).toBe('![a 1 x](https://x/img/t)');
+    expect(imageMarkdownLine('.png', 'https://x/img/t')).toBe('![image](https://x/img/t)');
   });
 
   test('imageTokens finds tokens regardless of the host', () => {

@@ -43,3 +43,45 @@ export function imageUrl(token: string) {
   const site = (process.env.CONVEX_SITE_URL ?? '').replace(/\/+$/, '');
   return `${site}${IMAGE_PATH}${token}`;
 }
+
+/** Size of the decoded bytes of a base64 string, without decoding it. */
+const base64Size = (b64: string) => Math.floor((b64.length * 3) / 4) - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0);
+
+export type DecodedImage = { ok: true; bytes: Uint8Array<ArrayBuffer>; declaredType?: string } | { ok: false; reason: string };
+
+/**
+ * Decodes an image sent as plain base64 or as a data URL (`data:image/png;base64,…`) for the MCP
+ * upload. The size is checked before decoding. Only the declared type (if any) and the size are
+ * decided here; whether the bytes are an allowed image is `checkImage`'s job, the same as for UI uploads.
+ */
+export function decodeBase64Image(data: string): DecodedImage {
+  let declaredType: string | undefined;
+  let b64 = data.trim();
+  if (/^data:/i.test(b64)) {
+    const m = /^data:([^;,]*)((?:;[^;,]*)*),/is.exec(b64);
+    if (!m || !/;base64$/i.test(m[2]!)) return { ok: false, reason: 'A data URL must be base64-encoded: data:image/png;base64,…' };
+    const type = m[1]!.trim().toLowerCase();
+    declaredType = type === 'image/jpg' ? 'image/jpeg' : type || undefined;
+    b64 = b64.slice(m[0].length);
+  }
+  b64 = b64.replace(/\s+/g, '').replace(/-/g, '+').replace(/_/g, '/');
+  if (b64.length === 0) return { ok: false, reason: 'The file is empty.' };
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) return { ok: false, reason: 'The image data is not valid base64.' };
+  if (b64.length % 4 === 1) return { ok: false, reason: 'The image data is not valid base64.' };
+  if (base64Size(b64) > LIMITS.imageMaxBytes) return { ok: false, reason: IMAGE_TOO_LARGE };
+  const raw = atob(b64.replace(/=+$/, ''));
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return { ok: true, bytes, declaredType };
+}
+
+/** Markdown line for an uploaded image; the file name (without extension) becomes the alt text. */
+export function imageMarkdownLine(filename: string, url: string) {
+  const alt = filename
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.[A-Za-z0-9]{1,5}$/, '')
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[[\]\\()<>]/g, '')
+    .trim();
+  return `![${alt || 'image'}](${url})`;
+}
