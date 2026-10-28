@@ -62,7 +62,7 @@ describe('index.html', () => {
     const without = siteHtml(html, siteSettings(config, {}));
     expect(without).not.toMatch(/__SITE_URL__|og:image"|og:url|twitter:image|rel="canonical"/);
     const withUrl = siteHtml(html, siteSettings(config, { SELFBOUND_SITE_URL: 'https://example.com' }));
-    expect(withUrl).toContain('<meta property="og:image" content="https://example.com/brand/og.png" />');
+    expect(withUrl).toContain('<meta property="og:image" content="https://example.com/brand/social.png" />');
     expect(withUrl).toContain('<link rel="canonical" href="https://example.com/" />');
   });
   it('fills in the repository and docs links and leaves no placeholder behind', () => {
@@ -70,6 +70,9 @@ describe('index.html', () => {
     expect(out).toContain('href="https://github.com/example/selfbound"');
     expect(out).toContain('href="https://docs.example.com"');
     expect(out).not.toMatch(/__[A-Z_]+__|<!--robots-->/);
+  });
+  it('lets the strict CSP play the self-hosted demo video', () => {
+    expect(headerValue(vercelConfig(siteSettings(config, {}, legal)), 'Content-Security-Policy')).toContain("media-src 'self'");
   });
   it('has no inline script or style, so the strict CSP holds', () => {
     expect(html).not.toMatch(/<script(?![^>]*\bsrc=)[^>]*>/);

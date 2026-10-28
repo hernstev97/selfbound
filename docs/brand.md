@@ -36,7 +36,7 @@ other colour appears.
 | `app/public/brand/og-image.png` | 1200 × 630, social preview image (`og:image`, `twitter:image`) |
 | `app/public/brand/clerk-logo.png` | 512 × 512, for uploading in the Clerk dashboard (application logo) |
 | `app/src/lib/brand.ts` | the shapes for the inline SVG (`components/Logo.svelte`): sidebar, sign-in and consent screens (lockup), loading screen (symbol) |
-| `site/public/…` | favicons, `brand/selfbound-lockup.svg`, `selfbound-symbol.svg`, `brand/og.png` for the landing page |
+| `site/public/…` | favicons, `brand/selfbound-lockup.svg`, `selfbound-symbol.svg`, `brand/og.png` (the plain logo) for the landing page; its link preview uses `brand/social.png` (headline and app screenshot, made by `e2e/tools/social-image.mjs`) |
 | `docs-site/public/…`, `docs-site/src/assets/logo-light.svg`, `logo-dark.svg` | favicons, social image and header logo of the docs (ink and paper lockup) |
 
 The app-icon proportions (symbol 56 % of the tile, corner radius 22.5 %) are constants in the script.
