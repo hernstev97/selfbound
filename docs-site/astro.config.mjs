@@ -93,6 +93,7 @@ export default defineConfig({
               label: 'Self-hosting',
               items: [
                 { slug: 'start/self-hosting' },
+                { slug: 'start/self-hosting/setup-script' },
                 { slug: 'start/self-hosting/clerk' },
                 { slug: 'start/self-hosting/convex' },
                 { slug: 'start/self-hosting/web-app' },
