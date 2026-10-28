@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import { api } from '../convex/_generated/api';
 import type { Id } from '../convex/_generated/dataModel';
-import { addDays } from '../convex/lib/dates';
+import { addDays, DAY_MS } from '../convex/lib/dates';
 import { reduceCatalog } from '../convex/lib/modelsCatalog';
 import { dayWindow, minuteWindow, RATE_PER_MINUTE } from '../convex/ops/agents';
+import { NEW_FILE_GRACE_MS, sweepFiles } from '../convex/ops/files';
+import { LIMITS } from '../convex/shared/constants';
 import modelsDev from './lib/fixtures/models-dev.json';
 import { berlinDay, createOne, expectSprintInvariant, fixture, getIssue, historyOf, setup, type Client, type T } from './helpers';
 
@@ -75,6 +77,7 @@ describe('MCP over HTTP', () => {
       'set_status',
       'move_issues',
       'add_comment',
+      'upload_image',
       'get_current_sprint',
       'list_teams',
       'list_projects',
@@ -867,5 +870,106 @@ describe('MCP after a team key rename (XLR8-72)', () => {
     const teams = (await mcp.call('list_teams')).value.teams as Json[];
     expect(teams.find((x) => x.key === 'OBT')).toMatchObject({ previousKeys: ['ORB'] });
     expect(teams.find((x) => x.key === 'NOVA')).not.toHaveProperty('previousKeys');
+  });
+});
+
+describe('MCP: upload_image (SELF-107)', () => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
+  const WEBP = new Uint8Array([...new TextEncoder().encode('RIFF'), 26, 0, 0, 0, ...new TextEncoder().encode('WEBPVP8L'), 0, 0, 0, 0]);
+  const b64 = (bytes: Uint8Array | string) => Buffer.from(typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes).toString('base64');
+  const files = (t: T) => t.run(async (ctx) => await ctx.db.query('files').collect());
+  const storedCount = (t: T) => t.run(async (ctx) => (await ctx.db.system.query('_storage').collect()).length);
+
+  test('a PNG as base64 and a WebP as data URL: URL, Markdown line, served on /img, actor = agent', async () => {
+    const { t, owner } = setup();
+    const { key, agentId } = await agent(owner);
+    const mcp = client(t, key);
+    const png = await mcp.call('upload_image', { data: b64(PNG), filename: 'login-after.png' });
+    expect(png.ok).toBe(true);
+    expect(png.value).toMatchObject({ contentType: 'image/png', size: PNG.length });
+    expect(png.value.url).toMatch(/^http:\/\/127\.0\.0\.1:3211\/img\/[A-Za-z0-9_-]{43}$/);
+    expect(png.value.markdown).toBe(`![login-after](${png.value.url})`);
+    const served = await t.fetch(new URL(png.value.url).pathname, { method: 'GET' });
+    expect(served.status).toBe(200);
+    expect(served.headers.get('content-type')).toBe('image/png');
+    expect(new Uint8Array(await served.arrayBuffer())).toEqual(PNG);
+
+    const webp = await mcp.call('upload_image', { data: `data:image/webp;base64,${b64(WEBP)}`, filename: 'a [b](c).webp' });
+    expect(webp.value).toMatchObject({ contentType: 'image/webp', markdown: `![a bc](${webp.value.url})` });
+
+    const rows = await files(t);
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(row.uploadedBy).toEqual({ kind: 'agent', agentId });
+  });
+
+  test('not an image, wrong data URL, bad base64, too large: rejected, nothing stored', async () => {
+    const { t, owner } = setup();
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const big = new Uint8Array(LIMITS.imageMaxBytes + 1);
+    big.set(PNG);
+    for (const [data, message] of [
+      [b64('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'), /Only images are allowed/],
+      // (A wrong declared type is not testable here: convex-test stores no content type; checkImage covers it.)
+      [`data:image/svg+xml;base64,${b64('<svg/>')}`, /Only images are allowed/],
+      [b64('<html>'), /Only images are allowed/],
+      ['data:image/png,not-base64', /base64/],
+      ['!!! not base64 !!!', /not valid base64/],
+      [b64(big), /too large/],
+    ] as const) {
+      const result = await mcp.call('upload_image', { data, filename: 'x.png' });
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(message);
+    }
+    expect(await files(t)).toHaveLength(0);
+    expect(await storedCount(t)).toBe(0);
+    // Wrong arguments fail validation before any work.
+    expect((await mcp.call('upload_image', { data: b64(PNG) })).error).toMatch(/filename/);
+  });
+
+  test('every call counts for the rate limit, rejected ones too; a revoked key gets 401', async () => {
+    const { t, owner } = setup();
+    const { key, agentId } = await agent(owner);
+    const mcp = client(t, key);
+    const before = await rateCount(t, agentId);
+    await mcp.call('upload_image', { data: b64(PNG), filename: 'a.png' });
+    await mcp.call('upload_image', { data: b64('<html>'), filename: 'b.png' });
+    expect((await rateCount(t, agentId)) - before).toBe(2);
+    await owner.mutation(api.agents.revoke, { agentId });
+    const response = await mcp.post({ jsonrpc: '2.0', id: 9, method: 'tools/call', params: { name: 'upload_image', arguments: { data: b64(PNG), filename: 'c.png' } } });
+    expect(response.status).toBe(401);
+    expect(await files(t)).toHaveLength(1);
+  });
+
+  test('cleanup: an unused agent upload survives the grace period, goes after it; used in a comment or description it stays', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const issue = await createOne(owner, f.orb);
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const unused = await mcp.call('upload_image', { data: b64(PNG), filename: 'unused.png' });
+    const inComment = await mcp.call('upload_image', { data: b64(PNG), filename: 'comment.png' });
+    const inDescription = await mcp.call('upload_image', { data: b64(PNG), filename: 'description.png' });
+    const now = Date.now();
+    // Several minutes or hours between upload and use are normal; a whole week is not.
+    expect(await t.run(async (ctx) => await sweepFiles(ctx, now + NEW_FILE_GRACE_MS - DAY_MS))).toMatchObject({ deleted: 0 });
+
+    await mcp.call('add_comment', { requestId: 'req-image-0001', identifier: 'ORB-1', body: `Done.\n\n${inComment.value.markdown}` });
+    const detail = await mcp.call('get_issue', { identifier: 'ORB-1' });
+    const updated = await mcp.call('update_issue', {
+      identifier: 'ORB-1',
+      description: `Summary\n\n${inDescription.value.markdown}`,
+      expectedDescriptionVersion: detail.value.description.version,
+    });
+    expect(updated.ok).toBe(true);
+    const rows = await files(t);
+    const by = (url: string) => rows.find((r) => url.endsWith(r.token))!;
+    expect(by(inComment.value.url).deleteAfter).toBeUndefined();
+    expect(by(inDescription.value.url).deleteAfter).toBeUndefined();
+    expect(by(unused.value.url).deleteAfter).toBeGreaterThan(now);
+
+    expect(await t.run(async (ctx) => await sweepFiles(ctx, now + 30 * DAY_MS))).toMatchObject({ deleted: 1 });
+    expect((await files(t)).map((r) => r.token).sort()).toEqual([inComment.value.url, inDescription.value.url].map((u) => u.split('/img/')[1]).sort());
+    expect(issue.id).toBeDefined();
   });
 });

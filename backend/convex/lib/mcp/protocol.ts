@@ -34,7 +34,7 @@ export const CHART_EXAMPLES = [
 
 export const INSTRUCTIONS = [
   'This Selfbound instance is a single-owner issue tracker.',
-  'Use these tools to find, read and manage issues across its teams: search_issues and list_issues to find work, get_issue for details with comments, relations and pull requests, create_issues / update_issue / set_status / move_issues / add_comment to make changes, and get_current_sprint for the sprint that spans all teams.',
+  'Use these tools to find, read and manage issues across its teams: search_issues and list_issues to find work, get_issue for details with comments, relations and pull requests, create_issues / update_issue / set_status / move_issues / add_comment to make changes, upload_image to put screenshots into texts, and get_current_sprint for the sprint that spans all teams.',
   'Identifiers look like "ACME-106" (team key + number). Teams are referenced by key, labels, projects and statuses by name; call list_teams, list_labels, list_projects or list_statuses to look up valid values. Each team has its own workflow statuses. An issue can name the model an agent should use (`model`, `effectiveModel` with its source); list_models lists the valid models, efforts and speeds.',
   'There is a single user (the owner) and no assignee field: the "assigned" filter means all open issues outside triage in teams that are not dormant and not knowledge-only.',
   'Teams can also have a knowledge area (list_teams field `wiki`): pages in a tree with Markdown text, topics and sources. Use search_articles, list_articles and get_article to read it, create_article and update_article (`append` to add findings) to write; search first to avoid duplicates.',
@@ -42,6 +42,7 @@ export const INSTRUCTIONS = [
     CHART_EXAMPLES.join(' ') +
     ' Line and area charts take "x" (labels, or numbers in increasing order); area and bar also take "stack":"stacked"|"percent"; bar takes "orientation":"horizontal". Every series needs one value per x or category (at most 8 series, no negative values in bars). Invalid JSON is not rejected on save, the reader sees an error instead of the chart.',
   'Issue descriptions have two layers: on top a short summary for the owner in plain words (goal, state, what they need to know; a few sentences or bullets), below it one "> [!AGENT]" panel, shown collapsed in the app, with the details for agents (acceptance criteria, affected files, technical notes, test steps). Keep that split when you edit a description; a short issue needs no AGENT panel.',
+  'Images: call upload_image first (base64 or data URL plus a file name; compress screenshots to WebP or JPEG, ideally under 300 KB), then paste the returned Markdown line into a comment (add_comment) or description (update_issue, create_issues). Images stay private to Selfbound; unused uploads are deleted after 7 days.',
   'Always pass a fresh requestId to create_issues, add_comment, create_article and update_article; retrying with the same requestId is safe. Business errors come back as tool results with isError and a plain explanation.',
 ].join(' ');
 
@@ -108,7 +109,8 @@ export class ToolError extends Error {
   }
 }
 
-const MAX_BODY_BYTES = 4 * 1024 * 1024;
+// Room for a 5 MB image as base64 (upload_image); only authenticated agents get this far.
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 
 /**
  * Cache hints, mandatory on `server/discover` and `tools/list` since 2026-07-28

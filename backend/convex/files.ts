@@ -1,6 +1,8 @@
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
-import { internalMutation, internalQuery } from './_generated/server';
+import type { Id } from './_generated/dataModel';
+import { internalMutation, internalQuery, type ActionCtx } from './_generated/server';
+import type { Actor } from './lib/actor';
 import { ownerAction, ownerWriteMutation } from './lib/auth';
 import { invalid, notFound } from './lib/errors';
 import { checkImage, IMAGE_TOO_LARGE, imageUrl } from './lib/image';
@@ -10,7 +12,7 @@ import { NEW_FILE_GRACE_MS, sweepFiles } from './ops/files';
 import { actorValidator } from './schema';
 import { LIMITS } from './shared/constants';
 
-// Images in descriptions and comments.
+// Images in descriptions and comments (agents upload over MCP, see `upload_image` in mcp.ts).
 //
 // Upload: generateUploadUrl → fetch POST (file) → register (checks it and issues the token)
 // → the UI writes `![name](<url>)` into the Markdown. Served via GET /img/<token>
@@ -29,36 +31,8 @@ export const generateUploadUrl = ownerWriteMutation({
  */
 export const register = ownerAction({
   args: { storageId: v.id('_storage') },
-  handler: async (ctx, args): Promise<{ url: string; contentType: string; size: number }> => {
-    const meta = await ctx.runQuery(internal.files.storageMeta, { storageId: args.storageId });
-    if (!meta) notFound('The uploaded file');
-    const reject = async (reason: string): Promise<never> => {
-      await ctx.storage.delete(args.storageId);
-      return invalid(reason);
-    };
-    // Size from the metadata first: don't even read files that are too large.
-    if (meta.size > LIMITS.imageMaxBytes) return await reject(IMAGE_TOO_LARGE);
-    const blob = await ctx.storage.get(args.storageId);
-    if (!blob) notFound('The uploaded file');
-    const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
-    const check = checkImage(head, meta.size, meta.contentType);
-    if (!check.ok) return await reject(check.reason);
-    // Randomness only in actions (in mutations it is deterministic).
-    const token = base64url(crypto.getRandomValues(new Uint8Array(32)));
-    try {
-      await ctx.runMutation(internal.files.insert, {
-        token,
-        storageId: args.storageId,
-        contentType: check.contentType,
-        size: meta.size,
-        actor: ctx.actor,
-      });
-    } catch (error) {
-      await ctx.storage.delete(args.storageId);
-      throw error;
-    }
-    return { url: imageUrl(token), contentType: check.contentType, size: meta.size };
-  },
+  handler: async (ctx, args): Promise<{ url: string; contentType: string; size: number }> =>
+    await registerStoredImage(ctx, args.storageId, ctx.actor),
 });
 
 /** Internal: storage metadata (size, content type) for the check. */
@@ -103,3 +77,36 @@ export const sweep = internalMutation({
     return result;
   },
 });
+
+/**
+ * The check and registration of a file already in storage; the one path for UI uploads (`register`)
+ * and MCP uploads (`mcp.uploadImage`). Rejected files are deleted.
+ */
+export async function registerStoredImage(
+  ctx: ActionCtx,
+  storageId: Id<'_storage'>,
+  actor: Actor,
+): Promise<{ url: string; contentType: string; size: number }> {
+  const meta = await ctx.runQuery(internal.files.storageMeta, { storageId });
+  if (!meta) notFound('The uploaded file');
+  const reject = async (reason: string): Promise<never> => {
+    await ctx.storage.delete(storageId);
+    return invalid(reason);
+  };
+  // Size from the metadata first: don't even read files that are too large.
+  if (meta.size > LIMITS.imageMaxBytes) return await reject(IMAGE_TOO_LARGE);
+  const blob = await ctx.storage.get(storageId);
+  if (!blob) notFound('The uploaded file');
+  const head = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+  const check = checkImage(head, meta.size, meta.contentType);
+  if (!check.ok) return await reject(check.reason);
+  // Randomness only in actions (in mutations it is deterministic).
+  const token = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  try {
+    await ctx.runMutation(internal.files.insert, { token, storageId, contentType: check.contentType, size: meta.size, actor });
+  } catch (error) {
+    await ctx.storage.delete(storageId);
+    throw error;
+  }
+  return { url: imageUrl(token), contentType: check.contentType, size: meta.size };
+}

@@ -51,6 +51,7 @@ const mcp = httpAction(async (ctx, request) => {
       countCall: (keyHash) => ctx.runMutation(internal.mcp.countCall, { keyHash }),
       read: (keyHash, tool, args, today) => ctx.runQuery(internal.mcp.read, { keyHash, tool, args: plain(args), today }),
       call: (keyHash, tool, args) => ctx.runMutation(internal.mcp.call, { keyHash, tool, args: plain(args) }),
+      upload: (keyHash, args) => ctx.runAction(internal.mcp.uploadImage, { keyHash, args: plain(args) }),
       countFailedCall: (keyHash) => ctx.runMutation(internal.mcp.countFailedCall, { keyHash }),
       log: (error, tool) => console.error(`MCP tool ${tool} failed:`, error),
       ...(cfg ? { challenge: (error?: 'invalid_token') => wwwAuthenticate(cfg, error) } : {}),

@@ -21,7 +21,7 @@ export async function mcpSuite(backend, log) {
   const smoke = await runMcpSmoke({ url, key });
   assert.equal(smoke.serverName, 'selfbound');
   assert.equal(smoke.instructions, true);
-  assert.equal(smoke.tools.length, 20);
+  assert.equal(smoke.tools.length, 21);
   assert.deepEqual(smoke.call, { tool: 'list_teams', isError: false, textBytes: smoke.call.textBytes, structuredKeys: ['teams'] });
   const list = await runMcpSmoke({ url, key, tool: 'list_issues', args: { filter: 'assigned', team: 'INT' } });
   assert.equal(list.call.isError, false);
@@ -50,7 +50,29 @@ export async function mcpSuite(backend, log) {
   assert.equal(detail.structuredContent.reviewedByOwner, false);
   // legacy-xlr8: deprecated copy of reviewedByOwner
   assert.equal(detail.structuredContent.reviewedBySteven, false);
+  // upload_image: real file storage (a 1x1 PNG), served on /img, usable in a comment; no image → rejected.
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64');
+  const uploaded = await client.callTool({ name: 'upload_image', arguments: { data: `data:image/png;base64,${png.toString('base64')}`, filename: 'integration.png' } });
+  assert.notEqual(uploaded.isError, true, JSON.stringify(uploaded.content));
+  assert.equal(uploaded.structuredContent.contentType, 'image/png');
+  assert.equal(uploaded.structuredContent.markdown, `![integration](${uploaded.structuredContent.url})`);
+  const served = await fetch(uploaded.structuredContent.url);
+  assert.equal(served.status, 200);
+  assert.equal(served.headers.get('content-type'), 'image/png');
+  assert.deepEqual(Buffer.from(await served.arrayBuffer()), png);
+  const commented = await client.callTool({
+    name: 'add_comment',
+    arguments: { requestId: 'integration-image-0001', identifier: 'INT-2', body: `Screenshot:\n\n${uploaded.structuredContent.markdown}` },
+  });
+  assert.notEqual(commented.isError, true, JSON.stringify(commented.content));
+  const html = await client.callTool({ name: 'upload_image', arguments: { data: Buffer.from('<html><script>1</script></html>').toString('base64'), filename: 'x.png' } });
+  assert.equal(html.isError, true);
+  assert.match(html.content[0].text, /Only images are allowed/);
+  const wrongType = await client.callTool({ name: 'upload_image', arguments: { data: `data:image/jpeg;base64,${png.toString('base64')}`, filename: 'x.jpg' } });
+  assert.equal(wrongType.isError, true, 'content that does not match the declared type must be rejected');
+  assert.match(wrongType.content[0].text, /does not match/);
   await client.close();
+  log('MCP: upload_image: PNG stored and served, used in a comment; HTML and a wrong declared type rejected');
   log('MCP: create_issues twice with the same requestId → one issue (INT-2)');
 
   // 3. Key clients never start OAuth: wrong key → 401 without WWW-Authenticate.

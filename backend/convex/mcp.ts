@@ -1,6 +1,11 @@
 import { ConvexError, v } from 'convex/values';
-import { internalMutation, internalQuery } from './_generated/server';
-import { fail } from './lib/errors';
+import { internal } from './_generated/api';
+import { internalAction, internalMutation, internalQuery } from './_generated/server';
+import { registerStoredImage } from './files';
+import type { Actor } from './lib/actor';
+import { fail, invalid } from './lib/errors';
+import { decodeBase64Image, imageMarkdownLine } from './lib/image';
+import { isUploadTool } from './lib/mcp/endpoint';
 import { checkToolArguments, isToolName } from './lib/mcp/tools';
 import { authenticateAgent, consumeRate } from './ops/agents';
 import { isReadTool, plain, runReadTool, runWriteTool } from './ops/mcp';
@@ -33,7 +38,46 @@ export const call = internalMutation({
     await consumeRate(ctx, agent._id);
     const input = checked(tool, args);
     if (isReadTool(input.tool)) fail('invalid', `${tool} is a read tool.`);
+    if (isUploadTool(input.tool)) fail('invalid', `${tool} runs as an action, not in this mutation.`);
     return { ok: true, value: plain(await runWriteTool(ctx, actor, input.tool, input.args)) };
+  },
+});
+
+/**
+ * upload_image, step 1: count the call and hand back the actor. The count is committed on its
+ * own, so a rejected image counts too (no free probing for the rate limit).
+ */
+export const countUpload = internalMutation({
+  args: { keyHash: v.string() },
+  handler: async (ctx, { keyHash }): Promise<{ actor: Actor }> => {
+    const { agent, actor } = await authenticateAgent(ctx, keyHash, Date.now());
+    await consumeRate(ctx, agent._id);
+    return { actor };
+  },
+});
+
+/**
+ * upload_image: a mutation cannot store files, so this is an action. Same check and registration
+ * as the UI upload (`registerStoredImage`), actor = the agent. Until the image appears in a text
+ * it has the grace period of fresh uploads (`NEW_FILE_GRACE_MS`, ops/files.ts).
+ */
+export const uploadImage = internalAction({
+  args: { keyHash: v.string(), args: v.any() },
+  handler: async (ctx, { keyHash, args }): Promise<Record<string, unknown>> => {
+    const { actor } = await ctx.runMutation(internal.mcp.countUpload, { keyHash });
+    const input = checkToolArguments('upload_image', args);
+    if (!input.ok) return fail('invalid', `Invalid arguments for upload_image: ${input.errors.join('; ')}`);
+    const decoded = decodeBase64Image(input.value.data);
+    if (!decoded.ok) return invalid(decoded.reason);
+    const storageId = await ctx.storage.store(new Blob([decoded.bytes], { type: decoded.declaredType ?? '' }));
+    const { url, contentType, size } = await registerStoredImage(ctx, storageId, actor);
+    return plain({
+      url,
+      markdown: imageMarkdownLine(input.value.filename, url),
+      contentType,
+      size,
+      note: 'Put the markdown line into add_comment, update_issue (description) or create_issues. An image that no text uses within 7 days is deleted.',
+    });
   },
 });
 

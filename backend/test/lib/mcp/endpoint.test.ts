@@ -28,6 +28,10 @@ function backend(overrides: Partial<McpBackend> = {}) {
       log.push(`call:${tool}`);
       return { value: { ok: true } };
     },
+    upload: async () => {
+      log.push('upload');
+      return { url: 'u' };
+    },
     countFailedCall: async () => log.push('countFailedCall'),
     ...overrides,
   };
@@ -58,6 +62,19 @@ describe('MCP endpoint', () => {
     expect((await mcpEndpoint(toolCall('list_teams', {}), b, 't')).status).toBe(200);
     expect((await mcpEndpoint(toolCall('add_comment', { requestId: 'req-12345678', identifier: 'ACME-1', body: 'x' }), b, 't')).status).toBe(200);
     expect(log).toEqual(['authenticate', 'countCall', 'read:list_teams:2026-10-09', 'authenticate', 'call:add_comment']);
+  });
+
+  test('upload_image runs as an action; a failure is not counted twice, a rate limit passes through', async () => {
+    const args = { data: 'AAAA', filename: 'a.png' };
+    const ok = backend();
+    expect((await mcpEndpoint(toolCall('upload_image', args), ok.b, 't')).status).toBe(200);
+    expect(ok.log).toEqual(['authenticate', 'upload']);
+    const bad = backend({ upload: async () => Promise.reject(Object.assign(new Error('x'), { data: { code: 'invalid', message: 'Only images are allowed' } })) });
+    const failed = JSON.parse((await mcpEndpoint(toolCall('upload_image', args), bad.b, 't')).body!);
+    expect(failed.result).toMatchObject({ isError: true, content: [{ text: expect.stringContaining('invalid: Only images are allowed') }] });
+    expect(bad.log).not.toContain('countFailedCall');
+    const revoked = backend({ upload: async () => Promise.reject(denied()) });
+    expect((await mcpEndpoint(toolCall('upload_image', args), revoked.b, 't')).status).toBe(401);
   });
 
   test('invalid arguments and unknown tools are counted', async () => {

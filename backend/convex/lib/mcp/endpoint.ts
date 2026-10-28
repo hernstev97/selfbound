@@ -5,6 +5,7 @@
 // Flow of a tool call:
 //   read tool:  countCall (mutation, rate limit only) → read (query, cacheable)
 //   write tool: call (one mutation: count, idempotency, operation)
+//   upload_image: upload (one action: count, check, store; storing files needs an action)
 // Errors are counted too: a discarded write call and a call that already fails argument
 // validation are counted afterwards with countFailedCall.
 // If the key is revoked between sign-in and tool call: 401 as for an unknown key, not a
@@ -45,6 +46,8 @@ export interface McpBackend {
   countCall(keyHash: string): Promise<unknown>;
   read(keyHash: string, tool: ToolName, args: unknown, today: string): Promise<unknown>;
   call(keyHash: string, tool: ToolName, args: unknown): Promise<{ value: unknown }>;
+  /** `upload_image`: an action (a mutation cannot store files). It counts the call itself, before the work. */
+  upload(keyHash: string, args: unknown): Promise<unknown>;
   countFailedCall(keyHash: string): Promise<unknown>;
   log?(error: unknown, tool: string): void;
   /** Only with OAuth enabled: value for WWW-Authenticate (lib/oauth/core.ts wwwAuthenticate). */
@@ -52,6 +55,9 @@ export interface McpBackend {
   /** Allowed `Origin` headers (see McpDeps.allowedOrigins). */
   allowedOrigins?: readonly string[];
 }
+
+/** Tools that need an action instead of the one write mutation. */
+export const isUploadTool = (name: string) => name === 'upload_image';
 
 export const isReadTool = (name: string) => TOOLS.find((t) => t.name === name)?.annotations?.readOnlyHint === true;
 
@@ -143,14 +149,15 @@ export async function mcpEndpoint(
           throw toolError(data); // already counted (or over the limit)
         }
       }
+      const upload = isUploadTool(name);
       try {
-        return (await retryOnConflict(() => backend.call(keyHash, name, args))).value;
+        return upload ? await backend.upload(keyHash, args) : (await retryOnConflict(() => backend.call(keyHash, name, args))).value;
       } catch (error) {
         const data = errorData(error);
         if (!data) throw error;
         if (data.code === 'access_denied') revoked = true;
-        // Count discarded write calls anyway (not on rate limit or revocation).
-        else if (data.code !== 'rate_limited') await countFailed();
+        // Count discarded write calls anyway (not on rate limit or revocation). An upload counted itself first.
+        else if (data.code !== 'rate_limited' && !upload) await countFailed();
         throw toolError(data);
       }
     },

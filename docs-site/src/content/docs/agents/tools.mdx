@@ -40,6 +40,16 @@ try again.
 
 <McpTools group="comments" />
 
+## Images
+
+Screenshots go into descriptions and comments as Markdown. The agent uploads the image first and pastes the
+returned line (`![name](url)`) into `add_comment`, `update_issue` or `create_issues`. The images stay private in
+Selfbound, like those uploaded in the app: the URL holds a secret token. PNG, JPEG, WebP and GIF are accepted, at
+most 5 MB, checked by their content. Agents should compress screenshots first (WebP or JPEG, ideally under 300 KB)
+because storage and bandwidth cost money. An image that appears in no text within 7 days is deleted.
+
+<McpTools group="images" />
+
 ## Sprints
 
 <McpTools group="sprints" />
