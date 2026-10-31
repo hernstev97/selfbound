@@ -39,7 +39,7 @@ async function fixtures() {
 }
 
 /** Intentional horizontal scroll containers: board, tabs, budget strip, tables and code blocks. */
-const SCROLLERS = '[data-testid="board"], .tabs, .budget-strip, .md table, .md pre, .code-block, .tbl-wrap, .mobile-tabs';
+const SCROLLERS = '[data-testid="board"], .tabs, .budget-strip, .md-table, .md pre, .code-block, .tbl-wrap, .mobile-tabs';
 
 /** How wide the page really is: document, scroll containers and all elements past the right edge. */
 async function overflow(page: Page) {

@@ -781,6 +781,26 @@ details.callout-agent > .callout-body {
   border-top: 1px solid var(--line);
   margin: 1em 0;
 }
+/* Tables: as wide as their content. Two boxes (markdownRender.ts): `.md-table` is the text column and
+   centers a wider table on it, `.md-scroll` is the table's own scroll container. Too wide for the
+   room: cells wrap at word boundaries first, then the table scrolls sideways, never the page.
+   Where the text sits in a column of its own (`.desc` inside `.detail-main` or `.wiki-main`, both `md-area` containers) a table may grow
+   past the column up to the width of that area; elsewhere (comments, peek) it stays inside. */
+.md-table {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 0.75em;
+}
+.md-scroll {
+  flex: none;
+  max-width: 100%;
+  /* Narrower than the column: left-aligned like the text (the free space goes here, not to the centering). */
+  margin-right: auto;
+  overflow-x: auto;
+}
+:is(.detail-main, .wiki-main) .desc .md-scroll {
+  max-width: max(100%, calc(100cqw - 2 * var(--md-table-gutter, 16px)));
+}
 .md table {
   border-collapse: collapse;
 }
@@ -788,6 +808,12 @@ details.callout-agent > .callout-body {
 .md th {
   border: 1px solid var(--line);
   padding: 4px 8px;
+  /* Words stay whole (`.md` breaks anywhere, which cut "Wächt|er" in a narrow first column). */
+  overflow-wrap: break-word;
+}
+.md td a,
+.md th a {
+  overflow-wrap: anywhere;
 }
 
 /* Editor: status icon widget and text of a mention (decorations, mentions.ts in lib/editor). */

@@ -934,7 +934,6 @@
   /* As in the rendered view (compact); empty cells stay wide enough to click. */
   :global(.rich table) {
     border-collapse: collapse;
-    margin: 0 0 0.75em;
   }
   :global(.rich td),
   :global(.rich th) {

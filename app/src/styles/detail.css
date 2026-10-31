@@ -14,6 +14,8 @@
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+  /* Width reference for wide tables in the text (md.css). */
+  container: md-area / inline-size;
 }
 .detail-content {
   max-width: 740px;

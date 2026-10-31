@@ -1,5 +1,6 @@
 // Custom node views in the editor: tasks with a clickable checkbox, code blocks with a language
-// picker, info panels with a kind menu, images (a note instead of a broken image while uploading).
+// picker, info panels with a kind menu, images (a note instead of a broken image while uploading),
+// tables (wider than the text column, like the rendered view).
 import { t } from '@selfbound/core/i18n';
 import type { Node } from 'prosemirror-model';
 import type { EditorView, NodeView, NodeViewConstructor, ViewMutationRecord } from 'prosemirror-view';
@@ -303,6 +304,24 @@ class ImageView implements NodeView {
   }
 }
 
+/** Table in the same two boxes as the rendered text (markdownRender.ts, md.css), so editing does not change its width. */
+class TableView implements NodeView {
+  dom: HTMLElement;
+  contentDOM: HTMLElement;
+
+  constructor(private node: Node) {
+    this.dom = document.createElement('div');
+    this.dom.className = 'md-table';
+    const scroll = this.dom.appendChild(document.createElement('div'));
+    scroll.className = 'md-scroll';
+    this.contentDOM = scroll.appendChild(document.createElement('table')).appendChild(document.createElement('tbody'));
+  }
+
+  update(node: Node) {
+    return node.type === this.node.type;
+  }
+}
+
 export interface ViewHooks {
   /** Open the language picker for the code block at `pos` */
   openLang: (pos: number, anchor: HTMLElement) => void;
@@ -316,5 +335,6 @@ export function nodeViews(hooks: ViewHooks): Record<string, NodeViewConstructor>
     code_block: (node, _view, getPos) => new CodeView(node, getPos, hooks.openLang),
     callout: (node, _view, getPos) => new CalloutView(node, getPos, hooks.openKind),
     image: (node) => new ImageView(node),
+    table: (node) => new TableView(node),
   };
 }
