@@ -89,9 +89,9 @@ function expectLayout(b: Boxes, label: string, { wideRoom }: { wideRoom: boolean
     expect(t.right, `${label}: right of the area`).toBeLessThanOrEqual(b.area.right + 0.5);
     expect(t.brokenWords, `${label}: words cut in the middle`).toBe(0);
   }
-  // A short table stays as narrow as its content, left-aligned like the text.
-  expect(narrow.right - narrow.left, `${label}: narrow table`).toBeLessThan(200);
-  expect(narrow.left, `${label}: narrow table left-aligned`).toBeCloseTo(b.column.left, 0);
+  // A short table grows to the text width.
+  expect(narrow.left, `${label}: narrow table left`).toBeCloseTo(b.column.left, 0);
+  expect(narrow.right, `${label}: narrow table right`).toBeCloseTo(b.column.right, 0);
   // Wider than the column: centered on it.
   for (const t of [medium, wide, huge]) {
     if (t.right - t.left > b.column.right - b.column.left + 1) expect(middle(t), `${label}: centered on the column`).toBeCloseTo(center, 0);
@@ -156,9 +156,8 @@ test('Editing a page: the tables keep their width and place', async ({ page }) =
   await page.getByTestId('article-body').click({ position: { x: 5, y: 5 } });
   await expect(page.getByTestId('article-editor')).toBeVisible();
   const editing = await edges('[data-testid="article-editor"]');
-  // The editor keeps empty cells clickable (min-width), so a short table may be a bit wider there.
   expect(editing).toHaveLength(4);
-  expect(editing.slice(1)).toEqual(reading.slice(1));
+  expect(editing).toEqual(reading);
 });
 
 test('Comments: a table stays inside the comment (no breakout rule outside the text column)', async ({ page }) => {
