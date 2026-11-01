@@ -9,6 +9,7 @@ import { ensureTeamStates, teamStates } from '../lib/workflow';
 import { identifierOf, LIMITS } from '../shared/constants';
 import { matchingState, stateForStatus, statusOfState } from '../shared/workflow';
 import { record } from './history';
+import { moveCard } from './roadmap';
 import { statusTimestamps } from './issues';
 import { assertRoom, holds } from './priorityLimits';
 import { assertIssuesAllowed, getIssue, getTeam } from './validate';
@@ -96,6 +97,7 @@ export async function moveIssuesToTeamCore(ctx: MutationCtx, actor: Actor, args:
     // Urgent/high travels along: it must fit the target team's hard limit.
     if (holds({ ...issue, ...changes }, issue.priority)) await assertRoom(ctx, target._id, issue.priority);
     await ctx.db.patch('issues', issue._id, changes);
+    await moveCard(ctx, issue._id, target._id);
     await ctx.db.insert('identifierAliases', { key: aliasKey(source?.key ?? '?', issue.number), issueId: issue._id });
     const identifier = identifierOf(target.key, number);
     await record(ctx, actor, now, args.requestId, { issueId: issue._id, field: 'teamId', from: { teamId: issue.teamId, identifier: previous }, to: { teamId: target._id, identifier } });

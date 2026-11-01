@@ -55,6 +55,8 @@ export async function openCreatedEntry(ctx: MutationCtx, actor: Actor, issueId: 
 function valueOf(field: string, value: unknown): Change['value'] {
   if (value === undefined || value === null) return undefined;
   if (typeof value === 'string' || typeof value === 'number') return value;
+  // `public` (SELF-113): stored as true or missing.
+  if (typeof value === 'boolean') return value ? 1 : undefined;
   if (Array.isArray(value)) return value.filter((x): x is string => typeof x === 'string');
   if (typeof value === 'object') {
     const o = value as Record<string, unknown>;

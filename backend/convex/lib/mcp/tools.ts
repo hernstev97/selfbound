@@ -9,6 +9,8 @@ import { LIMITS, PARTIAL_DATE_RE, WIKI } from '../../shared/constants';
 import { MODEL_LIMITS } from '../../shared/models';
 import { STATE_NAME_MAX } from '../../shared/workflow';
 import type { Priority } from '../../shared/constants';
+import { PROJECT_STATES } from '../../shared/constants';
+import { ROADMAP_LIMITS, STAGE_CHOICES } from '../../shared/roadmap';
 import {
   anyOf,
   array,
@@ -133,6 +135,17 @@ const VISUAL_BLOCKS = 'Info panel: "> [!INFO] Title" quote; chart: ```chart code
 const TWO_LAYERS = 'Write a short summary for the owner on top and the details for agents (acceptance criteria, files, technical notes, test steps) in one "> [!AGENT]" panel below it, shown collapsed.';
 
 const title = () => string({ description: 'Issue title.', min: 1, max: LIMITS.titleMax, transform: (s) => s.trim() });
+
+/** Public fields (SELF-113): what the roadmap and its image export show. */
+const PUBLIC_HINT =
+  'Only public issues appear in the roadmap\'s image export; there they show the public title (else the title), the public summary and the cover image, never the description, comments or identifier.';
+const isPublic = () => boolean({ description: `Public: may appear in the roadmap image export (default false). ${PUBLIC_HINT}` });
+const publicTitle = () =>
+  string({ description: 'Public title for players, instead of the internal title on the roadmap and in the export.', max: ROADMAP_LIMITS.publicTitleMax, transform: (s) => s.trim() });
+const publicSummary = () =>
+  string({ description: 'Public summary for players: two or three plain sentences, no Markdown.', max: ROADMAP_LIMITS.publicSummaryMax, transform: (s) => s.trim() });
+const publicImage = () =>
+  string({ description: 'Cover image: the URL or Markdown line returned by upload_image (or an image already in the description).', min: 1, max: 2000 });
 const labelNames = () =>
   array(string({ min: 1, max: 100, transform: (s) => s.trim() }), {
     description: 'Label names (case-insensitive). The full set: replaces existing labels. See list_labels.',
@@ -233,6 +246,7 @@ const listIssues = object({
         'true = only snoozed issues (`snoozedUntil` is set), false = only issues that are not snoozed. Without it, snoozed issues are listed like any other; each shows its `snoozedUntil`.',
     }),
   ),
+  public: optional(boolean({ description: 'true = only public issues (roadmap export), false = only issues that are not public.' })),
   limit: optional(integer({ description: 'Maximum number of results.', min: 1, max: 100 }), 50),
 });
 
@@ -260,6 +274,10 @@ const newIssue = object({
   dueDate: optional(realDay('Due date, YYYY-MM-DD.')),
   parent: optional(identifier('Parent issue identifier, e.g. "ACME-100".')),
   model: optional(modelChoice(MODEL_INPUT)),
+  public: optional(isPublic()),
+  publicTitle: optional(publicTitle()),
+  publicSummary: optional(publicSummary()),
+  publicImage: optional(publicImage()),
 });
 
 const createIssues = object({
@@ -283,6 +301,7 @@ const expected = object(
     snoozedUntil: optional(nullable(realDay('YYYY-MM-DD'))),
     parent: optional(nullable(identifier())),
     model: optional(nullable(modelSeen('The issue\'s own model as you saw it (`model` from get_issue, as is), or null for none.'))),
+    public: optional(boolean()),
   },
   {
     description:
@@ -290,7 +309,7 @@ const expected = object(
   },
 );
 
-const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'snoozedUntil', 'parent', 'model', 'description'] as const;
+const UPDATE_FIELDS = ['title', 'status', 'priority', 'labels', 'project', 'estimate', 'dueDate', 'snoozedUntil', 'parent', 'model', 'description', 'public', 'publicTitle', 'publicSummary', 'publicImage'] as const;
 
 // For update_issue and set_status the requestId is optional: setting the same values again
 // changes nothing. With a requestId, though, a retry returns the original result instead of a
@@ -322,6 +341,10 @@ const updateIssue = object(
     ),
     parent: optional(nullable(identifier('Parent identifier, or null to remove.'))),
     model: optional(nullable(modelChoice(`${MODEL_INPUT} null removes the issue's own model (it then inherits again).`))),
+    public: optional(isPublic()),
+    publicTitle: optional(nullable(publicTitle())),
+    publicSummary: optional(nullable(publicSummary())),
+    publicImage: optional(nullable(publicImage())),
     description: optional(
       string({
         description: `New Markdown description (replaces the old one). Requires expectedDescriptionVersion. ${TWO_LAYERS} ${VISUAL_BLOCKS}`,
@@ -391,6 +414,124 @@ const listProjects = object({
 const listLabels = object({
   team: optional(teamKey('Only workspace labels and labels of this team.')),
 });
+
+// ---------------------------------------------------------------------------
+// Projects and labels (SELF-113: stages of a roadmap, categories)
+
+const projectName = (description: string) => string({ description, min: 1, max: 100, transform: (s) => s.trim() });
+const projectText = (description: string) => string({ description, max: ROADMAP_LIMITS.projectTextMax, transform: (s) => s.trim() });
+const projectState = () =>
+  enumOf(PROJECT_STATES, { description: 'State: planned, active, paused, done or canceled. Canceled projects are not shown on the roadmap.' });
+const period = () =>
+  string({
+    description: 'Rough time frame, no exact date: a quarter "2027-Q1" or a month "2027-03". The progress view draws the project up to its end.',
+    min: 1,
+    max: 20,
+  });
+const hue = (description = 'Color as an OKLCH hue, 0–360 (e.g. 25 copper, 145 green, 255 blue).') => number({ description, min: 0, max: 360 });
+const position = (what: string) => integer({ description: `Position ${what}, 1 = first. The others keep their order.`, min: 1, max: 1000 });
+
+const createProject = object({
+  requestId: requestId(),
+  team: teamKey('Team the project belongs to (projects belong to exactly one team).'),
+  name: projectName('Project name, unique within the team (case-insensitive).'),
+  description: optional(projectText('Goal of the project in a few sentences (shown on the roadmap and in the progress view; not in the image export unless the owner turns it on).')),
+  readyWhen: optional(projectText('When the project counts as done ("ready when").')),
+  state: optional(projectState()),
+  period: optional(period()),
+  hue: optional(hue()),
+  position: optional(position('among the team\'s projects (the roadmap columns follow this order)')),
+});
+
+const PROJECT_FIELDS = ['name', 'description', 'readyWhen', 'state', 'period', 'hue', 'position'] as const;
+const updateProject = object(
+  {
+    requestId: optionalRequestId(),
+    team: teamKey('Team of the project.'),
+    project: projectName('Current project name (case-insensitive), see list_projects.'),
+    name: optional(projectName('New name.')),
+    description: optional(nullable(projectText('Goal; null or "" removes it.'))),
+    readyWhen: optional(nullable(projectText('"Ready when"; null or "" removes it.'))),
+    state: optional(projectState()),
+    period: optional(nullable(period())),
+    hue: optional(nullable(hue())),
+    position: optional(position('among the team\'s projects')),
+  },
+  {
+    refine(v, _path, errors) {
+      if (!PROJECT_FIELDS.some((f) => v[f] !== undefined)) errors.push(`arguments: nothing to change; give at least one of ${PROJECT_FIELDS.join(', ')}`);
+    },
+  },
+);
+
+const labelName = (description: string) => string({ description, min: 1, max: 60, transform: (s) => s.trim() });
+const groupName = (description: string) => string({ description, min: 1, max: 100, transform: (s) => s.trim() });
+
+const createLabel = object({
+  requestId: requestId(),
+  name: labelName('Label name.'),
+  team: optional(teamKey('Team of the label; without it the label is workspace-wide.')),
+  group: optional(groupName('Label group (case-insensitive). An unknown group is created (in the team, if given).')),
+  exclusive: optional(boolean({ description: 'For the group: at most one of its labels per issue. Sets the flag of an existing group too. Roadmap categories work best in an exclusive group.' })),
+  hue: optional(hue('Color as an OKLCH hue, 0–360. Default: the group\'s color, else a color from the name.')),
+  position: optional(position('within the group (roadmap categories follow this order)')),
+});
+
+const LABEL_FIELDS = ['name', 'hue', 'group', 'exclusive', 'archived', 'position'] as const;
+const updateLabel = object(
+  {
+    requestId: optionalRequestId(),
+    label: labelName('Current label name (case-insensitive), see list_labels.'),
+    team: optional(teamKey('Team whose label it is; without it the workspace label of that name.')),
+    name: optional(labelName('New name.')),
+    hue: optional(hue()),
+    group: optional(nullable(groupName('Move the label into this group (created if unknown), or null to take it out of its group.'))),
+    exclusive: optional(boolean({ description: 'Set the exclusive flag of the label\'s group (after a move: of the new group).' })),
+    archived: optional(boolean({ description: 'true hides the label from new assignments; issues keep it.' })),
+    position: optional(position('within the group')),
+  },
+  {
+    refine(v, _path, errors) {
+      if (!LABEL_FIELDS.some((f) => v[f] !== undefined)) errors.push(`arguments: nothing to change; give at least one of ${LABEL_FIELDS.join(', ')}`);
+    },
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Roadmap (SELF-113)
+
+const getRoadmap = object({
+  team: teamKey('Team whose roadmap to read.'),
+  publicOnly: optional(boolean({ description: 'Only public issues (what the image export may show).' }), false),
+});
+
+const stage = () =>
+  enumOf(STAGE_CHOICES, {
+    description: 'Stage on the roadmap: done, testing, progress (in progress), planned, tentative, or hidden (not on the roadmap).',
+  });
+
+const ROADMAP_FIELDS = ['enabled', 'categoryGroup', 'stages', 'title', 'subtitle', 'accent'] as const;
+const updateRoadmap = object(
+  {
+    team: teamKey('Team whose roadmap settings to change.'),
+    enabled: optional(boolean({ description: 'Roadmap on (entry in the sidebar) or off.' })),
+    categoryGroup: optional(nullable(groupName('Label group whose labels are the roadmap categories (team or workspace group), or null for none.'))),
+    stages: optional(
+      array(object({ status: status('Status of the team.'), stage: stage() }), {
+        description: 'Stage per status; replaces the stored mapping. Statuses not listed use the default of their type (completed → done, started → progress or testing for review/test names, unstarted → planned, backlog → tentative, triage and canceled → hidden).',
+        max: ROADMAP_LIMITS.stagesMax,
+      }),
+    ),
+    title: optional(nullable(string({ description: 'Title of the image export (default: team name); null removes it.', max: ROADMAP_LIMITS.brandTitleMax }))),
+    subtitle: optional(nullable(string({ description: 'Subtitle of the image export; null removes it.', max: ROADMAP_LIMITS.brandSubtitleMax }))),
+    accent: optional(nullable(string({ description: 'Accent color of the image export, hex like "#b87333"; null = the team color.', pattern: /^#[0-9a-fA-F]{6}$/, patternHint: 'a hex color like #b87333' }))),
+  },
+  {
+    refine(v, _path, errors) {
+      if (!ROADMAP_FIELDS.some((f) => v[f] !== undefined)) errors.push(`arguments: nothing to change; give at least one of ${ROADMAP_FIELDS.join(', ')}`);
+    },
+  },
+);
 
 const listStatuses = object({
   team: optional(teamKey('Only the statuses of this team.')),
@@ -523,6 +664,12 @@ const SCHEMAS = {
   get_article: getArticle,
   create_article: createArticle,
   update_article: updateArticle,
+  create_project: createProject,
+  update_project: updateProject,
+  create_label: createLabel,
+  update_label: updateLabel,
+  get_roadmap: getRoadmap,
+  update_roadmap: updateRoadmap,
 } as const;
 
 export type ToolName = keyof typeof SCHEMAS;
@@ -538,7 +685,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   list_issues: {
     title: 'List issues',
     description:
-      'List issues with a preset filter (assigned, due, overdue, in_progress, done_today, triage, sprint) and/or by team, status, label, project and model. Filters combine with AND; without filter or status you get all open issues (triage up to the started statuses). Deleted issues are never returned. Sorted by priority (urgent first, none last), then due date.',
+      'List issues with a preset filter (assigned, due, overdue, in_progress, done_today, triage, sprint) and/or by team, status, label, project, model and public. Filters combine with AND; without filter or status you get all open issues (triage up to the started statuses). Deleted issues are never returned. Sorted by priority (urgent first, none last), then due date.',
     annotations: READ,
   },
   get_issue: {
@@ -551,13 +698,13 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   create_issues: {
     title: 'Create issues',
     description:
-      'Create 1 to 50 issues in one transaction. Teams are given by key, labels and project by name. Issues created by agents are marked as "not yet reviewed" for the owner. requestId makes the call safe to retry. The result lists the new identifiers and any warnings (e.g. budget_warning: a team is over its priority limit). If a priority limit of the team is hard and the new urgent/high issues would go over it, the call fails with priority_limit and nothing is created. An issue created with a status of type completed or canceled (done, canceled, duplicate) gets no priority; a warning with code priority_cleared names the priority that was dropped.',
+      'Create 1 to 50 issues in one transaction. Teams are given by key, labels and project by name. Issues created by agents are marked as "not yet reviewed" for the owner. requestId makes the call safe to retry. The result lists the new identifiers and any warnings (e.g. budget_warning: a team is over its priority limit). If a priority limit of the team is hard and the new urgent/high issues would go over it, the call fails with priority_limit and nothing is created. An issue created with a status of type completed or canceled (done, canceled, duplicate) gets no priority; a warning with code priority_cleared names the priority that was dropped. `public`, `publicTitle`, `publicSummary` and `publicImage` set what the team\'s roadmap export may show.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   update_issue: {
     title: 'Update issue',
     description:
-      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date, snooze, parent or model. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. Set `snoozedUntil` to a future day to snooze an issue (hidden from the owner\'s lists, back in the inbox with a push that morning) and null to unsnooze it. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it. Raising an issue to urgent or high in a team whose hard priority limit is full fails with priority_limit (lower another issue first); a soft limit only adds a budget_warning.',
+      'Change fields of one issue. Only the given fields change; null removes project, estimate, due date, snooze, parent or model. Pass `expected` with the values you saw to avoid overwriting a concurrent change. Changing the description requires expectedDescriptionVersion from get_issue. Set `snoozedUntil` to a future day to snooze an issue (hidden from the owner\'s lists, back in the inbox with a push that morning) and null to unsnooze it. The result lists applied fields, conflicts and warnings. Moving an issue to done, canceled or duplicate removes its priority (only open work carries one); a warning with code priority_cleared names the removed priority, and reopening the issue does not restore it. Raising an issue to urgent or high in a team whose hard priority limit is full fails with priority_limit (lower another issue first); a soft limit only adds a budget_warning. `public` marks the issue for the roadmap\'s image export; `publicTitle`, `publicSummary` and `publicImage` (null removes one) are its public card, the only texts the export shows.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   set_status: {
@@ -598,7 +745,8 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   },
   list_projects: {
     title: 'List projects',
-    description: 'List projects with name, team and state. Every project belongs to exactly one team.',
+    description:
+      'List projects with name, team, state, position within the team, goal (`description`), "ready when", period and color, plus progress: issues total (without canceled), open, started, done, canceled, public, and points (estimates) total and done. Every project belongs to exactly one team.',
     annotations: READ,
   },
   list_statuses: {
@@ -652,8 +800,43 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   list_labels: {
     title: 'List labels',
     description:
-      'List labels with name, group and scope (workspace-wide or team). In an exclusive group an issue can carry only one label.',
+      'List labels with name, group and scope (workspace-wide or team), in their order within the group (`position`). In an exclusive group an issue can carry only one label.',
     annotations: READ,
+  },
+  create_project: {
+    title: 'Create project',
+    description:
+      'Create a project in a team, optionally with goal (`description`), "ready when", state, a rough period (quarter "2027-Q1" or month "2027-03"), color and position. Projects are the columns of the team\'s roadmap and the rows of its progress view, in their order. Assign issues with update_issue or create_issues (`project`). requestId makes the call safe to retry.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  update_project: {
+    title: 'Update project',
+    description:
+      'Change a project of a team: name, goal (`description`), "ready when", state, period, color or position (1 = first column of the roadmap). Only the given fields change; null removes goal, "ready when", period or color.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  },
+  create_label: {
+    title: 'Create label',
+    description:
+      'Create a label, workspace-wide or in a team, optionally in a label group (an unknown group is created; `exclusive` = one label of the group per issue) and at a position within the group. A label group can be a team\'s roadmap categories (update_roadmap `categoryGroup`). Label names should be unique within the team. requestId makes the call safe to retry.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  update_label: {
+    title: 'Update label',
+    description:
+      'Change a label: name, color, group (null takes it out; unknown groups are created), the group\'s exclusive flag, archived, or its position within the group. Only the given fields change.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
+  },
+  get_roadmap: {
+    title: 'Get roadmap',
+    description: `Read a team's roadmap as the owner sees it: the settings (on, category group, stage per status, export title and colors) and per project (in order) its period, state, progress (done/total) and its issues by category with stage, public flag and public card. With publicOnly only public issues, as in the image export. ${PUBLIC_HINT}`,
+    annotations: READ,
+  },
+  update_roadmap: {
+    title: 'Update roadmap settings',
+    description:
+      'Change a team\'s roadmap settings: on/off, the label group whose labels are the categories, the stage each status shows as (done, testing, progress, planned, tentative, hidden), and title, subtitle and accent color of the image export. Only the given fields change.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
 };
 

@@ -90,6 +90,12 @@ describe('MCP over HTTP', () => {
       'get_article',
       'create_article',
       'update_article',
+      'create_project',
+      'update_project',
+      'create_label',
+      'update_label',
+      'get_roadmap',
+      'update_roadmap',
     ]);
     // No tool changes teams or logos.
     expect(JSON.stringify(tools.body.result.tools)).not.toMatch(/logo|create_team|update_team/i);
@@ -479,7 +485,9 @@ describe('MCP over HTTP', () => {
       counts: { open: 2, planned: 1, addedLater: 1 },
     });
     expect((await mcp.call('list_teams', { includeDormant: false })).value.teams.map((x: Json) => x.key)).toEqual(['ORB', 'NOVA']);
-    expect((await mcp.call('list_projects', { team: 'ORB' })).value.projects).toEqual([{ name: 'Orbit · Search', team: 'ORB', state: 'active' }]);
+    expect((await mcp.call('list_projects', { team: 'ORB' })).value.projects).toEqual([
+      { name: 'Orbit · Search', team: 'ORB', state: 'active', position: 1, progress: { total: 0, open: 0, started: 0, done: 0, canceled: 0, public: 0, points: { total: 0, done: 0 } } },
+    ]);
     const labels = (await mcp.call('list_labels', { team: 'NOVA' })).value.labels as Json[];
     expect(labels.map((l) => l.name).sort()).toEqual(['Bug', 'Design', 'Docs', 'Feature']);
     expect(labels.find((l) => l.name === 'Bug')).toMatchObject({ group: 'Type', exclusive: true, scope: 'workspace' });

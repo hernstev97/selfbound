@@ -31,6 +31,9 @@ const FIELD: Record<string, string> = {
   dueDate: 'due date',
   snoozedUntil: 'snoozed until',
   teamId: 'team',
+  publicTitle: 'public title',
+  publicSummary: 'public summary',
+  publicImage: 'public image',
 };
 const IMAGE_RE = /(?:https?:\/\/[^\s()<>"']*)?\/img\/([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/g;
 
@@ -50,6 +53,8 @@ export class ExportIndex {
   readonly prs = new Map<string, Doc<'pullRequests'>[]>();
   readonly relations = new Map<string, Doc<'relations'>[]>();
   readonly aliases = new Map<string, string[]>();
+  /** Public card (roadmap) per issue */
+  readonly cards = new Map<string, Doc<'publicCards'>>();
   /** Any id → display name (labels, projects, sprints, topics, states, teams, issues as identifiers). */
   readonly names = new Map<string, string>();
   readonly agents = new Map<string, string>();
@@ -92,6 +97,8 @@ export class ExportIndex {
       if (r.toId !== r.fromId) push(this.relations, r.toId, r);
     }
     for (const alias of tables.identifierAliases) push(this.aliases, alias.issueId, alias.key);
+    // Missing in exports made before SELF-113.
+    for (const card of tables.publicCards ?? []) this.cards.set(card.issueId, card);
     for (const agent of tables.agents) this.agents.set(agent._id, agent.name);
     this.ownerName = tables.profile[0]?.name ?? 'Owner';
     for (const list of [this.comments, this.history]) for (const rows of list.values()) rows.sort((a, b) => at(a) - at(b));
@@ -241,6 +248,7 @@ export function issueMarkdown(issue: Doc<'issues'>, index: ExportIndex, path: st
       ['due', issue.dueDate],
       ['snoozed_until', issue.snoozedUntil],
       ['model', issue.model && `${issue.model.provider}/${issue.model.modelId}${issue.model.effort ? ` (${issue.model.effort})` : ''}`],
+      ['public', issue.public || undefined],
       ['created', time(issue.createdAt)],
       ['created_by', index.actor(issue.createdBy)],
       ['updated', time(issue.updatedAt)],
@@ -254,6 +262,16 @@ export function issueMarkdown(issue: Doc<'issues'>, index: ExportIndex, path: st
   out.push(`# ${id} ${issue.title}\n`);
   const body = index.bodies.get(issue._id)?.markdown.trim();
   if (body) out.push(`${localImages(body, index, path)}\n`);
+
+  const card = index.cards.get(issue._id);
+  if (card) {
+    const lines = [
+      card.title && `- Title: ${card.title}`,
+      card.summary && `- Summary: ${card.summary.replace(/\n+/g, ' ')}`,
+      card.image && localImages(`- Image: ![cover](/img/${card.image})`, index, path),
+    ].filter(Boolean);
+    out.push(`## Public card\n\n${lines.join('\n')}\n`);
+  }
 
   const relations: string[] = [];
   for (const r of index.relations.get(issue._id) ?? []) {
