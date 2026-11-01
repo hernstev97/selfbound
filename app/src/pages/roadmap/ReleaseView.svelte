@@ -29,7 +29,8 @@
   function open(id: string, e: MouseEvent) {
     if (e.metaKey || e.ctrlKey || e.button !== 0) return;
     e.preventDefault();
-    app.roadmap.open(id as IssueId, { toggle: true });
+    // A click on the card beside closes it; Enter (a click without a pointer, detail 0) opens its page.
+    app.roadmap.open(id as IssueId, { toggle: e.detail > 0 });
   }
 </script>
 

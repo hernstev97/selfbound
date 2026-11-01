@@ -116,9 +116,9 @@
             {/each}
           </div>
         {/if}
-        <label class={['btn', 'small', uploading && 'busy']}>
+        <label class={['btn', 'small', 'pub-upload', uploading && 'busy']}>
           <span class="icon">{@html ICON.image}</span>{uploading ? t('Uploading …') : t('Upload image')}
-          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="visually-hidden" data-testid="detail-public-upload" disabled={uploading} onchange={(e) => void upload(e.currentTarget)} />
+          <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" class="pub-file" data-testid="detail-public-upload" disabled={uploading} onchange={(e) => void upload(e.currentTarget)} />
         </label>
       </div>
     {/if}
@@ -172,12 +172,25 @@
     align-items: flex-start;
     gap: 4px;
   }
+  .pub-file {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
   .pub-cover img {
     width: 100%;
+    max-height: 180px;
     aspect-ratio: 16 / 9;
     object-fit: cover;
     border-radius: var(--radius-md);
     border: 1px solid var(--line);
+  }
+  .pub-upload {
+    position: relative;
+    align-self: flex-start;
   }
   .pub-thumbs {
     display: grid;

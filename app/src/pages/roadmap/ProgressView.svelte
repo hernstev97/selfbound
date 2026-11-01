@@ -66,7 +66,7 @@
   function openIssue(id: IssueId, e: MouseEvent) {
     if (e.metaKey || e.ctrlKey || e.button !== 0) return;
     e.preventDefault();
-    app.roadmap.open(id, { toggle: true });
+    app.roadmap.open(id, { toggle: e.detail > 0 });
   }
 </script>
 

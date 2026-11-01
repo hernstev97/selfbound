@@ -818,6 +818,21 @@
   .pg-scroll {
     margin: 0 10px 88px;
   }
+  /* Narrow name column: the title may wrap, the count stays, the mini bar goes. */
+  .pg-mini {
+    display: none;
+  }
+  .pg-name {
+    gap: 4px;
+    padding-right: 6px;
+  }
+  .pg-row:not(.sub) .pg-title {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    font-size: var(--fs-small);
+  }
   .rx-body {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
