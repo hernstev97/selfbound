@@ -4,7 +4,7 @@
 // browser), the keyboard focus, and computes both views and the data of the image export
 // (core/src/roadmap.ts).
 import { api } from '@selfbound/backend/api';
-import { t } from '../i18n.ts';
+import { msg, t } from '../i18n.ts';
 import { Slice } from '../observable.ts';
 import {
   computeAxis,
@@ -32,6 +32,7 @@ import {
 import type { Page, RoadmapTab } from '../route.ts';
 import type { IssueId, TeamDoc } from '../types.ts';
 import type { App } from './index.ts';
+import { registerAction } from './actions.ts';
 
 export interface RoadmapUi {
   /** Team key of the page; null = not on a roadmap page */
@@ -459,3 +460,27 @@ export class RoadmapController {
     };
   }
 }
+
+// ---------------------------------------------------------------- Roadmap page keyboard
+// Registered only with this chunk (extension point registerAction), like the sprint pages: they work
+// only on the roadmap page, where the chunk is always loaded. "Go to: Roadmap" and the public switch
+// stay in actions.ts (available everywhere).
+
+const roadmapPage = (a: App) => a.nav.page.get().name === 'roadmap' && !!a.roadmapLoaded();
+const roadmapTab = (a: App, tab: RoadmapTab) => roadmapPage(a) && a.roadmap.ui.get().tab === tab;
+for (const action of [
+  { id: 'roadmap.down', label: msg('Next card'), section: 'Roadmap', keys: ['j', 'arrowdown'], hidden: true, when: roadmapPage, run: (a) => a.roadmap.step(1) },
+  { id: 'roadmap.up', label: msg('Previous card'), section: 'Roadmap', keys: ['k', 'arrowup'], hidden: true, when: roadmapPage, run: (a) => a.roadmap.step(-1) },
+  { id: 'roadmap.left', label: msg('Column left'), section: 'Roadmap', keys: ['arrowleft'], hidden: true, when: (a) => roadmapTab(a, 'release'), run: (a) => a.roadmap.stepColumn(-1) },
+  { id: 'roadmap.right', label: msg('Column right'), section: 'Roadmap', keys: ['arrowright'], hidden: true, when: (a) => roadmapTab(a, 'release'), run: (a) => a.roadmap.stepColumn(1) },
+  { id: 'roadmap.open', label: msg('Open card'), section: 'Roadmap', keys: ['enter'], hidden: true, when: (a) => roadmapPage(a) && a.roadmap.ui.get().focus !== null, run: (a) => a.roadmap.activate() },
+  { id: 'roadmap.release', label: msg('Roadmap: release view'), section: 'Roadmap', keys: ['1'], icon: 'roadmap', keywords: 'roadmap release columns spalten etappen', when: roadmapPage, run: (a) => a.roadmap.setTab('release') },
+  { id: 'roadmap.progress', label: msg('Roadmap: progress'), section: 'Roadmap', keys: ['2'], icon: 'progress', keywords: 'fortschritt timeline zeitachse tracker', when: roadmapPage, run: (a) => a.roadmap.setTab('progress') },
+  { id: 'roadmap.toggleAll', label: msg('Expand or collapse all'), section: 'Roadmap', keys: ['z'], icon: 'chevronDown', keywords: 'expand collapse all alle auf zu aufklappen zuklappen fold', when: roadmapPage, run: (a) => a.roadmap.toggleAll() },
+  { id: 'roadmap.public', label: msg('Roadmap: only public issues'), section: 'Roadmap', icon: 'eye', keywords: 'public öffentlich filter export discord', when: roadmapPage, run: (a) => a.roadmap.togglePublicOnly() },
+  { id: 'roadmap.export', label: msg('Export roadmap as image …'), section: 'Roadmap', keys: ['shift+x'], icon: 'image', keywords: 'export image picture png discord share bild teilen exportieren', when: roadmapPage, run: (a) => a.roadmap.exportOpen.set(true) },
+  { id: 'roadmap.today', label: msg('Progress: jump to today'), section: 'Roadmap', keys: ['n'], icon: 'calendar', keywords: 'today now heute jetzt', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.today() },
+  { id: 'roadmap.zoomIn', label: msg('Progress: zoom in'), section: 'Roadmap', keys: ['+', '='], icon: 'plus', keywords: 'zoom in näher quarter quartal', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.zoomBy(-1) },
+  { id: 'roadmap.zoomOut', label: msg('Progress: zoom out'), section: 'Roadmap', keys: ['-'], icon: 'minus', keywords: 'zoom out weiter year jahr', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.zoomBy(1) },
+  { id: 'roadmap.rows', label: msg('Progress: rows by project or category'), section: 'Roadmap', keys: ['r'], icon: 'display', keywords: 'rows zeilen projects categories kategorien projekte', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.setRows(a.roadmap.ui.get().rows === 'projects' ? 'categories' : 'projects') },
+] as Parameters<typeof registerAction>[0][]) registerAction(action);
