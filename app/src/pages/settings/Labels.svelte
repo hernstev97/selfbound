@@ -83,8 +83,8 @@
           <span class="icon">{@html ICON.chevronDown}</span>
         </span>
         {#if id !== 'none'}
-          <button class="icon-btn plain" aria-label={t('Move up')} title={t('Move up')} disabled={i === 0} onclick={() => void admin.moveLabel(l._id, -1)}><span class="icon">{@html ICON.chevronUp}</span></button>
-          <button class="icon-btn plain" aria-label={t('Move down')} title={t('Move down')} disabled={i === labels.length - 1} onclick={() => void admin.moveLabel(l._id, 1)}><span class="icon">{@html ICON.chevronDown}</span></button>
+          <button class="icon-btn plain order-btn" aria-label={t('Move up')} title={t('Move up')} disabled={i === 0} onclick={() => void admin.moveLabel(l._id, -1)}><span class="icon">{@html ICON.chevronUp}</span></button>
+          <button class="icon-btn plain order-btn" aria-label={t('Move down')} title={t('Move down')} disabled={i === labels.length - 1} onclick={() => void admin.moveLabel(l._id, 1)}><span class="icon">{@html ICON.chevronDown}</span></button>
         {/if}
         <button class="btn ghost small" data-testid="label-archive" onclick={() => admin.updateLabel(l._id, { archived: !l.archived })}>{l.archived ? t('Unarchive') : t('Archive')}</button>
       </div>
@@ -108,3 +108,12 @@
     <button class="btn small" type="submit">{t('Create group')}</button>
   </div>
 </form>
+
+<style>
+  /* No room on a phone; the order of roadmap categories is also set in the team settings. */
+  @media (max-width: 768px) {
+    .order-btn {
+      display: none;
+    }
+  }
+</style>
