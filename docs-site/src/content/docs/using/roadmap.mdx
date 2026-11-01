@@ -1,0 +1,105 @@
+---
+title: Roadmap and progress
+description: A team's roadmap with its projects as stages, the progress on a time axis, public issues and an image export with nothing internal in it.
+sidebar:
+  order: 7.5
+---
+import { Aside } from '@astrojs/starlight/components';
+import Kbd from '../../../components/Kbd.astro';
+
+A team can show its work as a **roadmap**: the projects are the stages, in their order, and inside each stage
+the issues are sorted into categories with the stage they are in. The **progress** view puts the same stages on
+a time axis. Both are made from the issues that are already in Selfbound; nothing is entered twice. For sharing,
+the roadmap and the progress view export a picture that contains **public issues only**.
+
+Everything stays behind your sign-in. There is no public page.
+
+## Turning it on
+
+In the team settings (<Kbd keys="o s" />), section **Roadmap**:
+
+- **Roadmap** on adds "Roadmap" under the team in the sidebar. <Kbd keys="g r" /> opens it.
+- **Categories:** a label group whose labels are the categories, for example "Characters", "Places",
+  "Enemies". A group with single choice works best, so every issue has one category. The order of the
+  categories is set right there (or with the arrows in Settings → Labels).
+- **Status on the roadmap:** what each status of the team shows as: *Done*, *Testing*, *In progress*,
+  *Planned*, *Tentative*, or *Not shown*. Without a choice a status uses the default of its type: completed is
+  Done, started is In progress (Testing when the name says review or test), unstarted is Planned, backlog is
+  Tentative, triage and canceled are not shown.
+- **Export title, subtitle and accent color** for the picture. The logo is the team logo.
+
+## Projects are the stages
+
+Every project of the team is a column of the roadmap and a row of the progress view, in the order of Settings →
+Projects (the arrows move a project). Unfold a project there for its roadmap details:
+
+| Field | Meaning |
+|---|---|
+| Goal | What the stage is about, a few sentences. Shown under the column. |
+| Ready when | When the stage counts as done. |
+| Period | A rough time frame, no exact date: a quarter like `2027-Q1` or a month like `2027-03`. |
+| Color | The tint of the column and the bar. |
+| Status | Planned, active, paused, done or canceled. Canceled projects are left off the roadmap. |
+
+## The roadmap
+
+Each column shows the project's period, its state, "x of y done" with a bar, and the goal. Below it, the
+categories with their number of issues; click a category to fold it, or fold all of them with the button at the
+top (<Kbd keys="z" />). A card shows the picture, the title, the short text and the stage.
+
+- **Filters** above the columns: categories and stages (several at once). **Only public** shows what the export
+  would show. The filters are remembered per team.
+- **Opening a card:** in a wide window the issue opens next to the roadmap, fully editable. Click the card again
+  or press <Kbd keys="escape" /> to close it, <Kbd keys="enter" /> to open its own page. On a phone the issue
+  opens as a page.
+- **Keyboard:** <Kbd keys="j" />/<Kbd keys="k" /> within a column, <Kbd keys="arrowleft" />/<Kbd keys="arrowright" />
+  to the next column, <Kbd keys="1" /> and <Kbd keys="2" /> switch between roadmap and progress.
+
+## Progress
+
+One row per project, or per category with the switch at the top (<Kbd keys="r" />). The bar runs from the first
+issue that was started to the last one completed, or to today while work is open. A dashed outline runs on to
+the end of the period; a stage that has not started shows its period dashed. Completed issues are points on the
+row. Click a row to unfold its issues, each with its own bar.
+
+Zoom with **Quarter**, **Two quarters** or **Year** (the plus and minus keys). **Today**
+(<Kbd keys="n" />) scrolls back to now.
+
+## Public issues
+
+An issue is internal until you mark it as **public**: on the issue, section **Roadmap**, or with the command
+"Public on the roadmap". A public issue can have a **public card**:
+
+- a **public title**, if the internal one is not meant for outsiders (otherwise the title is used),
+- a **short text** for players, two or three sentences,
+- a **cover picture**, picked from the images in the description and comments, or uploaded.
+
+Only these three are ever shown outside the app. The switch goes into the history and can be undone with
+<Kbd keys="mod+z" />.
+
+## Exporting a picture
+
+**Export image** (<Kbd keys="shift+x" />) opens a preview. The preview is the file: what you see is what you
+download or copy.
+
+- **View:** roadmap or progress. **Format:** 1920 pixels wide (Discord) or 1080 (phone, portrait). **Look:**
+  dark or light.
+- **Subtitle**, the date ("As of …") and the team logo can be turned off; projects can be left out.
+- **Copy** puts the picture on the clipboard, so <Kbd keys="mod+v" /> pastes it into Discord. **Download PNG**
+  saves it.
+
+<Aside type="caution" title="Only public issues">
+The picture is built from public issues only; the others are left out before anything is drawn, so they do not
+count in "x of y done" either. Descriptions, comments, details for agents and identifiers never appear, and the
+file carries no text metadata. Project goals are internal text too: they appear only if you check
+**Goals of the projects**.
+</Aside>
+
+Discord takes files up to 8 MB. If a picture with many cover images is larger, Selfbound draws it smaller until
+it fits and says so below the preview.
+
+## For agents
+
+Agents can set up a roadmap through MCP: projects with `create_project` and `update_project`, category labels
+with `create_label` and `update_label`, the settings with `update_roadmap`, and the public fields with
+`update_issue`. `get_roadmap` shows the result. See [Tools](/agents/tools/#roadmap-projects-and-labels).

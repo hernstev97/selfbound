@@ -318,3 +318,19 @@ describe('MCP: roadmap tools (SELF-113)', () => {
 });
 
 
+
+describe('sample roadmap (seed.roadmapDemo)', () => {
+  test('creates the team EMB once, local test data only', async () => {
+    const { t, owner } = setup();
+    const first = await owner.mutation(api.seed.roadmapDemo, { images: [] });
+    expect(first.created).toBe(true);
+    expect((await owner.mutation(api.seed.roadmapDemo, { images: [] })).created).toBe(false);
+    const team = await t.run(async (ctx) => (await ctx.db.get('teams', first.teamId))!);
+    expect(team.roadmap).toMatchObject({ on: true, subtitle: 'Early Access · Fahrplan' });
+    const issues = await t.run(async (ctx) => await ctx.db.query('issues').collect());
+    expect(issues.filter((i) => i.public)).toHaveLength(16);
+    expect(issues.filter((i) => i.completedAt !== undefined && i.completedAt < Date.now() - 100 * 86_400_000).length).toBeGreaterThan(0);
+    const noSeed = setup({ allowSeed: false });
+    await expectCode(noSeed.owner.mutation(api.seed.roadmapDemo, { images: [] }), 'access_denied');
+  });
+});
