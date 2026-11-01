@@ -5,7 +5,7 @@
 // landscape) or 1080 (phone, portrait); `scale` shrinks the whole picture to stay below 8 MB.
 import { STAGES, type Stage } from '@selfbound/backend/shared/roadmap';
 import { hueColor, type ExportData } from '@selfbound/core/app/roadmap';
-import type { ExportColumn, ExportRow } from '@selfbound/core/roadmap';
+import { dayOfString, type ExportColumn, type ExportRow } from '@selfbound/core/roadmap';
 import { stripPng } from './png.ts';
 
 export type ExportView = 'roadmap' | 'progress';
@@ -480,7 +480,8 @@ function drawProgress(ctx: Ctx, data: ExportData, opts: RenderOptions, frame: Fr
       ctx.fill();
     }
     if (row.target !== null && row.end === null && row.target > axis.today) {
-      const from = Math.max(axis.today + 1, row.start ?? axis.today + 1);
+      // Started: from today to the end of the period; not started yet: the period itself.
+      const from = Math.max(axis.today + 1, row.start ?? (row.period ? dayOfString(row.period.start) : axis.today + 1));
       ctx.strokeStyle = tint;
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 6]);

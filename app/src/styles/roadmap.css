@@ -500,13 +500,17 @@
   background: var(--accent);
   z-index: 2;
 }
-.pg-now b {
+.pg-now-label {
   position: absolute;
-  top: 2px;
-  left: 4px;
+  top: 4px;
+  z-index: 1;
+  transform: translateX(-50%);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: var(--accent);
+  color: var(--accent-fg);
   font-size: var(--fs-mini);
   font-weight: 590;
-  color: var(--accent-text);
   white-space: nowrap;
 }
 .pg-rows {
@@ -621,6 +625,8 @@
   background: color-mix(in oklch, oklch(0.66 0.14 var(--hue)) 72%, var(--bg-panel));
   display: flex;
   align-items: center;
+  /* The count sits at the end, near today, where the view is scrolled to. */
+  justify-content: flex-end;
   overflow: hidden;
 }
 .pg-bar.done {
@@ -670,13 +676,21 @@
 }
 
 /* ---- Export dialog */
+.rx-overlay {
+  display: grid;
+  place-items: center;
+}
 .rx-dialog {
   width: min(1180px, calc(100vw - 32px));
   height: min(820px, calc(100vh - 32px));
   display: flex;
   flex-direction: column;
-  padding: 0;
   overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  border: 1px solid var(--border-popover);
+  box-shadow: var(--shadow-popover);
+  outline: none;
 }
 .rx-head {
   display: flex;
@@ -704,6 +718,11 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+.rx-lead {
+  margin: 0;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
 }
 .rx-field {
   display: flex;
@@ -740,7 +759,7 @@
   align-items: flex-start;
   justify-content: center;
 }
-.rx-preview canvas {
+.rx-preview img {
   display: block;
   max-width: 100%;
   height: auto;

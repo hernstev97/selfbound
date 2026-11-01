@@ -150,7 +150,7 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="overlay dialog-overlay"
+  class="overlay dim rx-overlay"
   out:leave|global
   {@attach modal()}
   {@attach backCloses(() => close())}
@@ -164,14 +164,14 @@
     }
   }}
 >
-  <div class="dialog rx-dialog" role="dialog" aria-modal="true" aria-labelledby="rx-title" data-testid="roadmap-export-dialog">
+  <div class="rx-dialog" role="dialog" aria-modal="true" aria-labelledby="rx-title" data-testid="roadmap-export-dialog">
     <header class="rx-head">
       <h2 id="rx-title">{t('Export as image')}</h2>
       <button class="icon-btn plain" aria-label={t('Close')} onclick={close}><span class="icon">{@html ICON.close}</span></button>
     </header>
     <div class="rx-body">
       <div class="rx-options">
-        <p class="rx-note">{t('Only issues marked as public appear, with their public title, summary and picture. Descriptions, comments and identifiers never do.')}</p>
+        <p class="rx-lead">{t('Only issues marked as public appear, with their public title, summary and picture. Descriptions, comments and identifiers never do.')}</p>
         <div class="rx-field">
           <span class="rx-label">{t('View')}</span>
           <span class="seg">
@@ -213,7 +213,7 @@
         </div>
       </div>
       <div class="rx-preview" data-testid="export-preview">
-        {#if url && !nothing}<img src={url} alt={t('Preview of the picture')} data-testid="export-image" style="max-width: 100%; height: auto; box-shadow: var(--shadow-popover); border-radius: 6px" />{/if}
+        {#if url && !nothing}<img src={url} alt={t('Preview of the picture')} data-testid="export-image" />{/if}
         {#if nothing}
           <div class="empty"><div class="empty-text">{t('No public issues yet. Mark issues as public on the issue (Roadmap section) or with the command “Public on the roadmap”.')}</div></div>
         {:else if busy}<span class="rx-status">{t('Drawing …')}</span>{/if}

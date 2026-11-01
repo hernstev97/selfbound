@@ -83,7 +83,7 @@
                       <span class="rm-card-top">
                         <span class="rm-stage" data-stage={card.stage}><span class="rm-stage-dot" data-stage={card.stage}></span>{STAGE_TEXT[card.stage]}</span>
                         <span class="rm-card-key">{card.key}</span>
-                        {#if card.public}<span class="rm-public" title={t('Public: appears in the image export')}><span class="icon">{@html ICON.eye}</span><span class="visually-hidden">{t('Public')}</span></span>{/if}
+                        {#if card.public}<span class="rm-public" role="img" aria-label={t('Public')} title={t('Public: appears in the image export')}><span class="icon">{@html ICON.eye}</span></span>{/if}
                       </span>
                       <span class="rm-card-title">{card.title}</span>
                       {#if card.title !== card.internalTitle}<span class="rm-card-internal" title={t('Internal title')}>{card.internalTitle}</span>{/if}

@@ -45,7 +45,8 @@
       const smooth = shownJump !== -1 && jump !== shownJump;
       shownJump = jump;
       shownZoom = zoom;
-      showToday(smooth);
+      // After layout: the track gets its new width in this update.
+      requestAnimationFrame(() => showToday(smooth));
     }
   });
 
@@ -98,6 +99,7 @@
               <span style:left="{x(q.start)}px" style:width="{q.days * perDay}px">{t('Q{quarter} {year}', { quarter: q.quarter, year: q.year })}</span>
             {/each}
           </div>
+          <span class="pg-now-label" style:left="{x(today)}px">{t('Today')}</span>
           <div class="pg-months">
             {#each view.axis.months as m (m.start)}
               <span style:left="{x(m.start)}px" style:width="{m.days * perDay}px">{m.days * perDay >= 34 ? monthText(m.year, m.month) : monthText(m.year, m.month, 'narrow')}</span>
@@ -107,7 +109,7 @@
       </div>
       <div class="pg-lines" aria-hidden="true" style:width="{trackW}px">
         {#each view.axis.months as m (m.start)}<span class={[m.month % 3 === 1 && 'q']} style:left="{x(m.start)}px"></span>{/each}
-        <span class="pg-now" style:left="{x(today)}px"><b>{t('Today')}</b></span>
+        <span class="pg-now" style:left="{x(today)}px"></span>
       </div>
       <div class="pg-rows">
         {#if view.rows.length === 0}
@@ -122,7 +124,7 @@
               <span class="pg-name-text">
                 <span class="pg-title">{row.name}</span>
                 <span class="pg-sub">
-                  {#if row.state}{PROJECT_STATE_TEXT[row.state] ?? row.state}{/if}{#if row.state && period} · {/if}{#if period}{period}{/if}
+                  {[row.state ? (PROJECT_STATE_TEXT[row.state] ?? row.state) : null, period].filter(Boolean).join(' · ')}
                 </span>
               </span>
               <span class="pg-count" data-testid="progress-count">{row.done}/{row.total}</span>
@@ -139,7 +141,8 @@
                 </span>
               {/if}
               {#if row.end === null && row.target !== null && row.target > today}
-                {@const from = Math.max(today + 1, row.start ?? today + 1)}
+                <!-- Started: from today to the end of the period; not started yet: the period itself. -->
+                {@const from = Math.max(today + 1, row.start !== null ? row.start : row.period ? dayOfString(row.period.start) : today + 1)}
                 <span class="pg-plan" style:left="{x(from)}px" style:width="{Math.max(2, (row.target + 1 - from) * perDay)}px" title={t('Planned until {date}', { date: dayText(row.target) })}></span>
               {/if}
               {#if row.target !== null}<span class="pg-target" style:left="{x(row.target + 1)}px" title={t('End of the period: {date}', { date: dayText(row.target) })}></span>{/if}

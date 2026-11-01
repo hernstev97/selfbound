@@ -29,4 +29,9 @@ export default {
   'Snoozed issue is back': 'Zurückgestelltes Issue ist zurück',
   'In the morning of the chosen day a snoozed issue returns to the inbox.':
     'Am gewählten Tag kommt ein zurückgestelltes Issue morgens zurück in den Eingang.',
+  // backend/convex/shared/roadmap.ts: STAGE_LABEL (Done and Planned exist already)
+  Testing: 'Auf Test',
+  'In progress': 'In Arbeit',
+  Tentative: 'Vorläufig',
+  'Not shown': 'Nicht zeigen',
 } satisfies Dictionary;

@@ -85,13 +85,13 @@
       <div class="card-row muted">{t('The group has no labels yet. Add them under Settings → Labels.')}</div>
     {/if}
     <div class="card-row column" data-testid="team-roadmap-stages">
-      <span class="t">{t('Stage per status')}<div class="sub">{t('What each status shows as on the roadmap. "Not shown" keeps its issues off the roadmap.')}</div></span>
+      <span class="t">{t('Status on the roadmap')}<div class="sub">{t('What each status shows as on the roadmap. "Not shown" keeps its issues off the roadmap.')}</div></span>
       <div class="rm-stage-map">
         {#each states as s (s._id)}
           <label class="rm-stage-line">
             <span class="grow">{s.name}</span>
             <span class="dp-select">
-              <select aria-label={t('Stage for {status}', { status: s.name })} data-testid="team-roadmap-stage" data-state={s.name} value={stageOf(s._id)} onchange={(e) => setStage(s._id as StateId, e.currentTarget.value as StageChoice | '')}>
+              <select aria-label={t('Roadmap status for {status}', { status: s.name })} data-testid="team-roadmap-stage" data-state={s.name} value={stageOf(s._id)} onchange={(e) => setStage(s._id as StateId, e.currentTarget.value as StageChoice | '')}>
                 <option value="">{t('Default: {stage}', { stage: STAGE_TEXT[defaultStage(s)] })}</option>
                 {#each STAGE_CHOICES as stage (stage)}<option value={stage}>{STAGE_TEXT[stage]}</option>{/each}
               </select>
