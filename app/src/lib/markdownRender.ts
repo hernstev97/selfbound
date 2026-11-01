@@ -71,6 +71,10 @@ const DRIVE_LINE =
   /^ {0,3}(?:<?https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{10,200})(?:[/?#][^\s<>]*)?>?|\[([^\]\n]*)\]\(https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]{10,200})(?:[/?#][^\s()]*)?\))[ \t]*(?:\n|$)/;
 const DRIVE_START = /(?:^|\n) {0,3}(?:<|\[[^\]\n]*\]\()?https:\/\/drive\.google\.com\/file\/d\//;
 
+/** Every table sits in two boxes: the outer one centers it on the text column, the inner one scrolls (md.css). */
+const TABLE_OPEN = '<div class="md-table"><div class="md-scroll"><table>';
+const TABLE_CLOSE = '</table></div></div>';
+
 /**
  * Sanitizing renderer: Markdown → safe HTML. `highlight` returns the colored HTML of a code block,
  * or null while the highlighter is not loaded yet (the block stays neutral).
@@ -174,7 +178,7 @@ export function createRender(
     FORBID_ATTR: ['style'],
   };
   return (markdown: string, teamKeys?: ReadonlySet<string>) => {
-    const html = marked.parse(markdown, { async: false }) as string;
+    const html = (marked.parse(markdown, { async: false }) as string).replaceAll('<table>', TABLE_OPEN).replaceAll('</table>', TABLE_CLOSE);
     // Bare identifiers only if the text can contain one (otherwise keep the fast path).
     if (!teamKeys?.size || !/[A-Z][A-Z0-9]{1,5}-[1-9]/.test(markdown)) return DOMPurify.sanitize(html, options);
     const fragment = DOMPurify.sanitize(html, { ...options, RETURN_DOM_FRAGMENT: true });
