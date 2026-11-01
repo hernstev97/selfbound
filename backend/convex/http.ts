@@ -241,6 +241,9 @@ http.route({
         // A token always points to the same file.
         'Cache-Control': 'private, max-age=31536000, immutable',
         'Cross-Origin-Resource-Policy': 'cross-origin',
+        // The roadmap's image export draws cover images onto a canvas, which needs CORS. Nothing is
+        // revealed by it: whoever has the token can load the image anyway.
+        'Access-Control-Allow-Origin': '*',
       },
     });
   }),

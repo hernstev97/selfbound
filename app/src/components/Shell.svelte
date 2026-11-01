@@ -43,6 +43,8 @@
       <Lazy load={pages.pulls} />
     {:else if shell.page === 'projects'}
       <Lazy load={pages.projects} />
+    {:else if shell.page === 'roadmap'}
+      <Lazy load={pages.roadmap} />
     {:else if shell.page === 'wiki' || shell.page === 'article'}
       <Lazy load={pages.wiki} />
     {:else if shell.page === 'drafts'}

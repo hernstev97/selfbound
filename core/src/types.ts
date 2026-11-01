@@ -84,6 +84,8 @@ export interface DetailDoc {
   pullRequests: PullRequestInfo[];
   history: HistoryDoc[];
   sprints: { sprintId: SprintId; kind: SprintItemKind; addedAt: number; removedAt?: number; sprint: { _id: SprintId; number: number; name: string; state: SprintDoc['state'] } }[];
+  /** Public card for the roadmap (SELF-113); null = none, missing in an older cache */
+  publicCard?: { title: string | null; summary: string | null; image: string | null } | null;
 }
 
 export interface CommentDoc {

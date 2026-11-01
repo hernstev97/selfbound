@@ -45,7 +45,7 @@
   const pullTitle = $derived(
     [sb.pulls.ready ? t('{count} ready to merge', { count: sb.pulls.ready }) : '', sb.pulls.failing ? t('{count} with failing checks', { count: sb.pulls.failing }) : ''].filter(Boolean).join(' · '),
   );
-  const teamPages = (key: string) => ({ triage: view('triage', key), issues: view('active', key), backlog: view('backlog', key), projects: { name: 'projects', team: key } as Page, wiki: { name: 'wiki', team: key } as Page, settings: { name: 'settings', section: 'teams', sub: key } as Page });
+  const teamPages = (key: string) => ({ triage: view('triage', key), issues: view('active', key), backlog: view('backlog', key), projects: { name: 'projects', team: key } as Page, roadmap: { name: 'roadmap', team: key, tab: 'release' } as Page, wiki: { name: 'wiki', team: key } as Page, settings: { name: 'settings', section: 'teams', sub: key } as Page });
 
   // The list comes first on startup: the cards of the other teams follow one frame after the first
   // issues (after syncing when the store is empty). Otherwise startup would paint them in the same frame.
@@ -222,6 +222,11 @@
         <a class={['nav-item', sb.active === `team:${team.key}:projects` && 'active']} href={pagePath(tp.projects)} onclick={(e) => go(e, tp.projects)} data-flip="nav:{team.key}:projects" data-testid="nav-team-{team.key}-projects">
           <span class="icon mi ui-projects"></span><span class="label">{t('Projects')}</span>
         </a>
+        {#if team.roadmap}
+          <a class={['nav-item', sb.active === `team:${team.key}:roadmap` && 'active']} href={pagePath(tp.roadmap)} onclick={(e) => go(e, tp.roadmap)} data-flip="nav:{team.key}:roadmap" data-testid="nav-team-{team.key}-roadmap" title={tip(t('Roadmap'), 'go.roadmap')}>
+            <span class="icon mi ui-roadmap"></span><span class="label">{t('Roadmap')}</span>
+          </a>
+        {/if}
         {/if}
         {#if team.wiki}
           <a class={['nav-item', sb.active === `team:${team.key}:wiki` && 'active']} href={pagePath(tp.wiki)} onclick={(e) => go(e, tp.wiki)} data-flip="nav:{team.key}:wiki" data-testid="nav-team-{team.key}-wiki" title={tip(t('Knowledge'), 'go.wiki')}>

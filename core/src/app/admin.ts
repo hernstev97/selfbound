@@ -9,6 +9,7 @@ import type { Id } from '@selfbound/backend/dataModel';
 import type { LabelDoc, LabelGroupDoc, Meta, ProjectDoc, StateDoc, StateId, TeamDoc, TeamId } from '../types.ts';
 import type { StateType } from '@selfbound/backend/shared/workflow';
 import type { ModelChoice, ModelInfo } from '@selfbound/backend/shared/models';
+import type { StageChoice } from '@selfbound/backend/shared/roadmap';
 import type { App } from './index.ts';
 import { errorMessage } from './toasts.ts';
 import type { PriorityLimits } from '../budget.ts';
@@ -337,8 +338,62 @@ export class Admin {
     return this.#run(t('Project not created'), () => this.store.call(api.projects.create, { teamId, name, state }));
   }
 
-  updateProject(projectId: ProjectDoc['_id'], patch: { name?: string; state?: ProjectState }) {
-    return this.#run(t('Project not updated'), () => this.store.call(api.projects.update, { projectId, ...patch }, this.#meta((m) => ({ ...m, projects: m.projects.map((p) => (p._id === projectId ? { ...p, ...patch } : p)) }))));
+  /** Name, state and the roadmap fields (SELF-113); null or '' clears goal, "ready when", period or color. */
+  updateProject(projectId: ProjectDoc['_id'], patch: { name?: string; state?: ProjectState; description?: string | null; readyWhen?: string | null; period?: string | null; hue?: number | null }) {
+    // Optimistic: cleared fields go away, the period keeps the input until the server normalizes it.
+    const local = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, v === null || v === '' ? undefined : v]));
+    return this.#run(t('Project not updated'), () => this.store.call(api.projects.update, { projectId, ...patch }, this.#meta((m) => ({ ...m, projects: m.projects.map((p) => (p._id === projectId ? ({ ...p, ...local } as ProjectDoc) : p)) }))));
+  }
+
+  /** Move a project one place up/down within its team (the roadmap columns follow). */
+  moveProject(projectId: ProjectDoc['_id'], delta: -1 | 1) {
+    const projects = this.store.meta.get()?.projects ?? [];
+    const project = projects.find((p) => p._id === projectId);
+    if (!project) return;
+    const siblings = projects.filter((p) => p.teamId === project.teamId).sort((a, b) => a.order - b.order);
+    const i = siblings.findIndex((p) => p._id === projectId);
+    const j = i + delta;
+    if (j < 0 || j >= siblings.length) return;
+    [siblings[i], siblings[j]] = [siblings[j]!, siblings[i]!];
+    const ids = siblings.map((p) => p._id);
+    return this.#run(
+      t('Order not saved'),
+      () =>
+        this.store.call(
+          api.projects.reorder,
+          { teamId: project.teamId, projectIds: ids },
+          this.#meta((m) => ({ ...m, projects: m.projects.map((p) => (ids.includes(p._id) ? { ...p, order: ids.indexOf(p._id) } : p)).sort((a, b) => a.order - b.order) })),
+        ),
+    );
+  }
+
+  /** Move a label one place up/down within its group (roadmap categories follow this order). */
+  moveLabel(labelId: LabelDoc['_id'], delta: -1 | 1) {
+    const labels = this.store.meta.get()?.labels ?? [];
+    const label = labels.find((l) => l._id === labelId);
+    if (!label) return;
+    const siblings = labels.filter((l) => (label.groupId ? l.groupId === label.groupId : !l.groupId && l.teamId === label.teamId)).sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity) || a.name.localeCompare(b.name));
+    const i = siblings.findIndex((l) => l._id === labelId);
+    const j = i + delta;
+    if (j < 0 || j >= siblings.length) return;
+    [siblings[i], siblings[j]] = [siblings[j]!, siblings[i]!];
+    const ids = siblings.map((l) => l._id);
+    return this.#run(t('Order not saved'), () => this.store.call(api.labels.reorder, { labelIds: ids }, this.#meta((m) => ({ ...m, labels: m.labels.map((l) => (ids.includes(l._id) ? { ...l, order: ids.indexOf(l._id) } : l)) }))));
+  }
+
+  // ---------------------------------------------------------------- Roadmap (SELF-113)
+
+  /** A team's roadmap settings; only the given fields (null clears; `stages` replaces the mapping). */
+  updateRoadmap(teamId: TeamId, patch: { on?: boolean; categoryGroupId?: LabelGroupDoc['_id'] | null; stages?: { stateId: StateDoc['_id']; stage: StageChoice }[]; title?: string | null; subtitle?: string | null; accent?: string | null }) {
+    const apply = (team: TeamDoc): TeamDoc => {
+      const next: Record<string, unknown> = { ...(team.roadmap ?? { on: false }) };
+      for (const [k, v] of Object.entries(patch)) {
+        if (v === null || v === '' || (k === 'stages' && Array.isArray(v) && v.length === 0)) delete next[k];
+        else next[k] = v;
+      }
+      return { ...team, roadmap: next as TeamDoc['roadmap'] };
+    };
+    return this.#run(t('Roadmap settings not saved'), () => this.store.call(api.roadmap.updateSettings, { teamId, ...patch }, this.#meta((m) => ({ ...m, teams: m.teams.map((x) => (x._id === teamId ? apply(x) : x)) }))));
   }
 
   // ---------------------------------------------------------------- Labels

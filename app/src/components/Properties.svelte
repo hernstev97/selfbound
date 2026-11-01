@@ -6,6 +6,7 @@
   import { anchorOf, tip } from '../lib/ui.ts';
   import { logoClass } from '../lib/providerLogo.ts';
   import TeamLogo from './TeamLogo.svelte';
+  import IssuePublic from './IssuePublic.svelte';
 
   let { detail: d }: { detail: DetailState } = $props();
 
@@ -72,6 +73,8 @@
     ><span class="icon" style="color: var(--text-muted)">{@html ICON.parent}</span>{#if d.parent}<span class="val">{d.parent.key} {d.parent.title}</span>{:else}<span class="empty-val">{t('Set parent')}</span>{/if}</button
   >
 </div>
+
+<IssuePublic detail={d} />
 
 <div class="props-card">
   <div class="prop-meta">

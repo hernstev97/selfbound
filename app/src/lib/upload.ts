@@ -51,14 +51,20 @@ export function insertImages(field: ImageField, files: File[], target: UploadTar
   for (const job of jobs) void run(job);
 }
 
+/** One image checked, shrunk and uploaded; returns its URL (`<site>/img/<token>`). Also used for roadmap cover images. */
+export async function uploadImage(file: File): Promise<string> {
+  const blob = await prepareImage(file);
+  const uploadUrl = await app.store.call(api.files.generateUploadUrl, {});
+  const response = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': blob.type }, body: blob });
+  if (!response.ok) throw new Error(t('Upload failed ({status}).', { status: response.status }));
+  const { storageId } = (await response.json()) as { storageId: Id<'_storage'> };
+  const { url } = await app.store.act(api.files.register, { storageId });
+  return url;
+}
+
 async function run(job: Job) {
   try {
-    const blob = await prepareImage(job.file);
-    const uploadUrl = await app.store.call(api.files.generateUploadUrl, {});
-    const response = await fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': blob.type }, body: blob });
-    if (!response.ok) throw new Error(t('Upload failed ({status}).', { status: response.status }));
-    const { storageId } = (await response.json()) as { storageId: Id<'_storage'> };
-    const { url } = await app.store.act(api.files.register, { storageId });
+    const url = await uploadImage(job.file);
     replace(job, { alt: job.name, src: url });
   } catch (error) {
     replace(job, failed(job));

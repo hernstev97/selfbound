@@ -2780,6 +2780,10 @@ button.crumb:hover {
   html .props-col {
     display: none;
   }
+  html .mobile-public {
+    display: block;
+    margin-bottom: 16px;
+  }
   html .detail-content {
     padding: 12px 16px 120px;
   }

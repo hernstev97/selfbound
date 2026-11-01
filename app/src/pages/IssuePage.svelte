@@ -11,6 +11,7 @@
   import Description from '../components/Description.svelte';
   import Activity from '../components/Activity.svelte';
   import Properties from '../components/Properties.svelte';
+  import IssuePublic from '../components/IssuePublic.svelte';
   import IssueKnowledge from '../components/IssueKnowledge.svelte';
   import IssuePullRequests from '../components/pr/IssuePullRequests.svelte';
   import DetailSkeleton from '../components/DetailSkeleton.svelte';
@@ -148,6 +149,9 @@
           <button class={['chip', d.estimate === null && 'unset']} onclick={(e) => open('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
           <button class={['chip', (!d.model || d.model.source !== 'issue') && 'unset']} data-testid="issue-model" onclick={(e) => open('model', e)}><span class={['icon mi', logoClass(d.model?.logo)]}></span>{d.model?.label ?? t('Model')}</button>
         </div>
+
+        <!-- Where the properties column is hidden (phone, narrow split), the roadmap card sits here. -->
+        <div class="mobile-public"><IssuePublic detail={d} /></div>
 
         <Description detail={d} />
 

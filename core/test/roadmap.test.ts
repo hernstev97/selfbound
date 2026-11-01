@@ -39,7 +39,7 @@ const meta: Meta = {
 };
 const team = meta.teams.find((t) => t._id === 't1')!;
 
-const issue = (seq: number, patch: Partial<IssueDoc>): Issue => ({ ...doc(seq, { teamId: 't1', ...patch }), key: `ACME-${seq + 1}` }) as Issue;
+const issue = (seq: number, patch: Record<string, unknown>): Issue => ({ ...doc(seq, { teamId: 't1', ...patch } as Partial<IssueDoc>), key: `ACME-${seq + 1}` }) as Issue;
 
 const issues: Issue[] = [
   issue(1, { title: 'Hero model', projectId: 'p1', labelIds: ['c1'], status: 'done', public: true, startedAt: at('2026-07-02'), completedAt: at('2026-08-15') }),
@@ -87,7 +87,7 @@ describe('release view', () => {
   });
 
   test('a status mapped to another stage, or hidden, moves or drops the cards', () => {
-    const mapped = { ...team, roadmap: { on: true, categoryGroupId: 'g9', stages: [{ stateId: 't1:in_progress', stage: 'testing' as const }, { stateId: 't1:todo', stage: 'hidden' as const }] } };
+    const mapped = { ...team, roadmap: { on: true, categoryGroupId: 'g9', stages: [{ stateId: 't1:in_progress', stage: 'testing' as const }, { stateId: 't1:todo', stage: 'hidden' as const }] } } as unknown as typeof team;
     const view = computeRelease({ ...input, team: mapped }, NO_FILTERS, '-');
     const two = view.columns[1]!;
     expect(two.groups.flatMap((g) => g.cards.map((c) => [c.internalTitle, c.stage]))).toEqual([['Second circle', 'testing']]);

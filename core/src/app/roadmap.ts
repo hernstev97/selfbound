@@ -374,9 +374,10 @@ export class RoadmapController {
     if (focus && !this.#order().includes(focus)) this.ui.set({ ...this.ui.get(), focus: null });
   }
 
-  focus(id: string | null) {
+  /** `follow`: the issue beside the page follows the focus (J/K, ←/→), as in a split list. */
+  focus(id: string | null, follow = false) {
     if (this.ui.get().focus !== id) this.ui.set({ ...this.ui.get(), focus: id });
-    if (id && this.app.detail.besideShown() && this.app.store.get(id as IssueId)) this.app.detail.showBeside(id as IssueId);
+    if (follow && id && this.app.detail.besideShown() && this.app.store.get(id as IssueId)) this.app.detail.showBeside(id as IssueId);
   }
 
   /** J/K: next or previous card in the column (release) or row (progress). */
@@ -388,16 +389,16 @@ export class RoadmapController {
       const at = columns.findIndex((c) => ui.focus !== null && c.includes(ui.focus));
       if (at < 0) {
         const first = columns.find((c) => c.length > 0);
-        return this.focus(first ? (delta > 0 ? first[0]! : first.at(-1)!) : null);
+        return this.focus(first ? (delta > 0 ? first[0]! : first.at(-1)!) : null, true);
       }
       const col = columns[at]!;
       const i = col.indexOf(ui.focus!);
-      return this.focus(col[Math.max(0, Math.min(col.length - 1, i + delta))]!);
+      return this.focus(col[Math.max(0, Math.min(col.length - 1, i + delta))]!, true);
     }
     const order = this.#order();
     const i = ui.focus ? order.indexOf(ui.focus) : -1;
     const next = i < 0 ? (delta > 0 ? order[0] : order.at(-1)) : order[Math.max(0, Math.min(order.length - 1, i + delta))];
-    this.focus(next ?? null);
+    this.focus(next ?? null, true);
   }
 
   /** ←/→ in the release view: the card at the same height in the next column with cards. */
@@ -411,7 +412,7 @@ export class RoadmapController {
     for (let i = at + delta; i >= 0 && i < columns.length; i += delta) {
       if (columns[i]!.length === 0) continue;
       at = i;
-      return this.focus(columns[i]![Math.min(row, columns[i]!.length - 1)]!);
+      return this.focus(columns[i]![Math.min(row, columns[i]!.length - 1)]!, true);
     }
   }
 
@@ -424,13 +425,14 @@ export class RoadmapController {
   }
 
   /**
-   * Opens an issue: beside the roadmap in a wide window, as its own page otherwise. A second
-   * open of the issue already beside opens its page.
+   * Opens an issue: beside the roadmap in a wide window, as its own page otherwise. Clicking the
+   * card that is already beside closes it (`toggle`); Enter on it opens its page.
    */
-  open(id: IssueId) {
+  open(id: IssueId, opts: { toggle?: boolean } = {}) {
     this.focus(id);
     const wide = this.app.wide.get() && !this.app.mobile.get();
-    if (!wide || this.app.detail.beside.get() === id) return this.app.openIssue(id);
+    if (!wide) return this.app.openIssue(id);
+    if (this.app.detail.beside.get() === id) return opts.toggle ? this.app.detail.showBeside(null) : this.app.openIssue(id);
     this.app.detail.showBeside(id);
   }
 
