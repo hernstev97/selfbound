@@ -42,9 +42,11 @@
     }
   }
   let o = $state(read());
+  /** A plain copy that reads every option (so effects track them); no $state.snapshot, which would put a Svelte helper into the start bundle. */
+  const plain = (): Options => ({ ...o, skip: [...o.skip] });
   let subtitle = $state(o.subtitle ?? app.roadmap.team()?.roadmap?.subtitle ?? '');
   $effect(() => {
-    const snapshot = { ...$state.snapshot(o), subtitle: subtitle.trim() || null };
+    const snapshot = { ...plain(), subtitle: subtitle.trim() || null };
     try {
       localStorage.setItem(`${KEY}:${uiSlice.current.team}`, JSON.stringify(snapshot));
     } catch {
@@ -76,7 +78,7 @@
   // Render after a short pause; a newer change wins.
   $effect(() => {
     const d = data;
-    const opts = $state.snapshot(o);
+    const opts = plain();
     const sub = subtitle.trim() || null;
     if (!d) return;
     const mine = ++run;

@@ -29,6 +29,13 @@
   const today = $derived(view?.axis.today ?? 0);
 
   let scroller = $state<HTMLElement>();
+  /** Visible width; a ResizeObserver of its own (bind:clientWidth would put a Svelte helper into the start bundle). */
+  function measure(node: HTMLElement) {
+    viewport = node.clientWidth;
+    const observer = new ResizeObserver(() => (viewport = node.clientWidth));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }
   /** Scroll so that today sits in the left third of the track (on open, on "Today", after a zoom). */
   function showToday(smooth: boolean) {
     if (!scroller || !view) return;
@@ -88,7 +95,7 @@
   </span>
 </div>
 
-<div class="pg-scroll" bind:this={scroller} bind:clientWidth={viewport} data-testid="roadmap-progress">
+<div class="pg-scroll" bind:this={scroller} {@attach measure} data-testid="roadmap-progress">
   {#if view}
     <div class="pg-grid" style:--name-w="{nameW}px" style:width="{nameW + trackW}px">
       <div class="pg-head">
