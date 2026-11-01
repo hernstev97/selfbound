@@ -156,9 +156,11 @@ export interface IssuePatch {
   sprintId?: SprintId | null;
   /** Desired model (XLR8-93); `null` = none of its own (inherits again) */
   model?: ModelChoice | null;
+  /** May appear in the roadmap's image export (SELF-113); stored only as true */
+  public?: boolean;
 }
 export type PatchField = keyof IssuePatch;
-export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'snoozedUntil', 'parentId', 'sprintId', 'model'];
+export const PATCH_FIELDS: PatchField[] = ['title', 'stateId', 'status', 'priority', 'labelIds', 'projectId', 'estimate', 'dueDate', 'snoozedUntil', 'parentId', 'sprintId', 'model', 'public'];
 
 /** New issue (like `NewIssue` in the backend). */
 export interface NewIssue {

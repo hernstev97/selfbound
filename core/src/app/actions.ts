@@ -11,7 +11,7 @@ import type { Issue, IssueId, PaletteKind, Status } from '../types.ts';
 import { VIEWS, addTarget, planSprint } from '../views.ts';
 import type { App } from './index.ts';
 
-export type ActionSection = 'Issue' | 'Selection' | 'Navigation' | 'View' | 'General' | 'Triage' | 'Inbox' | 'Sprint' | 'Wiki';
+export type ActionSection = 'Issue' | 'Selection' | 'Navigation' | 'View' | 'General' | 'Triage' | 'Inbox' | 'Sprint' | 'Wiki' | 'Roadmap';
 
 /** Display name of each section (command menu, keyboard help). */
 export const SECTION_LABEL: Record<ActionSection, string> = translated({
@@ -24,6 +24,7 @@ export const SECTION_LABEL: Record<ActionSection, string> = translated({
   Inbox: 'Inbox',
   Sprint: 'Sprint',
   Wiki: 'Knowledge',
+  Roadmap: 'Roadmap',
 });
 
 export interface Action {
@@ -83,6 +84,10 @@ const someUnread = (a: App, ids: readonly IssueId[]) => entries(a, ids).some(unr
 const inboxAll = (a: App) => (inboxPage(a) ? entries(a, a.list.visibleIds()) : []);
 // Pull requests page (own chunk): J/K and Enter move through its rows.
 const pullsPage = (a: App) => a.nav.page.get().name === 'pulls' && !!a.pullsLoaded();
+const roadmapPage = (a: App) => a.nav.page.get().name === 'roadmap' && !!a.roadmapLoaded();
+const roadmapTab = (a: App, tab: 'release' | 'progress') => roadmapPage(a) && a.roadmap.ui.get().tab === tab;
+/** The issue of an action on the roadmap page: the one beside it, else the focused card. */
+const roadmapIssue = (a: App) => roadmapPage(a) && a.targets().length > 0;
 const manualOrder = (a: App) => listFocus(a) && a.list.view.get().display.ordering === 'rank' && a.list.view.get().display.grouping === 'none';
 
 // Edit text without the mouse: on an issue page (or on the right of a split list; in the inbox E
@@ -108,6 +113,27 @@ function goWiki(a: App) {
     return;
   }
   a.nav.go({ name: 'wiki', team: team.key });
+}
+
+/** Roadmap of the team in context (else of the current team); a hint if it is off. */
+function goRoadmap(a: App) {
+  const key = a.contextTeam() ?? a.currentTeam();
+  const team = a.store.meta.get()?.teams.find((x) => x.key === key);
+  if (!team) return;
+  if (!team.roadmap?.on) {
+    a.toasts.show(t('{team} has no roadmap yet. Turn it on in the team settings.', { team: team.name }), { label: t('Settings'), run: () => a.openTeamSettings(team.key) });
+    return;
+  }
+  a.nav.go({ name: 'roadmap', team: team.key, tab: 'release' });
+}
+
+/** Make the targets public or private (the first one decides). */
+function togglePublic(a: App) {
+  const ids = a.targets();
+  const first = ids.length ? a.store.get(ids[0]!) : undefined;
+  if (!first) return;
+  const value = first.public !== true;
+  a.edit.patch(ids, { public: value }, { label: value ? t('Made public') : t('Made private') });
 }
 
 /** J/K: the detail page steps through issues, the list moves focus; in the split inbox the right pane follows. */
@@ -157,6 +183,7 @@ export const ACTIONS: Action[] = [
   { id: 'issue.copyKey', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', context: [3, 3], when: realTarget, run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.copyKeyPlain', label: msg('Copy ID'), section: 'Issue', keys: ['mod+c'], hidden: true, when: (a) => realTarget(a) && !textSelected(), run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.moveUp', label: msg('Move issue up'), section: 'Issue', keys: ['alt+arrowup'], icon: 'arrowUp', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, -1) },
+  { id: 'issue.public', label: msg('Public on the roadmap: on/off'), section: 'Issue', icon: 'eye', keywords: 'public öffentlich roadmap export discord private privat sichtbar visible', context: [3, 7], when: (a) => notDeleted(a) || roadmapIssue(a), run: togglePublic },
   { id: 'issue.moveDown', label: msg('Move issue down'), section: 'Issue', keys: ['alt+arrowdown'], icon: 'arrowDown', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, 1) },
   // E for "edit". In the inbox, E stays "remove": this action applies only on the issue page.
   { id: 'issue.editDescription', label: msg('Edit description'), section: 'Issue', keys: ['e'], icon: 'edit', keywords: 'edit description text write bearbeiten ändern schreiben beschreibung', when: editableIssue, run: (a) => a.detail.startEdit() },
@@ -279,11 +306,27 @@ export const ACTIONS: Action[] = [
   { id: 'pulls.up', label: msg('Previous pull request'), section: 'Navigation', keys: ['k', 'arrowup'], hidden: true, when: pullsPage, run: (a) => a.pulls.step(-1) },
   { id: 'pulls.open', label: msg('Open pull request'), section: 'Navigation', keys: ['enter'], hidden: true, when: (a) => pullsPage(a) && a.pulls.state.get().focus !== null, run: (a) => a.pulls.open(undefined, { toggle: false }) },
   { id: 'pulls.done', label: msg('Show or hide merged and closed pull requests'), section: 'View', icon: 'pr', keywords: 'pull requests done merged closed erledigt gemergt geschlossen', when: (a) => pullsPage(a) && a.pulls.state.get().groups.some((g) => g.group === 'done'), run: (a) => a.pulls.toggleDone() },
+  // Roadmap page (SELF-113)
+  { id: 'roadmap.down', label: msg('Next card'), section: 'Roadmap', keys: ['j', 'arrowdown'], hidden: true, when: roadmapPage, run: (a) => a.roadmap.step(1) },
+  { id: 'roadmap.up', label: msg('Previous card'), section: 'Roadmap', keys: ['k', 'arrowup'], hidden: true, when: roadmapPage, run: (a) => a.roadmap.step(-1) },
+  { id: 'roadmap.left', label: msg('Column left'), section: 'Roadmap', keys: ['arrowleft'], hidden: true, when: (a) => roadmapTab(a, 'release'), run: (a) => a.roadmap.stepColumn(-1) },
+  { id: 'roadmap.right', label: msg('Column right'), section: 'Roadmap', keys: ['arrowright'], hidden: true, when: (a) => roadmapTab(a, 'release'), run: (a) => a.roadmap.stepColumn(1) },
+  { id: 'roadmap.open', label: msg('Open card'), section: 'Roadmap', keys: ['enter'], hidden: true, when: (a) => roadmapPage(a) && a.roadmap.ui.get().focus !== null, run: (a) => a.roadmap.activate() },
+  { id: 'roadmap.release', label: msg('Roadmap: release view'), section: 'Roadmap', keys: ['1'], icon: 'roadmap', keywords: 'roadmap release columns spalten etappen', when: roadmapPage, run: (a) => a.roadmap.setTab('release') },
+  { id: 'roadmap.progress', label: msg('Roadmap: progress'), section: 'Roadmap', keys: ['2'], icon: 'progress', keywords: 'fortschritt timeline zeitachse tracker', when: roadmapPage, run: (a) => a.roadmap.setTab('progress') },
+  { id: 'roadmap.toggleAll', label: msg('Expand or collapse all'), section: 'Roadmap', keys: ['z'], icon: 'chevronDown', keywords: 'expand collapse all alle auf zu aufklappen zuklappen fold', when: roadmapPage, run: (a) => a.roadmap.toggleAll() },
+  { id: 'roadmap.public', label: msg('Roadmap: only public issues'), section: 'Roadmap', icon: 'eye', keywords: 'public öffentlich filter export discord', when: roadmapPage, run: (a) => a.roadmap.togglePublicOnly() },
+  { id: 'roadmap.export', label: msg('Export roadmap as image …'), section: 'Roadmap', keys: ['shift+x'], icon: 'image', keywords: 'export image picture png discord share bild teilen exportieren', when: roadmapPage, run: (a) => a.roadmap.exportOpen.set(true) },
+  { id: 'roadmap.today', label: msg('Progress: jump to today'), section: 'Roadmap', keys: ['n'], icon: 'calendar', keywords: 'today now heute jetzt', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.today() },
+  { id: 'roadmap.zoomIn', label: msg('Progress: zoom in'), section: 'Roadmap', keys: ['+', '='], icon: 'plus', keywords: 'zoom in näher quarter quartal', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.zoomBy(-1) },
+  { id: 'roadmap.zoomOut', label: msg('Progress: zoom out'), section: 'Roadmap', keys: ['-'], icon: 'minus', keywords: 'zoom out weiter year jahr', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.zoomBy(1) },
+  { id: 'roadmap.rows', label: msg('Progress: rows by project or category'), section: 'Roadmap', keys: ['r'], icon: 'display', keywords: 'rows zeilen projects categories kategorien projekte', when: (a) => roadmapTab(a, 'progress'), run: (a) => a.roadmap.setRows(a.roadmap.ui.get().rows === 'projects' ? 'categories' : 'projects') },
   { id: 'go.snoozed', label: msg('Go to: Snoozed'), section: 'Navigation', keys: ['g h'], icon: 'snooze', keywords: 'snoozed zurückgestellt wiedervorlage later hidden', run: (a) => a.nav.goView({ kind: 'snoozed', team: a.contextTeam() }) },
   { id: 'go.triage', label: msg('Go to: Triage'), section: 'Navigation', keys: ['g t'], icon: 'triage', keywords: 'triage', run: (a) => a.nav.goView({ kind: 'triage', team: null }) },
   { id: 'go.all', label: msg('Go to: All issues'), section: 'Navigation', keys: ['g a'], icon: 'issues', top: true, keywords: 'all alle', run: (a) => a.nav.goView({ kind: 'all', team: null }) },
   { id: 'go.active', label: msg('Go to: Active issues'), section: 'Navigation', keys: ['g e'], icon: 'active', keywords: 'active aktiv', run: (a) => a.nav.goView({ kind: 'active', team: a.contextTeam() }) },
   { id: 'go.backlog', label: msg('Go to: Backlog'), section: 'Navigation', keys: ['g b'], icon: 'backlog', keywords: 'backlog', run: (a) => a.nav.goView({ kind: 'backlog', team: a.contextTeam() }) },
+  { id: 'go.roadmap', label: msg('Go to: Roadmap'), section: 'Navigation', keys: ['g r'], icon: 'roadmap', keywords: 'roadmap release fahrplan etappen stages milestones meilensteine fortschritt timeline zeitachse', run: (a) => goRoadmap(a) },
   { id: 'go.wiki', label: msg('Go to: Knowledge'), section: 'Navigation', keys: ['g w'], icon: 'wiki', keywords: 'wissen wiki doku dokumentation docs documentation knowledge seiten pages', run: (a) => goWiki(a) },
   { id: 'go.sprint', label: msg('Go to: Sprint'), section: 'Navigation', keys: ['g s'], icon: 'sprint', keywords: 'sprint cycle', run: (a) => a.nav.goView({ kind: 'sprint', team: null }) },
   { id: 'team.switch', label: msg('Switch team …'), section: 'Navigation', keys: ['o t'], icon: 'team', keywords: 'team wechseln switch current aktuelles', run: (a) => a.palette.open('switchTeam') },

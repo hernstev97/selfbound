@@ -99,6 +99,7 @@ export class KeyController {
       return consume(e, () => {
         if (app.mobileDrawer.get()) return app.mobileDrawer.set(false);
         if (app.detail.splitShown()) return app.detail.closeSplit();
+        if (app.detail.besideShown()) return app.detail.showBeside(null);
         if (app.detail.peekOpen.get()) return app.detail.togglePeek();
         if (app.prSplit.get()) return app.prSplit.set(null);
         if (app.nav.page.get().name === 'issue' || app.nav.page.get().name === 'pr') return app.closeIssue();

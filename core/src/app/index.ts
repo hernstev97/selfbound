@@ -32,6 +32,7 @@ import { PaletteController } from './palette.ts';
 import { Perf } from './perf.ts';
 import { Prefs, type SidebarTeamSize } from './prefs.ts';
 import type { PullsController } from './pulls.ts';
+import type { RoadmapController } from './roadmap.ts';
 import type { SprintController } from './sprints.ts';
 import type { WikiController } from './wiki.ts';
 import { Cues } from './cues.ts';
@@ -60,6 +61,8 @@ export interface SidebarTeam {
   triage: number;
   /** Wiki: 'on' next to the issues, 'only' wiki only, null none */
   wiki: 'on' | 'only' | null;
+  /** Roadmap turned on (SELF-113) */
+  roadmap: boolean;
 }
 
 /** Numbers on a team card (App.teamStats). */
@@ -197,6 +200,7 @@ export class App {
         this.main.onIssues(ids);
         this.side.onIssues(ids);
         this.#sprints?.refresh();
+        this.#roadmap?.onIssues(ids);
         this.detail.refreshIf(ids);
         this.#updateSidebar();
         this.#checkIssuePage();
@@ -206,6 +210,7 @@ export class App {
         this.side.onMeta(store.meta.get());
         this.#sprints?.refresh();
         this.#wiki?.refresh();
+        this.#roadmap?.onMeta();
         this.detail.refresh();
         this.#updateSidebar();
         this.#redirectWikiOnly(this.nav.page.get());
@@ -391,6 +396,34 @@ export class App {
     return this.#wikiLoading;
   }
 
+  #roadmap: RoadmapController | null = null;
+  #roadmapLoading: Promise<RoadmapController> | null = null;
+
+  /** Roadmap and progress of a team (SELF-113); available after `loadRoadmap()` (own chunk). */
+  get roadmap(): RoadmapController {
+    if (!this.#roadmap) throw new Error('Roadmap is not loaded yet (app.loadRoadmap())');
+    return this.#roadmap;
+  }
+
+  roadmapLoaded(): RoadmapController | null {
+    return this.#roadmap;
+  }
+
+  loadRoadmap(): Promise<RoadmapController> {
+    this.#roadmapLoading ??= import('./roadmap.ts').then(
+      ({ RoadmapController }) => {
+        this.#roadmap = new RoadmapController(this);
+        this.#roadmap.onPage(this.nav.page.get());
+        return this.#roadmap;
+      },
+      (error: unknown) => {
+        this.#roadmapLoading = null;
+        throw error;
+      },
+    );
+    return this.#roadmapLoading;
+  }
+
   #pulls: PullsController | null = null;
   #pullsLoading: Promise<PullsController> | null = null;
 
@@ -498,6 +531,12 @@ export class App {
     if (name === 'issue') return page ? [page] : [];
     // Wiki and PR pages: status and other issue shortcuts must not hit a (hidden) issue of the list.
     if (name === 'wiki' || name === 'article' || name === 'pr' || name === 'pulls') return [];
+    // Roadmap: the issue beside it, else the focused card (never the hidden list).
+    if (name === 'roadmap') {
+      const beside = this.detail.besideShown() ? this.detail.beside.get() : null;
+      const focus = this.#roadmap?.focusId() ?? null;
+      return beside ? [beside] : focus ? [focus] : [];
+    }
     return this.list.targets();
   }
 
@@ -514,7 +553,7 @@ export class App {
   contextTeam(): string | null {
     const page = this.nav.page.get();
     if (page.name === 'view') return page.view.team;
-    if (page.name === 'wiki') return page.team;
+    if (page.name === 'wiki' || page.name === 'roadmap') return page.team;
     if (page.name === 'issue') {
       const issue = this.store.byKey(page.key);
       return issue ? this.store.teamKey(issue.teamId) : null;
@@ -581,6 +620,10 @@ export class App {
     else if (page.name === 'wiki' || page.name === 'article') void this.loadWiki();
     if (this.#pulls) this.#pulls.onPage(page);
     else if (page.name === 'pulls') void this.loadPulls();
+    if (this.#roadmap) this.#roadmap.onPage(page);
+    else if (page.name === 'roadmap') void this.loadRoadmap();
+    // The issue beside the roadmap stays while its own page is open (Enter, then back).
+    if (page.name !== 'roadmap' && page.name !== 'issue') this.detail.showBeside(null);
     this.mobileDrawer.set(false);
     if (page.name === 'issue') this.#checkIssuePage();
     else this.detail.closePage();
@@ -593,7 +636,7 @@ export class App {
       if (focus && !this.list.order().includes(focus)) this.list.focusEdge(false);
     }
     // Team page: the team becomes the sidebar's current team (issue pages do not change it).
-    const team = page.name === 'projects' || page.name === 'wiki' ? page.team : page.name === 'view' ? page.view.team : null;
+    const team = page.name === 'projects' || page.name === 'wiki' || page.name === 'roadmap' ? page.team : page.name === 'view' ? page.view.team : null;
     if (team && team !== this.prefs.state.get().currentTeam) this.prefs.set({ currentTeam: team });
     this.#updateSidebar();
     const wasIssue = this.shell.get().page === 'issue';
@@ -613,6 +656,7 @@ export class App {
     if (page.name === 'drafts') return `${t('Drafts')} · Selfbound`;
     if (page.name === 'projects') return `${t('Projects')} · ${page.team} · Selfbound`;
     if (page.name === 'wiki') return `${t('Knowledge')} · ${page.team} · Selfbound`;
+    if (page.name === 'roadmap') return `${page.tab === 'progress' ? t('Progress') : t('Roadmap')} · ${page.team} · Selfbound`;
     if (page.name === 'article') return `${t('Knowledge')} · Selfbound`;
     if (page.name === 'pr') return `${page.repo.split('/')[1] ?? page.repo}#${page.number} · Selfbound`;
     if (page.name === 'pulls') return `${t('Pull requests')} · Selfbound`;
@@ -727,6 +771,11 @@ export class App {
       this.nav.go({ name: 'projects', team: key });
       return;
     }
+    // From a roadmap into the other team's roadmap if it has one.
+    if (page.name === 'roadmap' && this.store.meta.get()?.teams.find((t) => t.key === key)?.roadmap?.on) {
+      this.nav.go({ name: 'roadmap', team: key, tab: page.tab });
+      return;
+    }
     // From the wiki into the other team's wiki if it has one; wiki-only teams always go there.
     const wiki = this.store.meta.get()?.teams.find((t) => t.key === key)?.wiki;
     if (wiki === 'only' || ((page.name === 'wiki' || page.name === 'article') && wiki)) {
@@ -755,6 +804,7 @@ export class App {
     if (page.name === 'view') active = page.view.team ? `team:${page.view.team}:${page.view.kind === 'all' || page.view.kind === 'project' ? 'active' : page.view.kind}` : page.view.kind;
     if (page.name === 'projects') active = `team:${page.team}:projects`;
     if (page.name === 'wiki') active = `team:${page.team}:wiki`;
+    if (page.name === 'roadmap') active = `team:${page.team}:roadmap`;
     if (page.name === 'view' && page.view.kind === 'project') active = `team:${page.view.team}:projects`;
     if (page.name === 'view' && (page.view.kind === 'plan' || page.view.kind === 'close')) active = 'sprint';
     if (page.name === 'sprints') active = 'sprint';
@@ -768,6 +818,7 @@ export class App {
       dormant: t.dormant,
       triage: triageByTeam.get(t._id) ?? 0,
       wiki: t.wiki ?? null,
+      roadmap: t.roadmap?.on === true && t.wiki !== 'only',
     }));
     const others = teams.filter((t) => t.key !== currentKey);
     const next: SidebarState = {

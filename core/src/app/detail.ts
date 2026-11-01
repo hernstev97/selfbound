@@ -150,6 +150,8 @@ export class DetailController {
   #pageId: IssueId | null = null;
   /** Preview from the command menu or search */
   #previewId: IssueId | null = null;
+  /** Shown beside a page that is not a list (the roadmap, SELF-113); null = none */
+  readonly beside = new Slice<IssueId | null>(null);
   #target: IssueId | null = null;
   #unwatch: (() => void) | null = null;
   #prefetchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -184,6 +186,22 @@ export class DetailController {
     return this.#pageId === null && !this.splitShown() && (this.peekOpen.get() || this.#previewId !== null) && this.#target !== null;
   }
 
+  /**
+   * Beside a page that is not a list (the roadmap): the issue on the right, the page stays. The
+   * page decides when (wide window); `null` closes it.
+   */
+  showBeside(id: IssueId | null) {
+    if (this.beside.get() === id) return;
+    this.beside.set(id);
+    if (id) this.#markSeen(id);
+    this.#retarget();
+  }
+
+  /** The issue shown beside the roadmap, if any (and not covered by the issue's own page). */
+  besideShown() {
+    return this.#pageId === null && this.beside.get() !== null && this.app.nav.page.get().name === 'roadmap';
+  }
+
   /** The right side of the split view shows the focused issue. */
   splitShown() {
     return this.#pageId === null && this.split.get() && this.app.splitCapable();
@@ -216,6 +234,8 @@ export class DetailController {
   }
 
   closeSplit() {
+    // The ✕ of the issue beside the roadmap closes that one.
+    if (this.besideShown()) return this.showBeside(null);
     if (!this.split.get()) return;
     this.split.set(false);
     this.#retarget();
@@ -296,6 +316,7 @@ export class DetailController {
   /** Which issue to show: detail page, split view, preview, peek. */
   #wanted(): IssueId | null {
     if (this.#pageId) return this.#pageId;
+    if (this.besideShown()) return this.beside.get();
     if (this.splitShown()) return this.app.list.focusId();
     return this.#previewId ?? (this.peekOpen.get() ? this.app.list.focusId() : null);
   }
@@ -354,7 +375,7 @@ export class DetailController {
     }
     const doc = this.app.store.detail(id);
     this.state.set(this.#compute(issue, doc ?? null));
-    if (doc && (this.#pageId === id || this.splitShown())) this.#checkDescription(doc);
+    if (doc && (this.#pageId === id || this.splitShown() || this.besideShown())) this.#checkDescription(doc);
   }
 
   #compute(issue: Issue, doc: DetailDoc | null): DetailState {

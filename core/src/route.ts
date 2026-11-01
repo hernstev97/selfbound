@@ -6,6 +6,7 @@
 //   /triage                triage (all teams)        /team/KIU/triage
 //   /all /active /backlog  all teams                 /team/KIU/all, /team/KIU (= active), /team/KIU/backlog
 //   /team/KIU/projects     a team's projects         /team/KIU/project/<id>
+//   /team/KIU/roadmap      a team's roadmap          /team/KIU/roadmap/progress its progress tracker
 //   /team/KIU/wiki         a team's wiki             /wiki/<id> page (permanent address, no team; the older
 //                          /wissen paths still parse, they are in links stored in issue texts, see backend/convex/shared/links.ts)
 //   /issue/KIU-106         issue (full page)
@@ -34,11 +35,15 @@ export type Page =
   | { name: 'pulls' }
   | { name: 'projects'; team: string }
   | { name: 'wiki'; team: string }
+  | { name: 'roadmap'; team: string; tab: RoadmapTab }
   | { name: 'article'; id: string }
   | { name: 'drafts' }
   | { name: 'sprints' }
   | { name: 'settings'; section: string; sub?: string }
   | { name: 'new' };
+
+/** Tabs of the roadmap page: release view (columns) and progress tracker (time axis). */
+export type RoadmapTab = 'release' | 'progress';
 
 export interface Location {
   page: Page;
@@ -115,6 +120,7 @@ export function parsePath(pathname: string): Page {
     const team = b.toUpperCase();
     if (c === 'projects') return { name: 'projects', team };
     if ((c === 'wiki' || c === 'wissen') && !d) return { name: 'wiki', team };
+    if (c === 'roadmap' && (!d || d === 'progress') && !e) return { name: 'roadmap', team, tab: d === 'progress' ? 'progress' : 'release' };
     if (c === 'project' && d) return { name: 'view', view: { kind: 'project', team, project: d } };
     const kind = TEAM_TABS[c ?? ''];
     if (kind) return { name: 'view', view: { kind, team } };
@@ -147,6 +153,8 @@ export function pagePath(page: Page): string {
       return `/team/${page.team}/projects`;
     case 'wiki':
       return `/team/${page.team}/wiki`;
+    case 'roadmap':
+      return page.tab === 'progress' ? `/team/${page.team}/roadmap/progress` : `/team/${page.team}/roadmap`;
     case 'article':
       return `/wiki/${encodeURIComponent(page.id)}`;
     case 'drafts':
@@ -257,7 +265,7 @@ export function withCurrentTeamKeys(page: Page, current: (key: string) => string
     const team = current(page.view.team);
     return team === page.view.team ? page : { ...page, view: { ...page.view, team } };
   }
-  if (page.name === 'projects' || page.name === 'wiki') {
+  if (page.name === 'projects' || page.name === 'wiki' || page.name === 'roadmap') {
     const team = current(page.team);
     return team === page.team ? page : { ...page, team };
   }
