@@ -598,7 +598,7 @@ export async function exportPng(data: ExportData, opts: RenderOptions): Promise<
   return last!;
 }
 
-/** File name from the export title: "copperblood-roadmap-2026-11-01.png". */
+/** File name from the export title: "emberfall-roadmap-2026-11-01.png". */
 export function fileName(title: string, view: ExportView, day: string) {
   const slug =
     title

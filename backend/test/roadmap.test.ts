@@ -185,20 +185,20 @@ describe('roadmap settings', () => {
       on: true,
       categoryGroupId: f.area,
       stages: [{ stateId: review, stage: 'progress' }],
-      title: ' Copper ',
+      title: ' Ember ',
       subtitle: 'Roadmap',
       accent: '#B87333',
     });
     let team = await t.run(async (ctx) => (await ctx.db.get('teams', f.orb))!);
-    expect(team.roadmap).toEqual({ on: true, categoryGroupId: f.area, stages: [{ stateId: review, stage: 'progress' }], title: 'Copper', subtitle: 'Roadmap', accent: '#b87333' });
+    expect(team.roadmap).toEqual({ on: true, categoryGroupId: f.area, stages: [{ stateId: review, stage: 'progress' }], title: 'Ember', subtitle: 'Roadmap', accent: '#b87333' });
 
     await owner.mutation(api.roadmap.updateSettings, { teamId: f.orb, categoryGroupId: null, stages: [], subtitle: null, accent: null });
     team = await t.run(async (ctx) => (await ctx.db.get('teams', f.orb))!);
-    expect(team.roadmap).toEqual({ on: true, title: 'Copper' });
+    expect(team.roadmap).toEqual({ on: true, title: 'Ember' });
 
     const novaDone = await stateId(t, f.nova, 'done');
     await expectCode(owner.mutation(api.roadmap.updateSettings, { teamId: f.orb, stages: [{ stateId: novaDone, stage: 'done' }] }), 'invalid');
-    await expectCode(owner.mutation(api.roadmap.updateSettings, { teamId: f.orb, accent: 'copper' }), 'invalid');
+    await expectCode(owner.mutation(api.roadmap.updateSettings, { teamId: f.orb, accent: 'orange' }), 'invalid');
     const { groupId: novaGroup } = await owner.mutation(api.labelGroups.create, { name: 'Nova areas', exclusive: true, teamId: f.nova });
     await expectCode(owner.mutation(api.roadmap.updateSettings, { teamId: f.orb, categoryGroupId: novaGroup }), 'invalid');
   });

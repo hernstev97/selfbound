@@ -23,7 +23,7 @@ const at = (day: string) => new Date(`${day}T12:00:00`).getTime();
 
 const meta: Meta = {
   ...baseMeta,
-  teams: baseMeta.teams.map((t) => (t._id === 't1' ? { ...t, roadmap: { on: true, categoryGroupId: 'g9', title: 'Copper' } } : t)) as Meta['teams'],
+  teams: baseMeta.teams.map((t) => (t._id === 't1' ? { ...t, roadmap: { on: true, categoryGroupId: 'g9', title: 'Ember' } } : t)) as Meta['teams'],
   projects: [
     { _id: 'p1', _creationTime: 0, teamId: 't1', name: 'Etappe 1', state: 'done', order: 0, period: '2026-Q3', hue: 25, description: 'Internal goal', updatedAt: 0 },
     { _id: 'p2', _creationTime: 0, teamId: 't1', name: 'Etappe 2', state: 'active', order: 1, period: '2027-Q1', updatedAt: 0 },

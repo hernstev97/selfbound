@@ -53,7 +53,7 @@ describe('roadmap PNG', () => {
   });
 
   test('file names come from the export title only', () => {
-    expect(fileName('Copperblood: Früh & „Wild“', 'roadmap', '2026-11-01')).toBe('copperblood-fruh-wild-roadmap-2026-11-01.png');
+    expect(fileName('Emberfall: Früh & „Wild“', 'roadmap', '2026-11-01')).toBe('emberfall-fruh-wild-roadmap-2026-11-01.png');
     expect(fileName('***', 'progress', '2026-11-01')).toBe('roadmap-progress-2026-11-01.png');
   });
 });
