@@ -95,6 +95,12 @@ describe('legacy lifecycle (initialize)', () => {
       'get_article',
       'create_article',
       'update_article',
+      'create_project',
+      'update_project',
+      'create_label',
+      'update_label',
+      'get_roadmap',
+      'update_roadmap',
     ]);
     for (const t of tools) {
       expect(t.inputSchema.type).toBe('object');

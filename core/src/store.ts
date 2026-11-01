@@ -1313,7 +1313,8 @@ export function applyPatch(doc: IssueDoc, patch: IssuePatch, now: number, workfl
   const next = { ...doc } as Record<string, unknown>;
   for (const [field, value] of Object.entries(patch)) {
     if (value === undefined) continue;
-    if (value === null) delete next[field];
+    // `public` is stored only as true (backend): false removes it.
+    if (value === null || (field === 'public' && value === false)) delete next[field];
     else next[field] = value;
   }
   if (workflows && patch.stateId) {

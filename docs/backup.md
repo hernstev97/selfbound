@@ -20,8 +20,8 @@ The unencrypted ZIP never leaves the runner.
 | Backed up | Not backed up (and why) |
 |---|---|
 | all issues with descriptions, comments, history, relations | the code: it lives in Git |
-| teams, labels, projects, sprints, knowledge pages | environment variables (Clerk settings, webhook secret, …): keep them in a password manager ([operations.md](operations.md#backend-environment-variables)) |
-| team logos and images from descriptions and comments (files with checksums) | scheduled background jobs that have not run yet: they are recreated after the import |
+| teams (with roadmap settings), labels, projects (with the roadmap fields), sprints, knowledge pages, public cards of the roadmap | environment variables (Clerk settings, webhook secret, …): keep them in a password manager ([operations.md](operations.md#backend-environment-variables)) |
+| team logos and images from descriptions, comments and roadmap cards (files with checksums) | scheduled background jobs that have not run yet: they are recreated after the import |
 | agents (only the hashes of their keys), import data, pull request links | videos: they are links to Google Drive, not stored in Selfbound |
 
 A backup is a ZIP with one JSONL file per table and a folder with the files (`convex export

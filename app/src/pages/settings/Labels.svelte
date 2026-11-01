@@ -3,6 +3,7 @@
   import { ICON, type LabelGroupDoc } from '@selfbound/core';
   import { t, tn } from '@selfbound/core/i18n';
   import { HUES } from '@selfbound/core/app/admin';
+  import { byLabelOrder } from '@selfbound/core/roadmap';
   import { app } from '../../app-instance.ts';
   import { fromSlice } from '../../slice.svelte.ts';
   import InlineText from './InlineText.svelte';
@@ -25,7 +26,8 @@
     return c;
   });
   const groups = $derived([...(meta?.labelGroups ?? []).map((g) => ({ id: g._id as string, group: g })), { id: 'none', group: null }]);
-  const labelsOf = (groupId: string) => (meta?.labels ?? []).filter((l) => (l.groupId ?? 'none') === groupId && (showArchived || !l.archived));
+  // In their order within the group (roadmap categories follow it), then by name.
+  const labelsOf = (groupId: string) => (meta?.labels ?? []).filter((l) => (l.groupId ?? 'none') === groupId && (showArchived || !l.archived)).sort(byLabelOrder);
 
   async function createLabel(e: SubmitEvent, groupId: string) {
     e.preventDefault();
@@ -68,7 +70,7 @@
     <button class="btn ghost small" data-testid="label-add-{group?.name ?? 'none'}" onclick={() => { addLabelTo = id; newLabel = ''; }}><span class="icon">{@html ICON.plus}</span>{t('Label')}</button>
   </div>
   <div class="card-list">
-    {#each labels as l (l._id)}
+    {#each labels as l, i (l._id)}
       <div class={['card-row', l.archived && 'archived']} data-testid="label-row" data-name={l.name}>
         <HuePicker hue={l.hue} pick={(h) => admin.updateLabel(l._id, { hue: h })} />
         <span class="t"><InlineText value={l.name} label={t('Label name')} save={(v) => admin.updateLabel(l._id, { name: v })} /></span>
@@ -80,6 +82,10 @@
           </select>
           <span class="icon">{@html ICON.chevronDown}</span>
         </span>
+        {#if id !== 'none'}
+          <button class="icon-btn plain order-btn" aria-label={t('Move up')} title={t('Move up')} disabled={i === 0} onclick={() => void admin.moveLabel(l._id, -1)}><span class="icon">{@html ICON.chevronUp}</span></button>
+          <button class="icon-btn plain order-btn" aria-label={t('Move down')} title={t('Move down')} disabled={i === labels.length - 1} onclick={() => void admin.moveLabel(l._id, 1)}><span class="icon">{@html ICON.chevronDown}</span></button>
+        {/if}
         <button class="btn ghost small" data-testid="label-archive" onclick={() => admin.updateLabel(l._id, { archived: !l.archived })}>{l.archived ? t('Unarchive') : t('Archive')}</button>
       </div>
     {/each}
@@ -102,3 +108,12 @@
     <button class="btn small" type="submit">{t('Create group')}</button>
   </div>
 </form>
+
+<style>
+  /* No room on a phone; the order of roadmap categories is also set in the team settings. */
+  @media (max-width: 768px) {
+    .order-btn {
+      display: none;
+    }
+  }
+</style>

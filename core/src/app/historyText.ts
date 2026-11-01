@@ -125,6 +125,15 @@ export function historyText(h: Pick<HistoryDoc, 'field' | 'from' | 'to' | 'actor
       const date = dayLabel(h.to);
       return say(tc('you', 'snoozed it until {date}', { date }), t('snoozed it until {date}', { date }));
     }
+    // Roadmap (SELF-113). The inbox keeps `public` as 1 (made public) or nothing (made private).
+    case 'public':
+      return h.to === true || h.to === 1 ? say(tc('you', 'made it public'), t('made it public')) : say(tc('you', 'made it private'), t('made it private'));
+    case 'publicTitle':
+      return typeof h.to === 'string' ? say(tc('you', 'set the public title'), t('set the public title')) : say(tc('you', 'removed the public title'), t('removed the public title'));
+    case 'publicSummary':
+      return typeof h.to === 'string' ? say(tc('you', 'changed the public summary'), t('changed the public summary')) : say(tc('you', 'removed the public summary'), t('removed the public summary'));
+    case 'publicImage':
+      return typeof h.to === 'string' ? say(tc('you', 'set the cover image'), t('set the cover image')) : say(tc('you', 'removed the cover image'), t('removed the cover image'));
     case 'deleted':
       return say(tc('you', 'moved it to the trash'), t('moved it to the trash'));
     case 'restored':

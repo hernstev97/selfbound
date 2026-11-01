@@ -41,13 +41,14 @@ This document is the contract between the backend and the UI. It describes the t
 
 | Table | Contents | Key indexes |
 |---|---|---|
-| `teams` | `key`, `previousKeys?` (keys before a rename, oldest first, reserved for this team), name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none), `defaultModel?` (model choice for issues that set none, [models](#models-desired-model-per-issue)) | `by_key` |
+| `teams` | `key`, `previousKeys?` (keys before a rename, oldest first, reserved for this team), name, `hue`, `dormant`, `order`, `logoId`/`logoDarkId` (storage), `logoType`, `workflow?` (`strict`, `exceptions`, `defaultStateId`), `wiki?` (`'on'` = knowledge base next to the issues, `'only'` = knowledge base only; missing = none), `defaultModel?` (model choice for issues that set none, [models](#models-desired-model-per-issue)), `roadmap?` (`on`, `categoryGroupId?`, `stages?` = `[{ stateId, stage }]`, `title?`, `subtitle?`, `accent?` `#rrggbb`; [roadmap](#roadmap)) | `by_key` |
 | `workflowStates` | A team's statuses: name, `type` (triage, backlog, unstarted, started, completed, canceled), `position` (within the type), `color?`, `description?`, `isDuplicate?`, `legacyKey?` (old key of the default statuses), `archivedAt?` | `by_team` |
-| `projects` | Belongs to exactly one team. Name, `state`, `order` | `by_team` |
+| `projects` | Belongs to exactly one team. Name, `state`, `order`; for the roadmap `description?` (goal), `readyWhen?`, `period?` (`2027-Q1` or `2027-03`), `hue?` | `by_team` |
 | `labelGroups` | Name, `exclusive` (single choice), `hue`, optional `teamId` | |
-| `labels` | Name, `hue`, optional `groupId`, optional `teamId` (missing = workspace label), `archived` | |
+| `labels` | Name, `hue`, optional `groupId`, optional `teamId` (missing = workspace label), `archived`, `order?` (position within the group; missing = after the ordered ones, by name) | |
 | `counters` | `seq`, `team:<teamId>`, `sprint`: the last value handed out for each | `by_name` |
-| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `snoozedUntil` (snooze), `parentId`, `sprintId`, `model?` (`{ provider, modelId, effort?, speed? }`, [models](#models-desired-model-per-issue)), `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_snoozed`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
+| `issues` | `seq`, `bucket`, `teamId`, `number`, title, `stateId` (team status), `status` (status kind, derived), priority, `labelIds`, project, estimate, `dueDate`, `snoozedUntil` (snooze), `parentId`, `sprintId`, `model?` (`{ provider, modelId, effort?, speed? }`, [models](#models-desired-model-per-issue)), `public?` (stored only as `true`; [roadmap](#roadmap)), `rank`, `createdBy`, `reviewedAt` and `readAt` (legacy inbox markers, see `inboxEntries`), timestamps, `deletedAt`, `recurrenceId` | `by_bucket`, `by_seq`, `by_team_number`, `by_status`, `by_state`, `by_sprint`, `by_due`, `by_snoozed`, `by_completed`, `by_status_due`, `by_status_completed`, `by_parent`, `by_rank`, `by_updated`, `by_deleted`, `by_team_priority`, `by_project`, search `search_title` |
+| `publicCards` | Public card of an issue for the roadmap: `issueId`, `teamId` (follows a team move), `title?`, `summary?`, `image?` (token of a `files` image, referenced through `fileRefs` with owner = row id), `updatedAt`, `updatedBy`. At most one per issue; only `ops/roadmap.ts` writes it | `by_issue`, `by_team` |
 | `identifierAliases` | Old identifier (upper case, "ACME-106") → issue, written by team moves and the import. A renamed team key needs no rows: `teams.previousKeys` | `by_key`, `by_issue` |
 | `issueBodies` | Markdown, `version`, `updatedAt`, `updatedBy` | `by_issue` |
 | `bodySearch` | Search text of the description: the first 8000 characters (`BODY_SEARCH_CHARS`). Written only through `ops/bodies.ts`, together with `issueBodies` | `by_issue`, search `search_text` |
@@ -314,15 +315,32 @@ Relations: no self-reference, no second relation of the same type between the sa
 | `teams.generateLogoUploadUrl` | – | upload URL (string) |
 | `teams.setLogo` (action) | `{ teamId, storageId, variant: 'light'|'dark' }` | `{ teamId, contentType }` |
 | `teams.removeLogo` | `{ teamId, variant }` | `{ teamId, removed }` |
-| `projects.create` | `{ teamId, name, state? = 'active' }` | `{ projectId }` |
-| `projects.update` | `{ projectId, name?, state? }` (team cannot be changed) | `{ projectId }` |
+| `projects.create` | `{ teamId, name, state? = 'active', description?, readyWhen?, period?, hue? }` | `{ projectId }` |
+| `projects.update` | `{ projectId, name?, state?, description?, readyWhen?, period?, hue? }` (team cannot be changed; null or `''` clears a roadmap field; `period` is normalized: `2027-q1` → `2027-Q1`, `2027-3` → `2027-03`) | `{ projectId }` |
 | `projects.reorder` | `{ teamId, projectIds }` | `{ count }` |
 | `labelGroups.create` | `{ name, exclusive, hue?, teamId? }` | `{ groupId }` |
 | `labelGroups.update` | `{ groupId, name?, exclusive?, hue? }` | `{ groupId }` |
 | `labels.create` | `{ name, hue, groupId?, teamId? }` | `{ labelId }` |
-| `labels.update` | `{ labelId, name?, hue?, groupId? | null, archived? }` | `{ labelId }` |
+| `labels.update` | `{ labelId, name?, hue?, groupId? | null, archived? }` (a label that changes its group loses its position) | `{ labelId }` |
+| `labels.reorder` | `{ labelIds }`: they get positions 0, 1, 2 … (usually one group) | `{ count }` |
 
 **Logo upload:** `generateLogoUploadUrl` → `fetch(url, { method: 'POST', headers: { 'Content-Type': file.type }, body: file })` → `{ storageId }` → `teams.setLogo`. Checks: SVG or PNG, content matches the content type, at most 256 KB, square (PNG: IHDR; SVG: `viewBox` or `width`/`height`). SVG must pass an **allowlist** (`lib/logo.ts`): only shape, text, gradient, mask and filter elements (no `script`, `foreignObject`, `a`, `set`/`animate…`, `iframe` …) and only known presentation attributes (no `on…`). Before the check, namespace prefixes are stripped (`<s:script>` is a `script`), character references are resolved and whitespace and control characters are removed from values (`java&#9;script:`). References (`href`, `xlink:href`, `url()`) only to `#anchor`, for `<image>` also `data:image/png`; CSS without `@import`, escapes and external `url()`. DOCTYPE/ENTITY, CDATA outside `<style>`, processing instructions other than the XML declaration, and malformed files are rejected. Save Inkscape exports with their own namespaces (`inkscape:`, `sodipodi:`) as "plain SVG". Rejected files are deleted. The previous logo is deleted when it is replaced. Logos are always displayed via `<img>`; the URL in `meta.get` points to `GET /logo/<storageId>` (below), not to the storage URL.
+
+### roadmap
+
+Roadmap and progress per team (SELF-113). The page computes both views from the issues in the store; the server adds only the public cards. Rules shared with the UI (stages, defaults, periods, limits) are in `shared/roadmap.ts`.
+
+| Function | Arguments | Returns |
+|---|---|---|
+| `roadmap.cards` (query) | `{ teamId }` | `[{ issueId, title, summary, image }]` of the team's public cards (`image` = `<site>/img/<token>` or null) |
+| `roadmap.setCard` | `{ id, title?, summary?, image?, requestId? }` (null or `''` clears; `image` = token, `/img/` URL or Markdown line of an uploaded image) | `{ changed: ('title' \| 'summary' \| 'image')[] }` |
+| `roadmap.updateSettings` | `{ teamId, on?, categoryGroupId? \| null, stages?, title?, subtitle?, accent? }` (`stages` replaces the mapping; the category group must be a workspace group or one of the team) | `{ teamId }` |
+
+- **Public** is an issue field (`issues.update { public }`, through `applyPatch`: history, undo, MCP `expected`). It is stored only as `true`; `false` removes it, and a compare-and-set treats `false` and missing as the same.
+- **The card** writes one history row per changed field (`publicTitle`, `publicSummary`, `publicImage`; agents open inbox entries like any change) and bumps the issue's `updatedAt`. A card with nothing left is deleted. The image is a reference like an image in a text, so cleanup keeps it; purging the issue deletes the card and the reference; a team move takes it along.
+- **Who:** every actor may write cards, projects, labels and the roadmap settings (agents set roadmaps up through MCP); teams themselves stay owner-only. Knowledge-only teams have no roadmap.
+- **Stages:** a status maps to `done`, `testing`, `progress`, `planned`, `tentative` or `hidden`; without its own mapping the type decides (completed → done, started → progress or testing for review/test names, unstarted → planned, backlog → tentative, triage and canceled → hidden).
+- `issues.detail` returns the issue's `publicCard` (or null).
 
 ### files (images)
 
@@ -544,7 +562,7 @@ Served under the site URL (locally the backend port + 1, in the cloud `https://<
 | `POST /oauth/register`, `GET /oauth/authorize`, `POST /oauth/token`, `POST /oauth/revoke` | OAuth for connectors (claude.ai, ChatGPT), only with `SELFBOUND_APP_URL`. Details: [`mcp.md`](mcp.md#oauth-for-connectors) |
 | `POST /github` | Read the raw body, verify `X-Hub-Signature-256` with `GITHUB_WEBHOOK_SECRET` (during rotation also `GITHUB_WEBHOOK_SECRET_PREVIOUS`) → otherwise 401. `ping` → 200. Otherwise `internal.github.applyDelivery` |
 | `GET /logo/<storageId>` | Team logo or model provider logo, no sign-in (like a storage URL; `<img>` and CSS masks send no token). Only files a team or `modelLogos` uses as its logo and that pass the logo check (provider logos need not be square), otherwise 404. Response with `Content-Type` from the check (`image/svg+xml` or `image/png`), `Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'`, `X-Content-Type-Options: nosniff`, `Cache-Control: public, max-age=31536000, immutable` |
-| `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches) |
+| `GET /img/<token>` | Image from a description or comment, no sign-in (the token is the access protection, see above). Unknown token → 404. `Content-Type` from the upload check, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: private, max-age=31536000, immutable` (not in shared caches), `Access-Control-Allow-Origin: *` (the roadmap's image export draws cover pictures onto a canvas; whoever has the token can load the image anyway) |
 | `GET /embed/<provider>/<id>/<slot>` | Thumbnail of a video card (`thumb`), stored by `embeds.resolve`. No sign-in (`<img>` sends no token; public content of the provider, only for cached cards). Provider, ID and slot must match their patterns; unknown → 404. `Content-Type` from the check at storing, `Content-Security-Policy: default-src 'none'; sandbox`, `X-Content-Type-Options: nosniff`, `Content-Disposition: inline`, `Referrer-Policy: no-referrer`, `Cache-Control: public, max-age=86400` (not immutable: a refresh may replace the file) |
 | `GET /ghmedia/<mediaKey>/<index>` | Media from a PR, no sign-in (the key is the access protection, as with `/img`). Repo file: Contents API → fresh `download_url` (for private repos with a short-lived `token` parameter). Attachment: signed URL from the last fetch if younger than 4 min; otherwise refetch the post (description or comment/review, `source`) with `full+json` and store the fresh URLs of all its attachments (`github.com/user-attachments` cannot be resolved with a fine-grained token). The detail caches the `download_url` for 60 s (`resolved`). While one call is refetching a post (`resigningAt` on all attachments of that post, valid for 10 s), parallel calls wait up to 4 s for its result. Response `302` with `Cache-Control: private, max-age=60` (or the remaining cache time; `private, no-store` if the target is valid for less than 60 s), `Referrer-Policy: no-referrer`; no bytes pass through Convex. Assumption: GitHub's `token` parameter on a `download_url` stays valid for more than 2 minutes. Unknown or error → 404 without details |
 | `GET /health` | `health.status` as JSON, no data |
@@ -617,6 +635,9 @@ The cron names are internal identifiers in `convex/crons.ts`.
 Queries go through indexes. Unbounded `.collect()` only happens on small sets (one bucket, the entries of one issue or sprint). Reference data and lists have fixed upper bounds (`take`). Cleanup jobs run in pages and reschedule themselves. The seed sends 100 issues per call.
 
 ## Test data
+
+`seed.roadmapDemo({ images })` (owner, `SELFBOUND_ALLOW_SEED=1`) adds the fictional game team EMB (Emberfall) with a roadmap: four projects with periods, six categories, 25 issues with past start and completion times, 16 of them public with cards. `node e2e/tools/roadmap-demo.mjs` draws cover pictures, uploads them and calls it against the local backend; `e2e/tests/z-roadmap.spec.ts` uses it too.
+
 
 `data/generate.ts` generates deterministic data (fixed seed, reference time 2026-10-08 12:00 UTC) with invented content only:
 

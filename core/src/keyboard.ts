@@ -51,16 +51,19 @@ function keyName(part: string): string {
 }
 
 /** "mod+shift+z" → "Ctrl ⇧ Z", "g a" → "G then A" */
+/** Keys of one step: "mod+k" → ["mod", "k"]; the plus key itself stays a key ("+", "mod++"). */
+const parts = (step: string) => step.split(/\+(?!$)/);
+
 export function formatShortcut(combo: string): string {
   return combo
     .split(' ')
-    .map((step) => step.split('+').map(keyName).join(' '))
+    .map((step) => parts(step).map(keyName).join(' '))
     .join(` ${t('then')} `);
 }
 
 /** Single keys for key caps: "mod+k" → ["Ctrl", "K"] */
 export function shortcutKeys(combo: string): string[] {
-  return combo.split(' ').flatMap((step, i) => [...(i > 0 ? [t('then')] : []), ...step.split('+').map(keyName)]);
+  return combo.split(' ').flatMap((step, i) => [...(i > 0 ? [t('then')] : []), ...parts(step).map(keyName)]);
 }
 
 export function isEditable(target: EventTarget | null) {

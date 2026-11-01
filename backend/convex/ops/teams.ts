@@ -9,6 +9,7 @@ import { ensureTeamStates } from '../lib/workflow';
 import { isOwnerKind, TEAM_KEY_RE, type ProjectState } from '../shared/constants';
 import { sameChoice, type ModelChoice } from '../shared/models';
 import { checkHue, checkModel, checkName, getTeam } from './validate';
+import { normalizePeriod, ROADMAP_LIMITS } from '../shared/roadmap';
 
 // Teams, projects, labels and label groups.
 // Only the owner changes teams and logos. The import (actor 'import') may create and
@@ -212,23 +213,53 @@ export async function removeTeamLogo(ctx: MutationCtx, actor: Actor, args: { tea
 
 // ---------------------------------------------------------------- Projects
 
+/** Roadmap fields of a project (SELF-113); null or an empty text clears a field. */
+export interface ProjectFields {
+  description?: string | null;
+  readyWhen?: string | null;
+  period?: string | null;
+  hue?: number | null;
+}
+
+function checkProjectText(text: string, what: string): string | undefined {
+  const s = text.replace(/[ \t]+\n/g, '\n').trim();
+  if (s.length > ROADMAP_LIMITS.projectTextMax) invalid(`${what} is too long (at most ${ROADMAP_LIMITS.projectTextMax} characters).`);
+  return s || undefined;
+}
+
+/** The roadmap fields as a patch: a value, or undefined to remove the field. */
+function projectFields(args: ProjectFields): Partial<Pick<Doc<'projects'>, 'description' | 'readyWhen' | 'period' | 'hue'>> {
+  const patch: Partial<Pick<Doc<'projects'>, 'description' | 'readyWhen' | 'period' | 'hue'>> = {};
+  if (args.description !== undefined) patch.description = args.description === null ? undefined : checkProjectText(args.description, 'The goal');
+  if (args.readyWhen !== undefined) patch.readyWhen = args.readyWhen === null ? undefined : checkProjectText(args.readyWhen, '"Ready when"');
+  if (args.period !== undefined) {
+    if (args.period === null || !args.period.trim()) patch.period = undefined;
+    else patch.period = normalizePeriod(args.period) ?? invalid('The period must be a quarter like 2027-Q1 or a month like 2027-03.');
+  }
+  if (args.hue !== undefined) patch.hue = args.hue === null ? undefined : checkHue(args.hue);
+  return patch;
+}
+
 export async function createProject(
   ctx: MutationCtx,
   _actor: Actor,
-  args: { teamId: Id<'teams'>; name: string; state?: ProjectState },
+  args: { teamId: Id<'teams'>; name: string; state?: ProjectState; position?: number } & ProjectFields,
 ) {
   const team = await getTeam(ctx, args.teamId);
   const siblings = await ctx.db
     .query('projects')
     .withIndex('by_team', (q) => q.eq('teamId', team._id))
     .take(500);
+  const fields = projectFields(args);
   const projectId = await ctx.db.insert('projects', {
     teamId: team._id,
     name: checkName(args.name, 'The project'),
     state: args.state ?? 'active',
     order: siblings.reduce((max, p) => Math.max(max, p.order), -1) + 1,
+    ...Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined)),
     updatedAt: Date.now(),
   });
+  if (args.position !== undefined) await moveProject(ctx, team._id, projectId, args.position);
   return { projectId };
 }
 
@@ -236,14 +267,27 @@ export async function createProject(
 export async function updateProject(
   ctx: MutationCtx,
   _actor: Actor,
-  args: { projectId: Id<'projects'>; name?: string; state?: ProjectState },
+  args: { projectId: Id<'projects'>; name?: string; state?: ProjectState; position?: number } & ProjectFields,
 ) {
   const project = (await ctx.db.get('projects', args.projectId)) ?? notFound('The project');
-  const patch: Partial<Doc<'projects'>> = {};
+  const patch: Partial<Doc<'projects'>> = projectFields(args);
   if (args.name !== undefined) patch.name = checkName(args.name, 'The project');
   if (args.state !== undefined) patch.state = args.state;
   await ctx.db.patch('projects', project._id, { ...patch, updatedAt: Date.now() });
+  if (args.position !== undefined) await moveProject(ctx, project.teamId, project._id, args.position);
   return { projectId: project._id };
+}
+
+/** Puts a project at a position (1 = first) within its team, the others keep their order. */
+async function moveProject(ctx: MutationCtx, teamId: Id<'teams'>, projectId: Id<'projects'>, position: number) {
+  const projects = (await ctx.db
+    .query('projects')
+    .withIndex('by_team', (q) => q.eq('teamId', teamId))
+    .take(500)).sort((a, b) => a.order - b.order);
+  const ids = projects.map((p) => p._id).filter((id) => id !== projectId);
+  const at = Math.max(0, Math.min(ids.length, Math.round(position) - 1));
+  ids.splice(at, 0, projectId);
+  await reorderProjects(ctx, { kind: 'system' }, { teamId, projectIds: ids });
 }
 
 export async function reorderProjects(
@@ -307,7 +351,7 @@ async function checkLabelScope(ctx: MutationCtx, teamId: Id<'teams'> | undefined
 export async function createLabel(
   ctx: MutationCtx,
   _actor: Actor,
-  args: { name: string; hue: number; groupId?: Id<'labelGroups'>; teamId?: Id<'teams'> },
+  args: { name: string; hue: number; groupId?: Id<'labelGroups'>; teamId?: Id<'teams'>; position?: number },
 ) {
   await checkLabelScope(ctx, args.teamId, args.groupId);
   const labelId = await ctx.db.insert('labels', {
@@ -316,13 +360,45 @@ export async function createLabel(
     ...(args.groupId ? { groupId: args.groupId } : {}),
     ...(args.teamId ? { teamId: args.teamId } : {}),
   });
+  if (args.position !== undefined) await moveLabel(ctx, labelId, args.position);
   return { labelId };
+}
+
+/** Labels that share a list: the same group, or ungrouped in the same scope (team or workspace). */
+async function siblingLabels(ctx: MutationCtx, label: Doc<'labels'>) {
+  const all = await ctx.db.query('labels').take(2000);
+  return all.filter((l) => (label.groupId ? l.groupId === label.groupId : !l.groupId && l.teamId === label.teamId));
+}
+
+/** Labels in their order: ordered ones first, then the rest by name (shared/labels in the UI too). */
+function byOrder(a: Doc<'labels'>, b: Doc<'labels'>) {
+  return (a.order ?? Infinity) - (b.order ?? Infinity) || a.name.localeCompare(b.name);
+}
+
+/** Puts a label at a position (1 = first) among its siblings; every sibling then has an order. */
+async function moveLabel(ctx: MutationCtx, labelId: Id<'labels'>, position: number) {
+  const label = (await ctx.db.get('labels', labelId)) ?? notFound('The label');
+  const ids = (await siblingLabels(ctx, label)).sort(byOrder).map((l) => l._id).filter((id) => id !== labelId);
+  ids.splice(Math.max(0, Math.min(ids.length, Math.round(position) - 1)), 0, labelId);
+  await reorderLabels(ctx, { kind: 'system' }, { labelIds: ids });
+}
+
+/** Order of labels: the given ones get 0, 1, 2 … in this order (usually the labels of one group). */
+export async function reorderLabels(ctx: MutationCtx, _actor: Actor, args: { labelIds: Id<'labels'>[] }) {
+  if (args.labelIds.length > 500) invalid('Too many labels at once.');
+  let i = 0;
+  for (const id of args.labelIds) {
+    const label = (await ctx.db.get('labels', id)) ?? notFound('The label', { labelId: id });
+    if (label.order !== i) await ctx.db.patch('labels', label._id, { order: i });
+    i++;
+  }
+  return { count: args.labelIds.length };
 }
 
 export async function updateLabel(
   ctx: MutationCtx,
   _actor: Actor,
-  args: { labelId: Id<'labels'>; name?: string; hue?: number; groupId?: Id<'labelGroups'> | null; archived?: boolean },
+  args: { labelId: Id<'labels'>; name?: string; hue?: number; groupId?: Id<'labelGroups'> | null; archived?: boolean; position?: number },
 ) {
   const label = (await ctx.db.get('labels', args.labelId)) ?? notFound('The label');
   const patch: Partial<Doc<'labels'>> = {};
@@ -333,6 +409,9 @@ export async function updateLabel(
     patch.groupId = args.groupId ?? undefined;
   }
   if (args.archived !== undefined) patch.archived = args.archived;
+  // A label that changes its group starts at the end of the new one.
+  if (args.groupId !== undefined && (args.groupId ?? undefined) !== label.groupId) patch.order = undefined;
   await ctx.db.patch('labels', label._id, patch);
+  if (args.position !== undefined) await moveLabel(ctx, label._id, args.position);
   return { labelId: label._id };
 }

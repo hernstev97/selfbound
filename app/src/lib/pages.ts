@@ -31,6 +31,8 @@ export const pages = {
   pulls: once(() => Promise.all([import('../pages/PullsPage.svelte'), app.loadPulls()]).then(([m]) => m)),
   projects: once(() => import('../pages/ProjectsPage.svelte')),
   drafts: once(() => import('../pages/DraftsPage.svelte')),
+  /** Roadmap and progress (SELF-113): page and core logic (app.loadRoadmap) as separate chunks */
+  roadmap: once(() => Promise.all([import('../pages/roadmap/RoadmapPage.svelte'), app.loadRoadmap()]).then(([m]) => m)),
   /** Wiki: page and core logic (app.loadWiki) as separate chunks */
   wiki: once(() => Promise.all([import('../pages/wiki/WikiPage.svelte'), app.loadWiki()]).then(([m]) => m)),
   /** Context menu, create dialog, display options, peek */

@@ -40,6 +40,9 @@ import { enabledModels } from './models';
 import { moveIssuesToTeamCore } from './move';
 import { profileRow } from './profile';
 import { modelRow } from './validate';
+import { cardOf, cardsOfTeam, setPublicCard, updateRoadmapSettings, type CardPatch } from './roadmap';
+import { createLabel, createLabelGroup, createProject, updateLabel, updateLabelGroup, updateProject } from './teams';
+import { periodRange, stageOfIssue, stageRank, type StageChoice } from '../shared/roadmap';
 import {
   addSourcesCore,
   appendArticleBodyCore,
@@ -309,6 +312,7 @@ class Lookup {
       if (parent) out.parent = parent;
     }
     if (issue.model) out.model = await this.modelOut(issue.model);
+    if (issue.public) out.public = true;
     const effective = await this.effectiveModel(issue);
     if (effective) {
       const from = effective.source === 'parent' ? await this.parentIdentifier(issue.parentId!) : effective.source === 'team' ? team?.key : undefined;
@@ -483,6 +487,7 @@ async function listIssues(ctx: QueryCtx, args: ToolArgs['list_issues'], today: s
     (!labelIds || issue.labelIds.some((id) => labelIds!.has(id))) &&
     (!projectIds || (issue.projectId !== undefined && projectIds.includes(issue.projectId))) &&
     (args.snoozed === undefined || (issue.snoozedUntil !== undefined) === args.snoozed) &&
+    (args.public === undefined || (issue.public === true) === args.public) &&
     preset(issue);
   // The model is checked last: it may read the parent.
   const matches = async (issue: Doc<'issues'>) => matchesFields(issue) && (!byModel || (await byModel(issue)));
@@ -781,6 +786,8 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     reviewedBySteven: reviewedByOwner,
     ...(await allowedStatuses(lookup, issue)),
     ...(previousIdentifiers.length ? { previousIdentifiers } : {}),
+    public: issue.public === true,
+    ...(await publicCardOut(ctx, id)),
     description: { markdown: body?.markdown ?? '', version: body?.version ?? 0 },
     comments: await Promise.all(
       visibleComments
@@ -812,6 +819,21 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
       })),
     ),
   };
+}
+
+/** The public card (roadmap, SELF-113), only when it has something. */
+async function publicCardOut(ctx: QueryCtx, issueId: Id<'issues'>) {
+  const card = await cardOf(ctx, issueId);
+  return card ? { publicCard: card } : {};
+}
+
+/** Card fields of create_issues / update_issue as a patch for setPublicCard (empty = nothing to do). */
+function cardPatchOf(args: { publicTitle?: string | null; publicSummary?: string | null; publicImage?: string | null }): CardPatch {
+  const patch: CardPatch = {};
+  if (args.publicTitle !== undefined) patch.title = args.publicTitle;
+  if (args.publicSummary !== undefined) patch.summary = args.publicSummary;
+  if (args.publicImage !== undefined) patch.image = args.publicImage;
+  return patch;
 }
 
 /** Knowledge pages for the issue: linked from description/comments, or pages that mention the issue. */
@@ -888,29 +910,85 @@ async function listTeams(ctx: QueryCtx, args: ToolArgs['list_teams']) {
 async function listProjects(ctx: QueryCtx, args: ToolArgs['list_projects']) {
   const lookup = new Lookup(ctx);
   const team = args.team ? await lookup.teamByKey(args.team) : undefined;
-  const projects = (await lookup.projects())
+  const all = await lookup.projects();
+  const projects = all
     .filter((p) => (!team || p.teamId === team._id) && (args.includeClosed || (p.state !== 'done' && p.state !== 'canceled')))
     .sort((a, b) => a.order - b.order);
   return {
     projects: await Promise.all(
-      projects.map(async (p) => ({ name: p.name, team: (await lookup.team(p.teamId))?.key ?? '?', state: p.state })),
+      projects.map(async (p) => ({
+        ...(await projectOut(lookup, p, all)),
+        progress: await projectProgress(ctx, p._id),
+      })),
     ),
   };
+}
+
+/** A project for agents: name, team, state, roadmap fields that are set, position within the team (1 = first). */
+async function projectOut(lookup: Lookup, p: Doc<'projects'>, all: Doc<'projects'>[]) {
+  const siblings = all.filter((x) => x.teamId === p.teamId).sort((a, b) => a.order - b.order);
+  return {
+    name: p.name,
+    team: (await lookup.team(p.teamId))?.key ?? '?',
+    state: p.state,
+    position: siblings.findIndex((x) => x._id === p._id) + 1,
+    ...(p.description ? { description: p.description } : {}),
+    ...(p.readyWhen ? { readyWhen: p.readyWhen } : {}),
+    ...(p.period ? { period: p.period } : {}),
+    ...(p.hue !== undefined ? { hue: p.hue } : {}),
+  };
+}
+
+/** Issues of a project by state (trash left out), and points (estimates) open and done. */
+async function projectProgress(ctx: QueryCtx, projectId: Id<'projects'>) {
+  const issues = (await ctx.db.query('issues').withIndex('by_project', (q) => q.eq('projectId', projectId)).take(SCAN_MAX)).filter(
+    (i) => i.deletedAt === undefined,
+  );
+  const out = { total: 0, open: 0, started: 0, done: 0, canceled: 0, public: 0, points: { total: 0, done: 0 } };
+  for (const i of issues) {
+    if (i.public) out.public++;
+    if (i.status === 'canceled' || i.status === 'duplicate') {
+      out.canceled++;
+      continue;
+    }
+    out.total++;
+    out.points.total += i.estimate ?? 0;
+    if (i.status === 'done') {
+      out.done++;
+      out.points.done += i.estimate ?? 0;
+    } else {
+      out.open++;
+      if (i.status === 'in_progress' || i.status === 'in_review') out.started++;
+    }
+  }
+  return out;
+}
+
+/** Labels in their order within the group: ordered ones first, then by name. */
+function labelOrder(a: Doc<'labels'>, b: Doc<'labels'>) {
+  return (a.order ?? Infinity) - (b.order ?? Infinity) || a.name.localeCompare(b.name);
 }
 
 async function listLabels(ctx: QueryCtx, args: ToolArgs['list_labels']) {
   const lookup = new Lookup(ctx);
   const team = args.team ? await lookup.teamByKey(args.team) : undefined;
   const groups = await lookup.groups();
-  const labels = (await lookup.labels()).filter((l) => !l.archived && (!team || !l.teamId || l.teamId === team._id));
+  const labels = (await lookup.labels())
+    .filter((l) => !l.archived && (!team || !l.teamId || l.teamId === team._id))
+    .sort((a, b) => (a.groupId ?? '').localeCompare(b.groupId ?? '') || labelOrder(a, b));
+  const position = new Map<string, number>();
   return {
     labels: await Promise.all(
       labels.map(async (l) => {
         const group = l.groupId ? groups.find((g) => g._id === l.groupId) : undefined;
+        const key = `${l.groupId ?? ''}:${l.groupId ? '' : (l.teamId ?? '')}`;
+        position.set(key, (position.get(key) ?? 0) + 1);
         return {
           name: l.name,
           ...(group ? { group: group.name, exclusive: group.exclusive } : {}),
           scope: l.teamId ? ((await lookup.team(l.teamId))?.key ?? '?') : 'workspace',
+          hue: l.hue,
+          position: position.get(key)!,
         };
       }),
     ),
@@ -1247,6 +1325,254 @@ async function updateArticleTool(ctx: MutationCtx, actor: Actor, args: ToolArgs[
  * in the instance time zone) is passed in rather than taken from Date.now(): this keeps the query
  * deterministic and the cache valid for exactly one day.
  */
+// ---------------------------------------------------------------- Projects, labels, roadmap (SELF-113)
+
+async function projectByName(lookup: Lookup, team: Doc<'teams'>, name: string) {
+  const id = await lookup.projectId(team, name);
+  return (await lookup.projects()).find((p) => p._id === id)!;
+}
+
+async function createProjectTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['create_project']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.create_project', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    const team = await lookup.teamByKey(args.team);
+    if (team.wiki === 'only') fail('invalid', `Team ${team.key} holds knowledge only (no issues, no projects for a roadmap).`, { team: team.key });
+    if ((await lookup.projects()).some((p) => p.teamId === team._id && sameText(p.name, args.name))) {
+      fail('invalid', `Team ${team.key} already has a project "${args.name}". Use update_project to change it.`, { project: args.name });
+    }
+    const { projectId } = await createProject(ctx, actor, {
+      teamId: team._id,
+      name: args.name,
+      state: args.state,
+      description: args.description,
+      readyWhen: args.readyWhen,
+      period: args.period,
+      hue: args.hue,
+      position: args.position,
+    });
+    const all = await ctx.db.query('projects').take(2000);
+    return { project: await projectOut(lookup, all.find((p) => p._id === projectId)!, all) };
+  });
+}
+
+async function updateProjectTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['update_project']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.update_project', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    const team = await lookup.teamByKey(args.team);
+    const project = await projectByName(lookup, team, args.project);
+    if (args.name !== undefined && !sameText(args.name, project.name)) {
+      if ((await lookup.projects()).some((p) => p.teamId === team._id && p._id !== project._id && sameText(p.name, args.name))) {
+        fail('invalid', `Team ${team.key} already has a project "${args.name}".`, { project: args.name });
+      }
+    }
+    await updateProject(ctx, actor, {
+      projectId: project._id,
+      name: args.name,
+      state: args.state,
+      description: args.description,
+      readyWhen: args.readyWhen,
+      period: args.period,
+      hue: args.hue,
+      position: args.position,
+    });
+    const all = await ctx.db.query('projects').take(2000);
+    return { project: await projectOut(lookup, all.find((p) => p._id === project._id)!, all) };
+  });
+}
+
+/** A stable color from a name, for labels and groups created without one. */
+function hueOfName(name: string) {
+  let h = 0;
+  for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) % 360;
+  return h;
+}
+
+/** A label group by name: the team's first, then a workspace group. */
+async function groupByName(lookup: Lookup, team: Doc<'teams'> | undefined, name: string) {
+  const groups = (await lookup.groups()).filter((g) => sameText(g.name, name));
+  return (team ? groups.find((g) => g.teamId === team._id) : undefined) ?? groups.find((g) => !g.teamId) ?? null;
+}
+
+/** The group for a label: found by name, else created (in the team, if any) with the given flag. */
+async function groupFor(ctx: MutationCtx, actor: Actor, lookup: Lookup, team: Doc<'teams'> | undefined, name: string, exclusive: boolean | undefined, hue: number | undefined) {
+  const group = await groupByName(lookup, team, name);
+  if (group) {
+    if (group.teamId && group.teamId !== team?._id) fail('invalid', `The label group "${name}" belongs to another team.`);
+    if (exclusive !== undefined && exclusive !== group.exclusive) await updateLabelGroup(ctx, actor, { groupId: group._id, exclusive });
+    return { id: group._id, hue: group.hue, created: false };
+  }
+  const { groupId } = await createLabelGroup(ctx, actor, { name, exclusive: exclusive ?? false, hue: hue ?? hueOfName(name), ...(team ? { teamId: team._id } : {}) });
+  return { id: groupId, hue: hue ?? hueOfName(name), created: true };
+}
+
+/** A label by name: the team's label when a team is given, else the workspace label. */
+async function labelByName(lookup: Lookup, team: Doc<'teams'> | undefined, name: string) {
+  const labels = (await lookup.labels()).filter((l) => sameText(l.name, name) && (team ? l.teamId === team._id : !l.teamId));
+  if (labels.length === 0) {
+    fail('not_found', `Unknown label "${name}"${team ? ` in team ${team.key}` : ' (workspace)'}. Call list_labels; pass \`team\` for team labels.`, { label: name });
+  }
+  if (labels.length > 1) fail('invalid', `Label name "${name}" is ambiguous (it exists in several groups).`, { label: name });
+  return labels[0]!;
+}
+
+async function labelOut(ctx: QueryCtx, labelId: Id<'labels'>) {
+  const lookup = new Lookup(ctx);
+  const label = (await lookup.labels()).find((l) => l._id === labelId)!;
+  const group = label.groupId ? (await lookup.groups()).find((g) => g._id === label.groupId) : undefined;
+  const siblings = (await lookup.labels()).filter((l) => (label.groupId ? l.groupId === label.groupId : !l.groupId && l.teamId === label.teamId)).sort(labelOrder);
+  return {
+    name: label.name,
+    ...(group ? { group: group.name, exclusive: group.exclusive } : {}),
+    scope: label.teamId ? ((await lookup.team(label.teamId))?.key ?? '?') : 'workspace',
+    hue: label.hue,
+    position: siblings.findIndex((l) => l._id === label._id) + 1,
+    ...(label.archived ? { archived: true } : {}),
+  };
+}
+
+async function createLabelTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['create_label']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.create_label', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    const team = args.team ? await lookup.teamByKey(args.team) : undefined;
+    const group = args.group ? await groupFor(ctx, actor, lookup, team, args.group, args.exclusive, args.hue) : undefined;
+    const clash = (await lookup.labels()).find((l) => sameText(l.name, args.name) && (team ? l.teamId === team._id : !l.teamId) && l.groupId === group?.id);
+    if (clash) fail('invalid', `The label "${args.name}" already exists${group ? ` in group "${args.group}"` : ''}. Use update_label.`, { label: args.name });
+    const { labelId } = await createLabel(ctx, actor, {
+      name: args.name,
+      hue: args.hue ?? group?.hue ?? hueOfName(args.name),
+      ...(group ? { groupId: group.id } : {}),
+      ...(team ? { teamId: team._id } : {}),
+      position: args.position,
+    });
+    return { label: await labelOut(ctx, labelId), ...(group?.created ? { createdGroup: args.group } : {}) };
+  });
+}
+
+async function updateLabelTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['update_label']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.update_label', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    const team = args.team ? await lookup.teamByKey(args.team) : undefined;
+    const label = await labelByName(lookup, team, args.label);
+    let groupId: Id<'labelGroups'> | null | undefined;
+    let createdGroup: string | undefined;
+    if (args.group === null) groupId = null;
+    else if (args.group !== undefined) {
+      const group = await groupFor(ctx, actor, lookup, team, args.group, args.exclusive, undefined);
+      groupId = group.id;
+      if (group.created) createdGroup = args.group;
+    } else if (args.exclusive !== undefined) {
+      if (!label.groupId) fail('invalid', `The label "${label.name}" is in no group; give \`group\` to set the exclusive flag.`);
+      await updateLabelGroup(ctx, actor, { groupId: label.groupId, exclusive: args.exclusive });
+    }
+    await updateLabel(ctx, actor, {
+      labelId: label._id,
+      name: args.name,
+      hue: args.hue,
+      ...(groupId !== undefined ? { groupId } : {}),
+      archived: args.archived,
+      position: args.position,
+    });
+    return { label: await labelOut(ctx, label._id), ...(createdGroup ? { createdGroup } : {}) };
+  });
+}
+
+/** Category of an issue: its first label (in group order) from the category group. */
+function categoryOf(issue: Doc<'issues'>, categories: Doc<'labels'>[]) {
+  for (const label of categories) if (issue.labelIds.includes(label._id)) return label.name;
+  return null;
+}
+
+async function getRoadmapTool(ctx: QueryCtx, args: ToolArgs['get_roadmap']) {
+  const lookup = new Lookup(ctx);
+  const team = await lookup.teamByKey(args.team);
+  const settings = team.roadmap ?? { on: false };
+  const states = await lookup.states(team._id);
+  const groups = await lookup.groups();
+  const group = settings.categoryGroupId ? groups.find((g) => g._id === settings.categoryGroupId) : undefined;
+  const categories = group ? (await lookup.labels()).filter((l) => l.groupId === group._id && !l.archived).sort(labelOrder) : [];
+  const cards = new Map((await cardsOfTeam(ctx, team._id)).map((c) => [c.issueId, c]));
+  const all = await lookup.projects();
+  const projects = all.filter((p) => p.teamId === team._id && p.state !== 'canceled').sort((a, b) => a.order - b.order);
+  const out = [];
+  for (const p of projects) {
+    const issues = (await ctx.db.query('issues').withIndex('by_project', (q) => q.eq('projectId', p._id)).take(SCAN_MAX)).filter(
+      (i) => i.deletedAt === undefined && i.teamId === team._id,
+    );
+    const shown = issues
+      .map((i) => ({ issue: i, stage: stageOfIssue(i, states, settings) as StageChoice }))
+      .filter((x) => x.stage !== 'hidden' && (!args.publicOnly || x.issue.public));
+    const byCategory = new Map<string, unknown[]>();
+    for (const { issue, stage } of shown.sort((a, b) => stageRank(a.stage) - stageRank(b.stage) || a.issue.seq - b.issue.seq)) {
+      const name = categoryOf(issue, categories) ?? '(no category)';
+      const card = cards.get(issue._id);
+      const list = byCategory.get(name) ?? [];
+      list.push({
+        identifier: await lookup.identifier(issue),
+        title: issue.title,
+        stage,
+        status: await lookup.statusName(issue),
+        public: issue.public === true,
+        ...(card?.title ? { publicTitle: card.title } : {}),
+        ...(card?.summary ? { publicSummary: card.summary } : {}),
+        ...(card?.image ? { publicImage: card.image } : {}),
+      });
+      byCategory.set(name, list);
+    }
+    const order = [...categories.map((c) => c.name), '(no category)'];
+    const range = periodRange(p.period);
+    out.push({
+      ...(await projectOut(lookup, p, all)),
+      ...(range ? { periodStart: range.start, periodEnd: range.end } : {}),
+      progress: { done: shown.filter((x) => x.stage === 'done').length, total: shown.length },
+      categories: order.filter((name) => byCategory.has(name)).map((name) => ({ name, issues: byCategory.get(name) })),
+    });
+  }
+  return {
+    team: team.key,
+    enabled: settings.on,
+    categoryGroup: group ? { name: group.name, exclusive: group.exclusive, labels: categories.map((c) => c.name) } : null,
+    stages: activeStates(states).map((s) => ({ status: s.name, stage: stageOfIssue({ stateId: s._id, status: statusOfState(s) }, states, settings), custom: settings.stages?.some((m) => m.stateId === s._id) ?? false })),
+    ...(settings.title ? { title: settings.title } : {}),
+    ...(settings.subtitle ? { subtitle: settings.subtitle } : {}),
+    ...(settings.accent ? { accent: settings.accent } : {}),
+    projects: out,
+    ...(categories.length === 0 ? { note: 'No category group is set: issues show without categories. Set one with update_roadmap (categoryGroup).' } : {}),
+  };
+}
+
+async function updateRoadmapTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['update_roadmap']) {
+  const lookup = new Lookup(ctx);
+  const team = await lookup.teamByKey(args.team);
+  let categoryGroupId: Id<'labelGroups'> | null | undefined;
+  if (args.categoryGroup === null) categoryGroupId = null;
+  else if (args.categoryGroup !== undefined) {
+    const group = await groupByName(lookup, team, args.categoryGroup);
+    if (!group) fail('not_found', `Unknown label group "${args.categoryGroup}". Create it with create_label (group), see list_labels.`, { group: args.categoryGroup });
+    categoryGroupId = group._id;
+  }
+  let stages: { stateId: Id<'workflowStates'>; stage: StageChoice }[] | undefined;
+  if (args.stages) {
+    const states = await lookup.states(team._id);
+    stages = args.stages.map((m) => {
+      const state = stateByName(states, m.status);
+      if (!state || state.archivedAt !== undefined) {
+        fail('invalid', `Unknown status "${m.status}" for team ${team.key}. Valid: ${activeStates(states).map((s) => `"${s.name}"`).join(', ')}.`, { status: m.status });
+      }
+      return { stateId: state._id, stage: m.stage };
+    });
+  }
+  await updateRoadmapSettings(ctx, actor, {
+    teamId: team._id,
+    on: args.enabled,
+    categoryGroupId,
+    stages,
+    title: args.title,
+    subtitle: args.subtitle,
+    accent: args.accent,
+  });
+  return await getRoadmapTool(ctx, { team: team.key, publicOnly: true });
+}
+
 export async function runReadTool(ctx: QueryCtx, tool: ToolName, args: unknown, today: string): Promise<unknown> {
   switch (tool) {
     case 'search_issues':
@@ -1273,6 +1599,8 @@ export async function runReadTool(ctx: QueryCtx, tool: ToolName, args: unknown, 
       return await listStatuses(ctx, args as ToolArgs['list_statuses']);
     case 'list_inbox':
       return await listInboxTool(ctx, args as ToolArgs['list_inbox']);
+    case 'get_roadmap':
+      return await getRoadmapTool(ctx, args as ToolArgs['get_roadmap']);
     case 'list_models':
       return await listModelsTool(ctx, args as ToolArgs['list_models']);
     default:
@@ -1321,12 +1649,15 @@ async function createIssuesToolCore(ctx: MutationCtx, actor: Actor, args: ToolAr
       ...(item.dueDate ? { dueDate: item.dueDate } : {}),
       ...(parentId ? { parentId } : {}),
       ...(item.model ? { model: item.model } : {}),
+      ...(item.public ? { public: true } : {}),
     });
   }
   const result = await createIssuesCore(ctx, actor, { issues, requestId: args.requestId });
   const created = [];
   const cleared = [];
-  for (const { id, identifier, clearedPriority } of result.issues) {
+  for (const [i, { id, identifier, clearedPriority }] of result.issues.entries()) {
+    const card = cardPatchOf(args.issues[i]!);
+    if (Object.keys(card).length) await setPublicCard(ctx, actor, { id, ...card }, Date.now(), args.requestId);
     const issue = await ctx.db.get('issues', id);
     if (!issue) continue;
     const brief = await lookup.brief(issue);
@@ -1399,6 +1730,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       const want = expected.model === null ? null : normalizeChoice(expected.model);
       check('model', sameChoice(want, issue.model), expected.model, issue.model ? await lookup.modelOut(issue.model) : null);
     }
+    if (expected.public !== undefined) check('public', expected.public === (issue.public === true), expected.public, issue.public === true);
     const blocked = new Set(conflicts.map((c) => c.field));
 
     const patch: IssuePatch = {};
@@ -1418,6 +1750,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       patch.parentId = args.parent === null ? null : (await issueByIdentifier(ctx, args.parent))._id;
     }
     if (args.model !== undefined && !blocked.has('model')) patch.model = args.model;
+    if (args.public !== undefined && !blocked.has('public')) patch.public = args.public;
 
     const before = issue;
     if (Object.keys(patch).length > 0) await applyPatch(ctx, actor, issue._id, patch, undefined, now, args.requestId);
@@ -1434,9 +1767,15 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       snoozedUntil: 'snoozedUntil',
       parentId: 'parent',
       model: 'model',
+      public: 'public',
     } as const;
     for (const [field, name] of Object.entries(FIELD_NAMES) as [keyof typeof FIELD_NAMES, string][]) {
       if (JSON.stringify(before[field] ?? null) !== JSON.stringify(after[field] ?? null)) changed.push(name);
+    }
+    const card = cardPatchOf(args);
+    if (Object.keys(card).length) {
+      const result = await setPublicCard(ctx, actor, { id: issue._id, ...card }, now, args.requestId);
+      for (const field of result.changed) changed.push(`public${field[0]!.toUpperCase()}${field.slice(1)}`);
     }
 
     let descriptionVersion: number | undefined;
@@ -1481,6 +1820,7 @@ async function updateIssueTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['u
       ...(descriptionVersion !== undefined ? { descriptionVersion } : {}),
       warnings,
       issue: await lookup.brief(after),
+      ...(Object.keys(card).length ? await publicCardOut(ctx, issue._id) : {}),
     };
   });
 }
@@ -1611,6 +1951,16 @@ export async function runWriteTool(ctx: MutationCtx, actor: Actor, tool: ToolNam
       return await createArticleTool(ctx, actor, args as ToolArgs['create_article']);
     case 'update_article':
       return await updateArticleTool(ctx, actor, args as ToolArgs['update_article']);
+    case 'create_project':
+      return await createProjectTool(ctx, actor, args as ToolArgs['create_project']);
+    case 'update_project':
+      return await updateProjectTool(ctx, actor, args as ToolArgs['update_project']);
+    case 'create_label':
+      return await createLabelTool(ctx, actor, args as ToolArgs['create_label']);
+    case 'update_label':
+      return await updateLabelTool(ctx, actor, args as ToolArgs['update_label']);
+    case 'update_roadmap':
+      return await updateRoadmapTool(ctx, actor, args as ToolArgs['update_roadmap']);
     default:
       return fail('invalid', `${tool} is not a write tool.`);
   }

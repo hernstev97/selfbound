@@ -20,6 +20,7 @@ export const newIssueValidator = v.object({
   parentId: v.optional(v.id('issues')),
   sprintId: v.optional(v.id('sprints')),
   model: v.optional(modelChoiceValidator),
+  public: v.optional(v.boolean()), // may appear in the roadmap's image export (SELF-113)
 });
 export type NewIssue = Infer<typeof newIssueValidator>;
 
@@ -36,6 +37,7 @@ export const issuePatchValidator = v.object({
   parentId: v.optional(v.union(v.id('issues'), v.null())),
   sprintId: v.optional(v.union(v.id('sprints'), v.null())),
   model: v.optional(v.union(modelChoiceValidator, v.null())), // desired model (XLR8-93)
+  public: v.optional(v.boolean()), // roadmap export (SELF-113); false = not public
 });
 export type IssuePatch = Infer<typeof issuePatchValidator>;
 export type PatchField = keyof IssuePatch;
@@ -52,6 +54,7 @@ export const PATCH_FIELDS: PatchField[] = [
   'parentId',
   'sprintId',
   'model',
+  'public',
 ];
 
 export const revertItemValidator = v.object({

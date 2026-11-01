@@ -141,7 +141,7 @@ describe('argument validation', () => {
       }),
     );
     expect(bad).toEqual([
-      'issues[0].assignee: unknown field (allowed: team, title, description, status, priority, labels, project, estimate, dueDate, parent, model)',
+      'issues[0].assignee: unknown field (allowed: team, title, description, status, priority, labels, project, estimate, dueDate, parent, model, public, publicTitle, publicSummary, publicImage)',
       'issues[0].team: "K" is not a team key like "ACME"',
       'issues[0].title: must be at least 1 character long',
       'issues[0].priority: "critical" is not a priority (0-4 or none/urgent/high/medium/low)',

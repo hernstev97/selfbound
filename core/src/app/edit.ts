@@ -52,10 +52,13 @@ const FIELD_LABEL: Record<PatchField, string> = translated({
   parentId: 'Parent',
   sprintId: 'Sprint',
   model: 'Model',
+  public: 'Public',
 });
 
 /** Current value of a field as a patch value (`null` = not set). */
 function current(issue: Issue, field: PatchField): unknown {
+  // Stored only as true; the patch value for "not public" is false (null is not valid there).
+  if (field === 'public') return issue.public === true;
   const value = (issue as unknown as Record<string, unknown>)[field];
   return value === undefined ? null : value;
 }

@@ -12,6 +12,7 @@
   import HuePicker from './HuePicker.svelte';
   import Workflow from './Workflow.svelte';
   import TeamModel from './TeamModel.svelte';
+  import TeamRoadmap from './TeamRoadmap.svelte';
   import Dialog from './Dialog.svelte';
   import { admin } from './admin.ts';
   import type { LogoVariant } from '@selfbound/core/app/admin';
@@ -133,6 +134,8 @@
   </div>
 
   {#if team.wiki !== 'only'}<Workflow {team} />{/if}
+
+  {#if team.wiki !== 'only'}<TeamRoadmap {team} />{/if}
 
   <h2 class="section-title">{t('Logo')}</h2>
   <p class="section-lead">{t('SVG or PNG, square, at most 256 KB. Optionally a second logo for dark backgrounds. From Inkscape, save as "Plain SVG".')}</p>

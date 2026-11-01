@@ -15,6 +15,7 @@ import { commentPage } from './ops/comments';
 import * as inbox from './ops/inbox';
 import * as ops from './ops/issues';
 import { moveIssuesToTeam } from './ops/move';
+import { cardOf } from './ops/roadmap';
 
 // ---------------------------------------------------------------- Read
 
@@ -67,7 +68,7 @@ export const detail = ownerQuery({
     const issue = await ctx.db.get('issues', id);
     if (!issue) return null;
     const identifier = teamKeys(ctx);
-    const [body, commentsPage, outgoing, incoming, links, history, sprintEntries] = await Promise.all([
+    const [body, commentsPage, outgoing, incoming, links, history, sprintEntries, publicCard] = await Promise.all([
       ctx.db
         .query('issueBodies')
         .withIndex('by_issue', (q) => q.eq('issueId', id))
@@ -94,6 +95,7 @@ export const detail = ownerQuery({
         .query('sprintItems')
         .withIndex('by_issue', (q) => q.eq('issueId', id))
         .take(200),
+      cardOf(ctx, id),
     ]);
     const brief = async (otherId: Id<'issues'>) => {
       const other = await ctx.db.get('issues', otherId);
@@ -144,6 +146,8 @@ export const detail = ownerQuery({
       pullRequests,
       history,
       sprints: sprints.sort((a, b) => a.addedAt - b.addedAt),
+      // Public card for the roadmap (SELF-113): title, summary, image URL; null = none
+      publicCard,
     };
   },
 });

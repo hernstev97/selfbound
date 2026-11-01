@@ -25,6 +25,7 @@ import type { ModelChoice } from '../shared/models';
 import { defaultState, statusOfState } from '../shared/workflow';
 import { insertBody, writeBody } from './bodies';
 import { syncFileRefs } from './files';
+import { purgeCard } from './roadmap';
 import { dropLinksTo, syncArticleLinks } from './links';
 import { record } from './history';
 import { purgeEntries } from './inbox';
@@ -177,6 +178,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       dueDate: item.dueDate === undefined ? undefined : checkDay(item.dueDate, 'The due date'),
       parentId: item.parentId ? (await checkParent(ctx, null, item.parentId))._id : undefined,
       model: item.model ? await checkModel(ctx, item.model) : undefined,
+      public: item.public === true,
     });
   }
 
@@ -219,6 +221,7 @@ export async function createIssuesCore(ctx: MutationCtx, actor: Actor, args: Cre
       ...(p.dueDate ? { dueDate: p.dueDate } : {}),
       ...(p.parentId ? { parentId: p.parentId } : {}),
       ...(p.model ? { model: p.model } : {}),
+      ...(p.public ? { public: true } : {}),
       rank: ranks[i],
       createdBy: actor,
       // Legacy marker (see schema): lets the inbox migration tell issues apart that never had an entry.
@@ -280,7 +283,9 @@ export async function applyPatch(
       const expected = expect[field];
       if (expected === undefined) continue;
       if (!PATCH_FIELDS.includes(field)) invalid(`Unknown field "${field}".`);
-      if (!sameValue(issue[field], expected, field === 'labelIds')) {
+      // `public` is stored only as true: false and missing are the same value.
+      const same = field === 'public' ? (issue.public === true) === (expected === true) : sameValue(issue[field], expected, field === 'labelIds');
+      if (!same) {
         const team = await ctx.db.get('teams', issue.teamId);
         const identifier = identifierOf(team?.key ?? '?', issue.number);
         fail('conflict', `${identifier} was changed in the meantime (${field}). Reload and try again.`, {
@@ -361,6 +366,8 @@ export async function applyPatch(
     const undo = opts.undo ? await lastReplacedModel(ctx, issue._id) : null;
     set('model', patch.model === null ? undefined : await checkModel(ctx, patch.model, { keep: issue.model, undo }));
   }
+  // Stored only as true: "not public" is the missing field.
+  if (patch.public !== undefined) set('public', patch.public ? true : undefined);
 
   if (changes.status !== undefined) Object.assign(changes, statusTimestamps(issue, changes.status, now));
   // A raise (the issue newly counts toward urgent/high in its team) must fit a hard limit.
@@ -565,6 +572,7 @@ export async function purgeIssue(ctx: MutationCtx, issue: Doc<'issues'>, now: nu
     ...(await ctx.db.query('comments').withIndex('by_issue', (q) => q.eq('issueId', id)).collect()),
   ];
   for (const row of texts) await syncFileRefs(ctx, row._id, null, now);
+  await purgeCard(ctx, id, now);
   // Links to knowledge pages from the description and comments, and links from pages to the issue.
   const linkRows = await ctx.db
     .query('articleLinks')

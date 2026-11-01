@@ -13,6 +13,7 @@ const GROUPS = {
   sprints: ['get_current_sprint'],
   knowledge: ['search_articles', 'list_articles', 'get_article', 'create_article', 'update_article'],
   lookup: ['list_teams', 'list_projects', 'list_labels', 'list_statuses', 'list_models'],
+  roadmap: ['get_roadmap', 'update_roadmap', 'create_project', 'update_project', 'create_label', 'update_label'],
 } as const;
 type Group = keyof typeof GROUPS;
 

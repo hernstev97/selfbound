@@ -11,7 +11,7 @@ import type { Issue, IssueId, PaletteKind, Status } from '../types.ts';
 import { VIEWS, addTarget, planSprint } from '../views.ts';
 import type { App } from './index.ts';
 
-export type ActionSection = 'Issue' | 'Selection' | 'Navigation' | 'View' | 'General' | 'Triage' | 'Inbox' | 'Sprint' | 'Wiki';
+export type ActionSection = 'Issue' | 'Selection' | 'Navigation' | 'View' | 'General' | 'Triage' | 'Inbox' | 'Sprint' | 'Wiki' | 'Roadmap';
 
 /** Display name of each section (command menu, keyboard help). */
 export const SECTION_LABEL: Record<ActionSection, string> = translated({
@@ -24,6 +24,7 @@ export const SECTION_LABEL: Record<ActionSection, string> = translated({
   Inbox: 'Inbox',
   Sprint: 'Sprint',
   Wiki: 'Knowledge',
+  Roadmap: 'Roadmap',
 });
 
 export interface Action {
@@ -110,6 +111,27 @@ function goWiki(a: App) {
   a.nav.go({ name: 'wiki', team: team.key });
 }
 
+/** Roadmap of the team in context (else of the current team); a hint if it is off. */
+function goRoadmap(a: App) {
+  const key = a.contextTeam() ?? a.currentTeam();
+  const team = a.store.meta.get()?.teams.find((x) => x.key === key);
+  if (!team) return;
+  if (!team.roadmap?.on) {
+    a.toasts.show(t('{team} has no roadmap yet. Turn it on in the team settings.', { team: team.name }), { label: t('Settings'), run: () => a.openTeamSettings(team.key) });
+    return;
+  }
+  a.nav.go({ name: 'roadmap', team: team.key, tab: 'release' });
+}
+
+/** Make the targets public or private (the first one decides). */
+function togglePublic(a: App) {
+  const ids = a.targets();
+  const first = ids.length ? a.store.get(ids[0]!) : undefined;
+  if (!first) return;
+  const value = first.public !== true;
+  a.edit.patch(ids, { public: value }, { label: value ? t('Made public') : t('Made private') });
+}
+
 /** J/K: the detail page steps through issues, the list moves focus; in the split inbox the right pane follows. */
 function step(a: App, delta: number) {
   a.cues.emit('tap');
@@ -157,6 +179,7 @@ export const ACTIONS: Action[] = [
   { id: 'issue.copyKey', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', context: [3, 3], when: realTarget, run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.copyKeyPlain', label: msg('Copy ID'), section: 'Issue', keys: ['mod+c'], hidden: true, when: (a) => realTarget(a) && !textSelected(), run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.moveUp', label: msg('Move issue up'), section: 'Issue', keys: ['alt+arrowup'], icon: 'arrowUp', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, -1) },
+  { id: 'issue.public', label: msg('Public on the roadmap: on/off'), section: 'Issue', icon: 'eye', keywords: 'public öffentlich roadmap export discord private privat sichtbar visible', context: [3, 7], when: notDeleted, run: togglePublic },
   { id: 'issue.moveDown', label: msg('Move issue down'), section: 'Issue', keys: ['alt+arrowdown'], icon: 'arrowDown', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, 1) },
   // E for "edit". In the inbox, E stays "remove": this action applies only on the issue page.
   { id: 'issue.editDescription', label: msg('Edit description'), section: 'Issue', keys: ['e'], icon: 'edit', keywords: 'edit description text write bearbeiten ändern schreiben beschreibung', when: editableIssue, run: (a) => a.detail.startEdit() },
@@ -284,6 +307,7 @@ export const ACTIONS: Action[] = [
   { id: 'go.all', label: msg('Go to: All issues'), section: 'Navigation', keys: ['g a'], icon: 'issues', top: true, keywords: 'all alle', run: (a) => a.nav.goView({ kind: 'all', team: null }) },
   { id: 'go.active', label: msg('Go to: Active issues'), section: 'Navigation', keys: ['g e'], icon: 'active', keywords: 'active aktiv', run: (a) => a.nav.goView({ kind: 'active', team: a.contextTeam() }) },
   { id: 'go.backlog', label: msg('Go to: Backlog'), section: 'Navigation', keys: ['g b'], icon: 'backlog', keywords: 'backlog', run: (a) => a.nav.goView({ kind: 'backlog', team: a.contextTeam() }) },
+  { id: 'go.roadmap', label: msg('Go to: Roadmap'), section: 'Navigation', keys: ['g r'], icon: 'roadmap', keywords: 'roadmap release fahrplan etappen stages milestones meilensteine fortschritt timeline zeitachse', run: (a) => goRoadmap(a) },
   { id: 'go.wiki', label: msg('Go to: Knowledge'), section: 'Navigation', keys: ['g w'], icon: 'wiki', keywords: 'wissen wiki doku dokumentation docs documentation knowledge seiten pages', run: (a) => goWiki(a) },
   { id: 'go.sprint', label: msg('Go to: Sprint'), section: 'Navigation', keys: ['g s'], icon: 'sprint', keywords: 'sprint cycle', run: (a) => a.nav.goView({ kind: 'sprint', team: null }) },
   { id: 'team.switch', label: msg('Switch team …'), section: 'Navigation', keys: ['o t'], icon: 'team', keywords: 'team wechseln switch current aktuelles', run: (a) => a.palette.open('switchTeam') },

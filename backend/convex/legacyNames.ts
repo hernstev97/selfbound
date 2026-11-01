@@ -32,6 +32,7 @@ export const TABLES = [
   'articleBodies',
   'articleRevisions',
   'articleSources',
+  'publicCards',
   'requests',
   'sprints',
   'appearance',
@@ -53,6 +54,7 @@ export const ACTOR_FIELDS = {
   articleBodies: ['updatedBy'],
   articleRevisions: ['actor'],
   articleSources: ['createdBy'],
+  publicCards: ['updatedBy'],
 } as const satisfies Partial<Record<MigratedTable, readonly string[]>>;
 
 const PAGE = 200;

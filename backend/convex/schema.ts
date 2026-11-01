@@ -80,6 +80,27 @@ export const projectStateValidator = v.union(
 
 export const wikiModeValidator = v.union(v.literal('on'), v.literal('only'));
 
+// Roadmap (SELF-113, shared/roadmap.ts): what a status shows as on the roadmap.
+export const stageChoiceValidator = v.union(
+  v.literal('done'),
+  v.literal('testing'),
+  v.literal('progress'),
+  v.literal('planned'),
+  v.literal('tentative'),
+  v.literal('hidden'),
+);
+export const stageMappingValidator = v.object({ stateId: v.id('workflowStates'), stage: stageChoiceValidator });
+/** A team's roadmap: on/off, the label group whose labels are the categories, stages, export branding. */
+export const roadmapSettingsValidator = v.object({
+  on: v.boolean(),
+  categoryGroupId: v.optional(v.id('labelGroups')),
+  // Statuses with their own stage; the others use the default of their type.
+  stages: v.optional(v.array(stageMappingValidator)),
+  title: v.optional(v.string()), // export title; missing = team name
+  subtitle: v.optional(v.string()),
+  accent: v.optional(v.string()), // #rrggbb; missing = the team's hue
+});
+
 // Priority limit (shared/priorityLimits.ts): `max` null = no limit; `hard` = reject instead of warn.
 export const priorityLimitValidator = v.object({ max: v.union(v.number(), v.null()), hard: v.boolean() });
 export const priorityLimitsValidator = v.object({ urgent: priorityLimitValidator, high: priorityLimitValidator });
@@ -203,6 +224,8 @@ export default defineSchema({
     wiki: v.optional(wikiModeValidator),
     // Model for the team's issues that set none themselves and whose parent sets none. Missing = none.
     defaultModel: v.optional(modelChoiceValidator),
+    // Roadmap and progress (SELF-113). Missing = off.
+    roadmap: v.optional(roadmapSettingsValidator),
     updatedAt: v.number(),
   }).index('by_key', ['key']),
 
@@ -228,6 +251,11 @@ export default defineSchema({
     state: projectStateValidator,
     iconId: v.optional(v.id('_storage')),
     order: v.number(),
+    // Roadmap (SELF-113); all optional, missing = not set.
+    description: v.optional(v.string()), // goal
+    readyWhen: v.optional(v.string()), // when the project counts as done
+    period: v.optional(v.string()), // rough time frame: "2027-Q1" or "2027-03" (shared/roadmap.ts)
+    hue: v.optional(v.number()), // color on the roadmap (OKLCH hue); missing = neutral
     updatedAt: v.number(),
   }).index('by_team', ['teamId']),
 
@@ -244,6 +272,8 @@ export default defineSchema({
     groupId: v.optional(v.id('labelGroups')),
     teamId: v.optional(v.id('teams')), // missing = workspace label
     archived: v.optional(v.boolean()),
+    // Position within its group (roadmap categories, settings); missing = after the ordered ones, by name.
+    order: v.optional(v.number()),
   }),
 
   // Running counters in their own table, so creating an issue doesn't re-run every client's meta
@@ -276,6 +306,9 @@ export default defineSchema({
     sprintId: v.optional(v.id('sprints')),
     // Desired model (XLR8-93). Missing = inherited from the parent or the team default, else none.
     model: v.optional(modelChoiceValidator),
+    // Public (SELF-113): may appear in the roadmap's image export. Missing = not public (stored only as true).
+    // The public card (title, summary, image) lives in `publicCards`, so buckets stay small.
+    public: v.optional(v.boolean()),
     rank: v.string(), // order in the backlog (fractional-indexing)
     createdBy: actorValidator,
     // Legacy inbox markers. Inbox entries live in `inboxEntries` now; these two stay in the schema
@@ -331,6 +364,21 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: actorValidator,
   }).index('by_issue', ['issueId']),
+
+  // Public card of an issue (SELF-113): what the roadmap and its image export show instead of the
+  // internal title and description. One row per issue at most; only through ops/roadmap.ts.
+  // `image` is the token of an uploaded image (`files`, referenced through fileRefs owner = row id).
+  publicCards: defineTable({
+    issueId: v.id('issues'),
+    teamId: v.id('teams'), // follows the issue when it moves
+    title: v.optional(v.string()),
+    summary: v.optional(v.string()),
+    image: v.optional(v.string()),
+    updatedAt: v.number(),
+    updatedBy: actorValidator,
+  })
+    .index('by_issue', ['issueId'])
+    .index('by_team', ['teamId']),
 
   // Search text of the description (the first BODY_SEARCH_CHARS characters), so full-text search
   // doesn't have to read whole descriptions (up to 200,000 characters).

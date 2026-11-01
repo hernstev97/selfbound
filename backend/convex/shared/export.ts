@@ -21,6 +21,7 @@ export const EXPORT_TABLES = [
   'labelGroups',
   'labels',
   'issues',
+  'publicCards',
   'identifierAliases',
   'issueBodies',
   'bodyRevisions',

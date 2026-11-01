@@ -24,3 +24,9 @@ export const update = ownerWriteMutation({
   },
   handler: async (ctx, args) => await ops.updateLabel(ctx, ctx.actor, args),
 });
+
+/** Order within a group (roadmap categories): the given labels get positions 0, 1, 2 … */
+export const reorder = ownerWriteMutation({
+  args: { labelIds: v.array(v.id('labels')) },
+  handler: async (ctx, args) => await ops.reorderLabels(ctx, ctx.actor, args),
+});

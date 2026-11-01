@@ -9,6 +9,9 @@ import { ensureTeamStates, stateFields } from './lib/workflow';
 import { DAY_MS } from './lib/dates';
 import { BODY_SEARCH_CHARS } from './ops/bodies';
 import { openCreatedEntry } from './ops/inboxChanges';
+import { createIssuesCore } from './ops/issues';
+import { setPublicCard, updateRoadmapSettings } from './ops/roadmap';
+import { createLabel, createLabelGroup, createProject, createTeam } from './ops/teams';
 import { readOpsStatus, writeOpsStatus } from './ops/maintenance';
 import { applyProvider, setModelEnabled } from './ops/models';
 import { writeStatus } from './ops/githubPr';
@@ -359,5 +362,94 @@ export const finish = ownerMutation({
     for (const { teamId, number } of args.teamNumbers) await setCounter(ctx, teamCounter(teamId), number, true);
     await writeOpsStatus(ctx, 'seed', { set: args.set, count: args.count, finishedAt: Date.now() });
     return { ok: true };
+  },
+});
+
+// ---------------------------------------------------------------- Roadmap sample (SELF-113)
+
+/** Category, title, status, days ago started / completed, public card (title, summary, image index). */
+type DemoIssue = [project: number, category: number, title: string, status: 'done' | 'in_review' | 'in_progress' | 'todo' | 'backlog', started: number | null, completed: number | null, card?: [title: string | null, summary: string, image?: number]];
+
+const DEMO_CATEGORIES: [string, number][] = [
+  ['Figuren', 25],
+  ['Orte', 150],
+  ['Gegner', 0],
+  ['Fähigkeiten', 285],
+  ['Klang und Grafik', 210],
+  ['Technik', 245],
+];
+
+const DEMO_PROJECTS: { name: string; state: 'done' | 'active' | 'planned'; period: string; hue: number; description: string; readyWhen: string }[] = [
+  { name: 'Etappe 1 · Erster Funke', state: 'done', period: '2026-Q2', hue: 45, description: 'Ein spielbarer Lauf vom Start bis zum ersten Wächter.', readyWhen: 'Ein Lauf lässt sich gewinnen und verlieren.' },
+  { name: 'Etappe 2 · Die Gießerei', state: 'active', period: '2026-Q4', hue: 25, description: 'Der zweite Kreis mit neuen Gegnern und der Schmiede.', readyWhen: 'Drei Builds tragen bis zum zweiten Wächter.' },
+  { name: 'Etappe 3 · Unter Asche', state: 'planned', period: '2027-Q1', hue: 15, description: 'Tiefer in die Asche: Fallen, Nebel und ein neuer Held.', readyWhen: 'Alle drei Kreise sind spielbar.' },
+  { name: 'Etappe 4 · Glutkern', state: 'planned', period: '2027-Q2', hue: 5, description: 'Das Herz der Welt und das Ende der Geschichte.', readyWhen: 'Der Endkampf ist fertig vertont.' },
+];
+
+// Sample texts for a fictional game; public cards are written for players.
+const DEMO_ISSUES: DemoIssue[] = [
+  [0, 0, 'Held: Grundbewegung und Ausweichrolle', 'done', 210, 180, ['Die Glutritterin', 'Die erste Heldin: schnell, mit einer Rolle, die Funken hinterlässt.', 0]],
+  [0, 1, 'Erster Kreis: Raster und Übergänge', 'done', 205, 170, ['Der erste Kreis', 'Schmiedehallen voller Funken und alter Maschinen.', 1]],
+  [0, 2, 'Wächter 1: Phasen und Angriffe', 'done', 190, 150, ['Der Hammerwächter', 'Ein Koloss aus Eisen, der den Weg zur Gießerei bewacht.', 2]],
+  [0, 3, 'Segen: erste zwölf Effekte', 'done', 185, 160, ['Zwölf Segen', 'Kleine Gaben der Glut, die jeden Lauf anders machen.']],
+  [0, 5, 'Speicherstand zwischen den Läufen', 'done', 175, 140],
+  [0, 4, 'Musik: Thema des ersten Kreises', 'done', 170, 135, [null, 'Das Thema des ersten Kreises, mit Amboss und Chor.']],
+  [0, 2, 'Fehler: Wächter bleibt in Phase 2 hängen', 'done', 150, 147],
+  [1, 0, 'Zweite Figur: der Aschemönch', 'in_progress', 40, null, ['Der Aschemönch', 'Langsam, aber jeder Schlag lässt Asche regnen.', 3]],
+  [1, 1, 'Zweiter Kreis: die Gießerei', 'in_review', 55, null, ['Die Gießerei', 'Flüsse aus flüssigem Kupfer und Brücken, die sich bewegen.', 4]],
+  [1, 2, 'Gegner: Schlackenläufer', 'done', 70, 30, ['Schlackenläufer', 'Flinke Gegner, die in Rudeln angreifen.']],
+  [1, 2, 'Gegner: Tiegelwächter', 'in_progress', 20, null],
+  [1, 3, 'Schmiede: Waffen verbessern', 'in_progress', 35, null, ['Die Schmiede', 'Zwischen den Läufen Waffen härten, umschmieden und benennen.', 5]],
+  [1, 3, 'Segen: Kombinationen anzeigen', 'todo', null, null, ['Segen kombinieren', 'Zeigt, welche Segen sich gegenseitig verstärken.']],
+  [1, 4, 'Grafik: Hitzeflimmern im zweiten Kreis', 'done', 60, 25],
+  [1, 5, 'Steuerung mit dem Gamepad', 'in_review', 30, null, ['Gamepad', 'Volle Unterstützung für Controller, frei belegbar.']],
+  [1, 5, 'Ladezeiten unter zwei Sekunden', 'todo', null, null],
+  [1, 2, 'Wächter 2: Spoiler-Phase (intern)', 'todo', null, null],
+  [2, 1, 'Dritter Kreis: Aschefelder', 'todo', null, null, ['Die Aschefelder', 'Nebel, Glutnester und Wege, die nur einmal halten.', 1]],
+  [2, 0, 'Dritte Figur: Entwurf', 'backlog', null, null, ['Eine dritte Figur', 'Noch geheim, aber sie kommt mit einer Kette.']],
+  [2, 2, 'Fallen: Glutspalten', 'todo', null, null],
+  [2, 4, 'Klang: Wind und Asche', 'backlog', null, null, [null, 'Ein neuer Klangteppich für die Aschefelder.']],
+  [2, 3, 'Fluch-System (Entwurf)', 'backlog', null, null],
+  [3, 2, 'Endkampf: Der Glutkern', 'backlog', null, null, ['Der Glutkern', 'Das Herz der Welt wartet am Ende des letzten Kreises.', 2]],
+  [3, 4, 'Vertonung der Erzählerin', 'backlog', null, null],
+  [3, 5, 'Erfolge und Statistiken', 'backlog', null, null, ['Erfolge', 'Ziele für Sammler und eine Statistik über alle Läufe.']],
+];
+
+/**
+ * A sample team "Emberfall" (key EMB) with a roadmap: projects as stages with periods, categories,
+ * issues with past start and completion times and public cards. For screenshots and tests, local only.
+ * `images`: URLs of uploaded images (`files.register`) for the cover pictures. Does nothing if EMB exists.
+ */
+export const roadmapDemo = ownerMutation({
+  args: { images: v.array(v.string()) },
+  handler: async (ctx, args) => {
+    assertSeedAllowed();
+    const existing = await ctx.db
+      .query('teams')
+      .withIndex('by_key', (q) => q.eq('key', 'EMB'))
+      .first();
+    if (existing) return { teamId: existing._id, created: false };
+    const now = Date.now();
+    const { teamId } = await createTeam(ctx, ctx.actor, { key: 'EMB', name: 'Emberfall', hue: 35 });
+    const { groupId } = await createLabelGroup(ctx, ctx.actor, { name: 'Kategorie', exclusive: true, hue: 30, teamId });
+    const labels: Id<'labels'>[] = [];
+    for (const [name, hue] of DEMO_CATEGORIES) labels.push((await createLabel(ctx, ctx.actor, { name, hue, groupId, teamId, position: labels.length + 1 })).labelId);
+    const projects: Id<'projects'>[] = [];
+    for (const p of DEMO_PROJECTS) projects.push((await createProject(ctx, ctx.actor, { teamId, ...p })).projectId);
+    const { issues } = await createIssuesCore(ctx, ctx.actor, {
+      issues: DEMO_ISSUES.map(([project, category, title, status, , , card]) => ({ teamId, title, status, projectId: projects[project], labelIds: [labels[category]!], public: !!card })),
+    });
+    for (const [i, { id }] of issues.entries()) {
+      const [, , , status, started, completed, card] = DEMO_ISSUES[i]!;
+      const startedAt = started === null ? undefined : now - started * DAY_MS;
+      const completedAt = completed === null ? undefined : now - completed * DAY_MS;
+      await ctx.db.patch('issues', id, { createdAt: (startedAt ?? now) - 7 * DAY_MS, startedAt, ...(status === 'done' ? { completedAt } : {}), updatedAt: completedAt ?? now });
+      if (card) {
+        const [title, summary, image] = card;
+        await setPublicCard(ctx, ctx.actor, { id, title, summary, image: image !== undefined ? (args.images[image] ?? null) : null }, now);
+      }
+    }
+    await updateRoadmapSettings(ctx, ctx.actor, { teamId, on: true, categoryGroupId: groupId, subtitle: 'Early Access · Fahrplan', accent: '#d9782f' });
+    return { teamId, created: true };
   },
 });

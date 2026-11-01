@@ -130,6 +130,11 @@ export const ICON = {
   warning: stroke('M8 2.5 14 13H2L8 2.5ZM8 6.5v3M8 11.25h.01'),
   pr: stroke('M5 3v10M5 3a1.5 1.5 0 1 1 0 .01M11 13a1.5 1.5 0 1 1 0-.01M11 11.5V6a2 2 0 0 0-2-2H7.5m1.5-1.5L7.5 4 9 5.5'),
   wiki: stroke('M3 3.5A1.5 1.5 0 0 1 4.5 2H13v10.5H4.5A1.5 1.5 0 0 0 3 14V3.5ZM3 14a1.5 1.5 0 0 1 1.5-1.5H13M6 5h4'),
+  // Roadmap (SELF-113): three columns of cards; progress: bars on a time line; image export.
+  roadmap: stroke('M2.5 3h3v10h-3ZM6.5 3h3v6h-3ZM10.5 3h3v8h-3Z'),
+  progress: stroke('M2.5 2.5v11M5 4.5h6M5 8h8M5 11.5h4'),
+  image: stroke('M3.5 2.5h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-9a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM2.5 10.5l3-3 3 3 2-2 3 3M10 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z'),
+  minus: stroke('M3.5 8h9'),
   page: stroke('M4.5 2h5l3 3v8.5a.5.5 0 0 1-.5.5h-7.5a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5ZM9.5 2v3h3M6 8.5h4M6 11h4'),
   cloudOff: stroke('M3 3l10 10M5.5 5.6A3.5 3.5 0 0 0 4.5 12.5h6.5M11.8 12.3A2.5 2.5 0 0 0 12 7.5h-.1A4 4 0 0 0 7.6 4.5'),
 } as const;
