@@ -1163,6 +1163,11 @@ describe('MCP: relations (SELF-114)', () => {
     const added = await mcp.call('add_relations', { requestId: 'rel-many-0001', identifier: 'ORB-1', relations: targets });
     expect(added.ok, added.error).toBe(true);
     expect(added.value.added).toHaveLength(50);
+    // At most 200 per direction in `relations`, and the result says so.
+    expect(added.value).toMatchObject({ relationsTruncated: true });
+    expect(added.value.relations).toHaveLength(200);
+    expect((await mcp.call('get_issue', { identifier: 'ORB-1' })).value).toMatchObject({ relationsTruncated: true });
+    expect((await mcp.call('get_issue', { identifier: 'ORB-2' })).value.relationsTruncated).toBeUndefined();
     const removed = await mcp.call('remove_relations', { identifier: 'ORB-1', relations: targets });
     expect(removed.ok, removed.error).toBe(true);
     expect(removed.value.removed).toHaveLength(50);

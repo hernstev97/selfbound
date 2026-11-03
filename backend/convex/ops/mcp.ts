@@ -702,18 +702,23 @@ async function relationValue(lookup: Lookup, value: unknown) {
   return word ? { type: word, identifier: await lookup.identifierOfId(otherId ?? '') } : value;
 }
 
-/** The relations of an issue as get_issue lists them (also the result of add_relations and remove_relations). */
+const RELATIONS_SHOWN = 200;
+
+/**
+ * The relations of an issue as get_issue lists them (also the result of add_relations and remove_relations):
+ * at most 200 per direction, `relationsTruncated` if there are more.
+ */
 async function relationsOf(ctx: QueryCtx, lookup: Lookup, id: Id<'issues'>) {
   const [outgoing, incoming] = await Promise.all([
-    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', id)).take(200),
-    ctx.db.query('relations').withIndex('by_to', (q) => q.eq('toId', id)).take(200),
+    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', id)).take(RELATIONS_SHOWN + 1),
+    ctx.db.query('relations').withIndex('by_to', (q) => q.eq('toId', id)).take(RELATIONS_SHOWN + 1),
   ]);
   const relations = [];
   for (const [rows, direction] of [
     [outgoing, 'out'],
     [incoming, 'in'],
   ] as const) {
-    for (const r of rows) {
+    for (const r of rows.slice(0, RELATIONS_SHOWN)) {
       const other = await ctx.db.get('issues', direction === 'out' ? r.toId : r.fromId);
       if (!other) continue;
       relations.push({
@@ -724,7 +729,8 @@ async function relationsOf(ctx: QueryCtx, lookup: Lookup, id: Id<'issues'>) {
       });
     }
   }
-  return relations;
+  const truncated = outgoing.length > RELATIONS_SHOWN || incoming.length > RELATIONS_SHOWN;
+  return { relations, ...(truncated ? { relationsTruncated: true } : {}) };
 }
 
 /** The enabled models with their valid values, and the team defaults (XLR8-93). */
@@ -771,7 +777,7 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     issue = await issueByIdentifier(ctx, args.identifier!);
   }
   const id = issue._id;
-  const [body, comments, relations, children, links, history, aliases] = await Promise.all([
+  const [body, comments, relationList, children, links, history, aliases] = await Promise.all([
     ctx.db.query('issueBodies').withIndex('by_issue', (q) => q.eq('issueId', id)).unique(),
     ctx.db.query('comments').withIndex('by_issue', (q) => q.eq('issueId', id)).order('desc').take(101),
     relationsOf(ctx, lookup, id),
@@ -830,7 +836,7 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
         })),
     ),
     ...(comments.length > 100 ? { olderCommentsOmitted: true } : {}),
-    relations,
+    ...relationList,
     subIssues: await Promise.all(
       children
         .filter((c) => c.deletedAt === undefined)
@@ -2033,7 +2039,7 @@ async function addRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['
       added,
       unchanged,
       ...(unchanged.length ? { note: 'The relations under `unchanged` already existed.' } : {}),
-      relations: await relationsOf(ctx, lookup, issue._id),
+      ...(await relationsOf(ctx, lookup, issue._id)),
     };
   });
 }
@@ -2055,7 +2061,7 @@ async function removeRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArg
       removed,
       unchanged,
       ...(unchanged.length ? { note: `${identifier} had none of the relations under \`unchanged\`; \`relations\` lists the ones it has.` } : {}),
-      relations: await relationsOf(ctx, lookup, issue._id),
+      ...(await relationsOf(ctx, lookup, issue._id)),
     };
   });
 }

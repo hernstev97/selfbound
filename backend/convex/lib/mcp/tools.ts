@@ -786,7 +786,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   remove_relations: {
     title: 'Remove relations',
     description:
-      'Remove 1 to 50 relations of one issue, given as get_issue lists them (entries of `relations` as they are, or `type` and the other `identifier`). A relation that does not exist is listed under `unchanged`. Removing a duplicate_of relation does not change the status. Each removal is recorded in the history of both issues. The result lists the relations the issue has afterwards.',
+      'Remove 1 to 50 relations of one issue, given as get_issue lists them (entries of `relations` as they are, or `type` and the other `identifier`). A relation that does not exist is listed under `unchanged`. Removing a duplicate_of relation does not change the status. Each removal is recorded in the history of both issues. The result lists the relations the issue has afterwards, as get_issue does.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   upload_image: {
