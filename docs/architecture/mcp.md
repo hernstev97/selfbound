@@ -36,11 +36,11 @@ Code: `backend/convex/lib/mcp/endpoint.ts` (tested without Convex in `test/lib/m
 
 **Errors:** Business errors (unknown identifier, conflict, trash, full hard priority limit, rate limit) come back as a tool result with `isError: true` and plain text `code: message`, so the model can correct itself. An unexpected error reads "Internal error …; retrying with the same requestId is safe".
 
-**Idempotency:** `requestId` is required for `create_issues`, `add_comment`, `create_article` and `update_article`, and optional for `update_issue`, `set_status` and `move_issues` (setting the same values again changes nothing; with a requestId, a retry after a lost response returns the original result instead of a conflict with the agent's own change). The **whole** tool is wrapped in the check, keyed on the agent's raw arguments (team key, label and project names, identifiers): a retry returns the stored result even if a name no longer resolves (label archived, issue in the trash). Same requestId with different arguments → error. Each agent has its own namespace; the requestId is recorded in the history.
+**Idempotency:** `requestId` is required for `create_issues`, `add_comment`, `add_relations`, `create_article` and `update_article`, and optional for `update_issue`, `set_status`, `move_issues` and `remove_relations` (setting the same values again changes nothing; with a requestId, a retry after a lost response returns the original result instead of a conflict with the agent's own change). The **whole** tool is wrapped in the check, keyed on the agent's raw arguments (team key, label and project names, identifiers): a retry returns the stored result even if a name no longer resolves (label archived, issue in the trash). Same requestId with different arguments → error. Each agent has its own namespace; the requestId is recorded in the history.
 
 **Archived labels:** Agents cannot assign them (`list_labels` doesn't show them). If an archived label is already on the issue, `update_issue` may keep listing it in `labels`.
 
-**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, comment, and upload images. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. The owner appears under their profile name (Settings → Profile), else `SELFBOUND_OWNER_NAME`, else "Owner"; agents appear as `<name> (agent)`. `get_issue` reports `reviewedByOwner`: true unless an unread inbox entry is waiting; a new change by an agent makes it false again. The old name `reviewedBySteven` is still returned with the same value while agents switch over; it is deprecated and removed with the other fallbacks.
+**Permissions:** There is no tool for teams or logos. Agents can create issues, change them, set status, move them to another team, comment, add and remove relations, and upload images. Issues created by agents without an explicit status land in triage (the team's triage status) and appear in the owner's inbox until the owner dismisses the entry. So do changes by agents to existing issues (status, comment, description, any field): one entry per issue, however many changes. The owner appears under their profile name (Settings → Profile), else `SELFBOUND_OWNER_NAME`, else "Owner"; agents appear as `<name> (agent)`. `get_issue` reports `reviewedByOwner`: true unless an unread inbox entry is waiting; a new change by an agent makes it false again. The old name `reviewedBySteven` is still returned with the same value while agents switch over; it is deprecated and removed with the other fallbacks.
 
 ## Tools
 
@@ -50,7 +50,7 @@ Responses are lean: identifier, title, status (name within the team) and `status
 |---|---|---|---|
 | `search_issues` | read | Full text over title and description (search indexes). Descriptions only if title matches are not enough, and only their beginning (8000 characters, table `bodySearch`) | `q`, `team?`, `includeClosed?` (default true), `model?`, `limit?` ≤ 50 |
 | `list_issues` | read | Lists with filters, sorted by priority, then due date | `filter?`, `team?`, `status?[]`, `label?`, `project?`, `model?`, `dueWithinDays?` (7), `snoozed?`, `public?`, `limit?` ≤ 100 |
-| `get_issue` | read | One issue with description (and its version), comments, relations, sub-issues, PRs, last 20 history entries; `reviewedByOwner` and the deprecated `reviewedBySteven` (see Permissions) | `identifier` (old identifiers work too) or `id` |
+| `get_issue` | read | One issue with description (and its version), comments, relations (at most 200 per direction, else `relationsTruncated`), sub-issues, PRs, last 20 history entries; `reviewedByOwner` and the deprecated `reviewedBySteven` (see Permissions) | `identifier` (old identifiers work too) or `id` |
 | `create_issues` | write | 1–50 issues in one transaction | `requestId`, `issues[]: { team, title, description?, status?, priority?, labels?, project?, estimate?, dueDate?, parent?, model?, public?, publicTitle?, publicSummary?, publicImage? }` |
 | `update_issue` | write | Change fields of one issue, including `public` and the public card (`publicTitle`, `publicSummary`, `publicImage`; null removes one) | `identifier`, fields, `expected?` (also `public`), `description` + `expectedDescriptionVersion`, `requestId?` |
 | `set_status` | write | Status for 1–50 issues | `identifiers[]`, `status`, `requestId?` |
@@ -59,6 +59,8 @@ Responses are lean: identifier, title, status (name within the team) and `status
 | `list_inbox` | read | The owner's open inbox entries, newest first: issue brief, `kind` (`created`/`changed`/`snoozed`), `unread`, who created it, and the latest change per field (`field`, `to`, `by`, `at`). Agents cannot read or remove entries | `unreadOnly?`, `limit?` (default 50, max 100) |
 | `move_issues` | write | Move 1–50 issues to another team (one transaction) | `identifiers[]` (old identifiers work too), `team`, `requestId?` |
 | `add_comment` | write | Comment (Markdown) | `requestId`, `identifier`, `body` |
+| `add_relations` | write | Relate one issue to 1–50 others (one transaction); see [Relations](#relations) | `requestId`, `identifier`, `relations[]: { type, identifier }` |
+| `remove_relations` | write | Remove 1–50 relations of one issue, given as `get_issue` lists them | `identifier`, `relations[]: { type, identifier, title?, status? }` (the last two ignored), `requestId?` |
 | `upload_image` | write | Upload an image (base64 or data URL) and get `url`, a ready `markdown` line, `contentType`, `size` | `data`, `filename` (alt text of the Markdown line) |
 | `get_current_sprint` | read | Active sprint (otherwise the next planned one): goal, date range, points done/total, planned and added late | – |
 | `list_teams` | read | Teams with key, name, dormant flag, `wiki`; a renamed team also `previousKeys` | `includeDormant?` (default true) |
@@ -106,6 +108,17 @@ A separate tool instead of a `team` field in `update_issue`: the move affects se
 - **All or nothing:** An unknown identifier (`not_found`, names all missing ones), an issue in the trash (`invalid`) or an urgent/high issue that would go over a hard [priority limit](#priority-limits) of the target team (`priority_limit`) fails the whole call; nothing is moved. Duplicate identifiers (including old and new identifier of the same issue) count once. The target team's strict order does not apply (same as in the UI).
 - **Result:** `team`; per moved issue `previousIdentifier`, `identifier`, `status` and `previousStatus` (names in the respective team) and `removed: { project, labels }` (name of the dropped project or `null`, names of the dropped team labels); `unchanged` (identifiers already in the target team); `note` (the rules in one sentence); `warnings` (`dormant_team` if the target team is dormant). History: one `teamId` entry (shown in `get_issue` → `recentHistory` as old and new identifier), plus `projectId`, `stateId`, `labelIds` where applicable, with the agent as actor and the `requestId`.
 - **Idempotency:** Like `set_status`: `requestId` is optional; with it, a retry returns the stored result (raw arguments, even if the identifiers have changed since). Without `requestId` a retry is harmless: the issues are already in the target team and are listed under `unchanged` with their new identifier. Old identifiers keep resolving in all tools (`get_issue` lists them under `previousIdentifiers`).
+
+### Relations
+
+`add_relations` and `remove_relations` (SELF-114) use the same operations as the app (`addRelationCore`, `removeRelationCore` in `ops/relations.ts`; the app's `relations.add`/`relations.remove` wrap them in their own idempotency check). Separate tools instead of a field in `update_issue`: a relation is a row between two issues, not a field of one, and a "full set" field like `labels` would let an agent delete relations it never saw; `remove_relations` is also the only one of the two marked destructive. They change relations only: "Mark as duplicate …" in the app also sets the status (`markDuplicate` of `relations.add`), an agent does that with `set_status` `duplicate`, which keeps `add_relations` purely additive (`destructiveHint: false`) and reports the cleared priority as usual.
+
+- **Words:** `type` is seen from `identifier`, in the words of `get_issue` → `relations`: `related`, `blocks`, `blocked_by`, `duplicate_of`, `duplicated_by` (case and separators forgiven, `"Blocked by"` works). Stored rows stay as before: `blocks` from → to, `duplicate` from (the duplicate) → to, `related` without direction. An agent can pass an entry of `get_issue` → `relations` to `remove_relations` as it is: `title` and `status` are accepted and ignored there (not in `add_relations`, where they would suggest they set something).
+- **Rules:** no relation to itself (also via an old identifier of the same issue), no second relation of the same type between the same two issues (an existing one is listed under `unchanged`, related counts in either direction), no relation the other way round (A `blocked_by` B when A `blocks` B exists → `invalid` naming the existing relation; remove it first). Repeats within one call count once.
+- **All or nothing:** an unknown identifier (`not_found`, names all), the issue or, for `add_relations`, another issue in the trash (`invalid`) fails the whole call. `remove_relations` may remove a relation to an issue in the trash (cleanup).
+- **History:** one `relation` or `relation_removed` row on both issues, with the agent as actor and the `requestId`, and an inbox entry for each (as for any agent change). `get_issue` → `recentHistory` and `list_inbox` show such a row as `{ type, identifier }` from that issue's side.
+- **Reads:** each pair is looked up through the index `by_from_to` (both directions), also in `addRelationCore`, so a call with 50 relations reads little even on an issue with hundreds of relations (test: 700 existing ones under `transactionLimits`).
+- **Result:** `identifier`; `added` or `removed`, `unchanged` (with a `note` when not empty), and `relations`: the relations of the issue afterwards, as in `get_issue` (at most 200 per direction; `relationsTruncated: true` if there are more). Removing a `duplicate_of` relation does not reopen the issue.
 
 **Renamed team key** (XLR8-72): identifiers and `team` arguments with a key the team had before a rename work in every tool (`resolveIssue`, `Lookup.teamByKey`). `get_issue` adds `<old key>-<number>` for each of the team's `previousKeys` to `previousIdentifiers`; `list_teams` shows `previousKeys`. Output always uses the current key.
 - Rate limit and permissions as for the other write tools.
@@ -217,6 +230,19 @@ Change only if the status still matches:
 {"identifier":"KIU-106","changed":["status"],"conflicts":[],"warnings":[],"issue":{"identifier":"KIU-106","status":"In Review", "…": "…"}}
 ```
 
+Relate an issue to two others and read back its relations:
+
+```json
+{"name":"add_relations","arguments":{"requestId":"2c4e…","identifier":"KIU-107","relations":[
+  {"type":"blocked_by","identifier":"KIU-98"},{"type":"related","identifier":"KIU-106"}]}}
+```
+
+```json
+{"identifier":"KIU-107","added":[{"type":"blocked_by","identifier":"KIU-98"},{"type":"related","identifier":"KIU-106"}],"unchanged":[],
+ "relations":[{"type":"related","identifier":"KIU-106","title":"Build search field","status":"In Progress"},
+              {"type":"blocked_by","identifier":"KIU-98","title":"Check import","status":"Todo"}]}
+```
+
 If the owner has changed the status in the meantime:
 
 ```json
@@ -296,7 +322,7 @@ The Convex site URL works as is, but a custom domain gives connectors a stable, 
 
 ## Tests
 
-- `backend/test/mcp.test.ts` (convex-test via `t.fetch`): handshake, 401/405/404, every tool (`move_issues`: identifiers, dropped fields, status, alias, idempotency, trash, dormant team; `priority_limit` on `create_issues`, `update_issue` and `move_issues`), all filters, compare-and-set, description with version, requestId, trash, revocation, rate limit, counting of failed calls.
+- `backend/test/mcp.test.ts` (convex-test via `t.fetch`): handshake, 401/405/404, every tool (`move_issues`: identifiers, dropped fields, status, alias, idempotency, trash, dormant team; `add_relations`/`remove_relations`: every type, history on both sides like the app, retry, no doubles, self, opposite direction, all or nothing, duplicate then `set_status`, 50 relations on an issue with 700, `list_inbox`; `priority_limit` on `create_issues`, `update_issue` and `move_issues`), all filters, compare-and-set, description with version, requestId, trash, revocation, rate limit, counting of failed calls.
 - `backend/test/regressions.test.ts`: archived labels, read limits with 3100 completed issues, `read` as a query, retry with requestId after archiving or trashing, counting invalid calls.
 - `backend/test/lib/mcp/endpoint.test.ts`: key format, order of count/read, 401 on revocation between authentication and call, separation of keys (401 without challenge) and access tokens (401 with `WWW-Authenticate`).
 - `backend/test/lib/mcp/*`: protocol and argument validation without a database, plus the official MCP SDK client against a local test server.

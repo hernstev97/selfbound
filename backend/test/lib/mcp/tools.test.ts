@@ -39,7 +39,13 @@ describe('tool definitions', () => {
       set_status: false,
       move_issues: false,
       add_comment: false,
+      add_relations: false,
+      remove_relations: false,
     });
+    // Adding never destroys; removing does.
+    const tool = (name: string) => TOOLS.find((t) => t.name === name)!;
+    expect(tool('add_relations').annotations).toMatchObject({ destructiveHint: false, idempotentHint: true });
+    expect(tool('remove_relations').annotations).toMatchObject({ destructiveHint: true, idempotentHint: true });
   });
 
   test('"assigned" is explained in the description', () => {
@@ -220,6 +226,28 @@ describe('argument validation', () => {
       'requestId: required',
       'body: must be at least 1 character long',
     ]);
+  });
+
+  test('add_relations and remove_relations: types as get_issue words them, spelling forgiven', () => {
+    expect(
+      ok(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'acme1', relations: [{ type: 'Blocked by', identifier: 'acme 2' }, { type: 'duplicate-of', identifier: 'ACME-3' }] })),
+    ).toEqual({ requestId: 'rel-0001', identifier: 'ACME-1', relations: [{ type: 'blocked_by', identifier: 'ACME-2' }, { type: 'duplicate_of', identifier: 'ACME-3' }] });
+    const schema = TOOLS.find((t) => t.name === 'add_relations')!.inputSchema as { properties: { relations: { items: { properties: { type: { enum: string[] } } } } } };
+    expect(schema.properties.relations.items.properties.type.enum).toEqual(['related', 'blocks', 'blocked_by', 'duplicate_of', 'duplicated_by']);
+    expect(errors(checkToolArguments('add_relations', { identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2' }] }))).toEqual(['requestId: required']);
+    expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', relations: [{ type: 'parent', identifier: 'ACME-2' }] }))[0]).toMatch(/relations\[0\]\.type: "parent" is not one of/);
+    // add_relations only links; get_issue's read-only fields belong to remove_relations.
+    expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', markDuplicate: true, relations: [{ type: 'duplicate_of', identifier: 'ACME-2', title: 'x' }] }))).toEqual([
+      'markDuplicate: unknown field (allowed: requestId, identifier, relations)',
+      'relations[0].title: unknown field (allowed: type, identifier)',
+    ]);
+    expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', relations: Array.from({ length: 51 }, (_, i) => ({ type: 'related', identifier: `ACME-${i + 2}` })) }))).toHaveLength(1);
+    // Removing works without requestId (removing again changes nothing).
+    expect(ok(checkToolArguments('remove_relations', { identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2', title: 'Search', status: 'Todo' }] }))).toEqual({
+      identifier: 'ACME-1',
+      relations: [{ type: 'related', identifier: 'ACME-2' }],
+    });
+    expect(errors(checkToolArguments('remove_relations', { identifier: 'ACME-1', relations: [] }))).toHaveLength(1);
   });
 
   test('type errors are named clearly', () => {

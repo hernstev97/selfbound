@@ -82,6 +82,8 @@ describe('legacy lifecycle (initialize)', () => {
       'set_status',
       'move_issues',
       'add_comment',
+      'add_relations',
+      'remove_relations',
       'upload_image',
       'get_current_sprint',
       'list_teams',
