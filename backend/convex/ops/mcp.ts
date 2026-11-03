@@ -5,10 +5,10 @@ import { addDays, dayStartInZone } from '../lib/dates';
 import { fail } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
 import { resolveIssue } from '../lib/identifiers';
-import type { ToolArgs, ToolName } from '../lib/mcp/tools';
+import type { RelationWord, ToolArgs, ToolName } from '../lib/mcp/tools';
 import type { IssuePatch, NewIssue } from '../lib/validators';
 import { teamStates, type State } from '../lib/workflow';
-import { CLOSED_STATUSES, identifierOf, isOpen, LEGACY_OWNER_KIND, OPEN_STATUSES, OWNER_KIND, STATUSES, type Priority, type Status } from '../shared/constants';
+import { CLOSED_STATUSES, identifierOf, isOpen, LEGACY_OWNER_KIND, OPEN_STATUSES, OWNER_KIND, STATUSES, type Priority, type RelationType, type Status } from '../shared/constants';
 import {
   effectiveModel,
   encodeChoice,
@@ -39,6 +39,7 @@ import { issueArticles } from './links';
 import { enabledModels } from './models';
 import { moveIssuesToTeamCore } from './move';
 import { profileRow } from './profile';
+import { addRelationCore, removeRelationCore } from './relations';
 import { modelRow } from './validate';
 import { cardOf, cardsOfTeam, setPublicCard, updateRoadmapSettings, type CardPatch } from './roadmap';
 import { createLabel, createLabelGroup, createProject, updateLabel, updateLabelGroup, updateProject } from './teams';
@@ -192,6 +193,12 @@ class Lookup {
   async parentIdentifier(parentId: Id<'issues'>) {
     const parent = await this.parentDoc(parentId);
     return parent ? await this.identifier(parent) : null;
+  }
+
+  /** Identifier for an issue id kept as text (history, inbox), null if it is not an issue (any more). */
+  async identifierOfId(raw: string) {
+    const id = this.ctx.db.normalizeId('issues', raw);
+    return id ? await this.parentIdentifier(id) : null;
   }
 
   async modelRow(choice: Pick<ModelChoice, 'provider' | 'modelId'>) {
@@ -671,6 +678,9 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
       return typeof value === 'object' && 'provider' in value ? encodeChoice(value as ModelChoice) : value;
     case 'stateId':
       return typeof value === 'string' ? ((await lookup.stateName(value as Id<'workflowStates'>)) ?? value) : value;
+    case 'relation':
+    case 'relation_removed':
+      return await relationValue(lookup, value);
     case 'deleted':
     case 'restored':
     case 'reviewed':
@@ -679,6 +689,42 @@ async function historyValue(lookup: Lookup, field: string, value: unknown): Prom
     default:
       return value;
   }
+}
+
+/**
+ * A relation in the history (`{ type, direction, otherId }`) or in an inbox change
+ * ("type:direction:otherId") in the words of get_issue: `{ type: "blocked_by", identifier }`.
+ */
+async function relationValue(lookup: Lookup, value: unknown) {
+  const o = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>;
+  const [type, direction, otherId] = typeof value === 'string' ? value.split(':') : [o.type, o.direction, o.otherId].map(String);
+  const word = RELATION_LABEL[type as RelationType]?.[direction as 'out' | 'in'];
+  return word ? { type: word, identifier: await lookup.identifierOfId(otherId ?? '') } : value;
+}
+
+/** The relations of an issue as get_issue lists them (also the result of add_relations and remove_relations). */
+async function relationsOf(ctx: QueryCtx, lookup: Lookup, id: Id<'issues'>) {
+  const [outgoing, incoming] = await Promise.all([
+    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', id)).take(200),
+    ctx.db.query('relations').withIndex('by_to', (q) => q.eq('toId', id)).take(200),
+  ]);
+  const relations = [];
+  for (const [rows, direction] of [
+    [outgoing, 'out'],
+    [incoming, 'in'],
+  ] as const) {
+    for (const r of rows) {
+      const other = await ctx.db.get('issues', direction === 'out' ? r.toId : r.fromId);
+      if (!other) continue;
+      relations.push({
+        type: RELATION_LABEL[r.type][direction],
+        identifier: await lookup.identifier(other),
+        title: other.title,
+        status: await lookup.statusName(other),
+      });
+    }
+  }
+  return relations;
 }
 
 /** The enabled models with their valid values, and the team defaults (XLR8-93). */
@@ -725,33 +771,16 @@ async function getIssueTool(ctx: QueryCtx, args: ToolArgs['get_issue']) {
     issue = await issueByIdentifier(ctx, args.identifier!);
   }
   const id = issue._id;
-  const [body, comments, outgoing, incoming, children, links, history, aliases] = await Promise.all([
+  const [body, comments, relations, children, links, history, aliases] = await Promise.all([
     ctx.db.query('issueBodies').withIndex('by_issue', (q) => q.eq('issueId', id)).unique(),
     ctx.db.query('comments').withIndex('by_issue', (q) => q.eq('issueId', id)).order('desc').take(101),
-    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', id)).take(200),
-    ctx.db.query('relations').withIndex('by_to', (q) => q.eq('toId', id)).take(200),
+    relationsOf(ctx, lookup, id),
     ctx.db.query('issues').withIndex('by_parent', (q) => q.eq('parentId', id)).take(200),
     ctx.db.query('issuePullRequests').withIndex('by_issue', (q) => q.eq('issueId', id)).take(100),
     ctx.db.query('history').withIndex('by_issue', (q) => q.eq('issueId', id)).order('desc').take(20),
     ctx.db.query('identifierAliases').withIndex('by_issue', (q) => q.eq('issueId', id)).take(20),
   ]);
   const visibleComments = comments.filter((c) => c.deletedAt === undefined);
-  const relations = [];
-  for (const [rows, direction] of [
-    [outgoing, 'out'],
-    [incoming, 'in'],
-  ] as const) {
-    for (const r of rows) {
-      const other = await ctx.db.get('issues', direction === 'out' ? r.toId : r.fromId);
-      if (!other) continue;
-      relations.push({
-        type: RELATION_LABEL[r.type][direction],
-        identifier: await lookup.identifier(other),
-        title: other.title,
-        status: await lookup.statusName(other),
-      });
-    }
-  }
   const pullRequests = [];
   for (const link of links) {
     const pr = await ctx.db.get('pullRequests', link.prId);
@@ -1049,7 +1078,7 @@ async function listInboxTool(ctx: QueryCtx, args: ToolArgs['list_inbox']) {
         [...entry.changes].reverse().map(async (c) => ({
           at: iso(c.at),
           field: c.field === 'stateId' ? 'status' : c.field,
-          ...(c.value !== undefined ? { to: c.field.startsWith('relation') ? await lookup.parentIdentifier(c.value as Id<'issues'>) : await historyValue(lookup, c.field, c.value) } : {}),
+          ...(c.value !== undefined ? { to: await historyValue(lookup, c.field, c.value) } : {}),
           by: await lookup.actorName(c.actor),
         })),
       ),
@@ -1934,6 +1963,122 @@ async function addCommentTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['ad
   });
 }
 
+// Relations (SELF-114): the words of get_issue, seen from `identifier`, mapped onto the stored rows
+// (blocks: from blocks to; duplicate: from is a duplicate of to). Same operations as the app.
+
+const RELATION_ROW: Record<RelationWord, { type: RelationType; reverse: boolean }> = {
+  related: { type: 'related', reverse: false },
+  blocks: { type: 'blocks', reverse: false },
+  blocked_by: { type: 'blocks', reverse: true },
+  duplicate_of: { type: 'duplicate', reverse: false },
+  duplicated_by: { type: 'duplicate', reverse: true },
+};
+
+/** The issue and the other issues, aliases resolved and repeats dropped; unknown ones fail the whole call. */
+async function relationTargets(ctx: MutationCtx, lookup: Lookup, args: { identifier: string; relations: { type: RelationWord; identifier: string }[] }) {
+  const issue = await issueByIdentifier(ctx, args.identifier);
+  const identifier = await lookup.identifier(issue);
+  assertNotDeleted(issue, identifier);
+  const missing: string[] = [];
+  const items: { word: RelationWord; other: Doc<'issues'>; otherIdentifier: string }[] = [];
+  for (const r of args.relations) {
+    const other = await resolveIssue(ctx, r.identifier);
+    if (!other) {
+      missing.push(r.identifier);
+      continue;
+    }
+    if (other._id === issue._id) fail('invalid', `${identifier} cannot have a relation to itself (${r.identifier}). Nothing was changed.`, { identifier });
+    if (items.some((i) => i.word === r.type && i.other._id === other._id)) continue;
+    items.push({ word: r.type, other, otherIdentifier: await lookup.identifier(other) });
+  }
+  if (missing.length) fail('not_found', `Issues not found: ${missing.join(', ')}. Nothing was changed.`, { missing });
+  return { issue, identifier, items };
+}
+
+/** Rows of the stored type between the two issues: `same` as asked (related in either direction), `opposite` the other way round. */
+async function rowsBetween(ctx: MutationCtx, issueId: Id<'issues'>, otherId: Id<'issues'>, word: RelationWord) {
+  const { type, reverse } = RELATION_ROW[word];
+  const [fromId, toId] = reverse ? [otherId, issueId] : [issueId, otherId];
+  const [out, back] = await Promise.all([
+    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', issueId)).collect(),
+    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', otherId)).collect(),
+  ]);
+  const rows = [...out.filter((r) => r.toId === otherId), ...back.filter((r) => r.toId === issueId)].filter((r) => r.type === type);
+  const same = rows.filter((r) => type === 'related' || (r.fromId === fromId && r.toId === toId));
+  return { fromId, toId, type, same, opposite: rows.filter((r) => !same.includes(r)) };
+}
+
+async function addRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['add_relations']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.add_relations', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    const { issue, identifier, items } = await relationTargets(ctx, lookup, args);
+    for (const item of items) assertNotDeleted(item.other, item.otherIdentifier);
+    const added = [];
+    const unchanged = [];
+    const duplicates = new Set<Id<'issues'>>();
+    for (const item of items) {
+      const rows = await rowsBetween(ctx, issue._id, item.other._id, item.word);
+      const entry = { type: item.word, identifier: item.otherIdentifier };
+      if (rows.same.length) unchanged.push(entry);
+      else if (rows.opposite.length) {
+        const existing = RELATION_LABEL[rows.type][rows.opposite[0]!.fromId === issue._id ? 'out' : 'in'];
+        fail(
+          'invalid',
+          `${identifier} already has the relation ${existing} ${item.otherIdentifier}, so it cannot also be ${item.word} ${item.otherIdentifier}. Nothing was changed. If the direction is wrong, remove that relation first (remove_relations with type "${existing}").`,
+          { identifier, other: item.otherIdentifier, existing },
+        );
+      } else {
+        await addRelationCore(ctx, actor, { fromId: rows.fromId, toId: rows.toId, type: rows.type, requestId: args.requestId });
+        added.push(entry);
+      }
+      if (rows.type === 'duplicate' && args.markDuplicate) duplicates.add(rows.fromId);
+    }
+    // "Mark as duplicate" as in the app: the duplicate gets its team's Duplicate status (workflow rules apply).
+    const markedDuplicate = [];
+    const warnings = [];
+    for (const id of duplicates) {
+      const before = await ctx.db.get('issues', id);
+      if (!before || before.status === 'duplicate') continue;
+      await applyPatch(ctx, actor, id, { status: 'duplicate' }, undefined, Date.now(), args.requestId);
+      const after = (await ctx.db.get('issues', id))!;
+      const brief = await lookup.brief(after);
+      markedDuplicate.push(brief);
+      if (before.priority !== 0 && after.priority === 0) warnings.push(priorityClearedWarning(String(brief.identifier), before.priority, brief.statusType));
+    }
+    return {
+      identifier,
+      added,
+      unchanged,
+      ...(unchanged.length ? { note: 'The relations under `unchanged` already existed.' } : {}),
+      ...(markedDuplicate.length ? { markedDuplicate } : {}),
+      ...(warnings.length ? { warnings } : {}),
+      relations: await relationsOf(ctx, lookup, issue._id),
+    };
+  });
+}
+
+async function removeRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['remove_relations']) {
+  return await idempotent(ctx, actor, args.requestId, 'mcp.remove_relations', { ...args }, async () => {
+    const lookup = new Lookup(ctx);
+    // The other issue may be in the trash: removing a relation to it is a cleanup.
+    const { issue, identifier, items } = await relationTargets(ctx, lookup, args);
+    const removed: { type: RelationWord; identifier: string }[] = [];
+    const unchanged: { type: RelationWord; identifier: string }[] = [];
+    for (const item of items) {
+      const rows = await rowsBetween(ctx, issue._id, item.other._id, item.word);
+      for (const row of rows.same) await removeRelationCore(ctx, actor, { relationId: row._id, requestId: args.requestId });
+      (rows.same.length ? removed : unchanged).push({ type: item.word, identifier: item.otherIdentifier });
+    }
+    return {
+      identifier,
+      removed,
+      unchanged,
+      ...(unchanged.length ? { note: `${identifier} had none of the relations under \`unchanged\`; \`relations\` lists the ones it has.` } : {}),
+      relations: await relationsOf(ctx, lookup, issue._id),
+    };
+  });
+}
+
 export async function runWriteTool(ctx: MutationCtx, actor: Actor, tool: ToolName, args: unknown): Promise<unknown> {
   if (actor.kind !== 'agent') fail('access_denied', 'MCP tools run only as an agent.');
   switch (tool) {
@@ -1947,6 +2092,10 @@ export async function runWriteTool(ctx: MutationCtx, actor: Actor, tool: ToolNam
       return await moveIssuesTool(ctx, actor, args as ToolArgs['move_issues']);
     case 'add_comment':
       return await addCommentTool(ctx, actor, args as ToolArgs['add_comment']);
+    case 'add_relations':
+      return await addRelationsTool(ctx, actor, args as ToolArgs['add_relations']);
+    case 'remove_relations':
+      return await removeRelationsTool(ctx, actor, args as ToolArgs['remove_relations']);
     case 'create_article':
       return await createArticleTool(ctx, actor, args as ToolArgs['create_article']);
     case 'update_article':

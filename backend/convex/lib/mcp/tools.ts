@@ -388,6 +388,51 @@ const addComment = object({
   body: string({ description: `Comment in Markdown. ${VISUAL_BLOCKS}`, min: 1, max: LIMITS.commentMax }),
 });
 
+// ---------------------------------------------------------------------------
+// Relations (SELF-114): the words get_issue uses in `relations`, seen from the issue named first
+
+export const RELATION_TYPES = ['related', 'blocks', 'blocked_by', 'duplicate_of', 'duplicated_by'] as const;
+export type RelationWord = (typeof RELATION_TYPES)[number];
+
+/** Case and separators are forgiven ("Blocked by" → blocked_by), the JSON Schema lists the exact words. */
+function relationType(): Schema<RelationWord> {
+  const base = enumOf(RELATION_TYPES, {
+    description:
+      'Seen from `identifier`: "related" (the two belong together), "blocks" (it has to be finished before the other), "blocked_by" (the other has to be finished first), "duplicate_of" (it is a duplicate of the other), "duplicated_by" (the other is a duplicate of it). The same words as in get_issue `relations`.',
+  });
+  return { ...base, check: (value, path, errors) => base.check(typeof value === 'string' ? value.trim().toLowerCase().replace(/[\s-]+/g, '_') : value, path, errors) };
+}
+
+const RELATIONS_MAX = 50;
+const relationItems = (description: string) =>
+  array(object({ type: relationType(), identifier: identifier('The other issue, e.g. "ACME-107".') }), { description, min: 1, max: RELATIONS_MAX });
+
+const addRelations = object(
+  {
+    requestId: requestId(),
+    identifier: identifier(),
+    relations: relationItems(`Relations of \`identifier\` to add, 1 to ${RELATIONS_MAX}. A relation that already exists is listed under \`unchanged\`.`),
+    markDuplicate: optional(
+      boolean({
+        description:
+          'With duplicate_of or duplicated_by: also set the duplicate (the issue that is a duplicate of the other) to its team\'s Duplicate status, like "Mark as duplicate" in the app. This closes it and removes its priority. Default false: only the relation is added.',
+      }),
+    ),
+  },
+  {
+    refine(v, _path, errors) {
+      if (v.markDuplicate && !v.relations.some((r) => r.type === 'duplicate_of' || r.type === 'duplicated_by'))
+        errors.push('markDuplicate: only together with a duplicate_of or duplicated_by relation');
+    },
+  },
+);
+
+const removeRelations = object({
+  requestId: optionalRequestId(),
+  identifier: identifier(),
+  relations: relationItems(`Relations of \`identifier\` to remove, 1 to ${RELATIONS_MAX}, as get_issue lists them. One that does not exist is listed under \`unchanged\`.`),
+});
+
 /** Base64 grows by 4/3; the slack covers a data URL prefix. */
 const IMAGE_DATA_MAX = Math.ceil(LIMITS.imageMaxBytes / 3) * 4 + 100;
 
@@ -651,6 +696,8 @@ const SCHEMAS = {
   set_status: setStatus,
   move_issues: moveIssues,
   add_comment: addComment,
+  add_relations: addRelations,
+  remove_relations: removeRelations,
   upload_image: uploadImage,
   get_current_sprint: getCurrentSprint,
   list_teams: listTeams,
@@ -692,7 +739,7 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
     title: 'Get issue',
     // legacy-xlr8: the description names the deprecated field reviewedBySteven
     description:
-      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (blocks, related, duplicate), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries. `model` is the issue\'s own desired model; `effectiveModel` the one that applies, with its `source` (issue, parent or team default). `reviewedByOwner` is true unless an unread inbox entry waits for the owner; `reviewedBySteven` is a deprecated copy of it and will be removed.',
+      'Get one issue by identifier (e.g. "ACME-106", old identifiers resolve too) or internal id: all fields, the Markdown description with its version, comments, relations (`type` related, blocks, blocked_by, duplicate_of or duplicated_by; change them with add_relations and remove_relations), sub-issues, linked pull requests, related knowledge pages (`knowledge`, read them with get_article) and the most recent history entries. `model` is the issue\'s own desired model; `effectiveModel` the one that applies, with its `source` (issue, parent or team default). `reviewedByOwner` is true unless an unread inbox entry waits for the owner; `reviewedBySteven` is a deprecated copy of it and will be removed.',
     annotations: READ,
   },
   create_issues: {
@@ -724,6 +771,18 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
     description:
       'Add a Markdown comment to an issue, e.g. a progress report. requestId makes the call safe to retry without duplicate comments.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  add_relations: {
+    title: 'Add relations',
+    description:
+      'Relate one issue to 1 to 50 others: related, blocks, blocked_by, duplicate_of or duplicated_by (seen from `identifier`, the same words as in get_issue `relations`). Use it instead of a comment like "related to ACME-12": the owner sees relations on the issue page. A relation that already exists is listed under `unchanged`, not added twice. An issue cannot relate to itself; a relation in the opposite direction (ACME-2 blocks ACME-1 when ACME-1 should block ACME-2) is refused, remove the old one first. With `markDuplicate` the duplicate also gets its team\'s Duplicate status, like "Mark as duplicate" in the app (warning priority_cleared if it had a priority). Each relation is recorded in the history of both issues. If any issue is unknown or in the trash, nothing is changed. requestId makes the call safe to retry.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  },
+  remove_relations: {
+    title: 'Remove relations',
+    description:
+      'Remove 1 to 50 relations of one issue, given as get_issue lists them (`type` and the other `identifier`). A relation that does not exist is listed under `unchanged`. Removing a duplicate_of relation does not change the status. Each removal is recorded in the history of both issues. The result lists the relations the issue has afterwards.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   upload_image: {
     title: 'Upload image',

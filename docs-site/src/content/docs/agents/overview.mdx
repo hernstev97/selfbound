@@ -38,6 +38,7 @@ and is recorded in the history just like one you make yourself.
 - **Set the status** of up to 50 issues at once.
 - **Move issues** to another team. They get a new identifier, and the old one keeps working.
 - **Comment** on issues in Markdown.
+- **Link issues:** add and remove relations (related, blocks, blocked by, duplicate of).
 - **Read the current sprint** with its goal, dates, points and issues.
 - **Read and write knowledge pages:** search, list and read pages; create pages and update them, either by
   replacing the text or by appending to it.
@@ -49,7 +50,7 @@ Two safeguards protect writes:
 
 - **`requestId` makes retries safe.** Agents pass their own key with a call. If the response gets lost and
   the agent sends the same call again, Selfbound returns the original result instead of acting twice. Creating
-  issues, commenting and writing knowledge pages require it.
+  issues, commenting, adding relations and writing knowledge pages require it.
 - **`expected` values prevent overwriting your changes.** When an agent changes an issue, it can pass the
   values it last saw. If you changed a field in the meantime, Selfbound leaves that field alone and reports a
   conflict, so the agent reads the issue again and decides. Replacing a description or a knowledge page's
@@ -73,7 +74,7 @@ There are no tools for the following, so agents cannot do them over MCP:
 - Create labels or projects. Agents can only use the ones that exist (topics of knowledge pages are the
   exception: unknown topics are created).
 - Plan sprints or add issues to a sprint.
-- Add relations between issues (blocks, related, duplicate) or upload files other than images.
+- Upload files other than images.
 - Remove issues from your inbox or mark them as read.
 
 Agents never see secrets: keys are stored only as hashes, and no tool returns settings, keys or
