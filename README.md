@@ -7,8 +7,8 @@
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/list-dark.webp">
-    <img src="docs/images/list-light.webp" alt="Selfbound issue list with sidebar, grouped by status" width="900">
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/demo-dark.webp">
+    <img src="docs/images/demo-light.webp" alt="Product video, 28 seconds: list and board, a status change and undo from the keyboard, an agent creating an issue over MCP, the inbox and the pull requests page, with captions on what each part is for" width="900">
   </picture>
 </p>
 
@@ -21,6 +21,22 @@ place, answers within a frame, and is open to AI agents through MCP.
 > [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <table>
+  <tr>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/list-dark.webp">
+        <img src="docs/images/list-light.webp" alt="Issue list with sidebar, grouped by status">
+      </picture>
+      <sub>Issue list, grouped by status</sub>
+    </td>
+    <td width="50%">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/images/inbox-dark.webp">
+        <img src="docs/images/inbox-light.webp" alt="Inbox with an issue that an agent has just created">
+      </picture>
+      <sub>Inbox: what agents created waits for you</sub>
+    </td>
+  </tr>
   <tr>
     <td width="50%">
       <picture>
@@ -39,7 +55,7 @@ place, answers within a frame, and is open to AI agents through MCP.
   </tr>
 </table>
 
-The screenshots show the sample data of `pnpm dev`, in the light or dark theme of your GitHub settings.
+The demo and the screenshots show the sample data of `pnpm dev`, in the light or dark theme of your GitHub settings.
 
 **Teams are areas, not people.** As in Linear, a team in Selfbound is a workspace for one area of work (a
 product, a client, a private project) with its own key such as `ORB-12`, statuses, labels and

@@ -1,7 +1,9 @@
-// Landing page script: only the background motion. The content is HTML in index.html and reads
-// without this script.
+// Landing page script: the background motion and the demo video. The content is HTML in index.html and
+// reads without this script; the still in the hero is the first frame of the video and stays its poster.
 
 import './style.css';
+import demoDark from './assets/demo-dark.mp4';
+import demoLight from './assets/demo-light.mp4';
 import { loadStar, mountRaster, type Place } from './raster.ts';
 
 const hero = document.querySelector<HTMLElement>('.hero')!;
@@ -26,3 +28,52 @@ requestAnimationFrame(() =>
     { timeout: 1000 },
   ),
 );
+
+// Demo video over the hero screenshot. It loads after the page has loaded, follows the color scheme, plays
+// only while it is on screen and not at all with reduced motion; the button pauses and resumes it.
+const stage = document.querySelector<HTMLElement>('.shot .stage');
+const toggle = document.querySelector<HTMLButtonElement>('.shot .demo-toggle');
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+if (stage && toggle) {
+  const video = document.createElement('video');
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+  video.preload = 'none';
+  video.setAttribute('aria-hidden', 'true');
+  video.tabIndex = -1;
+  const still = stage.querySelector('img')!;
+  let wanted = !calm.matches;
+  let visible = false;
+  const sync = () => {
+    toggle.textContent = wanted ? 'Pause demo' : 'Play demo';
+    toggle.setAttribute('aria-pressed', String(!wanted));
+    if (wanted && visible) void video.play().catch(() => {});
+    else video.pause();
+  };
+  const source = () => (dark.matches ? demoDark : demoLight);
+  const load = () => {
+    video.poster = still.currentSrc;
+    video.src = source();
+    stage.append(video);
+    toggle.hidden = false;
+    new IntersectionObserver((entries) => {
+      visible = entries[entries.length - 1].isIntersecting;
+      sync();
+    }).observe(stage);
+    dark.addEventListener('change', () => {
+      const at = video.currentTime;
+      video.poster = still.currentSrc;
+      video.src = source();
+      video.currentTime = at;
+      sync();
+    });
+  };
+  toggle.addEventListener('click', () => {
+    wanted = !wanted;
+    sync();
+  });
+  // Calm users get the poster; the first click on the button loads and plays the video.
+  const start = () => (document.readyState === 'complete' ? idle(load, { timeout: 2000 }) : addEventListener('load', () => idle(load, { timeout: 2000 }), { once: true }));
+  start();
+}
