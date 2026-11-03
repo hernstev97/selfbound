@@ -236,12 +236,17 @@ describe('argument validation', () => {
     expect(schema.properties.relations.items.properties.type.enum).toEqual(['related', 'blocks', 'blocked_by', 'duplicate_of', 'duplicated_by']);
     expect(errors(checkToolArguments('add_relations', { identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2' }] }))).toEqual(['requestId: required']);
     expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', relations: [{ type: 'parent', identifier: 'ACME-2' }] }))[0]).toMatch(/relations\[0\]\.type: "parent" is not one of/);
-    expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', markDuplicate: true, relations: [{ type: 'blocks', identifier: 'ACME-2' }] }))).toEqual([
-      'markDuplicate: only together with a duplicate_of or duplicated_by relation',
+    // add_relations only links; get_issue's read-only fields belong to remove_relations.
+    expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', markDuplicate: true, relations: [{ type: 'duplicate_of', identifier: 'ACME-2', title: 'x' }] }))).toEqual([
+      'markDuplicate: unknown field (allowed: requestId, identifier, relations)',
+      'relations[0].title: unknown field (allowed: type, identifier)',
     ]);
     expect(errors(checkToolArguments('add_relations', { requestId: 'rel-0001', identifier: 'ACME-1', relations: Array.from({ length: 51 }, (_, i) => ({ type: 'related', identifier: `ACME-${i + 2}` })) }))).toHaveLength(1);
     // Removing works without requestId (removing again changes nothing).
-    expect(ok(checkToolArguments('remove_relations', { identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2' }] }))).toEqual({ identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2' }] });
+    expect(ok(checkToolArguments('remove_relations', { identifier: 'ACME-1', relations: [{ type: 'related', identifier: 'ACME-2', title: 'Search', status: 'Todo' }] }))).toEqual({
+      identifier: 'ACME-1',
+      relations: [{ type: 'related', identifier: 'ACME-2' }],
+    });
     expect(errors(checkToolArguments('remove_relations', { identifier: 'ACME-1', relations: [] }))).toHaveLength(1);
   });
 

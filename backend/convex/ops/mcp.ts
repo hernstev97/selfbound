@@ -39,7 +39,7 @@ import { issueArticles } from './links';
 import { enabledModels } from './models';
 import { moveIssuesToTeamCore } from './move';
 import { profileRow } from './profile';
-import { addRelationCore, removeRelationCore } from './relations';
+import { addRelationCore, relationsBetween, removeRelationCore } from './relations';
 import { modelRow } from './validate';
 import { cardOf, cardsOfTeam, setPublicCard, updateRoadmapSettings, type CardPatch } from './roadmap';
 import { createLabel, createLabelGroup, createProject, updateLabel, updateLabelGroup, updateProject } from './teams';
@@ -1964,7 +1964,8 @@ async function addCommentTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['ad
 }
 
 // Relations (SELF-114): the words of get_issue, seen from `identifier`, mapped onto the stored rows
-// (blocks: from blocks to; duplicate: from is a duplicate of to). Same operations as the app.
+// (blocks: from blocks to; duplicate: from is a duplicate of to). Same operations as the app. Only the
+// relation: closing a duplicate is set_status, so add_relations stays additive.
 
 const RELATION_ROW: Record<RelationWord, { type: RelationType; reverse: boolean }> = {
   related: { type: 'related', reverse: false },
@@ -1999,11 +2000,7 @@ async function relationTargets(ctx: MutationCtx, lookup: Lookup, args: { identif
 async function rowsBetween(ctx: MutationCtx, issueId: Id<'issues'>, otherId: Id<'issues'>, word: RelationWord) {
   const { type, reverse } = RELATION_ROW[word];
   const [fromId, toId] = reverse ? [otherId, issueId] : [issueId, otherId];
-  const [out, back] = await Promise.all([
-    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', issueId)).collect(),
-    ctx.db.query('relations').withIndex('by_from', (q) => q.eq('fromId', otherId)).collect(),
-  ]);
-  const rows = [...out.filter((r) => r.toId === otherId), ...back.filter((r) => r.toId === issueId)].filter((r) => r.type === type);
+  const rows = (await relationsBetween(ctx, issueId, otherId)).filter((r) => r.type === type);
   const same = rows.filter((r) => type === 'related' || (r.fromId === fromId && r.toId === toId));
   return { fromId, toId, type, same, opposite: rows.filter((r) => !same.includes(r)) };
 }
@@ -2015,7 +2012,6 @@ async function addRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['
     for (const item of items) assertNotDeleted(item.other, item.otherIdentifier);
     const added = [];
     const unchanged = [];
-    const duplicates = new Set<Id<'issues'>>();
     for (const item of items) {
       const rows = await rowsBetween(ctx, issue._id, item.other._id, item.word);
       const entry = { type: item.word, identifier: item.otherIdentifier };
@@ -2031,27 +2027,12 @@ async function addRelationsTool(ctx: MutationCtx, actor: Actor, args: ToolArgs['
         await addRelationCore(ctx, actor, { fromId: rows.fromId, toId: rows.toId, type: rows.type, requestId: args.requestId });
         added.push(entry);
       }
-      if (rows.type === 'duplicate' && args.markDuplicate) duplicates.add(rows.fromId);
-    }
-    // "Mark as duplicate" as in the app: the duplicate gets its team's Duplicate status (workflow rules apply).
-    const markedDuplicate = [];
-    const warnings = [];
-    for (const id of duplicates) {
-      const before = await ctx.db.get('issues', id);
-      if (!before || before.status === 'duplicate') continue;
-      await applyPatch(ctx, actor, id, { status: 'duplicate' }, undefined, Date.now(), args.requestId);
-      const after = (await ctx.db.get('issues', id))!;
-      const brief = await lookup.brief(after);
-      markedDuplicate.push(brief);
-      if (before.priority !== 0 && after.priority === 0) warnings.push(priorityClearedWarning(String(brief.identifier), before.priority, brief.statusType));
     }
     return {
       identifier,
       added,
       unchanged,
       ...(unchanged.length ? { note: 'The relations under `unchanged` already existed.' } : {}),
-      ...(markedDuplicate.length ? { markedDuplicate } : {}),
-      ...(warnings.length ? { warnings } : {}),
       relations: await relationsOf(ctx, lookup, issue._id),
     };
   });

@@ -422,7 +422,9 @@ export default defineSchema({
     createdBy: actorValidator,
   })
     .index('by_from', ['fromId'])
-    .index('by_to', ['toId']),
+    .index('by_to', ['toId'])
+    // One pair without reading every relation of an issue (SELF-114: up to 50 per MCP call).
+    .index('by_from_to', ['fromId', 'toId']),
 
   history: defineTable({
     issueId: v.id('issues'),

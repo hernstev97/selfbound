@@ -1,5 +1,5 @@
 import type { Id } from '../_generated/dataModel';
-import type { MutationCtx } from '../_generated/server';
+import type { MutationCtx, QueryCtx } from '../_generated/server';
 import type { Actor } from '../lib/actor';
 import { invalid, notFound } from '../lib/errors';
 import { idempotent } from '../lib/idempotency';
@@ -15,6 +15,17 @@ import { getIssue } from './validate';
 type AddArgs = { fromId: Id<'issues'>; toId: Id<'issues'>; type: RelationType; markDuplicate?: boolean; requestId?: string };
 type RemoveArgs = { relationId: Id<'relations'>; requestId?: string };
 
+/** All relations between two issues, in both directions. */
+export async function relationsBetween(ctx: QueryCtx, a: Id<'issues'>, b: Id<'issues'>) {
+  const pair = (from: Id<'issues'>, to: Id<'issues'>) =>
+    ctx.db
+      .query('relations')
+      .withIndex('by_from_to', (q) => q.eq('fromId', from).eq('toId', to))
+      .collect();
+  const [forward, backward] = await Promise.all([pair(a, b), pair(b, a)]);
+  return [...forward, ...backward];
+}
+
 export async function addRelation(ctx: MutationCtx, actor: Actor, args: AddArgs) {
   return await idempotent(ctx, actor, args.requestId, 'relations.add', { ...args }, async () => await addRelationCore(ctx, actor, args));
 }
@@ -24,17 +35,7 @@ export async function addRelationCore(ctx: MutationCtx, actor: Actor, args: AddA
   if (args.fromId === args.toId) invalid('An issue cannot have a relation to itself.');
   const from = await getIssue(ctx, args.fromId);
   const to = await getIssue(ctx, args.toId);
-  const forward = await ctx.db
-    .query('relations')
-    .withIndex('by_from', (q) => q.eq('fromId', from._id))
-    .collect();
-  const backward = await ctx.db
-    .query('relations')
-    .withIndex('by_from', (q) => q.eq('fromId', to._id))
-    .collect();
-  const exists =
-    forward.some((r) => r.toId === to._id && r.type === args.type) ||
-    backward.some((r) => r.toId === from._id && r.type === args.type);
+  const exists = (await relationsBetween(ctx, from._id, to._id)).some((r) => r.type === args.type);
   if (exists) invalid('This relation already exists.');
   const now = Date.now();
   const relationId = await ctx.db.insert('relations', {

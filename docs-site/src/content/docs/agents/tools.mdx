@@ -47,8 +47,10 @@ types are seen from the issue named first and use the same words as the `relatio
 `blocks`, `blocked_by`, `duplicate_of`, `duplicated_by`), so an agent can pass an entry it read straight to
 `remove_relations`. A relation that already exists is not added twice, an issue cannot relate to itself, and a
 relation the other way round (B blocks A when A should block B) is refused until the old one is removed. Each
-change appears in the history of both issues and in your inbox. With `markDuplicate`, the duplicate also gets the
-team's Duplicate status, as **Mark as duplicate …** does in the app.
+change appears in the history of both issues and in your inbox.
+
+The tools change only relations. **Mark as duplicate …** in the app also sets the status to Duplicate; an agent
+does that in a second step with `set_status` and the status `duplicate`.
 
 <McpTools group="relations" />
 

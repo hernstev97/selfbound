@@ -54,7 +54,7 @@ This document is the contract between the backend and the UI. It describes the t
 | `bodySearch` | Search text of the description: the first 8000 characters (`BODY_SEARCH_CHARS`). Written only through `ops/bodies.ts`, together with `issueBodies` | `by_issue`, search `search_text` |
 | `bodyRevisions` | Earlier versions of a description with full text: overwritten by the import (`import_overwrite`) or a Linear version not applied because of a conflict (`import_conflict`), `version`, `at`, `actor`, `runId` | `by_issue` |
 | `comments` | `body`, `author`, `createdAt`, `editedAt`, `deletedAt` (soft delete) | `by_issue`, search `search_comment` |
-| `relations` | `fromId`, `toId`, `type` (blocks: from blocks to; duplicate: from is a duplicate of to; related) | `by_from`, `by_to` |
+| `relations` | `fromId`, `toId`, `type` (blocks: from blocks to; duplicate: from is a duplicate of to; related) | `by_from`, `by_to`, `by_from_to` |
 | `history` | One row per change: `field`, `from`, `to`, `actor`, `at`, `requestId` | `by_issue` |
 | `inboxEntries` | The owner's inbox: `issueId`, `kind` (`created` \| `changed` \| `snoozed`), `actor` (latest), `changes` (latest change per field: `field`, `actor`, `at`, `value?`, `from?`), `createdAt`, `updatedAt`, `readAt?`, `removedAt?`. At most one open entry (no `removedAt`) per issue | `by_issue` (`issueId`, `removedAt`), `by_removed` (`removedAt`, `updatedAt`) |
 | `sprints` | `number`, name, goal, `startDate`/`endDate` (calendar days), `state`, `capacity`, `source` (`selfbound`/`linear`; the old value `xlr8` is still accepted and counts as `selfbound`), `startedAt`, `closedAt`, `retro` | `by_state`, `by_number`, `by_source_state_closed` |
@@ -275,7 +275,7 @@ Each team has its own statuses (`workflowStates`), each with a type: triage, bac
 | `relations.add` | `{ fromId, toId, type: 'blocks'|'related'|'duplicate', markDuplicate?, requestId? }` | `{ relationId }` |
 | `relations.remove` | `{ relationId, requestId? }` | `{ relationId }` |
 
-Relations: no self-reference, no second relation of the same type between the same issues (in either direction). With `duplicate`, `markDuplicate` sets the `from` issue to status `duplicate`. History on both issues.
+Relations: no self-reference, no second relation of the same type between the same issues (in either direction). With `duplicate`, `markDuplicate` sets the `from` issue to status `duplicate`. History on both issues. Agents set them with the MCP tools `add_relations` and `remove_relations` ([mcp.md](mcp.md#relations)), which call the same operations without their own idempotency check (`addRelationCore`, `removeRelationCore` in `ops/relations.ts`) and wrap the whole call once.
 
 ### sprints
 

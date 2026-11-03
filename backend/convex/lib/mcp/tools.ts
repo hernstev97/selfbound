@@ -404,33 +404,38 @@ function relationType(): Schema<RelationWord> {
 }
 
 const RELATIONS_MAX = 50;
-const relationItems = (description: string) =>
-  array(object({ type: relationType(), identifier: identifier('The other issue, e.g. "ACME-107".') }), { description, min: 1, max: RELATIONS_MAX });
+const otherIssue = () => identifier('The other issue, e.g. "ACME-107".');
 
-const addRelations = object(
-  {
-    requestId: requestId(),
-    identifier: identifier(),
-    relations: relationItems(`Relations of \`identifier\` to add, 1 to ${RELATIONS_MAX}. A relation that already exists is listed under \`unchanged\`.`),
-    markDuplicate: optional(
-      boolean({
-        description:
-          'With duplicate_of or duplicated_by: also set the duplicate (the issue that is a duplicate of the other) to its team\'s Duplicate status, like "Mark as duplicate" in the app. This closes it and removes its priority. Default false: only the relation is added.',
-      }),
-    ),
-  },
-  {
-    refine(v, _path, errors) {
-      if (v.markDuplicate && !v.relations.some((r) => r.type === 'duplicate_of' || r.type === 'duplicated_by'))
-        errors.push('markDuplicate: only together with a duplicate_of or duplicated_by relation');
-    },
-  },
-);
+const addRelations = object({
+  requestId: requestId(),
+  identifier: identifier(),
+  relations: array(object({ type: relationType(), identifier: otherIssue() }), {
+    description: `Relations of \`identifier\` to add, 1 to ${RELATIONS_MAX}. A relation that already exists is listed under \`unchanged\`.`,
+    min: 1,
+    max: RELATIONS_MAX,
+  }),
+});
 
+// Entries of get_issue `relations` pass as they are: `title` and `status` are read-only and ignored.
 const removeRelations = object({
   requestId: optionalRequestId(),
   identifier: identifier(),
-  relations: relationItems(`Relations of \`identifier\` to remove, 1 to ${RELATIONS_MAX}, as get_issue lists them. One that does not exist is listed under \`unchanged\`.`),
+  relations: array(
+    map(
+      object({
+        type: relationType(),
+        identifier: otherIssue(),
+        title: optional(string({ description: 'Ignored (get_issue returns it).', max: LIMITS.titleMax })),
+        status: optional(string({ description: 'Ignored (get_issue returns it).', max: STATE_NAME_MAX })),
+      }),
+      ({ type, identifier }) => ({ type, identifier }),
+    ),
+    {
+      description: `Relations of \`identifier\` to remove, 1 to ${RELATIONS_MAX}: entries of get_issue \`relations\` as they are, or just \`type\` and \`identifier\`. One that does not exist is listed under \`unchanged\`.`,
+      min: 1,
+      max: RELATIONS_MAX,
+    },
+  ),
 });
 
 /** Base64 grows by 4/3; the slack covers a data URL prefix. */
@@ -775,13 +780,13 @@ const META: Record<ToolName, Omit<ToolDefinition, 'name' | 'inputSchema'>> = {
   add_relations: {
     title: 'Add relations',
     description:
-      'Relate one issue to 1 to 50 others: related, blocks, blocked_by, duplicate_of or duplicated_by (seen from `identifier`, the same words as in get_issue `relations`). Use it instead of a comment like "related to ACME-12": the owner sees relations on the issue page. A relation that already exists is listed under `unchanged`, not added twice. An issue cannot relate to itself; a relation in the opposite direction (ACME-2 blocks ACME-1 when ACME-1 should block ACME-2) is refused, remove the old one first. With `markDuplicate` the duplicate also gets its team\'s Duplicate status, like "Mark as duplicate" in the app (warning priority_cleared if it had a priority). Each relation is recorded in the history of both issues. If any issue is unknown or in the trash, nothing is changed. requestId makes the call safe to retry.',
+      'Relate one issue to 1 to 50 others: related, blocks, blocked_by, duplicate_of or duplicated_by (seen from `identifier`, the same words as in get_issue `relations`). Use it instead of a comment like "related to ACME-12": the owner sees relations on the issue page. A relation that already exists is listed under `unchanged`, not added twice. An issue cannot relate to itself; a relation in the opposite direction (ACME-2 blocks ACME-1 when ACME-1 should block ACME-2) is refused, remove the old one first. Only the relation changes: to also close a duplicate as "Mark as duplicate" in the app does, call set_status with "duplicate". Each relation is recorded in the history of both issues. If any issue is unknown or in the trash, nothing is changed. requestId makes the call safe to retry.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   },
   remove_relations: {
     title: 'Remove relations',
     description:
-      'Remove 1 to 50 relations of one issue, given as get_issue lists them (`type` and the other `identifier`). A relation that does not exist is listed under `unchanged`. Removing a duplicate_of relation does not change the status. Each removal is recorded in the history of both issues. The result lists the relations the issue has afterwards.',
+      'Remove 1 to 50 relations of one issue, given as get_issue lists them (entries of `relations` as they are, or `type` and the other `identifier`). A relation that does not exist is listed under `unchanged`. Removing a duplicate_of relation does not change the status. Each removal is recorded in the history of both issues. The result lists the relations the issue has afterwards.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
   },
   upload_image: {

@@ -1020,7 +1020,7 @@ describe('MCP: relations (SELF-114)', () => {
       unchanged: [],
     });
     expect(result.value.relations).toHaveLength(4);
-    // Without markDuplicate only the relation is added.
+    // Only the relation: a duplicate_of does not close the issue (that is set_status).
     expect((await getIssue(t, a.id)).status).not.toBe('duplicate');
 
     // Stored like the app stores them: blocks from → to, duplicate from (the duplicate) → to.
@@ -1121,11 +1121,11 @@ describe('MCP: relations (SELF-114)', () => {
     // Checked before the call reaches the database.
     expect((await mcp.call('add_relations', { requestId: 'rel-bad-0001', identifier: 'ORB-1', relations: [{ type: 'parent_of', identifier: 'ORB-2' }] })).error).toMatch(/is not one of related, blocks, blocked_by, duplicate_of, duplicated_by/);
     expect((await mcp.call('add_relations', { requestId: 'rel-bad-0002', identifier: 'ORB-1', relations: [] })).error).toMatch(/at least 1 item/);
-    expect((await mcp.call('add_relations', { requestId: 'rel-bad-0003', identifier: 'ORB-1', markDuplicate: true, relations: [{ type: 'related', identifier: 'ORB-2' }] })).error).toMatch(/markDuplicate/);
+    expect((await mcp.call('add_relations', { requestId: 'rel-bad-0003', identifier: 'ORB-1', markDuplicate: true, relations: [{ type: 'duplicate_of', identifier: 'ORB-2' }] })).error).toMatch(/markDuplicate: unknown field/);
     expect((await mcp.call('add_relations', { identifier: 'ORB-1', relations: [{ type: 'related', identifier: 'ORB-4' }] })).error).toMatch(/requestId/);
   });
 
-  test('add_relations with markDuplicate: the duplicate gets the Duplicate status and loses its priority, with a warning', async () => {
+  test('duplicate_of only links; set_status "duplicate" then closes it as "Mark as duplicate" does in the app', async () => {
     const { t, owner } = setup();
     const f = await fixture(owner);
     const original = await createOne(owner, f.orb, { title: 'Original' });
@@ -1133,22 +1133,40 @@ describe('MCP: relations (SELF-114)', () => {
     const { key } = await agent(owner);
     const mcp = client(t, key);
     // Seen from the original: the copy is a duplicate of it.
-    const result = await mcp.call('add_relations', { requestId: 'rel-dup-0001', identifier: 'ORB-1', markDuplicate: true, relations: [{ type: 'duplicated_by', identifier: 'ORB-2' }] });
-    expect(result.ok, result.error).toBe(true);
-    expect(result.value).toMatchObject({
-      added: [{ type: 'duplicated_by', identifier: 'ORB-2' }],
-      markedDuplicate: [{ identifier: 'ORB-2', statusType: 'canceled', priority: 'none' }],
-      warnings: [{ code: 'priority_cleared', identifier: 'ORB-2', priority: 'high' }],
-    });
+    const linked = await mcp.call('add_relations', { requestId: 'rel-dup-0001', identifier: 'ORB-1', relations: [{ type: 'duplicated_by', identifier: 'ORB-2' }] });
+    expect(linked.value).toMatchObject({ added: [{ type: 'duplicated_by', identifier: 'ORB-2' }] });
+    expect(await getIssue(t, copy.id)).toMatchObject({ priority: 2 });
+    expect((await getIssue(t, copy.id)).status).not.toBe('duplicate');
+    const closed = await mcp.call('set_status', { requestId: 'rel-dup-0002', identifiers: ['ORB-2'], status: 'duplicate' });
+    expect(closed.value).toMatchObject({ changed: 1, warnings: [{ code: 'priority_cleared', identifier: 'ORB-2', priority: 'high' }] });
     expect(await getIssue(t, copy.id)).toMatchObject({ status: 'duplicate', priority: 0 });
-    expect((await getIssue(t, original.id)).status).not.toBe('duplicate');
-    const fields = (await historyOf(t, copy.id)).filter((h) => h.requestId === 'rel-dup-0001').map((h) => h.field);
-    expect(fields.sort()).toEqual(['priority', 'relation', 'stateId']);
+    // The app stores the same row for "Mark as duplicate": from = the duplicate.
+    expect(await relationRows(t)).toMatchObject([{ fromId: copy.id, toId: original.id, type: 'duplicate' }]);
+  });
 
-    // Already a duplicate: nothing to mark again.
-    const again = await mcp.call('add_relations', { requestId: 'rel-dup-0002', identifier: 'ORB-2', markDuplicate: true, relations: [{ type: 'duplicate_of', identifier: 'ORB-1' }] });
-    expect(again.value).toMatchObject({ added: [], unchanged: [{ type: 'duplicate_of', identifier: 'ORB-1' }] });
-    expect(again.value.markedDuplicate).toBeUndefined();
+  test('50 relations in one call stay within the read limits, also on an issue that already has hundreds', async () => {
+    const { t, owner } = setup();
+    const f = await fixture(owner);
+    const hub = await createOne(owner, f.orb, { title: 'Hub' });
+    const ids: Id<'issues'>[] = [];
+    for (let n = 0; n < 2; n++) {
+      const batch = await owner.mutation(api.issues.create, { issues: Array.from({ length: 30 }, (_, i) => ({ teamId: f.orb, title: `Issue ${n * 30 + i}` })) });
+      ids.push(...batch.issues.map((i) => i.id));
+    }
+    // 700 old relations of the hub (written directly, as an import over years might leave them).
+    await t.run(async (ctx) => {
+      for (let i = 0; i < 700; i++) await ctx.db.insert('relations', { fromId: hub.id, toId: ids[50 + (i % 10)]!, type: 'related', createdAt: i, createdBy: { kind: 'system' } });
+    });
+    const { key } = await agent(owner);
+    const mcp = client(t, key);
+    const targets = Array.from({ length: 50 }, (_, i) => ({ type: 'blocks', identifier: `ORB-${i + 2}` }));
+    const added = await mcp.call('add_relations', { requestId: 'rel-many-0001', identifier: 'ORB-1', relations: targets });
+    expect(added.ok, added.error).toBe(true);
+    expect(added.value.added).toHaveLength(50);
+    const removed = await mcp.call('remove_relations', { identifier: 'ORB-1', relations: targets });
+    expect(removed.ok, removed.error).toBe(true);
+    expect(removed.value.removed).toHaveLength(50);
+    expect(await relationRows(t)).toHaveLength(700);
   });
 
   test('remove_relations: as get_issue lists them, history on both sides, unchanged when missing, also to a trashed issue', async () => {
@@ -1172,7 +1190,9 @@ describe('MCP: relations (SELF-114)', () => {
     expect(wrongWay.value).toMatchObject({ removed: [], unchanged: [{ type: 'blocks', identifier: 'ORB-2' }], note: expect.stringContaining('had none') });
     expect(await relationRows(t)).toHaveLength(2);
 
-    const args = { requestId: 'rel-rm-0001', identifier: 'ORB-1', relations: [{ type: 'blocked_by', identifier: 'ORB-2' }] };
+    // Entries of get_issue pass as they are (title and status are ignored).
+    const args = { requestId: 'rel-rm-0001', identifier: 'ORB-1', relations: listed.filter((r: Json) => r.type === 'blocked_by') };
+    expect(args.relations[0]).toMatchObject({ title: expect.any(String), status: expect.any(String) });
     const removed = await mcp.call('remove_relations', args);
     expect(removed.value).toMatchObject({ identifier: 'ORB-1', removed: [{ type: 'blocked_by', identifier: 'ORB-2' }], unchanged: [] });
     expect(removed.value.relations).toMatchObject([{ type: 'related', identifier: 'ORB-3' }]);
