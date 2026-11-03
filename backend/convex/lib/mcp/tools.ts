@@ -391,12 +391,12 @@ const addComment = object({
 // ---------------------------------------------------------------------------
 // Relations (SELF-114): the words get_issue uses in `relations`, seen from the issue named first
 
-export const RELATION_TYPES = ['related', 'blocks', 'blocked_by', 'duplicate_of', 'duplicated_by'] as const;
-export type RelationWord = (typeof RELATION_TYPES)[number];
+export const RELATION_WORDS = ['related', 'blocks', 'blocked_by', 'duplicate_of', 'duplicated_by'] as const;
+export type RelationWord = (typeof RELATION_WORDS)[number];
 
 /** Case and separators are forgiven ("Blocked by" → blocked_by), the JSON Schema lists the exact words. */
 function relationType(): Schema<RelationWord> {
-  const base = enumOf(RELATION_TYPES, {
+  const base = enumOf(RELATION_WORDS, {
     description:
       'Seen from `identifier`: "related" (the two belong together), "blocks" (it has to be finished before the other), "blocked_by" (the other has to be finished first), "duplicate_of" (it is a duplicate of the other), "duplicated_by" (the other is a duplicate of it). The same words as in get_issue `relations`.',
   });
