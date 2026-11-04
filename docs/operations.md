@@ -430,6 +430,7 @@ A fine-grained personal access token for all repos whose PRs Selfbound should sh
 - Metadata: read
 
 Fine-grained tokens have no "Checks" permission; check runs of other apps arrive through the webhook.
+The same token serves the [GitHub Issues import](architecture/import.md#importing-from-github) (Issues and Pull requests, read).
 Set it without putting it on the command line, e.g.
 `node tooling/cloud.mjs env set GITHUB_TOKEN < ~/.config/selfbound/github-token`. Tokens expire (at most after a
 year); GitHub emails before that. Renew with the same permissions.

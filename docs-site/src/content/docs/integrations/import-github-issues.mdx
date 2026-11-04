@@ -1,19 +1,87 @@
 ---
 title: Import from GitHub Issues
-description: Importing issues from GitHub repositories is planned and not available yet.
+description: Copy the issues of one or more GitHub repositories into a Selfbound team, with labels, comments, dates and linked pull requests, and run the import again later without duplicates.
 sidebar:
   order: 3
 ---
-import Planned from '../../../components/Planned.astro';
+import { Aside, Steps } from '@astrojs/starlight/components';
 
-Selfbound cannot import GitHub issues yet. Today the only importer is the one for [Linear](/integrations/import-linear/). The [GitHub integration](/integrations/github/) links pull requests to Selfbound issues, but it does not copy issues from GitHub.
+The GitHub importer copies the issues of one or more repositories into a Selfbound team. It uses the GitHub token your instance already has for the [GitHub integration](/integrations/github/) and only reads from GitHub; it never changes anything there.
 
-<Planned issue="SELF-48" title="GitHub Issues importer">
-An importer for GitHub Issues is planned. The idea:
+The import runs from the command line in a checkout of the Selfbound repository, with the same command you used to set up your instance. There is no import button in the app: an import is usually a one-time move, and the command needs no extra setup.
 
-- Import one or more repositories into a Selfbound team.
-- Bring over title, description, open or closed state, labels, comments and dates, plus references to pull requests.
-- Run it again later without creating duplicates.
-</Planned>
+## What is imported
 
-Until then, you can move a small number of issues by hand, or let an AI agent read them from GitHub and create them in Selfbound.
+- **Issues** with title, description, open or closed state, labels, and the created and closed dates. Pull requests are not imported as issues.
+- **State:** open issues get the team's status for new issues (its default, usually Backlog). Closed issues become Done; issues closed as "not planned" become Canceled, and issues closed as duplicates become Duplicate.
+- **Labels:** a GitHub label uses the Selfbound label with the same name (case does not matter), from the team or the whole workspace. Missing labels are created as team labels in the GitHub color.
+- **Comments**, with the GitHub account shown as the author, for example "octocat (GitHub)". GitHub users do not become Selfbound users.
+- **Linked pull requests:** a pull request in one of the imported repositories that closes an issue by keyword (`Fixes #12`, `Closes acme/app#3` or the issue's URL, in its title or description) becomes a linked pull request on that issue. An imported link never closes an issue; from then on the [GitHub integration](/integrations/github/) handles that.
+
+Each description ends with a line pointing to the original, for example "Imported from acme/app#12 on GitHub, opened by octocat." Imported issues get the team's next numbers (GitHub numbers are per repository, so several repositories can share one team), count as reviewed and stay out of your inbox.
+
+## What changes or is left out
+
+| On GitHub | In Selfbound |
+|---|---|
+| Issue numbers (`#12`) | The team's next numbers (`ACME-37`). The original number is in the line at the end of the description. |
+| Assignees, milestones, projects | Not imported. |
+| Reactions, issue types, pinned and locked state | Not imported. |
+| Pull requests | Not imported as issues. Linked to the issues they close by keyword. |
+| Pull requests linked by hand in the "Development" sidebar | Not linked; only keywords in the pull request count. |
+| Comments on pull requests | Not imported. |
+| Images and files in descriptions and comments | Stay links to GitHub. Images from public repositories keep showing; images from private repositories need a GitHub login. |
+| The issue's event history | Not imported. The created and closed dates are. |
+
+## Before you start
+
+- A checkout of the Selfbound repository with Node.js 24 and its dependencies installed (`pnpm install`).
+- The [GitHub token](/integrations/github/#set-up-github-on-your-instance) on your instance (`GITHUB_TOKEN`) with access to the repositories you want to import and the permission **Issues: read**. The token described for the GitHub integration already has it. For linked pull requests it also needs **Pull requests: read**; without it, the import still runs and the report says that it skipped the links. Public repositories work with any token.
+- A team in Selfbound to import into. The import does not create teams.
+- For production: your instance settings in `deploy/instance.json` and a Convex deploy key in `~/.config/selfbound/convex-deploy-key`, as described in [Self-hosting](/start/self-hosting/).
+
+<Aside type="tip">
+Try the import against a local backend first (`pnpm dev`, then the same command with `tooling/convex.mjs` instead of `tooling/cloud.mjs`; the local backend needs its own `GITHUB_TOKEN`). If your production instance already holds data you care about, take a backup before importing into it.
+</Aside>
+
+## Run the import
+
+<Steps>
+
+1. **Start** the import with the team key and the repositories (`owner/name`, up to 20 per run):
+
+   ```sh
+   node tooling/cloud.mjs run githubImport:run '{"team": "ACME", "repos": ["acme/app", "acme/website"]}'
+   ```
+
+2. **Read the report.** The command waits until the import is done (up to 8 minutes) and prints how many issues, labels, comments and pull request links were read, new, changed, unchanged and skipped, plus deviations and conflicts. **Settings → Ops** in the app shows the result of the last import too.
+
+3. **Large repositories:** if the import takes longer, the command returns with `"status": "running"` and the import continues on the server. Check on it with:
+
+   ```sh
+   node tooling/cloud.mjs run githubImport:status
+   ```
+
+</Steps>
+
+Only one import runs at a time (GitHub or Linear). If an import fails, for example because the token has no access to a repository, the report says why, and the data imported so far stays. Fix the cause and run the same command again; nothing is duplicated.
+
+### Rate limits
+
+GitHub allows a token 5,000 requests per hour. The import reads 50 issues or 100 comments or pull requests per request, so a repository with 1,000 issues and 3,000 comments needs about 50 requests. When GitHub's limit is reached (including GitHub's short-term "secondary" limits), or fewer than 200 requests are left (so the pull request view keeps working), the import pauses until GitHub accepts requests again and then continues by itself. `githubImport:status` shows the time in `waitingUntil`.
+
+## Import again later
+
+You can repeat the import whenever you like, for example while you still use GitHub Issues in parallel. Issues are matched by repository and number, comments by their GitHub ID, so nothing is duplicated. Running it again without changes on GitHub counts everything as unchanged. When an issue changed, Selfbound compares title, state, labels and description one by one with the values from the previous import:
+
+- **Changed only on GitHub:** the GitHub value is applied. Your old value stays in the issue history, and an overwritten description is kept as an earlier version. An issue reopened on GitHub goes back to the team's status for new issues.
+- **Changed only in Selfbound:** your value stays.
+- **Changed in both:** your value stays, and the report lists the issue and field under conflicts.
+
+New issues and comments on GitHub are added. Edited comments are updated unless you deleted them in Selfbound. Issues you deleted permanently in Selfbound do not come back, and pull request links you removed are not restored. Issues you moved to another team stay there, and running the import into a different team updates the issues where they are instead of copying them.
+
+<Aside type="caution">
+Issues are matched by the repository's name. If you rename a repository on GitHub after importing it, a new import under the new name creates its issues again.
+</Aside>
+
+Continuous sync (GitHub changes arriving in Selfbound by themselves) is not available; run the import again to pick up changes.

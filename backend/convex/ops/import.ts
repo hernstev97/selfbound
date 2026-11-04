@@ -107,9 +107,9 @@ interface State {
 
 // ---------------------------------------------------------------- linearLinks
 
-const payloadHash = (payload: unknown) => hashText(stable(payload));
+export const payloadHash = (payload: unknown) => hashText(stable(payload));
 
-async function findLink(ctx: QueryCtx, kind: string, linearId: string) {
+export async function findLink(ctx: QueryCtx, kind: string, linearId: string) {
   return await ctx.db
     .query('linearLinks')
     .withIndex('by_kind_linear', (q) => q.eq('kind', kind).eq('linearId', linearId))
@@ -130,7 +130,7 @@ async function saveLink(
   else await s.ctx.db.insert('linearLinks', { kind, linearId, localId, hash, runId: s.runId, ...extra });
 }
 
-async function getLocal<T extends TableNames>(ctx: QueryCtx, table: T, localId: string): Promise<Doc<T> | null> {
+export async function getLocal<T extends TableNames>(ctx: QueryCtx, table: T, localId: string): Promise<Doc<T> | null> {
   const id = ctx.db.normalizeId(table, localId);
   return id ? await ctx.db.get(table, id) : null;
 }
@@ -160,7 +160,7 @@ function limitNote(s: State, identifier: string, priority: number, teamKey: stri
   note(s, `${identifier}: priority ${priority === 1 ? 'urgent' : 'high'} not taken, the hard limit of team ${teamKey} is full`);
 }
 
-const clip = (text: string, max: number, fallback: string) => {
+export const clip = (text: string, max: number, fallback: string) => {
   const t = text.replace(/\s+/g, ' ').trim();
   return (t.length > max ? t.slice(0, max) : t) || fallback;
 };
@@ -480,19 +480,76 @@ export function issueHash(p: ImportIssue) {
   return payloadHash(own);
 }
 
-type Merge = 'keep' | 'take' | 'conflict';
+export type Merge = 'keep' | 'take' | 'conflict';
 
 /**
  * Three-way decision for one field: base = last imported, linear = now in Linear,
  * local = now in Selfbound. Without base (link from before the merge existed) every
  * difference counts as a conflict: Selfbound wins.
  */
-function merge(hasBase: boolean, base: unknown, linear: unknown, local: unknown, unordered = false): Merge {
+export function merge(hasBase: boolean, base: unknown, linear: unknown, local: unknown, unordered = false): Merge {
   if (sameValue(local, linear, unordered)) return 'keep';
   if (!hasBase) return 'conflict';
   if (sameValue(base, linear, unordered)) return 'keep'; // changed only in Selfbound
   if (sameValue(base, local, unordered)) return 'take'; // changed only in Linear
   return 'conflict';
+}
+
+/**
+ * Three-way merge of an imported description (`baseHash`: hash of the last imported text).
+ * Changed only at the source: take it, the previous version goes in full into `bodyRevisions`.
+ * Changed on both sides: keep Selfbound's, store the source's version for comparison.
+ */
+export async function mergeImportedBody(
+  ctx: MutationCtx,
+  runId: Id<'importRuns'>,
+  now: number,
+  issueId: Id<'issues'>,
+  hasBase: boolean,
+  baseHash: string | undefined,
+  markdown: string,
+): Promise<Merge> {
+  const body = await ctx.db
+    .query('issueBodies')
+    .withIndex('by_issue', (q) => q.eq('issueId', issueId))
+    .unique();
+  const current = body?.markdown ?? '';
+  const decision = merge(hasBase, baseHash, hashText(markdown), hashText(current));
+  if (decision === 'take') {
+    if (current !== '') {
+      const revisionId = await ctx.db.insert('bodyRevisions', {
+        issueId,
+        markdown: current,
+        version: body?.version ?? 0,
+        reason: 'import_overwrite',
+        at: now,
+        actor: IMPORT,
+        runId,
+      });
+      await syncFileRefs(ctx, revisionId, current, now);
+    }
+    const version = await writeBody(ctx, issueId, body, markdown, IMPORT, now);
+    await ctx.db.patch('issues', issueId, { updatedAt: now });
+    await record(ctx, IMPORT, now, undefined, {
+      issueId,
+      field: 'description',
+      from: { version: body?.version ?? 0, ...(current !== '' ? { savedAsRevision: true } : {}) },
+      to: { version, preview: markdown.slice(0, 120) },
+    });
+  } else if (decision === 'conflict' && markdown !== '') {
+    // Keep the rejected version so the owner can compare.
+    const revisionId = await ctx.db.insert('bodyRevisions', {
+      issueId,
+      markdown,
+      version: body?.version ?? 0,
+      reason: 'import_conflict',
+      at: now,
+      actor: IMPORT,
+      runId,
+    });
+    await syncFileRefs(ctx, revisionId, markdown, now);
+  }
+  return decision;
 }
 
 async function addConflict(s: State, issueId: Id<'issues'>, identifier: string, fields: string[]) {
@@ -627,51 +684,9 @@ async function importIssue(s: State, p: ImportIssue): Promise<Outcome> {
     changed = true;
   }
 
-  const body = await ctx.db
-    .query('issueBodies')
-    .withIndex('by_issue', (q) => q.eq('issueId', existing._id))
-    .unique();
-  const current = body?.markdown ?? '';
-  const decision = merge(hasBase, old?.descriptionHash, base.descriptionHash, hashText(current));
-  if (decision === 'take') {
-    // Changed only in Linear: take it, keep the previous version in full.
-    if (current !== '') {
-      const revisionId = await ctx.db.insert('bodyRevisions', {
-        issueId: existing._id,
-        markdown: current,
-        version: body?.version ?? 0,
-        reason: 'import_overwrite',
-        at: now,
-        actor: IMPORT,
-        runId: s.runId,
-      });
-      await syncFileRefs(ctx, revisionId, current, now);
-    }
-    const version = await writeBody(ctx, existing._id, body, markdown, IMPORT, now);
-    await ctx.db.patch('issues', existing._id, { updatedAt: now });
-    await record(ctx, IMPORT, now, undefined, {
-      issueId: existing._id,
-      field: 'description',
-      from: { version: body?.version ?? 0, ...(current !== '' ? { savedAsRevision: true } : {}) },
-      to: { version, preview: markdown.slice(0, 120) },
-    });
-    changed = true;
-  } else if (decision === 'conflict') {
-    conflicts.push('description');
-    // Keep the rejected Linear version so the owner can compare.
-    if (markdown !== '') {
-      const revisionId = await ctx.db.insert('bodyRevisions', {
-        issueId: existing._id,
-        markdown,
-        version: body?.version ?? 0,
-        reason: 'import_conflict',
-        at: now,
-        actor: IMPORT,
-        runId: s.runId,
-      });
-      await syncFileRefs(ctx, revisionId, markdown, now);
-    }
-  }
+  const description = await mergeImportedBody(ctx, s.runId, now, existing._id, hasBase, old?.descriptionHash, markdown);
+  if (description === 'take') changed = true;
+  else if (description === 'conflict') conflicts.push('description');
   if (conflicts.length) await addConflict(s, existing._id, identifier, conflicts);
   await ensureAliases(s, existing._id, p.previousIdentifiers);
   if (sprint) await setImportedSprintItem(ctx, existing._id, sprint, outcomeOf(p.status), now);
