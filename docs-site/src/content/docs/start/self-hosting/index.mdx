@@ -5,17 +5,17 @@ sidebar:
   label: Overview
   order: 0
 ---
-import { Steps } from '@astrojs/starlight/components';
-import Planned from '../../../../components/Planned.astro';
+import { Aside, Steps } from '@astrojs/starlight/components';
 
 Each Selfbound instance belongs to one owner and runs on accounts you control: a Convex project for the
 backend, a Clerk application for sign-in, and a static host for the web app. This page gives you the
 overview; the pages after it walk through each part.
 
-<Planned issue="SELF-47">
-The setup is manual today: you create the accounts, copy values between them and run a few scripts. A
-guided setup script that does most of this for you is planned.
-</Planned>
+<Aside type="tip" title="The quick way">
+[Set up with the script](/start/self-hosting/setup-script/) takes you from zero to a running instance:
+you create the accounts and keys in the dashboards, and `node tooling/setup.mjs` does the rest. The pages
+after it describe the same steps by hand.
+</Aside>
 
 ## What an instance consists of
 
@@ -82,6 +82,9 @@ Nothing in this file is secret: these values end up in the browser or in public 
 and tokens never go into it.
 
 ## Order of the steps
+
+The [setup script](/start/self-hosting/setup-script/) runs the command-line parts of steps 2 and 3 for you
+and finds your user id from step 1. By hand:
 
 <Steps>
 

@@ -27,35 +27,40 @@ export function prodDeployment() {
   return requireInstance(['convexDeployment']).convexDeployment;
 }
 
-function deployKey() {
-  const expected = prodDeployment();
-  const keyFile = deployKeyFile();
+/**
+ * Reads the deploy key and checks it: the file is not readable by others and the key belongs to the
+ * production deployment `expected`. Returns `{ key }` or `{ problem, message }`; never prints the key.
+ * @returns {{ key: string } | { problem: 'missing' | 'open' | 'mismatch', message: string }}
+ */
+export function readDeployKey(keyFile, expected) {
   // One handle for check and read: the file cannot be swapped in between.
   let fd;
   try {
     fd = openSync(keyFile, 'r');
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
-    console.error(`Aborted: no deploy key at ${keyFile}. Create a production deploy key in the Convex dashboard and save it there with mode 600 (docs/self-hosting.md, section "2. Convex"), or point SELFBOUND_CONVEX_DEPLOY_KEY_FILE to it.`);
-    process.exit(2);
+    return { problem: 'missing', message: `No deploy key at ${keyFile}. Create a production deploy key in the Convex dashboard and save it there with mode 600 (docs/self-hosting.md, section "2. Convex"), or point SELFBOUND_CONVEX_DEPLOY_KEY_FILE to it.` };
   }
   let key;
   try {
     const mode = fstatSync(fd).mode & 0o777;
-    if (mode & 0o077) {
-      console.error(`Aborted: ${keyFile} is readable by others (mode ${mode.toString(8)}). Run: chmod 600 ${keyFile}`);
-      process.exit(2);
-    }
+    if (mode & 0o077) return { problem: 'open', message: `${keyFile} is readable by others (mode ${mode.toString(8)}). Run: chmod 600 ${keyFile}` };
     key = readFileSync(fd, 'utf8').trim();
   } finally {
     closeSync(fd);
   }
-  const name = /^prod:([a-z0-9-]+)\|/.exec(key)?.[1];
-  if (name !== expected) {
-    console.error(`Aborted: the key does not belong to the production deployment ${expected}.`);
-    process.exit(2);
-  }
-  return key;
+  if (deployKeyDeployment(key) !== expected) return { problem: 'mismatch', message: `The key in ${keyFile} does not belong to the production deployment ${expected}.` };
+  return { key };
+}
+
+/** Deployment name of a production deploy key ("prod:<name>|…"), else undefined. */
+export const deployKeyDeployment = (key) => /^prod:([a-z0-9-]+)\|./.exec(key)?.[1];
+
+function deployKey() {
+  const result = readDeployKey(deployKeyFile(), prodDeployment());
+  if ('key' in result) return result.key;
+  console.error(`Aborted: ${result.message}`);
+  process.exit(2);
 }
 
 export function runCloud(args, options = {}) {

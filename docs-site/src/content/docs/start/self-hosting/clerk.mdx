@@ -64,8 +64,9 @@ differs, look for the closest match.
 
 </Steps>
 
-The publishable key is not a secret: it ends up in the browser. Clerk's secret keys are not needed
-anywhere in Selfbound.
+The publishable key is not a secret: it ends up in the browser. Selfbound itself needs no Clerk secret key.
+The [setup script](/start/self-hosting/setup-script/) asks for one once, optionally, to look up your user
+id, and does not store it.
 
 <Aside type="note">
 The embedded sign-in form works without the path settings from step 6. They make sure that links Clerk

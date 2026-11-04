@@ -1,0 +1,174 @@
+---
+title: Set up with the script
+description: From zero to a running Selfbound instance with one guided script, including the owner account and agents over MCP.
+sidebar:
+  label: Setup script
+---
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+This page takes you from nothing to a running instance with your own Convex, Clerk and Vercel accounts.
+A few things only happen in the dashboards of those services (creating the project, the application and
+the keys). Everything else is done by one script, `node tooling/setup.mjs`: it asks for the values, checks
+them, writes the instance settings, sets the backend's environment variables, makes your Clerk user the
+owner and deploys backend and web app.
+
+The script is safe to run again. Every step first reads what is already there and only changes what
+differs; a value that is set but different is only replaced after you agree. With `--dry-run` it shows
+what it would change and changes nothing.
+
+Plan about an hour, most of it waiting for DNS. The pages [Clerk](/start/self-hosting/clerk/),
+[Convex](/start/self-hosting/convex/) and [Web app](/start/self-hosting/web-app/) describe the same setup
+by hand, with more background on each value.
+
+## Before you start
+
+You need:
+
+- **Node.js 24**, **pnpm** (`corepack enable` provides the pinned version) and Git.
+- Accounts at [Convex](https://convex.dev), [Clerk](https://clerk.com) and [Vercel](https://vercel.com).
+  The free plans are enough for one person.
+- **A domain you control**, for example `selfbound.example.com`, for the app and for Clerk's production
+  instance. To only try Selfbound out, a Clerk development instance works without a domain; see
+  [Production or development instance](/start/self-hosting/clerk/#production-or-development-instance).
+
+The examples use `selfbound.example.com` for the app, `clerk.selfbound.example.com` for Clerk and
+`happy-otter-123` for the Convex deployment. Replace them with yours.
+
+## 1. Get the code
+
+```sh
+git clone https://github.com/hernstev97/selfbound.git
+cd selfbound
+corepack enable
+pnpm install
+```
+
+## 2. Prepare the accounts
+
+These steps happen in the dashboards. Keep the tab open for each value the script asks for.
+
+<Steps>
+
+1. **Clerk application.** In the [Clerk dashboard](https://dashboard.clerk.com), create an application
+   and switch to its **Production** instance. Add your domain and create the DNS records Clerk shows you
+   (they can take a while).
+
+2. **JWT template.** **Configure → JWT templates → New template → Convex**. Keep the name `convex`.
+
+3. **Your user.** **Users → Create user**, with the e-mail address (and password, if you use one) you
+   want to sign in with. This user becomes the owner of the instance.
+
+4. **Lock sign-ups.** **Configure → Restrictions → Sign-up mode → Restricted**. Users you create in the
+   dashboard still work; nobody can create an account on their own.
+
+5. **Clerk paths.** **Configure → Developers → Paths**: `<SignIn />` → "Sign-in page on application domain"
+   → `https://selfbound.example.com/sign-in`; Signing out → "Page on application domain" →
+   `https://selfbound.example.com/`.
+
+6. **Convex project.** In the [Convex dashboard](https://dashboard.convex.dev), create a project. Note the
+   name of its **production** deployment (like `happy-otter-123`), and generate a **production deploy key**
+   in the production deployment's settings.
+
+7. **Vercel CLI.** Install the [Vercel CLI](https://vercel.com/docs/cli) and run `vercel login`. Note your
+   team or account slug (`vercel teams ls`).
+
+</Steps>
+
+## 3. Run the setup script
+
+Optional, to see the plan first:
+
+```sh
+node tooling/setup.mjs --dry-run
+```
+
+Then:
+
+```sh
+node tooling/setup.mjs
+```
+
+It goes through these steps and asks for what it needs:
+
+| Step | Asks for | What it does |
+|---|---|---|
+| Tools | – | checks Node.js, pnpm and `pnpm install` |
+| Instance settings | Convex deployment name, app address, Clerk **publishable key** (`pk_live_…`), Vercel project and team | writes `deploy/instance.json` (only the fields that change) |
+| Convex deploy key | the production deploy key (hidden input) | saves it to `~/.config/selfbound/convex-deploy-key` with mode 600 and checks that it belongs to your deployment |
+| Convex environment variables | – | sets `CLERK_JWT_ISSUER_DOMAIN` (read from the publishable key and checked against Clerk), `SELFBOUND_DEV_JWKS=none` and `SELFBOUND_APP_URL`; removes test switches if any are set |
+| Owner | the Clerk **secret key** (`sk_live_…`, under **Configure → API keys**; hidden input), or your user id | finds the first user of your Clerk instance (the one you created) and sets `SELFBOUND_OWNER_IDS` to it |
+| Backend | confirmation | deploys the backend (`node tooling/cloud.mjs deploy`) and checks `/health` |
+| Web app | confirmation | builds the app and deploys it to Vercel (`node tooling/deploy-web.mjs`) |
+| Push notifications | yes or no | creates the Web Push keys (`node tooling/vapid.mjs`) |
+
+The Clerk secret key is only used for one request to Clerk's API, to look up your user id; it is not
+stored. If you would rather not paste it, press Enter and type the user id from the user's page in the
+Clerk dashboard (`user_…`) instead.
+
+If a step stops, the script says why. Fix it and run the script again; finished steps only report
+"✓".
+
+Options:
+
+| Option | Effect |
+|---|---|
+| `--dry-run` | shows every change it would make; writes, sets and deploys nothing |
+| `--yes` | asks nothing: keeps existing values and takes the defaults; stops if a required value is missing |
+| `--only env,owner` | runs some steps only: `tools`, `instance`, `key`, `env`, `owner`, `backend`, `web`, `push` |
+
+## 4. Point your domain at the app
+
+Once, in the Vercel dashboard: open the project, **Settings → Domains**, add `selfbound.example.com` and
+create the DNS record Vercel shows you. Run `node tooling/setup.mjs --only web` again: it reports
+"serves the app" once the domain works.
+
+Not on Vercel? Answer "no" to the Vercel question: the script then builds into `deploy/web/`, and
+[Hosting elsewhere](/start/self-hosting/web-app/#hosting-elsewhere) lists the routing rules your host needs.
+
+## 5. Sign in
+
+Open `https://selfbound.example.com/`, click **Sign in** and sign in with the user from step 2.3. You land in
+an empty workspace; continue with [First steps](/start/first-steps/). The first sign-in also saves your
+browser's time zone as the instance's time zone (**Settings → General → Time zone**).
+
+Only the account in `SELFBOUND_OWNER_IDS` gets in. Anyone else who manages to sign in at Clerk sees no data
+and cannot change anything.
+
+## 6. Connect agents over MCP
+
+Your MCP address is `https://happy-otter-123.convex.site/mcp`; **Settings → Agents** shows it too. The
+script prints it at the end.
+
+- **Claude Code, Codex and other key-based clients:** **Settings → Agents → Create key**, then add the
+  address with the header `Authorization: Bearer <key>`. The dialog offers a ready-made command for Claude
+  Code.
+- **claude.ai and ChatGPT:** **Settings → Agents → Connect connector**, then add the address as a custom
+  connector within 15 minutes and click **Allow** on the consent page. The script has already set
+  `SELFBOUND_APP_URL`, which connectors need.
+
+Details and other clients: [Connect agents](/agents/connect/).
+
+## Check the result
+
+| Check | Expected |
+|---|---|
+| `https://happy-otter-123.convex.site/health` | `"ok": true`, `"clerk": true`, `"devAuth": false`, `"local": false`, `"oauth": true` |
+| `https://selfbound.example.com/` (signed out) | the landing page with **Sign in** |
+| after signing in | the app with an empty inbox, no "No access" |
+| `node tooling/setup.mjs --dry-run --yes --only instance,key,env,owner` | every line starts with "✓", none with "would set" or "would change" |
+
+Something wrong after signing in? See
+[the troubleshooting on the web app page](/start/self-hosting/web-app/#no-access-or-an-empty-app-after-sign-in).
+
+<Aside type="caution">
+Environment variables and keys are not in the code and not in the backup. Keep the deploy key and the
+values of the Convex environment variables in a password manager.
+</Aside>
+
+## Next steps
+
+- [Push notifications](/using/notifications/) on your phone and desktop, if you skipped them.
+- [GitHub pull requests](/integrations/github/) on their issues.
+- Nightly encrypted backups, described in
+  [docs/backup.md](https://github.com/hernstev97/selfbound/blob/main/docs/backup.md).
+- [Updating](/start/self-hosting/updating/) to new versions.
