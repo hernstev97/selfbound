@@ -168,18 +168,26 @@
   margin-left: 0;
 }
 
-@media (max-width: 760px) {
-  .wiki {
-    flex-direction: column;
+/* Phone (same width as app.mobile): tree and page are levels of their own, each over the whole
+   screen; the other one is hidden, not removed (the tree keeps its state). Bottom padding clears the
+   tab bar. */
+@media (max-width: 768px) {
+  .wiki[data-layer='page'] .wiki-side,
+  .wiki[data-layer='tree'] .wiki-main {
+    display: none;
   }
   .wiki-side {
+    flex: 1;
     width: auto;
-    max-height: 40vh;
+    padding: 4px 8px 120px;
     border-right: 0;
-    border-bottom: 0.5px solid var(--border);
   }
   .wiki-content {
-    padding: 24px 18px 60px;
+    padding: 16px 18px 120px;
+  }
+  /* "Knowledge" stays readable; the team name gives way first. */
+  .wiki-bar .wiki-crumb {
+    flex: none;
   }
   /* Tap targets with a 44 px hit area (see the mobile block in app.css): tree rows 44 px tall, expand
      and add-subpage with an invisible margin; source tools with a gap so nothing overlaps. */

@@ -88,7 +88,7 @@ export class WikiController {
   #detail: { id: string; slice: Slice<DetailResult | undefined>; stop: () => void } | null = null;
   /** Subscriptions of single pages (recently open or prefetched on hover), oldest first. */
   #cache = new Map<string, { slice: Slice<DetailResult | undefined>; release: () => void }>();
-  #trash: { teamId: string; slice: Slice<FunctionReturnType<typeof api.wiki.trash> | undefined>; release: () => void; stop: () => void } | null = null;
+  #trash: { teamId: string; slice: Slice<FunctionReturnType<typeof api.wiki.trash> | undefined>; release: () => void; stop: () => void; back: (() => void) | null } | null = null;
   #page: Page = { name: 'home' };
   #expanded: Set<string>;
   #filter: WikiFilter = NO_FILTER;
@@ -126,6 +126,8 @@ export class WikiController {
       const team = this.app.store.meta.get()?.teams.find((t) => t.key === page.team);
       this.#watchList(team?._id ?? null);
     } else if (page.name === 'article') {
+      // An opened page replaces the trash list (otherwise it would stay in front of the page).
+      this.closeTrash();
       this.#watchDetail(page.id);
       const teamId = this.#detail?.slice.get()?.article.teamId ?? null;
       if (teamId) this.#watchList(teamId);
@@ -308,6 +310,21 @@ export class WikiController {
     this.app.nav.go({ name: 'article', id });
   }
 
+  /**
+   * Phone: one level up (page → tree, subpage → page, trash → tree). Back in the history if we came
+   * from a page of the app, as the browser's Back does; a link opened directly goes to the parent page
+   * or the tree instead, in place of the entry, so Back does not lead down again.
+   */
+  up() {
+    if (this.#trash) return this.closeTrash();
+    if (this.app.nav.canGoBack()) return this.app.nav.back();
+    const { article, team } = this.state.get();
+    const parent = article?.path.at(-1);
+    const key = article?.teamKey ?? team?.key;
+    if (parent) this.app.nav.go({ name: 'article', id: parent.id }, { replace: true });
+    else if (key) this.app.nav.go({ name: 'wiki', team: key }, { replace: true });
+  }
+
   /** New page (optionally as a subpage), opened afterwards; the title is selected for overwriting. */
   async create(parentId: string | null = null): Promise<string | null> {
     const teamId = this.#list?.teamId ?? this.app.store.meta.get()?.teams.find((t) => t.key === (this.#page.name === 'wiki' ? this.#page.team : ''))?._id;
@@ -379,7 +396,9 @@ export class WikiController {
     if (!teamId || this.#trash?.teamId === teamId) return;
     this.closeTrash();
     const { slice, release } = this.app.store.watch(api.wiki.trash, { teamId: teamId as never });
-    this.#trash = { teamId, slice, release, stop: slice.subscribe(() => this.refresh()) };
+    // Phone: the trash is a level of its own, so Back closes it.
+    const back = this.app.mobile.get() ? this.app.nav.hold(() => this.closeTrash()) : null;
+    this.#trash = { teamId, slice, release, stop: slice.subscribe(() => this.refresh()), back };
     this.refresh();
   }
 
@@ -387,6 +406,7 @@ export class WikiController {
     if (!this.#trash) return;
     this.#trash.stop();
     this.#trash.release();
+    this.#trash.back?.();
     this.#trash = null;
     this.refresh();
   }

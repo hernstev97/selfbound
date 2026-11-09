@@ -176,3 +176,68 @@ test('Board on a phone: columns almost as wide as the screen, swipe horizontally
   expect(scrollable).toBe(true);
   await expect(first.getByTestId('issue-card').first()).toBeVisible();
 });
+
+test('Knowledge on a phone: tree and page are levels of their own, Back goes one level up', async ({ page }) => {
+  const team = (await backend().query(api.meta.get, {})).teams.find((t) => t.key === 'ORB')!;
+  if (!team.wiki) await backend().mutation(api.teams.update, { teamId: team._id, wiki: 'on' });
+  const stamp = Date.now();
+  const create = async (title: string, parentId?: string) => (await backend().mutation(api.wiki.create, { teamId: team._id, title, markdown: 'Text.', ...(parentId ? { parentId: parentId as never } : {}) })).articleId;
+  const upper = await create(`Phone upper ${stamp}`);
+  const lower = await create(`Phone lower ${stamp}`, upper);
+  const pageUrl = (id: string) => new RegExp(`/wiki/${id}$`);
+  const wide = page.viewportSize()!.width - 2;
+
+  // The tree is a screen of its own; the header names the area in full and has one trash button.
+  await page.goto('/team/ORB/wiki');
+  const row = page.getByTestId('wiki-row').filter({ hasText: `Phone upper ${stamp}` });
+  await expect(row).toBeVisible();
+  await expect(page.getByTestId('wiki-overview')).toBeHidden();
+  expect((await page.getByTestId('wiki-tree').boundingBox())!.width).toBeGreaterThan(wide - 20);
+  const area = page.locator('.wiki-crumb .crumb-title');
+  expect(await area.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expect(page.getByTestId('wiki-trash')).toBeVisible();
+  await expect(page.getByTestId('article-remove')).toHaveCount(0);
+
+  // A tap opens the page over the whole screen, without the tree; its header has its own tools.
+  await row.tap();
+  await expect(page).toHaveURL(pageUrl(upper));
+  await expect(page.getByTestId('article')).toBeVisible();
+  await expect(page.getByTestId('wiki-tree')).toBeHidden();
+  expect((await page.locator('.wiki-main').boundingBox())!.width).toBeGreaterThan(wide);
+  await expect(page.getByTestId('wiki-trash')).toHaveCount(0);
+  await expect(page.getByTestId('article-remove')).toBeVisible();
+
+  // Subpages from the page: one more level down, and a new one can be added there.
+  await page.getByTestId('article-children').getByText(`Phone lower ${stamp}`).tap();
+  await expect(page).toHaveURL(pageUrl(lower));
+  await expect(page.getByTestId('wiki-parent')).toHaveText(`Phone upper ${stamp}`);
+  await expect(page.getByTestId('article-add-child')).toBeVisible();
+
+  // The back button and the browser's Back: one level up each.
+  await page.getByTestId('wiki-back').tap();
+  await expect(page).toHaveURL(pageUrl(upper));
+  await page.goBack();
+  await expect(page).toHaveURL(/\/team\/ORB\/wiki$/);
+  await expect(row).toBeVisible();
+
+  // The trash is a level too: Back closes it and stays in the area.
+  await page.getByTestId('wiki-trash').tap();
+  await expect(page.getByTestId('wiki-trash-list')).toBeVisible();
+  await expect(page.getByTestId('wiki-tree')).toBeHidden();
+  await page.goBack();
+  await expect(page.getByTestId('wiki-tree')).toBeVisible();
+  await expect(page).toHaveURL(/\/team\/ORB\/wiki$/);
+
+  // A link to a subpage opens it over the whole screen; Back leads to the parent page, then to the tree.
+  await page.goto(`/wiki/${lower}`);
+  await expect(page.getByTestId('article')).toHaveAttribute('data-id', lower);
+  await expect(page.getByTestId('wiki-tree')).toBeHidden();
+  await page.getByTestId('wiki-back').tap();
+  await expect(page).toHaveURL(pageUrl(upper));
+  await expect(page.getByTestId('article')).toHaveAttribute('data-id', upper);
+  await page.getByTestId('wiki-back').tap();
+  await expect(page).toHaveURL(/\/team\/ORB\/wiki$/);
+  await expect(row).toBeVisible();
+
+  await backend().mutation(api.wiki.remove, { id: upper as never });
+});

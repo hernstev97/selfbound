@@ -186,6 +186,7 @@ export default {
   'Done for today: clear inbox': 'Fertig für heute: Eingang leeren',
   'Inbox cleared': ['Eingang geleert', 'Eingang geleert ({count} Einträge)'],
   'Edit page text': 'Text der Seite bearbeiten',
+  'Create subpage': 'Unterseite anlegen',
   'Go to: All sprints': 'Gehe zu: Alle Sprints',
   'Start sprint': 'Sprint starten',
   'Add to the sprint': 'Zum Sprint hinzufügen',

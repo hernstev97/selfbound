@@ -194,16 +194,21 @@ export class Navigator {
     this.go({ name: 'view', view }, opts);
   }
 
+  /** The entry below is one of our pages: Back stays in the app. */
+  canGoBack() {
+    return this.#depth > 0 && !!this.win;
+  }
+
   /** Back: browser history if we came from one of our pages, otherwise to the last list (with filters). */
   back() {
-    if (this.#depth > 0 && this.win) {
+    if (this.canGoBack()) {
       // If an overlay entry is still on top, it goes too.
       if (this.#marked) {
         this.#marked = false;
-        this.win.history.go(-2);
+        this.win!.history.go(-2);
         return;
       }
-      this.win.history.back();
+      this.win!.history.back();
       return;
     }
     this.#goLastView(false);
