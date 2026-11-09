@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
 import { Auth } from '../src/auth.ts';
+import { OWNER_KIND } from '../src/types.ts';
 import { doc, fakeClient, fakeWindow, flush, meta, settle } from './helpers.ts';
 
 const original = (globalThis as { window?: unknown }).window;
@@ -21,7 +22,7 @@ async function setup(path = '/all') {
   client.push('meta:counter', {}, { maxSeq: 63 });
   client.push('issues:bucket', { bucket: 0 }, Array.from({ length: 4 }, (_, i) => doc(i)));
   await settle();
-  return { app, browser };
+  return { app, browser, client };
 }
 
 describe('back closes overlays', () => {
@@ -201,5 +202,58 @@ describe('back closes overlays', () => {
     await browser.back();
     expect(app.nav.page.get().name).toBe('view');
     expect(browser.path()).toBe('/all');
+  });
+});
+
+describe('wiki on a phone: one level up', () => {
+  /** A page as wiki.get returns it, in team ACME, optionally below `parent`. */
+  const article = (id: string, parent?: { id: string; title: string }) => ({
+    article: { _id: id, title: id, teamId: 't1', createdAt: 0, topicIds: [], ...(parent ? { parentId: parent.id } : {}) },
+    team: { key: 'ACME' },
+    path: parent ? [parent] : [],
+    children: [],
+    body: { markdown: '', version: 1, updatedBy: { kind: OWNER_KIND }, updatedAt: 0 },
+    sources: [],
+  });
+
+  test('a link opened directly: up to the parent page, then the tree, each in place of the entry', async () => {
+    const { app, browser, client } = await setup('/wiki/lower');
+    const wiki = await app.loadWiki();
+    client.push('wiki:get', { id: 'lower' }, article('lower', { id: 'upper', title: 'Upper' }));
+    await settle();
+    const entries = browser.entries.length;
+    wiki.up();
+    await settle();
+    expect(browser.path()).toBe('/wiki/upper');
+    client.push('wiki:get', { id: 'upper' }, article('upper'));
+    await settle();
+    wiki.up();
+    await settle();
+    expect(browser.path()).toBe('/team/ACME/wiki');
+    // Back does not lead down again.
+    expect(browser.entries).toHaveLength(entries);
+  });
+
+  test('opened from the tree: up is Back in the history; the trash closes with Back', async () => {
+    const { app, browser, client } = await setup('/team/ACME/wiki');
+    const wiki = await app.loadWiki();
+    const treeIndex = browser.index;
+    wiki.open('upper');
+    await settle();
+    client.push('wiki:get', { id: 'upper' }, article('upper'));
+    await settle();
+    wiki.up();
+    await settle();
+    expect(browser.path()).toBe('/team/ACME/wiki');
+    expect(browser.index).toBe(treeIndex);
+
+    app.mobile.set(true);
+    wiki.openTrash();
+    await settle();
+    expect(wiki.state.get().trash).toBeNull();
+    await browser.back();
+    expect(wiki.state.get().trash).toBe(false);
+    expect(browser.path()).toBe('/team/ACME/wiki');
+    expect(browser.index).toBe(treeIndex);
   });
 });

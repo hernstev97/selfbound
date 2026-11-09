@@ -98,6 +98,11 @@ function editableArticle(a: App) {
   const article = wiki?.state.get().article;
   return !!article && !article.deleted && !wiki!.edit.get().editing;
 }
+/** The wiki page shown (not in the trash), for actions on it. */
+function shownArticle(a: App) {
+  const article = a.nav.page.get().name === 'article' ? a.wikiLoaded()?.state.get().article : null;
+  return article && !article.deleted ? article : null;
+}
 
 /** Wiki of the team in context (else of the current team); a hint if the team has no wiki. */
 function goWiki(a: App) {
@@ -238,6 +243,7 @@ export const ACTIONS: Action[] = [
 
   // Wiki
   { id: 'wiki.editBody', label: msg('Edit page text'), section: 'Wiki', keys: ['e'], icon: 'edit', keywords: 'edit wiki page text write wissen seite bearbeiten ändern schreiben', when: editableArticle, run: (a) => a.wiki.startEdit() },
+  { id: 'wiki.newSubpage', label: msg('Create subpage'), section: 'Wiki', icon: 'plus', keywords: 'new subpage child page wiki neue unterseite anlegen', when: (a) => !!shownArticle(a), run: (a) => void a.wiki.create(shownArticle(a)!.id) },
 
   // Sprint
   { id: 'go.sprints', label: msg('Go to: All sprints'), section: 'Navigation', icon: 'sprint', keywords: 'sprints cycles overview übersicht', run: (a) => a.nav.go({ name: 'sprints' }) },

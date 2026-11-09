@@ -1,6 +1,7 @@
 <script lang="ts">
   // Knowledge area of a team: the page tree on the left, the selected page or an overview on the
-  // right. /team/KEY/wiki and /wiki/<id> show the same page.
+  // right. /team/KEY/wiki and /wiki/<id> show the same page. On a phone tree and page are levels of
+  // their own, each over the whole screen: /team/KEY/wiki the tree, /wiki/<id> the page.
   import '../../styles/detail.css';
   import '../../styles/wiki.css';
   import { ICON } from '@selfbound/core';
@@ -17,8 +18,20 @@
   import WikiTree from './WikiTree.svelte';
 
   const wikiSlice = fromSlice(app.wiki.state);
+  const mobileSlice = fromSlice(app.mobile);
   const s = $derived(wikiSlice.current);
   const a = $derived(s.article ?? null);
+  /** Phone: the level shown (the trash list counts as a page); null = wide, both side by side. */
+  const layer = $derived(!mobileSlice.current ? null : s.articleId || s.trash !== false ? 'page' : 'tree');
+  /** Phone, page level: the level above (parent page; without one the tree). */
+  const parent = $derived(layer === 'page' && s.trash === false ? (a?.path.at(-1) ?? null) : null);
+
+  // The tree keeps its scroll position while a page is open (it is hidden, not removed).
+  let side = $state<HTMLElement>();
+  let sideTop = 0;
+  $effect(() => {
+    if (side && layer === 'tree') side.scrollTop = sideTop;
+  });
 
   let showRevisions = $state(false);
   // Close only when the page changes, not on every new revision of the same page.
@@ -58,42 +71,63 @@
     e.preventDefault();
     run();
   };
+  /** "Knowledge": the area (tree and overview); on a phone it also closes the trash, a level of its own there. */
+  function toArea() {
+    if (layer && s.trash !== false) app.wiki.closeTrash();
+    else if (s.team) app.nav.go({ name: 'wiki', team: s.team.key });
+  }
 </script>
 
-<header class="location-bar" data-testid="location-bar">
-  <button class="icon-btn plain mobile-only" aria-label={t('Navigation')} onclick={() => app.toggleSidebar()}><span class="icon">{@html ICON.menu}</span></button>
+<header class="location-bar wiki-bar" data-testid="location-bar">
+  {#if layer === 'page'}
+    <button class="icon-btn plain" aria-label={t('Back')} data-testid="wiki-back" onclick={() => app.wiki.up()}><span class="icon">{@html ICON.back}</span></button>
+  {:else}
+    <button class="icon-btn plain mobile-only" aria-label={t('Navigation')} onclick={() => app.toggleSidebar()}><span class="icon">{@html ICON.menu}</span></button>
+  {/if}
   <div class="crumbs">
-    {#if s.team}
-      <a class="crumb" href="/team/{s.team.key}/wiki" onclick={(e) => go(e, () => app.nav.go({ name: 'wiki', team: s.team!.key }))}>
-        <TeamLogo team={s.team} size={14} /><span class="crumb-title">{s.team.name}</span>
+    <!-- Phone, lower level: only the level above (parent page or the area), so nothing is cut down to a letter. -->
+    {#if parent}
+      <a class="crumb" href="/wiki/{parent.id}" data-testid="wiki-parent" onclick={(e) => go(e, () => app.wiki.open(parent.id))}>
+        <span class="icon">{@html ICON.page}</span><span class="crumb-title">{parent.title}</span>
       </a>
-      <span class="icon crumb-sep">{@html ICON.chevronRight}</span>
-    {/if}
-    <a class="crumb" href={s.team ? `/team/${s.team.key}/wiki` : '#'} onclick={(e) => go(e, () => s.team && app.nav.go({ name: 'wiki', team: s.team.key }))}>
-      <span class="icon">{@html ICON.wiki}</span><span class="crumb-title">{t('Knowledge')}</span>
-    </a>
-    {#if a}
-      {#each a.path as p (p.id)}
-        <span class="icon crumb-sep desktop-only">{@html ICON.chevronRight}</span>
-        <a class="crumb desktop-only" href="/wiki/{p.id}" onclick={(e) => go(e, () => app.wiki.open(p.id))}><span class="crumb-title">{p.title}</span></a>
-      {/each}
+    {:else}
+      {#if s.team && layer !== 'page'}
+        <a class="crumb" href="/team/{s.team.key}/wiki" onclick={(e) => go(e, () => app.nav.go({ name: 'wiki', team: s.team!.key }))}>
+          <TeamLogo team={s.team} size={14} /><span class="crumb-title">{s.team.name}</span>
+        </a>
+        <span class="icon crumb-sep">{@html ICON.chevronRight}</span>
+      {/if}
+      <a class="crumb wiki-crumb" href={s.team ? `/team/${s.team.key}/wiki` : '#'} onclick={(e) => go(e, toArea)}>
+        <span class="icon">{@html ICON.wiki}</span><span class="crumb-title">{t('Knowledge')}</span>
+      </a>
+      {#if a && !layer}
+        {#each a.path as p (p.id)}
+          <span class="icon crumb-sep">{@html ICON.chevronRight}</span>
+          <a class="crumb" href="/wiki/{p.id}" onclick={(e) => go(e, () => app.wiki.open(p.id))}><span class="crumb-title">{p.title}</span></a>
+        {/each}
+      {/if}
     {/if}
   </div>
   <span class="bar-spacer"></span>
   {#if s.enabled}
-    <button class="btn ghost small" aria-label={t('Deleted pages')} data-testid="wiki-trash" onclick={() => (s.trash === false ? app.wiki.openTrash() : app.wiki.closeTrash())}>
-      <span class="icon">{@html ICON.trash}</span><span class="btn-label">{t('Deleted')}</span>
-    </button>
+    <!-- Phone: each level shows only its own actions (the tree: trash and new page; a page: its tools). -->
+    {#if layer !== 'page'}
+      <button class="btn ghost small" aria-label={t('Deleted pages')} data-testid="wiki-trash" onclick={() => (s.trash === false ? app.wiki.openTrash() : app.wiki.closeTrash())}>
+        <span class="icon">{@html ICON.trash}</span><span class="btn-label">{t('Deleted')}</span>
+      </button>
+    {/if}
     {#if a && !a.deleted}
       <button class={['btn ghost small', showRevisions && 'on']} aria-label={t('Revisions')} aria-pressed={showRevisions} data-testid="article-revisions-toggle" onclick={() => (showRevisions = !showRevisions)}><span class="icon">{@html ICON.restore}</span><span class="btn-label">{t('Revisions')}</span></button>
       <button class="icon-btn plain" title={t('Copy link')} aria-label={t('Copy link')} data-testid="article-copy-link" onclick={() => { void navigator.clipboard?.writeText(`${location.origin}/wiki/${a!.id}`); app.toasts.show(t('Link copied')); }}><span class="icon">{@html ICON.link}</span></button>
       <button class="icon-btn plain" title={t('Move to trash')} aria-label={t('Move to trash')} data-testid="article-remove" onclick={() => void app.wiki.remove(a!.id)}><span class="icon">{@html ICON.trash}</span></button>
     {/if}
-    <button class="btn small" aria-label={t('New page')} data-testid="wiki-new" onclick={() => void app.wiki.create(null)}><span class="icon">{@html ICON.plus}</span><span class="btn-label">{t('New page')}</span></button>
+    {#if layer !== 'page'}
+      <button class="btn small" aria-label={t('New page')} data-testid="wiki-new" onclick={() => void app.wiki.create(null)}><span class="icon">{@html ICON.plus}</span><span class="btn-label">{t('New page')}</span></button>
+    {/if}
   {/if}
 </header>
 
-<div class="wiki" data-testid="wiki-page">
+<div class="wiki" data-testid="wiki-page" data-layer={layer}>
   {#if s.team && !s.enabled}
     <div class="page"><div class="page-content">
       <div class="empty" data-testid="wiki-disabled">
@@ -103,7 +137,7 @@
       </div>
     </div></div>
   {:else}
-    <aside class="wiki-side">
+    <aside class="wiki-side" bind:this={side} onscroll={(e) => (sideTop = e.currentTarget.scrollTop)}>
       <WikiTree state={s} />
     </aside>
     <div class="wiki-main">
@@ -137,6 +171,8 @@
           </div>
         </div>
       {:else if a}
+        <!-- Phone: subpages are added from the page (there is no tree beside it), so the section is always there. -->
+        {@const addChild = !!layer && !a.deleted}
         {#key a.id}
           <article class="wiki-content" data-testid="article" data-id={a.id}>
             {#if a.deleted}
@@ -167,8 +203,16 @@
             <ArticleProps article={a} state={s} />
             {#if showRevisions}<ArticleRevisions articleId={a.id} onclose={() => (showRevisions = false)} />{/if}
             <ArticleBody article={a} />
+            {#if a.children.length || addChild}
+              <div class="section-title">
+                {t('Subpages')}
+                {#if addChild}
+                  <span class="bar-spacer"></span>
+                  <button class="btn ghost small" data-testid="article-add-child" onclick={() => void app.wiki.create(a!.id)}><span class="icon">{@html ICON.plus}</span>{t('Create subpage')}</button>
+                {/if}
+              </div>
+            {/if}
             {#if a.children.length}
-              <div class="section-title">{t('Subpages')}</div>
               <div class="sub-list" data-testid="article-children">
                 {#each a.children as c (c.id)}
                   <a class="sub-row" href="/wiki/{c.id}" onclick={(e) => go(e, () => app.wiki.open(c.id))}>
