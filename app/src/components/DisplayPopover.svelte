@@ -25,7 +25,7 @@
 <!-- Animate out also when ListPage removes the block (|global). -->
 <div class="display-pop" data-testid="display-popover" role="dialog" aria-label={t('Display options')} {@attach outside} out:leave|global>
   <div class="dp-row">
-    <span>{t('Grouping')}</span>
+    <span>{t('Group by')}</span>
     <span class="dp-select">
       <select data-testid="display-grouping" value={v.display.grouping} onchange={(e) => app.main.setDisplay({ grouping: e.currentTarget.value as Grouping })}>
         {#each def.groupings as g (g)}<option value={g}>{GROUPING_LABEL[g]}</option>{/each}
@@ -48,7 +48,7 @@
   {#if v.display.grouping !== 'none'}
     {#if subs.length > 0}
       <div class="dp-row">
-        <span>{t('Then group by')}</span>
+        <span>{t('Then by')}</span>
         <span class="dp-select">
           <select data-testid="display-subgrouping" value={v.display.subGrouping ?? 'none'} onchange={(e) => app.main.setDisplay({ subGrouping: e.currentTarget.value as Grouping })}>
             <option value="none">{GROUPING_LABEL.none}</option>
@@ -73,7 +73,7 @@
     </div>
   {/if}
   <div class="dp-row">
-    <span>{t('Ordering')}</span>
+    <span>{t('Sort by')}</span>
     <span class="dp-select">
       <select data-testid="display-ordering" value={v.display.ordering} onchange={(e) => app.main.setDisplay({ ordering: e.currentTarget.value as Ordering })}>
         {#each def.orderings as o (o)}<option value={o}>{def.orderingLabels?.[o] ?? ORDERING_LABEL[o]}</option>{/each}
@@ -97,3 +97,13 @@
   </div>
   <div class="dp-foot"><button class="btn ghost small" onclick={() => app.main.resetDisplay()}>{t('Restore defaults')}</button></div>
 </div>
+
+<style>
+  .dp-row > span:first-child {
+    white-space: nowrap;
+  }
+  /* One width, so the selects share both edges instead of each being as wide as its longest option. */
+  .dp-select select {
+    width: 172px;
+  }
+</style>

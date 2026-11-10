@@ -2,7 +2,7 @@
 // Computes outside the components and passes unchanged results through (reuseList), so Svelte
 // only redraws changed rows.
 import { t, tn, translated } from '../i18n.ts';
-import { CLOSED, OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, parseDay, relativeTime, shortDate, actorName } from '../format.ts';
+import { CLOSED, OUTCOME_LABEL, PRIORITY_LABEL, dueLabel, listDate, parseDay, relativeTime, actorName } from '../format.ts';
 import { statusFilterLabel, workflowsOf } from '../workflow.ts';
 import { Slice, SliceFamily } from '../observable.ts';
 import { computeList, emptyFilters, filterCount, groupKeyOf, keyWidth, multiGrouping, reuseList, sameFilters, teamBadge, viewComparator, visibleFilter, type ListExtras } from '../query.ts';
@@ -659,9 +659,10 @@ export class ListController {
       estimate: issue.estimate ?? null,
       model: this.#modelCell(issue),
       due: issue.dueDate ? dueLabel(issue.dueDate) : null,
-      snoozed: issue.snoozedUntil ? shortDate(parseDay(issue.snoozedUntil).getTime()) : null,
-      created: shortDate(issue.createdAt),
-      updated: shortDate(issue.updatedAt),
+      // A snooze ends soon: day and month, never a year.
+      snoozed: issue.snoozedUntil ? listDate(parseDay(issue.snoozedUntil).getTime(), parseDay(issue.snoozedUntil).getTime()) : null,
+      created: listDate(issue.createdAt),
+      updated: listDate(issue.updatedAt),
       age: relativeTime(inboxAt(issue)),
       deleted: issue.deletedAt !== undefined ? relativeTime(issue.deletedAt) : null,
       unread: unread(issue),

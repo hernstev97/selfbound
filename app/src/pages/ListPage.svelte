@@ -15,6 +15,7 @@
   const shellSlice = fromSlice(app.shell);
   const displayOpen = fromSlice(app.displayOpen);
   const sidebarSlice = fromSlice(app.sidebar);
+  const selectedSlice = fromSlice(app.main.selectionCount);
   const h = $derived(headerSlice.current);
   const viewIconName = $derived(VIEWS[h.kind].icon);
   let scrolled = $state(false);
@@ -79,6 +80,9 @@
     </div>
   {/if}
   <span class="bar-count" data-testid="view-count-text"><span data-testid="view-count">{h.count}</span> {h.count === 1 ? t('issue') : t('issues')}</span>
+  {#if selectedSlice.current > 0}
+    <button class="chip-link bar-selected" aria-label={t('Clear selection')} data-testid="view-selected" onclick={() => app.main.clearSelection()}>{tc('sprint', '{count} selected', { count: selectedSlice.current })}<span class="icon mi ui-close"></span></button>
+  {/if}
   <span class="bar-spacer"></span>
   {#if shellSlice.current.canSplit && h.kind !== 'inbox'}
     <button class={['icon-btn', split && 'on']} title={tip(split ? t('Close split view') : t('Open in split view'), 'view.split')} aria-label={t('Split view')} aria-pressed={split} disabled={!split && h.count === 0} data-testid="split-toggle" onclick={() => app.detail.toggleSplit()}>
@@ -92,7 +96,7 @@
   {/if}
   <button class={['icon-btn', h.filterCount > 0 && 'on']} title={tip(t('Filter'), 'filter.open')} aria-label={t('Filter')} onclick={() => app.palette.open('filter')} data-testid="filter-button">
     <span class="icon mi ui-filter"></span>
-    {#if h.filterCount > 0}<span class="badge-num">{h.filterCount}</span>{/if}
+    {#if h.chips.length > 0}<span class="badge-num">{h.chips.length}</span>{/if}
   </button>
   <button class={['icon-btn', displayOpen.current && 'on']} title={tip(t('Display'), 'display.open')} aria-label={t('Display')} onclick={() => app.toggleDisplay()} data-testid="display-button">
     <span class="icon mi ui-display"></span>

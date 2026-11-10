@@ -101,6 +101,17 @@ export function shortDate(ms: number, now = Date.now()) {
   return sameYear ? format(d, 'short', { month: 'short', day: 'numeric' }) : format(d, 'shortYear', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+/**
+ * Date for a list column: like `shortDate` in the current year, month and year otherwise
+ * ("Dec ’25", German "Dez. ’25"), so every date fits the column.
+ */
+export function listDate(ms: number, now = Date.now()) {
+  const d = new Date(ms);
+  const year = String(d.getFullYear());
+  if (year === today(now).slice(0, 4)) return shortDate(ms, now);
+  return `${german() ? MONTHS_DE[d.getMonth()] : format(d, 'mon', { month: 'short' })} ’${year.slice(2)}`;
+}
+
 /** "just now", "5 min ago", "3 hours ago", "yesterday", "4 days ago", "2 months ago", else the date. */
 export function relativeTime(ms: number, now = Date.now()) {
   const diff = now - ms;

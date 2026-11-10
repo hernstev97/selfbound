@@ -89,7 +89,8 @@
     {#if row.group.budget}
       <span class={['group-budget', row.group.overBudget && 'over']} data-testid="group-budget" title={row.group.budgetTitle}>{row.group.budget}</span>
     {/if}
-    {@html cols}
+    <!-- Column icons once per open group: not on a collapsed or empty header, not again on each sub-group. -->
+    {@html row.collapsed || row.count === 0 || row.group.parent ? '<span class="group-cols"></span>' : cols}
     <button class="group-add" title={t('Create issue in this group')} aria-label={t('Create issue')} onclick={add}><span class="icon mi ui-plus"></span></button>
   </div>
 </div>

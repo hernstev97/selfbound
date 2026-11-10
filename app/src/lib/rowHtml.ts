@@ -23,7 +23,7 @@ function fixedTexts() {
     lateTip: esc(t('Added to the sprint later')),
     activeTip: esc(t('In the active sprint')),
     plannedTip: esc(t('In the planned sprint')),
-    late: esc(t('added late')),
+    late: esc(t('late')),
     restore: esc(t('Restore')),
     updated: esc(t('Updated')),
     created: esc(t('Created')),
@@ -135,9 +135,9 @@ export function rowLeadHtml(r: RowState, props: ReadonlySet<DisplayProp>): strin
 }
 
 export function rowRestHtml(r: RowState, props: ReadonlySet<DisplayProp>, trash: boolean): string {
-  let html = '';
+  let html = `<span class="row-title" data-testid="row-title">${esc(r.title)}</span>`;
+  // After the title, so titles of read and unread rows start at the same place.
   if (r.unread && !trash) html += `<span class="unseen-dot" data-testid="row-unseen" title="${esc(r.inboxText)}"></span>`;
-  html += `<span class="row-title" data-testid="row-title">${esc(r.title)}</span>`;
   if (r.pending) html += `<span class="row-tag" data-testid="row-pending">${T().saving}</span>`;
   html += `<span class="row-cols">${colsHtml(r, props)}</span>`;
   const end = endHtml(r, props, trash);

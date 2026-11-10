@@ -1,5 +1,6 @@
 <script lang="ts">
   // Phone: floating bar at the bottom plus a round button to create an issue.
+  import '../styles/mobile-bar.css';
   import { t } from '@selfbound/core/i18n';
   import { ICON } from '@selfbound/core';
   import { app } from '../app-instance.ts';

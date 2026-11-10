@@ -141,7 +141,7 @@ export default {
   'Added to the sprint later': 'Nachträglich in den Sprint gekommen',
   'In the active sprint': 'Im laufenden Sprint',
   'In the planned sprint': 'Im geplanten Sprint',
-  'added late': 'nachträglich',
+  late: 'spät',
   Restore: 'Wiederherstellen',
   Updated: 'Geändert',
   Created: 'Erstellt',

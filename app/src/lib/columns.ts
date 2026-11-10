@@ -19,8 +19,8 @@ export const COLUMN_WIDTH: Record<(typeof ROW_COLUMNS)[number], number> = {
   estimate: 40,
   due: 84,
 };
-/** Date columns at the far right (app.css `.row-date`) */
-const END_WIDTH = 44;
+/** Date columns at the far right (app.css `.row-date`): fits "Dec ’25" and German "19. März" */
+const END_WIDTH = 52;
 const GAP = 8;
 /** Title: at least this much room stays before the next stage applies */
 const TITLE_MIN = 240;
@@ -70,7 +70,7 @@ const HEAD_ICON: Partial<Record<DisplayProp, string>> = {
   labels: 'ui-label',
   snoozed: 'ui-snooze',
   updated: 'ui-edit',
-  created: 'ui-compose',
+  created: 'ui-system',
 };
 const ROW_COLUMNS_RTL = [...ROW_COLUMNS].reverse();
 const ROW_END_RTL = [...ROW_END].reverse();

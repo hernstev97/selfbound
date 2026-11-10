@@ -8,7 +8,7 @@ await loadFuzzy();
 import { buildOffsets, computeVariableWindow, computeWindow, indexAt, revealIndex, revealSpan } from '../src/window.ts';
 import { isConsentPath, pagePath, readLocation, writeLocation } from '../src/route.ts';
 import { VIEWS, type ViewContext } from '../src/views.ts';
-import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
+import { actorName, branchName, initials, nameHue, dayLabel, dueLabel, fullDate, listDate, monthLabel, parseDueInput, relativeTime, shortDate } from '../src/format.ts';
 import { setDictionary } from '../src/i18n.ts';
 import de from '../src/locales/de.ts';
 import { eventCombo, formatShortcut } from '../src/keyboard.ts';
@@ -442,6 +442,9 @@ describe('dates and times by language', () => {
     setDictionary('en', null);
     expect(shortDate(new Date(2026, 9, 8).getTime(), now)).toBe('Oct 8');
     expect(shortDate(new Date(2025, 2, 3).getTime(), now)).toBe('Mar 3, 2025');
+    // List columns: another year stays as narrow as the current one.
+    expect(listDate(new Date(2026, 9, 8).getTime(), now)).toBe('Oct 8');
+    expect(listDate(new Date(2025, 11, 22).getTime(), now)).toBe('Dec ’25');
     expect(dayLabel('2026-10-16', now)).toBe('Fri, Oct 16');
     expect(monthLabel('2026-10')).toBe('October 2026');
     expect(dueLabel('2026-10-09', now)).toEqual({ label: 'Today', overdue: false, soon: true });
@@ -463,6 +466,8 @@ describe('dates and times by language', () => {
     setDictionary('de', de);
     expect(shortDate(new Date(2026, 9, 8).getTime(), now)).toBe('8. Okt.');
     expect(shortDate(new Date(2025, 2, 3).getTime(), now)).toBe('3. März 2025');
+    expect(listDate(new Date(2026, 9, 8).getTime(), now)).toBe('8. Okt.');
+    expect(listDate(new Date(2025, 11, 22).getTime(), now)).toBe('Dez. ’25');
     expect(dayLabel('2026-10-16', now)).toBe('Fr., 16. Okt.');
     expect(dayLabel('2027-01-04', now)).toBe('Mo., 4. Jan. 2027');
     expect(monthLabel('2026-10')).toBe('Oktober 2026');

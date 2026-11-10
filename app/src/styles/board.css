@@ -207,6 +207,20 @@
     scale: 1;
   }
 }
+/* On the board card the stack takes its content width and gives way when other chips need room. */
+.card-labels {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.card-bottom .card-labels .label {
+  flex: 0 1 auto;
+  max-width: none;
+  overflow: hidden;
+  text-overflow: clip;
+}
+.card-bottom .card-labels .label:last-child {
+  text-overflow: ellipsis;
+}
 @media (max-width: 768px) {
   .board {
     scroll-snap-type: x mandatory;
