@@ -85,15 +85,16 @@
       {#key m.sub.parent}
       <div class="submenu" data-testid="context-submenu" role="menu" style:top="{m.sub.y}px" {@attach placeSub}>
         {#each m.sub.items as item, i (item.id)}
-          <button class={['menu-item', i === m.sub.active && 'active']} role="menuitemcheckbox" aria-checked={!!item.checked} data-testid="context-subitem" data-id={item.id} onpointermove={() => (settle(), app.menu.hoverSub(i))} onclick={() => app.menu.chooseSub(i)}>
+          <button class={['menu-item', i === m.sub.active && 'active']} role={m.sub.plain ? 'menuitem' : 'menuitemcheckbox'} aria-checked={m.sub.plain ? undefined : !!item.checked} data-testid="context-subitem" data-id={item.id} onpointermove={() => (settle(), app.menu.hoverSub(i))} onclick={() => app.menu.chooseSub(i)}>
             {#if item.checkbox}
               <span class={['box', item.checked && 'on']}>{#if item.checked}{@html ICON.check}{/if}</span>
-            {:else}
+            {:else if !m.sub.plain}
               <span class="check">{#if item.checked}{@html ICON.check}{/if}</span>
             {/if}
             {#if item.logo}<span class={['icon mi', logoClass(item.logo)]}></span>{:else if item.team}<TeamLogo team={item.team} />{:else if item.icon}<span class="icon">{@html item.icon}</span>{:else if item.dot !== undefined}<span class="icon"><span class="label-dot" style:--hue={item.dot}></span></span>{/if}
             <span class="label">{item.label}</span>
             {#if item.detail}<span class="detail">{item.detail}</span>{/if}
+            {#if item.shortcut}<span class="grow"></span><span class="shortcut">{item.shortcut}</span>{/if}
           </button>
         {/each}
       </div>
@@ -108,6 +109,11 @@
     max-height: calc(100dvh - 16px);
     overflow-y: auto;
     overscroll-behavior: contain;
+  }
+  @media (hover: none) {
+    .submenu :global(.shortcut) {
+      display: none;
+    }
   }
   /* Submenu rows as tall as the menu's own (the phone keeps its larger rows). */
   @media (min-width: 769px) {

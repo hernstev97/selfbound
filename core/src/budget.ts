@@ -48,6 +48,15 @@ export function budgetLabel(b: TeamBudget | undefined, limits: PriorityLimits = 
   ].join(' · ');
 }
 
+/** Team group header: only the limits that are reached or exceeded ("High 9 of 3"), empty when none is. */
+export function budgetReached(b: TeamBudget | undefined, limits: PriorityLimits = DEFAULT_PRIORITY_LIMITS) {
+  const parts: string[] = [];
+  const { urgent, high } = limits;
+  if (b?.urgent && urgent.max !== null && b.urgent >= urgent.max) parts.push(t('Urgent {count} of {max}', { count: b.urgent, max: urgent.max }));
+  if (b?.high && high.max !== null && b.high >= high.max) parts.push(t('High {count} of {max}', { count: b.high, max: high.max }));
+  return parts.join(' · ');
+}
+
 export function overBudget(b: TeamBudget | undefined, limits: PriorityLimits = DEFAULT_PRIORITY_LIMITS) {
   return overLimit(limits.urgent, b?.urgent ?? 0) || overLimit(limits.high, b?.high ?? 0);
 }

@@ -249,6 +249,31 @@ test('Context menu with submenu and shortcuts', async ({ page }) => {
   await expect(row(page, id)).toHaveAttribute('data-priority', '4');
 });
 
+test('Context menu: relations and copying are one entry each, the actions follow in the submenu', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await open(page);
+  const target = page.getByTestId('issue-row').nth(3);
+  const key = (await target.getAttribute('data-key'))!;
+  await target.click({ button: 'right', position: { x: 500, y: 20 } });
+  await expect(page.getByTestId('context-item').filter({ hasText: /Copy|Block|Related|duplicate/ })).toHaveText(['Copy']);
+  await page.locator('[data-testid="context-item"][data-id="sub:copy"]').hover();
+  const entries = page.getByTestId('context-subitem');
+  await expect(entries.locator('.label')).toHaveText(['Copy ID', 'Copy link', 'Copy branch name']);
+  await expect(entries.first().locator('.shortcut')).toHaveText(/\./);
+  await entries.first().click();
+  await expect(page.getByTestId('context-menu')).toHaveCount(0);
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(key);
+  // Keyboard: → opens the submenu, Enter runs the entry (here it asks for the other issue).
+  await target.click({ button: 'right', position: { x: 500, y: 20 } });
+  await page.locator('[data-testid="context-item"][data-id="sub:relation"]').hover();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByTestId('context-subitem').locator('.label')).toHaveText(['Blocks …', 'Blocked by …', 'Related to …', 'Mark as duplicate …']);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('context-menu')).toHaveCount(0);
+  await expect(page.getByTestId('palette-input')).toBeFocused();
+});
+
 test('Clicking the status icon opens the picker for that row', async ({ page }) => {
   await open(page);
   const target = page.getByTestId('issue-row').nth(4);

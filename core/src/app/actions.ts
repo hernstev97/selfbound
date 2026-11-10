@@ -40,6 +40,8 @@ export interface Action {
   top?: boolean;
   /** Place in the context menu: [group, order]; groups are separated by lines */
   context?: [number, number];
+  /** Context menu: listed in the submenu of this group instead of as an entry of its own */
+  sub?: 'relation' | 'copy';
   /** Opens this picker (context menu: submenu) */
   picker?: PaletteKind;
   danger?: boolean;
@@ -177,13 +179,13 @@ export const ACTIONS: Action[] = [
   { id: 'issue.parent', label: msg('Set parent …'), section: 'Issue', keys: ['mod+shift+p'], icon: 'parent', keywords: 'parent eltern übergeordnet', context: [1, 8], when: notDeleted, run: picker('parent') },
   { id: 'issue.team', label: msg('Move to team …'), section: 'Issue', keys: ['mod+shift+m'], icon: 'team', top: true, keywords: 'team move switch verschieben wechseln umziehen', picker: 'team', context: [1, 9], when: (a) => realTarget(a) && notDeleted(a), run: picker('team') },
   { id: 'issue.subissue', label: msg('Create sub-issue'), section: 'Issue', keys: ['mod+shift+o'], icon: 'subissue', keywords: 'sub child unter anlegen', context: [2, 1], when: (a) => single(a) && notDeleted(a), run: (a) => a.create.openSubIssue(a.targets()[0]) },
-  { id: 'issue.blocks', label: msg('Blocks …'), section: 'Issue', icon: 'blocked', keywords: 'relation blocks blockiert', context: [2, 2], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('blocks') },
-  { id: 'issue.blockedBy', label: msg('Blocked by …'), section: 'Issue', icon: 'blocked', keywords: 'relation blocked by blockiert von', context: [2, 3], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('blocks', true) },
-  { id: 'issue.related', label: msg('Related to …'), section: 'Issue', icon: 'relation', keywords: 'relation related verwandt', context: [2, 4], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('related') },
-  { id: 'issue.duplicate', label: msg('Mark as duplicate …'), section: 'Issue', icon: 'duplicate', keywords: 'duplicate duplikat doppelt', context: [2, 5], when: (a) => realTarget(a) && notDeleted(a), run: (a) => a.palette.openRelation('duplicate') },
-  { id: 'issue.copyLink', label: msg('Copy link'), section: 'Issue', keys: ['mod+shift+,'], icon: 'link', keywords: 'url copy kopieren', context: [3, 4], when: single, run: (a) => a.edit.copyLink(a.targets()[0]) },
-  { id: 'issue.copyBranch', label: msg('Copy branch name'), section: 'Issue', keys: ['mod+shift+.'], icon: 'branch', keywords: 'git branch copy kopieren', context: [3, 5], when: (a) => single(a) && notDeleted(a), run: (a) => a.edit.copyBranch(a.targets()[0]) },
-  { id: 'issue.copyKey', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', context: [3, 3], when: realTarget, run: (a) => a.edit.copyKeys(a.targets()) },
+  { id: 'issue.blocks', sub: 'relation', label: msg('Blocks …'), section: 'Issue', icon: 'blocked', keywords: 'relation blocks blockiert', context: [2, 2], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('blocks') },
+  { id: 'issue.blockedBy', sub: 'relation', label: msg('Blocked by …'), section: 'Issue', icon: 'blocked', keywords: 'relation blocked by blockiert von', context: [2, 3], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('blocks', true) },
+  { id: 'issue.related', sub: 'relation', label: msg('Related to …'), section: 'Issue', icon: 'relation', keywords: 'relation related verwandt', context: [2, 4], when: (a) => single(a) && notDeleted(a), run: (a) => a.palette.openRelation('related') },
+  { id: 'issue.duplicate', sub: 'relation', label: msg('Mark as duplicate …'), section: 'Issue', icon: 'duplicate', keywords: 'duplicate duplikat doppelt', context: [2, 5], when: (a) => realTarget(a) && notDeleted(a), run: (a) => a.palette.openRelation('duplicate') },
+  { id: 'issue.copyLink', sub: 'copy', label: msg('Copy link'), section: 'Issue', keys: ['mod+shift+,'], icon: 'link', keywords: 'url copy kopieren', context: [3, 4], when: single, run: (a) => a.edit.copyLink(a.targets()[0]) },
+  { id: 'issue.copyBranch', sub: 'copy', label: msg('Copy branch name'), section: 'Issue', keys: ['mod+shift+.'], icon: 'branch', keywords: 'git branch copy kopieren', context: [3, 5], when: (a) => single(a) && notDeleted(a), run: (a) => a.edit.copyBranch(a.targets()[0]) },
+  { id: 'issue.copyKey', sub: 'copy', label: msg('Copy ID'), section: 'Issue', keys: ['mod+.'], icon: 'copy', keywords: 'id identifier key kennung copy kopieren', context: [3, 3], when: realTarget, run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.copyKeyPlain', label: msg('Copy ID'), section: 'Issue', keys: ['mod+c'], hidden: true, when: (a) => realTarget(a) && !textSelected(), run: (a) => a.edit.copyKeys(a.targets()) },
   { id: 'issue.moveUp', label: msg('Move issue up'), section: 'Issue', keys: ['alt+arrowup'], icon: 'arrowUp', keywords: 'reihenfolge rang order rank', when: manualOrder, run: (a) => a.edit.move(a.list.focusId()!, -1) },
   { id: 'issue.public', label: msg('Public on the roadmap: on/off'), section: 'Issue', icon: 'eye', keywords: 'public öffentlich roadmap export discord private privat sichtbar visible', context: [3, 7], when: notDeleted, run: togglePublic },

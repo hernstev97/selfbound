@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
 import { KEYMAP, actionById } from '../src/app/actions.ts';
 import { loadMoveLogic } from '../src/app/palette.ts';
-import { eventCombo } from '../src/keyboard.ts';
+import { eventCombo, formatShortcut } from '../src/keyboard.ts';
 import { Auth } from '../src/auth.ts';
 import { labelIdsFrom, labelParam, writeLocation } from '../src/route.ts';
 import { revealIndex } from '../src/window.ts';
@@ -62,7 +62,14 @@ describe('relations', () => {
     app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
     for (const [action, other] of [['issue.blockedBy', 'i1'], ['issue.related', 'i2']] as const) {
       app.menu.open('i0' as IssueId, 10, 10);
-      app.menu.choose(app.menu.state.get()!.items.findIndex((i) => i.id === action));
+      // The four relations share one entry; they follow in its submenu.
+      const items = app.menu.state.get()!.items;
+      expect(items.some((i) => i.id === action)).toBe(false);
+      app.menu.hover(items.findIndex((i) => i.id === 'sub:relation'));
+      const sub = app.menu.state.get()!.sub!;
+      expect(sub.items.map((i) => i.id)).toEqual(['issue.blocks', 'issue.blockedBy', 'issue.related', 'issue.duplicate']);
+      app.menu.chooseSub(sub.items.findIndex((i) => i.id === action));
+      expect(app.menu.state.get()).toBeNull();
       chooseId(app, `i:${other}`);
     }
     await flush();
@@ -70,6 +77,28 @@ describe('relations', () => {
       { fromId: 'i1', toId: 'i0', type: 'blocks' },
       { fromId: 'i0', toId: 'i2', type: 'related' },
     ]);
+  });
+
+  test('context menu: copying is one entry, its submenu keeps the shortcuts', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    app.menu.open('i0' as IssueId, 10, 10);
+    const items = app.menu.state.get()!.items;
+    expect(items.filter((i) => i.id.startsWith('issue.copy'))).toEqual([]);
+    const index = items.findIndex((i) => i.id === 'sub:copy');
+    expect(items[index]).toMatchObject({ label: 'Copy', submenu: true });
+    // Keyboard: → opens the submenu on its first entry.
+    app.menu.hover(index);
+    app.menu.enterSub();
+    const sub = app.menu.state.get()!.sub!;
+    expect(sub.items.map((i) => [i.id, i.shortcut])).toEqual([
+      ['issue.copyKey', formatShortcut('mod+.')],
+      ['issue.copyLink', formatShortcut('mod+shift+,')],
+      ['issue.copyBranch', formatShortcut('mod+shift+.')],
+    ]);
+    expect(sub.active).toBe(0);
+    app.menu.choose();
+    expect(app.menu.state.get()).toBeNull();
   });
 
   test('mark as duplicate: undo removes the relation and resets the status, redo again', async () => {
