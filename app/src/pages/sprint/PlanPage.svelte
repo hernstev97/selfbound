@@ -150,7 +150,7 @@
           {#each mainHead.current.chips as chip (chip.field)}
             <span class="filter-chip" data-testid="filter-chip">{chip.label}<button aria-label={t('Remove filter')} onclick={() => app.main.removeFilter(chip.field)}><span class="icon">{@html ICON.close}</span></button></span>
           {/each}
-          <button class="chip-link" onclick={() => app.main.clearFilters()}>{t('Reset filters')}</button>
+          <button class="chip-link" onclick={() => app.main.clearFilters()}>{t('Clear filters')}</button>
         </div>
       {/if}
       <div class="budget-strip" data-testid="budget-strip" title={plan.limits.title}>

@@ -79,7 +79,7 @@
 <div class="props-card">
   <div class="prop-meta">
     <button class="prop-row" data-testid="detail-team" title={tip(t('Move to team'), 'issue.team')} onclick={(e) => open('team', e)}><TeamLogo team={d.team} size={14} /><span class="val">{d.team.name}</span></button>
-    <div title={d.createdFull}>{t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</div>
+    <div title={d.createdFull}>{d.createdBy === t('You') ? t('Created {when} by you', { when: d.created }) : t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</div>
     <div>{t('Updated {when}', { when: d.updated })}</div>
   </div>
 </div>

@@ -668,7 +668,7 @@ export class PaletteController {
           const group = label.groupId ? groups.get(label.groupId) : undefined;
           const has = labelSets.length > 0 && labelSets.every((s) => s.has(label._id));
           add(
-            { id: `l:${label._id}`, label: label.name, dot: label.hue, checkbox: true, checked: has, section: group ? (group.exclusive ? t('{group} · one', { group: group.name }) : group.name) : ungrouped, detail: prefix && group ? group.name : undefined },
+            { id: `l:${label._id}`, label: label.name, dot: label.hue, checkbox: true, checked: has, section: group ? (group.exclusive ? t('{group} · pick one', { group: group.name }) : group.name) : ungrouped, detail: prefix && group ? group.name : undefined },
             () => {
               this.#toggleLabel(label._id, target);
               return 'stay';

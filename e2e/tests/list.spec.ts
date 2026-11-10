@@ -135,7 +135,7 @@ test('Filter via the second level: Status ▸ In Progress', async ({ page }) => 
   await page.getByTestId('filter-chip-remove').click();
 });
 
-test('Empty state with "Reset filters"', async ({ page }) => {
+test('Empty state with "Clear filters"', async ({ page }) => {
   await open(page);
   const total = (await page.getByTestId('view-count').textContent())!;
   await page.keyboard.press('Control+f');
