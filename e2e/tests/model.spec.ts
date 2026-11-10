@@ -34,7 +34,7 @@ test('Shift+M: provider, model, effort, speed; the sub-issue inherits it, dimmed
   const child = await fresh(`Model child ${Date.now()}`, parent.id);
   await open(page, `/issue/${parent.identifier}`);
   const chip = page.getByTestId('detail-model');
-  await expect(chip).toContainText('Choose model');
+  await expect(chip).toHaveText('Model');
 
   await page.keyboard.press('Shift+M');
   const picker = page.locator('[data-testid="palette"][data-kind="model"]');
@@ -67,7 +67,7 @@ test('Shift+M: provider, model, effort, speed; the sub-issue inherits it, dimmed
   await open(page, `/issue/${parent.identifier}`);
   await page.keyboard.press('Shift+M');
   await picker.getByText('No model', { exact: true }).click();
-  await expect(page.getByTestId('detail-model')).toContainText('Choose model');
+  await expect(page.getByTestId('detail-model')).toHaveText('Model');
   await page.keyboard.press('Control+z');
   await expect(page.getByTestId('detail-model')).toHaveText('Claude Opus 5.5 · xhigh · fast');
   await settled(page);

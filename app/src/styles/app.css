@@ -68,8 +68,8 @@
 [data-theme='dark'] {
   --bg-app: oklch(0.129 calc(var(--c) * 0.3) var(--base-hue));
   --bg-panel: oklch(0.169 calc(var(--c) * 0.7) var(--base-hue));
-  --bg-row-hover: oklch(0.195 var(--c) var(--base-hue));
-  --bg-group: oklch(0.205 calc(var(--c) * 0.7) var(--base-hue));
+  --bg-row-hover: oklch(0.21 var(--c) var(--base-hue));
+  --bg-group: oklch(0.222 calc(var(--c) * 0.7) var(--base-hue));
   --bg-raised: oklch(0.215 calc(var(--c) * 2) var(--base-hue));
   --bg-popover: oklch(0.223 calc(var(--c) * 0.7) var(--base-hue));
   --bg-active: oklch(0.232 calc(var(--c) * 1.3) var(--base-hue));
@@ -149,13 +149,15 @@
   --overlay: rgb(0 0 0 / 0.18);
   --code-bg: oklch(0.955 0.002 var(--base-hue));
   --panel-edge: 1px;
-  --status-backlog: #8b8f95;
+  /* Icon colors: at least 3 : 1 on the panel and on a focused row. */
+  --status-backlog: #7f8389;
   --status-todo: #717174;
-  --status-progress: #e8c12f;
-  --status-review: #2f9a68;
-  --status-triage: #f2632a;
+  --status-progress: #ad8200;
+  --status-review: #2c9163;
+  --status-triage: #de5219;
+  --status-canceled: #7a8696;
   --prio: #6b6c70;
-  --urgent: #f2632a;
+  --urgent: #de5219;
   color-scheme: light;
 }
 
@@ -465,7 +467,7 @@ a {
   font-size: var(--fs-small);
   letter-spacing: -0.01em;
   color: var(--text-sidebar);
-  transition: background-color 0.15s ease-out;
+  transition: background-color var(--dur-2) var(--ease-out);
   white-space: nowrap;
 }
 .nav-item .icon {
@@ -519,7 +521,7 @@ a {
   height: 12px;
   color: var(--text-faint);
   margin-left: -4px;
-  transition: transform 0.1s;
+  transition: transform var(--dur-1) var(--ease-out);
 }
 .nav-item .caret.closed {
   transform: rotate(-90deg);
@@ -543,7 +545,7 @@ a {
 .nav-section .caret {
   width: 10px;
   height: 10px;
-  transition: transform 0.1s;
+  transition: transform var(--dur-1) var(--ease-out);
 }
 .nav-section .caret.closed {
   transform: rotate(-90deg);
@@ -585,6 +587,7 @@ a {
 .add-team:hover {
   color: var(--text);
   background: var(--bg-sidebar-hover);
+  transition-duration: 0s;
 }
 @media (hover: none) {
   .add-team {
@@ -778,10 +781,7 @@ a.team-card:hover .tc-bg {
   line-height: 1;
   letter-spacing: 0;
   color: oklch(0.98 0.02 var(--hue));
-  background: oklch(0.55 0.14 var(--hue));
-}
-[data-theme='light'] .team-logo {
-  background: oklch(0.62 0.15 var(--hue));
+  background: oklch(0.52 0.14 var(--hue));
 }
 .team-logo.img {
   background: none;
@@ -903,6 +903,7 @@ button.crumb:hover {
 .icon-btn:hover {
   background: var(--bg-row-hover);
   color: var(--text);
+  transition-duration: 0s;
 }
 .icon-btn.on {
   background: var(--bg-control-on);
@@ -963,6 +964,7 @@ button.crumb:hover {
 }
 .tab:hover {
   color: var(--text);
+  transition-duration: 0s;
 }
 .tab.active {
   background: var(--bg-row-hover);
@@ -1033,6 +1035,9 @@ button.crumb:hover {
   box-shadow: inset 0 0 0 0.5px var(--border-popover);
   font-size: var(--fs-small);
 }
+.quick-search:focus {
+  box-shadow: inset 0 0 0 1px var(--focus-ring);
+}
 .quick-wrap {
   position: relative;
   display: inline-flex;
@@ -1077,7 +1082,7 @@ button.crumb:hover {
   border-radius: var(--radius);
   /* Fixed size, nothing outside affects the inside: layout and style stay scoped to each row. */
   contain: strict;
-  transition: background-color 0.15s ease-out;
+  transition: background-color var(--dur-2) var(--ease-out);
   --row-bg: var(--bg-panel);
   --icon-cut: var(--row-bg);
 }
@@ -1176,6 +1181,11 @@ button.crumb:hover {
 .row .cell:hover {
   background: var(--bg-control);
   box-shadow: 0 0 0 3px var(--bg-control);
+}
+/* --bg-control is as light as the focused row there */
+[data-theme='light'] .row .cell:hover {
+  background: var(--bg-control-on);
+  box-shadow: 0 0 0 3px var(--bg-control-on);
 }
 .mi.p-priority {
   color: var(--prio);
@@ -1490,7 +1500,7 @@ button.crumb:hover {
 }
 /* Model inherited from the parent issue or the team default: dimmed */
 .row-cols .pill.inherited {
-  color: var(--text-faint);
+  color: var(--text-subtle);
   box-shadow: inset 0 0 0 1px var(--border);
   font-weight: 450;
 }
@@ -1694,7 +1704,7 @@ button.crumb:hover {
   gap: 12px;
   padding: 0 16px 0 14px;
   border-radius: var(--radius);
-  transition: background-color 0.15s ease-out;
+  transition: background-color var(--dur-2) var(--ease-out);
   --icon-cut: var(--bg-panel);
 }
 .inbox-row.focused {
@@ -1911,6 +1921,7 @@ button.crumb:hover {
 }
 .btn:hover {
   background: var(--bg-control-on);
+  transition-duration: 0s;
 }
 .btn.primary {
   background: var(--accent);
@@ -1936,6 +1947,11 @@ button.crumb:hover {
 }
 .btn.danger {
   color: var(--danger-text);
+}
+.btn:disabled,
+.icon-btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
 }
 .kbd {
   display: inline-grid;
@@ -1969,10 +1985,6 @@ button.crumb:hover {
 /* Offline with no cache: explanation above the placeholder */
 .offline-note {
   margin: 16px 34px 4px;
-  color: var(--text-muted);
-}
-.desc-offline {
-  margin: 8px 0 0;
   color: var(--text-muted);
 }
 
@@ -2271,58 +2283,6 @@ button.crumb:hover {
   color: var(--accent-fg);
 }
 
-.context-menu,
-.submenu {
-  position: fixed;
-  z-index: 56;
-  min-width: 210px;
-  max-width: 300px;
-  padding: 4px;
-  border-radius: var(--radius);
-  background: var(--bg-popover);
-  box-shadow: var(--shadow-popover);
-  animation: drop var(--dur-2) var(--ease-out);
-  --icon-cut: var(--bg-popover);
-}
-.submenu {
-  min-width: 170px;
-  max-height: 60vh;
-  overflow-y: auto;
-}
-.menu-sep {
-  height: 1px;
-  margin: 4px 6px;
-  background: var(--border-popover);
-  opacity: 0.6;
-}
-.menu-head {
-  padding: 6px 8px 4px;
-  color: var(--text-muted);
-  font-size: var(--fs-mini);
-  font-variant-numeric: tabular-nums;
-}
-
-.display-pop {
-  position: absolute;
-  top: 88px;
-  right: 12px;
-  width: 340px;
-  z-index: 45;
-  padding: 14px 0 6px;
-  border-radius: var(--radius-lg);
-  background: var(--bg-popover);
-  box-shadow: var(--shadow-popover);
-  animation: drop var(--dur-2) var(--ease-out);
-}
-.dp-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  min-height: 35px;
-  padding: 0 16px;
-  color: var(--text-muted);
-}
 .dp-select {
   position: relative;
 }
@@ -2338,6 +2298,9 @@ button.crumb:hover {
   color: var(--text);
   font: inherit;
 }
+.dp-select select:hover {
+  background: var(--bg-control-on);
+}
 .dp-select .icon {
   position: absolute;
   right: 8px;
@@ -2347,36 +2310,6 @@ button.crumb:hover {
   width: 14px;
   height: 14px;
 }
-.dp-sep {
-  height: 1px;
-  background: var(--border-popover);
-  opacity: 0.6;
-  margin: 10px 0;
-}
-.dp-props {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 6px 16px 10px;
-}
-.dp-chip {
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 9999px;
-  font-size: var(--fs-small);
-  color: var(--text-muted);
-  box-shadow: inset 0 0 0 1px var(--border-strong);
-}
-.dp-chip.on {
-  background: var(--bg-control-on);
-  color: var(--text-strong);
-  box-shadow: none;
-}
-.dp-foot {
-  display: flex;
-  justify-content: flex-end;
-  padding: 4px 12px 6px;
-}
 .toggle {
   position: relative;
   width: 32px;
@@ -2384,7 +2317,10 @@ button.crumb:hover {
   border-radius: 9px;
   background: var(--toggle-off);
   flex: none;
-  transition: background-color 0.1s;
+  transition: background-color var(--dur-1) var(--ease-out), filter var(--dur-1) var(--ease-out);
+}
+.toggle:hover {
+  filter: brightness(1.1);
 }
 .toggle::after {
   content: '';
@@ -2395,7 +2331,7 @@ button.crumb:hover {
   height: 14px;
   border-radius: 50%;
   background: white;
-  transition: transform 0.1s;
+  transition: transform var(--dur-1) var(--ease-out);
 }
 .toggle.on {
   background: var(--accent);
@@ -2471,94 +2407,8 @@ button.crumb:hover {
   background: var(--bg-control);
 }
 
-/* ---------------------------------------------------------------- Pages */
+/* ---------------------------------------------------------------- Sign-in (pages with cards: pages.css) */
 
-.page {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.page-content {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 32px 32px 60px;
-}
-.page-title {
-  margin: 0 0 6px;
-  font-size: 24px;
-  font-weight: 590;
-  letter-spacing: -0.015em;
-  color: var(--text-strong);
-}
-.page-lead {
-  margin: 0 0 24px;
-  color: var(--text-muted);
-}
-.card-list {
-  border-radius: var(--radius-lg);
-  background: var(--bg-group);
-  box-shadow: inset 0 0 0 0.5px var(--border);
-  overflow: hidden;
-}
-[data-theme='light'] .card-list {
-  background: var(--bg-raised);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-}
-.card-row:last-child {
-  border-bottom: 0;
-}
-.card-row:hover {
-  background: var(--bg-row-hover);
-}
-.card-row .t {
-  flex: 1;
-  min-width: 0;
-  font-weight: 510;
-  color: var(--text-strong);
-}
-.card-row .sub {
-  color: var(--text-muted);
-  font-size: var(--fs-mini);
-}
-.progress {
-  width: 80px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--bg-control-on);
-  overflow: hidden;
-}
-.progress > div {
-  height: 100%;
-  background: var(--status-done);
-}
-.seg {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 9999px;
-  background: var(--bg-control);
-  gap: 2px;
-}
-.seg button {
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 9999px;
-  color: var(--text-muted);
-  font-weight: 510;
-}
-.seg button.on {
-  background: var(--bg-control-on);
-  color: var(--text-strong);
-}
-
-/* Sign-in */
 .login {
   height: 100%;
   display: grid;
@@ -2622,7 +2472,7 @@ button.crumb:hover {
     /* No shadow while closed: it would bleed into the left screen edge. */
     box-shadow: none;
     transform: translateX(-102%);
-    transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+    transition: transform var(--dur-3) var(--ease-out), box-shadow var(--dur-3) var(--ease-out);
     display: flex !important;
   }
   .frame.drawer .sidebar {
@@ -2720,7 +2570,7 @@ button.crumb:hover {
   }
   .view-bar .tab {
     height: 32px;
-    padding: 0 14px;
+    padding: 0 11px;
   }
   .view-bar .tabs + .bar-count {
     display: none;
@@ -2793,36 +2643,6 @@ button.crumb:hover {
     height: 46px;
     font-size: 15px;
   }
-  .context-menu {
-    left: 12px !important;
-    right: 12px;
-    top: auto !important;
-    bottom: 12px;
-    max-width: none;
-    max-height: calc(100dvh - 24px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    border-radius: 24px;
-    padding: 8px;
-  }
-  .context-menu .menu-item {
-    height: 44px;
-    font-size: 16px;
-    border-radius: 9999px;
-    padding: 0 14px;
-  }
-  .submenu {
-    left: 12px !important;
-    right: 12px;
-    top: auto !important;
-    bottom: 12px;
-    max-width: none;
-    max-height: calc(100dvh - 24px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    border-radius: 24px;
-    padding: 8px;
-  }
   .toasts {
     left: 12px;
     right: 12px;
@@ -2831,15 +2651,6 @@ button.crumb:hover {
   }
   .toast {
     max-width: none;
-  }
-  .display-pop {
-    left: 8px;
-    right: 8px;
-    width: auto;
-    top: 100px;
-  }
-  .page-content {
-    padding: 16px 16px 120px;
   }
 
   /* Tap targets: at least 44 px hit area. Where the look should stay, an invisible ::after

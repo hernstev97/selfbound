@@ -633,9 +633,13 @@
           blur: () => {
             flush();
             onblur?.();
-            tableMenu = null;
-            kindMenu = null;
-            queueMicrotask(syncTable);
+            // Not in this tick: removing the editor blurs it while Svelte updates the page, and state
+            // may not change there (`state_unsafe_mutation`).
+            queueMicrotask(() => {
+              tableMenu = null;
+              kindMenu = null;
+              syncTable();
+            });
             return false;
           },
           focus: () => {
@@ -875,7 +879,7 @@
     filter: brightness(1.2);
   }
   :global(.rich .callout > button.callout-icon:focus-visible) {
-    outline: 2px solid var(--accent);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
   }
   :global(.rich .callout-title) {
@@ -1008,9 +1012,10 @@
     z-index: 60;
     width: 260px;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--bg-popover);
     box-shadow: var(--shadow-popover);
+    animation: drop var(--dur-2) var(--ease-out);
   }
   .table-item {
     display: flex;
@@ -1066,9 +1071,10 @@
     max-height: 312px;
     overflow-y: auto;
     padding: 4px;
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     background: var(--bg-popover);
     box-shadow: var(--shadow-popover);
+    animation: drop var(--dur-2) var(--ease-out);
   }
   .slash-menu.above {
     transform: translateY(-100%);
@@ -1106,9 +1112,10 @@
     align-items: center;
     width: 320px;
     padding: 6px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: var(--bg-popover);
     box-shadow: var(--shadow-popover);
+    animation: drop var(--dur-2) var(--ease-out);
   }
   .link-pop input {
     flex: 1;

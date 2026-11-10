@@ -2,6 +2,7 @@
   // Knowledge area of a team: the page tree on the left, the selected page or an overview on the
   // right. /team/KEY/wiki and /wiki/<id> show the same page. On a phone tree and page are levels of
   // their own, each over the whole screen: /team/KEY/wiki the tree, /wiki/<id> the page.
+  import '../../styles/pages.css';
   import '../../styles/detail.css';
   import '../../styles/wiki.css';
   import { ICON } from '@selfbound/core';
@@ -192,7 +193,10 @@
               onkeydown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
+                  // A page that was just created has no text yet: go on writing it.
+                  const write = fresh === a!.id && !a!.body.markdown;
                   (e.currentTarget as HTMLTextAreaElement).blur();
+                  if (write) app.wiki.startEdit();
                 } else if (e.key === 'Escape') {
                   title = a!.title;
                 }

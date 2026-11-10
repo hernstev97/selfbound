@@ -404,6 +404,10 @@
 }
 
 @media (max-width: 768px) {
+  /* The footer ends above the floating bar and the create button (84 px, as the toasts). */
+  .close-foot {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
   .budget-strip {
     flex-wrap: nowrap;
     overflow-x: auto;

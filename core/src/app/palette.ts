@@ -100,6 +100,9 @@ const FILTER_FIELDS = [
 ] as const;
 type FilterField = (typeof FILTER_FIELDS)[number]['id'];
 
+/** Empty search list before anything is typed (no recently opened issues yet). */
+const idleSearch = () => t('Type to search issues and knowledge pages');
+
 export class PaletteController {
   readonly state = new Slice<PaletteState | null>(null);
   #base: MenuItem[] = [];
@@ -164,6 +167,7 @@ export class PaletteController {
       parent: null,
       calendar: kind === 'due' || kind === 'snooze' ? this.#calendar(kind) : null,
       hint: this.#baseHint,
+      empty: kind === 'search' ? idleSearch() : undefined,
       seq: ++this.#seq,
     });
     if (opts.query) this.setQuery(opts.query);
@@ -200,6 +204,7 @@ export class PaletteController {
     if (!s) return;
     let items: MenuItem[];
     let hint: string | null = this.#baseHint;
+    let empty: string | undefined;
     const q = query.trim();
     if (s.kind === 'article') {
       // Wiki page for a link in the text: hits come from the server.
@@ -207,7 +212,11 @@ export class PaletteController {
       this.#scheduleArticles(q);
     } else if (s.kind === 'search' || s.kind === 'parent' || s.kind === 'relation' || s.kind === 'duplicate') {
       items = this.#issueItems(s.kind, q);
-      if (s.kind === 'search') this.#scheduleServer(q);
+      if (s.kind === 'search') {
+        this.#scheduleServer(q);
+        // Descriptions and comments are searched on the server: until it answers, "No results" would be wrong.
+        if (!items.length) empty = q.length >= 3 ? t('Searching descriptions and comments …') : q ? undefined : idleSearch();
+      }
     } else if (s.kind === 'command' && !q) {
       items = this.#commandTop();
     } else if (s.kind === 'filter' && !this.#filterField && q) {
@@ -228,17 +237,17 @@ export class PaletteController {
         const n = Number(q);
         const id = `est:${n}`;
         this.#run.set(id, () => this.apply({ estimate: n }));
-        items = [{ id, label: t('Estimate: {n} points', { n }), icon: ICON.estimate }, ...items.filter((i) => i.id !== id)];
+        items = [{ id, label: t('Estimate: {n} points', { n }), icon: ICON.estimate }, ...items.filter((i) => i.id !== `e:${n}`)];
       }
       if (s.kind === 'snooze') {
         // Only a day after today makes sense: "today" and past days are not offered.
         const base = today();
         const day = parseDueInput(q, undefined, base);
+        if (day && day <= base) empty = t('Snooze needs a day after today');
         if (day && day > base) {
           const id = `snooze:${day}`;
-          hint = `${q} → ${dayLabel(day)}`;
           this.#run.set(id, () => this.app.edit.snooze(this.#snoozeIds(), day));
-          items = [{ id, label: dayLabel(day), detail: q, icon: ICON.calendar }, ...items.filter((i) => i.id !== id)];
+          items = [{ id, label: dayLabel(day), detail: q, icon: ICON.calendar }, ...items.filter((i) => i.detail !== dayLabel(day))];
           this.#calendarMonth = day.slice(0, 7);
         }
       }
@@ -246,15 +255,14 @@ export class PaletteController {
         const day = parseDueInput(q);
         if (day) {
           const id = `due:${day}`;
-          hint = `${q} → ${dayLabel(day)}`;
           this.#run.set(id, () => this.apply({ dueDate: day }));
-          items = [{ id, label: dayLabel(day), detail: q, icon: ICON.calendar }, ...items.filter((i) => i.id !== id)];
+          items = [{ id, label: dayLabel(day), detail: q, icon: ICON.calendar }, ...items.filter((i) => i.detail !== dayLabel(day))];
           this.#calendarMonth = day.slice(0, 7);
         }
       }
     }
     if (q) items = items.map((i) => (i.section ? { ...i, section: undefined } : i));
-    this.state.set({ ...s, query, items: items.slice(0, s.kind === 'help' ? 200 : MAX_ITEMS), active: 0, hint, calendar: s.kind === 'due' || s.kind === 'snooze' ? this.#calendar(s.kind) : null });
+    this.state.set({ ...s, query, items: items.slice(0, s.kind === 'help' ? 200 : MAX_ITEMS), active: 0, hint, empty, calendar: s.kind === 'due' || s.kind === 'snooze' ? this.#calendar(s.kind) : null });
     this.#preview();
   }
 
@@ -668,7 +676,7 @@ export class PaletteController {
           const group = label.groupId ? groups.get(label.groupId) : undefined;
           const has = labelSets.length > 0 && labelSets.every((s) => s.has(label._id));
           add(
-            { id: `l:${label._id}`, label: label.name, dot: label.hue, checkbox: true, checked: has, section: group ? (group.exclusive ? t('{group} · one', { group: group.name }) : group.name) : ungrouped, detail: prefix && group ? group.name : undefined },
+            { id: `l:${label._id}`, label: label.name, dot: label.hue, checkbox: true, checked: has, section: group ? (group.exclusive ? t('{group} · pick one', { group: group.name }) : group.name) : ungrouped, detail: prefix && group ? group.name : undefined },
             () => {
               this.#toggleLabel(label._id, target);
               return 'stay';
@@ -722,6 +730,7 @@ export class PaletteController {
           ['2w', t('In two weeks'), addDays(now, 14)],
         ];
         for (const [id, label, day] of options) add({ id: `d:${id}`, label, detail: dayLabel(day), icon: ICON.calendar, checked: all(current, day as string | null) }, () => this.apply({ dueDate: day }, target));
+        if (!prefix && !inPicker) add({ id: 'd:pick', label: t('Pick a date …'), icon: ICON.calendar }, () => this.open('due', { target, anchor: this.#anchor }));
         add({ id: 'd:none', label: t('No due date'), icon: ICON.close, checked: all(current, null) }, () => this.apply({ dueDate: null }, target));
         break;
       }
@@ -1160,17 +1169,20 @@ export class PaletteController {
           wiki.push({ id: `w:${hit.id}`, label: hit.title, detail: team?.key, icon: ICON.page, snippet: hit.snippet, section: SECTION_LABEL.Wiki, keywords: 'wiki page wissen seite' });
         }
       } catch {
-        return; // server unreachable: local hits are enough
+        // server unreachable: local hits are enough
       }
       const s = this.state.get();
-      if (!s || s.kind !== 'search' || seq !== this.#serverSeq || (add.length === 0 && wiki.length === 0)) return;
+      if (!s || s.kind !== 'search' || seq !== this.#serverSeq) return;
+      if (add.length === 0 && wiki.length === 0) return s.empty ? this.state.set({ ...s, empty: undefined }) : undefined;
       const present = new Set(s.items.map((i) => i.preview).filter(Boolean));
       const fresh = add.filter((i) => !present.has(i.preview));
       for (const item of fresh) this.#run.set(item.id, () => this.app.openIssue(item.preview!));
       for (const item of wiki) this.#run.set(item.id, () => this.app.nav.go({ name: 'article', id: item.id.slice(2) }));
       const ids = fresh.filter((i) => i.id.startsWith('i:'));
       const text = fresh.filter((i) => i.id.startsWith('f:'));
-      this.state.set({ ...s, items: [...ids, ...s.items, ...text, ...wiki].slice(0, MAX_ITEMS + 30), active: ids.length ? 0 : s.active });
+      this.state.set({ ...s, items: [...ids, ...s.items, ...text, ...wiki].slice(0, MAX_ITEMS + 30), active: ids.length ? 0 : s.active, empty: undefined });
+      // The first hit may be new: its preview follows.
+      this.#preview();
     }, 160);
   }
 

@@ -2,6 +2,8 @@
   // Image export of the roadmap (SELF-113): a PNG of the release view or the progress tracker with
   // public issues only, to share on Discord. The preview IS the file (rendered and encoded on every
   // change), so what is downloaded or copied is exactly what was looked at. Options are remembered.
+  import '../../styles/pages.css';
+  import '../../styles/forms.css';
   import { ICON } from '@selfbound/core';
   import type { ExportData } from '@selfbound/core/app/roadmap';
   import { intlLocale, t, tn } from '@selfbound/core/i18n';
@@ -176,21 +178,21 @@
         <p class="rx-lead">{t('Only issues marked as public appear, with their public title, summary and picture. Descriptions, comments and identifiers never do.')}</p>
         <div class="rx-field">
           <span class="rx-label">{t('View')}</span>
-          <span class="seg">
+          <span class="seg rx-seg">
             <button class={[o.view === 'roadmap' && 'on']} aria-pressed={o.view === 'roadmap'} data-testid="export-view-roadmap" onclick={() => (o.view = 'roadmap')}>{t('Roadmap')}</button>
             <button class={[o.view === 'progress' && 'on']} aria-pressed={o.view === 'progress'} data-testid="export-view-progress" onclick={() => (o.view = 'progress')}>{t('Progress')}</button>
           </span>
         </div>
         <div class="rx-field">
           <span class="rx-label">{t('Format')}</span>
-          <span class="seg">
+          <span class="seg rx-seg">
             <button class={[o.layout === 'landscape' && 'on']} aria-pressed={o.layout === 'landscape'} data-testid="export-landscape" onclick={() => (o.layout = 'landscape')}>{t('1920 wide (Discord)')}</button>
             <button class={[o.layout === 'portrait' && 'on']} aria-pressed={o.layout === 'portrait'} data-testid="export-portrait" onclick={() => (o.layout = 'portrait')}>{t('1080 (phone)')}</button>
           </span>
         </div>
         <div class="rx-field">
           <span class="rx-label">{t('Look')}</span>
-          <span class="seg">
+          <span class="seg rx-seg">
             <button class={[o.dark && 'on']} aria-pressed={o.dark} data-testid="export-dark" onclick={() => (o.dark = true)}>{t('Dark')}</button>
             <button class={[!o.dark && 'on']} aria-pressed={!o.dark} data-testid="export-light" onclick={() => (o.dark = false)}>{t('Light')}</button>
           </span>

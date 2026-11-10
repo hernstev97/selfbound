@@ -3,6 +3,7 @@
   // comment. As its own page (/pr/<owner>/<repo>/<nr>) or beside the issue. Data: subscription
   // `githubPr.view`; on open `githubPr.refresh` fetches the state from GitHub, afterwards webhooks
   // keep it current. The code diff stays on GitHub (link to the changed files).
+  import '../../styles/forms.css';
   import '../../styles/pr.css';
   import { api } from '@selfbound/backend/api';
   import type { Id } from '@selfbound/backend/dataModel';

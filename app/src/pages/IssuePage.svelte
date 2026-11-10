@@ -1,7 +1,7 @@
 <script lang="ts">
   import '../styles/detail.css';
   import '../styles/overlays.css';
-  import { ICON, PRIORITY_ICON, STATUS_ICON, statusIcon, type PaletteKind } from '@selfbound/core';
+  import { ICON, PRIORITY_ICON, STATUS_ICON, statusIcon, type IssueId, type PaletteKind } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { app } from '../app-instance.ts';
   import { fromSlice } from '../slice.svelte.ts';
@@ -37,6 +37,13 @@
     const next = title.replace(/\s+/g, ' ').trim();
     if (d && next && next !== d.title) app.edit.patch([d.id], { title: next });
     else if (d) title = d.title;
+  }
+
+  /** A plain click opens the issue in the app; Ctrl or middle click stays the browser's (new tab). */
+  function follow(e: MouseEvent, id: IssueId) {
+    if (e.metaKey || e.ctrlKey || e.button !== 0) return;
+    e.preventDefault();
+    app.openIssue(id);
   }
 
   function open(kind: PaletteKind, e: MouseEvent & { currentTarget: HTMLElement }) {
@@ -142,12 +149,13 @@
           <button class="chip" onclick={(e) => open('labels', e)}><span class="icon">{@html ICON.label}</span>{d.labels.length ? d.labels.map((l) => l.name).join(', ') : t('Labels')}</button>
           <button class={['chip', !d.project && 'unset']} onclick={(e) => open('project', e)}><span class="icon">{@html ICON.projects}</span>{d.project?.name ?? t('Project')}</button>
           <button class={['chip', !d.sprint && 'unset']} onclick={(e) => open('sprint', e)}><span class="icon">{@html ICON.sprint}</span>{d.sprint?.name ?? t('Sprint')}</button>
+          <button class={['chip', d.estimate === null && 'unset']} onclick={(e) => open('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
           <button class={['chip', !d.due && 'unset']} onclick={(e) => open('due', e)}><span class="icon">{@html ICON.calendar}</span>{d.due?.long ?? t('Due date')}</button>
           {#if d.snoozable || d.snoozed}
             <button class={['chip', !d.snoozed && 'unset']} data-testid="issue-snooze" onclick={(e) => open('snooze', e)}><span class="icon">{@html ICON.snooze}</span>{d.snoozed ? t('Snoozed until {date}', { date: d.snoozed.long }) : t('Snooze')}</button>
           {/if}
-          <button class={['chip', d.estimate === null && 'unset']} onclick={(e) => open('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
           <button class={['chip', (!d.model || d.model.source !== 'issue') && 'unset']} data-testid="issue-model" onclick={(e) => open('model', e)}><span class={['icon mi', logoClass(d.model?.logo)]}></span>{d.model?.label ?? t('Model')}</button>
+          <button class={['chip', !d.parent && 'unset']} onclick={(e) => open('parent', e)}><span class="icon">{@html ICON.parent}</span>{d.parent?.key ?? t('Parent')}</button>
         </div>
 
         <!-- Where the properties column is hidden (phone, narrow split), the roadmap card sits here. -->
@@ -155,23 +163,23 @@
 
         <Description detail={d} />
 
-        <div class="section-title">
-          {t('Sub-issues')} {#if d.children.length}<span class="muted">{d.children.filter((c) => c.status === 'done').length}/{d.children.length}</span>{/if}
-          <span class="bar-spacer"></span>
-          {#if !d.deleted && !d.pending}
-            <button class="btn ghost small" data-testid="add-subissue" title={tip(t('Create sub-issue'), 'issue.subissue')} onclick={() => app.create.openSubIssue(d!.id)}><span class="icon">{@html ICON.plus}</span>{t('Create sub-issue')}</button>
-          {/if}
-        </div>
+        <!-- Only with sub-issues. Without any, Ctrl ⇧ O, the "…" menu and the command menu create the first one. -->
         {#if d.children.length}
+          <div class="section-title">
+            {t('Sub-issues')} <span class="muted">{d.children.filter((c) => c.status === 'done').length}/{d.children.length}</span>
+            <span class="bar-spacer"></span>
+            {#if !d.deleted && !d.pending}
+              <button class="icon-btn plain" data-testid="add-subissue" title={tip(t('Create sub-issue'), 'issue.subissue')} aria-label={t('Create sub-issue')} onclick={() => app.create.openSubIssue(d!.id)}><span class="icon">{@html ICON.plus}</span></button>
+            {/if}
+          </div>
           <div class="sub-list" data-testid="subissues">
             {#each d.children as child (child.id)}
-              <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-              <div class="sub-row" onclick={() => app.openIssue(child.id)}>
+              <a class="sub-row" href="/issue/{child.key}" onclick={(e) => follow(e, child.id)}>
                 <span class="icon">{@html PRIORITY_ICON[child.priority]}</span>
-                <span class="icon">{@html STATUS_ICON[child.status]}</span>
                 <span class="key">{child.key}</span>
+                <span class="icon">{@html STATUS_ICON[child.status]}</span>
                 <span class="t">{child.title}</span>
-              </div>
+              </a>
             {/each}
           </div>
         {/if}
@@ -182,19 +190,17 @@
             <div class="props-title" style="padding-left: 10px">{group.label}</div>
             <div class="sub-list">
               {#each group.items as rel (rel.relationId)}
-                <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-                <div class="sub-row" onclick={() => app.openIssue(rel.id)}>
-                  <span class="icon">{@html STATUS_ICON[rel.status]}</span>
-                  <span class="key">{rel.key}</span>
-                  <span class={['t', rel.deleted && 'deleted']}>{rel.title}</span>
+                <div class="sub-row">
+                  <a class="sub-link" href="/issue/{rel.key}" onclick={(e) => follow(e, rel.id)}>
+                    <span class="key">{rel.key}</span>
+                    <span class="icon">{@html STATUS_ICON[rel.status]}</span>
+                    <span class={['t', rel.deleted && 'deleted']}>{rel.title}</span>
+                  </a>
                   <button
                     class="icon-btn plain x"
                     aria-label={t('Remove relation')}
                     title={t('Remove relation')}
-                    onclick={(e) => {
-                      e.stopPropagation();
-                      void app.detail.removeRelation(rel.relationId);
-                    }}><span class="icon">{@html ICON.close}</span></button
+                    onclick={() => void app.detail.removeRelation(rel.relationId)}><span class="icon">{@html ICON.close}</span></button
                   >
                 </div>
               {/each}

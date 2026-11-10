@@ -16,8 +16,8 @@
   const active = $derived(p?.active ?? -1);
   const shellSlice = fromSlice(app.shell);
 
-  // Touch (phone): no autofocus in the search field (the keyboard would pop up at once) and no
-  // shortcuts in the entries.
+  // Touch (phone): no autofocus in the field of a picker (the keyboard would pop up at once) and no
+  // shortcuts in the entries. The search is opened to type, so it does focus.
   const coarse = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 
   const PICKER_KEY: Partial<Record<PaletteKind, string>> = { status: 'S', priority: 'P', labels: 'L', estimate: '⇧E', model: '⇧M', sprint: '⇧C', project: '⇧P', due: '⇧D', filter: 'F' };
@@ -85,7 +85,7 @@
           oninput={(e) => app.palette.setQuery(e.currentTarget.value)}
           autocomplete="off"
           spellcheck="false"
-          {@attach !coarse && autofocus}
+          {@attach (!coarse || p.kind === 'search') && autofocus}
         />
         {#if p.anchor && PICKER_KEY[p.kind] && !coarse}<span class="kbd">{PICKER_KEY[p.kind]}</span>{/if}
       </div>
@@ -128,7 +128,7 @@
             {#if item.submenu}<span class="icon arrow">{@html ICON.caretRight}</span>{/if}
           </button>
         {:else}
-          <div class="palette-empty" data-testid="palette-empty">{t('No results')}</div>
+          <div class="palette-empty" data-testid="palette-empty">{p.empty ?? t('No results')}</div>
         {/each}
       </div>
       {#if p.hint}<div class="palette-hint">{p.hint}</div>{/if}

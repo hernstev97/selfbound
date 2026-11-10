@@ -106,6 +106,8 @@ export class RoadmapController {
   readonly release = new Slice<ReleaseView | null>(null);
   readonly progress = new Slice<ProgressView | null>(null);
   #cards = new Map<string, PublicCard>();
+  /** Team the cards belong to */
+  #cardsTeam: string | null = null;
   #watch: { teamId: string; release: () => void; stop: () => void } | null = null;
   #timer: ReturnType<typeof setTimeout> | null = null;
 
@@ -154,7 +156,12 @@ export class RoadmapController {
     const team = this.team();
     if (!team || this.#watch?.teamId === team._id) return;
     this.#stopWatch();
-    this.#cards = new Map();
+    // Back on the same team: the cards from last time are right until the subscription answers.
+    if (this.#cardsTeam === team._id) this.ui.set({ ...this.ui.get(), loaded: true });
+    else this.#cards = new Map();
+    this.#cardsTeam = team._id;
+    // Offline or slow: after a moment show the issues with their own titles instead of placeholders.
+    setTimeout(() => this.ui.get().team === team.key && !this.ui.get().loaded && this.ui.set({ ...this.ui.get(), loaded: true }), 1500);
     const { slice, release } = this.app.store.watch(api.roadmap.cards, { teamId: team._id });
     const update = () => {
       const rows = slice.get();

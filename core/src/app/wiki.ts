@@ -234,7 +234,7 @@ export class WikiController {
             .sort((a, b) => a.title.localeCompare(b.title, intlLocale()))
             .map((a) => ({ id: a._id, title: a.title, parentId: a.parentId ?? null, depth: 0, hasChildren: false, expanded: false }))
         : visibleRows(articles, this.#expanded)
-      : teamDoc && !teamDoc.wiki
+      : (teamDoc && !teamDoc.wiki) || (meta && page.name === 'wiki' && !teamDoc)
         ? []
         : null;
     this.state.set({

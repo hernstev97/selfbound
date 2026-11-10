@@ -202,7 +202,7 @@ const DEFAULTS: Record<ThemeType, { panel: string; text: string; accent: string;
 
 /** Mix ratios surface → text, measured from the Selfbound colors (app.css). */
 const SHARE: Record<ThemeType, Record<string, number>> = {
-  dark: { app: 0.25, rowHover: 0.035, group: 0.05, raised: 0.06, popover: 0.07, active: 0.085, control: 0.14, controlOn: 0.23, sidebarHover: 0.05, line: 0.06, border: 0.1, borderStrong: 0.135, borderPopover: 0.225, muted: 0.66, faint: 0.38, subtle: 0.64, toggle: 0.51, code: 0.045, selection: 0.2 },
+  dark: { app: 0.25, rowHover: 0.055, group: 0.07, raised: 0.06, popover: 0.07, active: 0.085, control: 0.14, controlOn: 0.23, sidebarHover: 0.05, line: 0.06, border: 0.1, borderStrong: 0.135, borderPopover: 0.225, muted: 0.66, faint: 0.38, subtle: 0.64, toggle: 0.51, code: 0.045, selection: 0.2 },
   light: { app: 0.04, rowHover: 0.05, group: 0.035, raised: 0.01, popover: 0, active: 0.1, control: 0.055, controlOn: 0.1, sidebarHover: 0.04, line: 0.1, border: 0.1, borderStrong: 0.17, borderPopover: 0.17, muted: 0.75, faint: 0.45, subtle: 0.67, toggle: 0.67, code: 0.035, selection: 0.12 },
 };
 

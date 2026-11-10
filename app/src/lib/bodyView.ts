@@ -40,7 +40,11 @@ export function focusReturn() {
       // Only after the editor is gone: until then it (or "Done") holds focus.
       queueMicrotask(() => {
         const active = document.activeElement;
-        if (el.isConnected && (!active || active === document.body)) el.focus({ preventScroll: true });
+        if (!el.isConnected || (active && active !== document.body)) return;
+        // Back from the editor: the tint marks the text, a ring around the whole block would shout.
+        el.dataset.returned = '';
+        el.addEventListener('blur', () => delete el.dataset.returned, { once: true });
+        el.focus({ preventScroll: true });
       });
     },
   };

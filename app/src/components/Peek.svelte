@@ -11,6 +11,11 @@
   const paletteSlice = fromSlice(app.palette.state);
   const d = $derived(detailSlice.current);
   const beside = $derived(paletteSlice.current !== null);
+  // Search and command menu move aside for the card; every other centered picker sits where the card is.
+  const underPicker = $derived.by(() => {
+    const p = paletteSlice.current;
+    return !!p && !p.anchor && p.kind !== 'search' && p.kind !== 'command';
+  });
   // Cut at a line boundary so no link (image, Drive video) breaks in the middle.
   const shortBody = $derived.by(() => {
     const text = d?.body?.markdown ?? '';
@@ -22,14 +27,14 @@
 </script>
 
 {#if d}
-  <aside class={['peek', beside && 'beside-palette']} data-testid="peek" aria-label={t('Preview {key}', { key: d.key })} out:leave|global>
+  <aside class={['peek', beside && 'beside-palette', underPicker && 'under-picker']} data-testid="peek" aria-label={t('Preview {key}', { key: d.key })} out:leave|global>
     <div class="peek-key">{d.key}</div>
     <h2 class="peek-title" data-testid="peek-title">{d.title}</h2>
     {#if d.project || d.sprint}
       <div class="peek-sub">
         {#if d.project}<span class="icon">{@html ICON.projects}</span><span>{d.project.name}</span>{/if}
         {#if d.project && d.sprint}<span>·</span>{/if}
-        {#if d.sprint}<span class="icon">{@html ICON.sprint}</span><span>{d.sprint.name}{d.sprint.late ? ` (${t('added late')})` : ''}</span>{/if}
+        {#if d.sprint}<span class="icon">{@html ICON.sprint}</span><span>{d.sprint.name}{d.sprint.late ? ` · ${t('added late')}` : ''}</span>{/if}
       </div>
     {/if}
     <div class="peek-props">
@@ -54,7 +59,7 @@
       <div class="peek-desc desc-placeholder" data-testid="peek-description">{t('No description.')}</div>
     {/if}
     <div class="peek-foot">
-      <span>{t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</span><span>·</span><span>{t('Updated {when}', { when: d.updated })}</span>
+      <span>{d.createdBy === t('You') ? t('Created {when} by you', { when: d.created }) : t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</span><span>·</span><span>{t('Updated {when}', { when: d.updated })}</span>
     </div>
   </aside>
 {/if}

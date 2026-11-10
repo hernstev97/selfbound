@@ -32,6 +32,12 @@
   let editing = $state<string | null>(null);
   let editText = $state('');
   let confirmDelete = $state<string | null>(null);
+  // An armed "Really delete" disarms by itself: after 4 s, or when the pointer leaves the comment.
+  $effect(() => {
+    if (!confirmDelete) return;
+    const timer = setTimeout(() => (confirmDelete = null), 4000);
+    return () => clearTimeout(timer);
+  });
   let input = $state<ImageField | null>(null);
   let editInput = $state<ImageField | null>(null);
   /** An image still uploading (placeholder from upload.ts): send only once it is done. */
@@ -112,7 +118,8 @@
           {/if}
         </div>
       {:else}
-        <div class={['comment', item.pending && 'pending']} data-testid="comment" data-source={item.actor} data-id={item.id}>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class={['comment', item.pending && 'pending']} data-testid="comment" data-source={item.actor} data-id={item.id} onmouseleave={() => confirmDelete === item.id && (confirmDelete = null)}>
           <div class="comment-head">
             <span class={['act-avatar', item.actor]} style="box-shadow: none">
               {#if item.actor === OWNER_KIND}
@@ -146,7 +153,9 @@
                 return true;
               }}
               onescape={() => {
-                editing = null;
+                // Esc saves, as in the description. "Cancel" is the way to discard.
+                if (editText !== (item.body ?? '')) saveEdit(item.id);
+                else editing = null;
                 return true;
               }}
               upload={{ issueId: d.id }}
@@ -155,6 +164,7 @@
             />
             <div class="comment-box-foot">
               <ImageButton field={() => editInput} target={{ issueId: d.id }} />
+              <span class="desc-hint">{t('Esc or Ctrl Enter saves')}</span>
               <button class="btn ghost small" onclick={() => (editing = null)}>{t('Cancel')}</button>
               <button class="btn small primary" onclick={() => saveEdit(item.id)}>{t('Save')}</button>
             </div>
@@ -186,7 +196,7 @@
       />
       <div class="comment-box-foot">
         <ImageButton field={() => input} target={{ issueId: d.id }} />
-        <span>{uploading(draft) ? t('Uploading image …') : t('Ctrl Enter to send')}</span>
+        {#if uploading(draft)}<span>{t('Uploading image …')}</span>{:else}<span class="desc-hint">{t('Ctrl Enter to send')}</span>{/if}
         <button class="btn small primary" data-testid="comment-send" disabled={!draft.trim() || uploading(draft)} onclick={() => void send()}>{t('Comment')}</button>
       </div>
     </div>

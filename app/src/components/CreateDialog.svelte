@@ -77,8 +77,7 @@
       <span class="icon" style="color: var(--text-faint)">{@html ICON.chevronRight}</span>
       <span style="color: var(--text-muted); font-size: var(--fs-mini)">{d.parentId && parent ? t('Sub-issue of {key}', { key: parent.key }) : t('New issue')}</span>
       <span class="bar-spacer"></span>
-      <button class="btn small" onclick={() => app.create.close()} title={t('Close and keep as draft')}>{t('Save as draft')}</button>
-      <!-- × closes like Esc and keeps the content as a draft; Discard is at the bottom. -->
+      <!-- × closes like Esc and a click outside: the content stays as a draft. Discard is at the bottom. -->
       <button class="icon-btn plain" aria-label={t('Close')} title={`${t('Close, the draft stays')} · ${formatShortcut('escape')}`} data-testid="create-close" onclick={() => app.create.close()}><span class="icon">{@html ICON.close}</span></button>
     </div>
     <div class="create-body">
@@ -100,7 +99,7 @@
       <TextEditor
         class="create-desc"
         testid="create-description"
-        placeholder={t('Add description … ("/" for blocks, images with Ctrl V)')}
+        placeholder={t('Add description …')}
         label={t('Description')}
         value={d.description}
         onchange={(text) => app.create.update({ description: text })}
@@ -117,17 +116,20 @@
         {:else}<span class="icon">{@html ICON.label}</span>{t('Labels')}{/if}
       </button>
       <button class={['chip', !project && 'unset']} data-testid="create-project" onclick={(e) => pick('project', e)}><span class="icon">{@html ICON.projects}</span><span class="chip-text">{project?.name ?? t('Project')}</span></button>
+      <button class={['chip', !sprint && 'unset']} data-testid="create-sprint" onclick={(e) => pick('sprint', e)}><span class="icon">{@html ICON.sprint}</span>{sprint?.name ?? t('Sprint')}</button>
       <button class={['chip', d.estimate === null && 'unset']} data-testid="create-estimate" onclick={(e) => pick('estimate', e)}><span class="icon">{@html ICON.estimate}</span>{d.estimate ?? t('Estimate')}</button>
       <button class={['chip', !d.dueDate && 'unset']} data-testid="create-due" onclick={(e) => pick('due', e)}><span class="icon">{@html ICON.calendar}</span>{d.dueDate ? dayLabel(d.dueDate) : t('Due date')}</button>
-      <button class={['chip', !sprint && 'unset']} data-testid="create-sprint" onclick={(e) => pick('sprint', e)}><span class="icon">{@html ICON.sprint}</span>{sprint?.name ?? t('Sprint')}</button>
       <button class={['chip', model?.source !== 'issue' && 'unset']} data-testid="create-model" title={model && model.source !== 'issue' ? t('Inherited') : undefined} onclick={(e) => pick('model', e)}><span class={['icon mi', logoClass(model ? modelInfo(meta, model.choice)?.logo : null)]}></span><span class="chip-text">{model ? modelLabel(meta, model.choice) : t('Model')}</span></button>
       <button class={['chip', !parent && 'unset']} data-testid="create-parent" onclick={(e) => pick('parent', e)}><span class="icon">{@html ICON.parent}</span><span class="chip-text">{parent ? parent.key : t('Parent')}</span></button>
     </div>
     <div class="create-foot">
       <ImageButton field={() => descField} target={{ create: true }} />
-      <button class="btn small ghost" data-testid="create-discard" data-sound="destructive" title={t('Discard content (undo in the toast)')} onclick={() => app.create.discard()}>{t('Discard')}</button>
       {#if s.error}<span class="error" data-testid="create-error">{s.error}</span>{/if}
       <span class="bar-spacer"></span>
+      <!-- The one exit that loses text: only while there is text, and away from "Image". -->
+      {#if d.title.trim() || d.description.trim()}
+        <button class="btn small ghost" data-testid="create-discard" data-sound="destructive" title={t('Discard content (undo in the toast)')} onclick={() => app.create.discard()}>{t('Discard draft')}</button>
+      {/if}
       <button class="create-more" data-testid="create-more" onclick={() => app.create.toggleCreateMore()} title={`${t('Create more')} · ${formatShortcut('mod+shift+enter')}`}>
         <span class={['toggle', s.createMore && 'on']}></span>{t('Create more')}
       </button>

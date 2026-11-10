@@ -169,7 +169,9 @@ test('Create: × closes and keeps the draft (like Esc)', async ({ page }) => {
 test('Create: Discard in the footer, undo restores the dialog with its content; empty without a toast', async ({ page }) => {
   await open(page, '/all');
   await page.keyboard.press('c');
-  await page.getByTestId('create-discard').click();
+  // Nothing typed: nothing to discard, Esc closes without a toast.
+  await expect(page.getByTestId('create-discard')).toHaveCount(0);
+  await page.keyboard.press('Escape');
   await expect(page.getByTestId('create-dialog')).toHaveCount(0);
   await expect(page.getByTestId('toast')).toHaveCount(0);
 

@@ -83,13 +83,6 @@
 
 {#if e.editing}
   <div class="desc edit" data-testid="desc-editor-wrap" {@attach editorFocus}>
-    {#if e.conflict}
-      <div class="desc-conflict" data-testid="desc-conflict" role="alert">
-        <span class="grow">{t('{actor} just changed the description while you were typing. Your text is not lost.', { actor: e.conflict.by })}</span>
-        <button class="btn small" data-testid="desc-keep-mine" onclick={() => app.detail.keepMine()}>{t('Keep mine')}</button>
-        <button class="btn small ghost" data-testid="desc-take-theirs" onclick={() => app.detail.takeTheirs()}>{t('Take theirs')}</button>
-      </div>
-    {/if}
     <TextEditor
       class="desc-editor"
       testid="desc-editor"
@@ -106,12 +99,20 @@
       {focusAt}
       bind:field
     />
+    <!-- Below the text: a notice above it would move the line being typed. -->
+    {#if e.conflict}
+      <div class="desc-conflict" data-testid="desc-conflict" role="alert">
+        <span class="grow">{t('{actor} just changed the description while you were typing. Your text is not lost.', { actor: e.conflict.by })}</span>
+        <button class="btn small" data-testid="desc-keep-mine" onclick={() => app.detail.keepMine()}>{t('Keep mine')}</button>
+        <button class="btn small ghost" data-testid="desc-take-theirs" onclick={() => app.detail.takeTheirs()}>{t('Take theirs')}</button>
+      </div>
+    {/if}
     <div class="desc-tools">
       <ImageButton field={() => field} target={{ issueId: d.id }} />
       <span data-testid="desc-state">{e.conflict ? t('Not saved') : e.saving ? t('Saving …') : e.dirty ? t('Unsaved') : t('Saved automatically')}</span>
       <span class="bar-spacer"></span>
-      <span class="desc-hint">{t('"/" blocks · Ctrl B / I / K · images with Ctrl V · Esc done')}</span>
-      <button class="btn small" data-testid="desc-done" onclick={finish}>{tc('button', 'Done')}</button>
+      <span class="desc-hint">{t('"/" for blocks')}</span>
+      <button class="btn small" data-testid="desc-done" title={`${tc('button', 'Done')} · Esc`} onclick={finish}>{tc('button', 'Done')}</button>
     </div>
   </div>
 {:else}

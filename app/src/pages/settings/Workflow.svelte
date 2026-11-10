@@ -238,7 +238,7 @@
     border-radius: 4px;
   }
   .state-color:hover {
-    background: var(--bg-hover);
+    background: var(--bg-control);
   }
   .color-row {
     gap: 6px;

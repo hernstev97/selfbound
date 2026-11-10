@@ -379,7 +379,7 @@ export default {
   'Theme not saved': 'Theme nicht gespeichert',
   'VS Code theme (JSON)': 'VS-Code-Theme (JSON)',
   'My theme': 'Mein Theme',
-  'Choose file…': 'Datei wählen…',
+  'Choose file …': 'Datei wählen …',
   'In a theme package, the JSON is usually under': 'Die JSON steht im Theme-Paket meist unter',
   'From VS Code: "Developer: Generate Color Theme From Current Settings".': 'Aus VS Code: „Developer: Generate Color Theme From Current Settings“.',
   'Dark theme': 'Dunkles Theme',
@@ -474,7 +474,7 @@ export default {
   'Limit for {priority}': 'Grenze für {priority}',
   // settings/General.svelte
   'Automatic (browser language)': 'Automatisch (Sprache des Browsers)',
-  'Settings for this device. They take effect right away, without reloading. Color scheme, themes and fonts are under': 'Einstellungen für dieses Gerät. Wirken sofort, ohne Neuladen. Farbschema, Themes und Schriften stehen unter',
+  'Language, sidebar and sounds apply to this device. The time zone applies to the whole instance. Color scheme, themes and fonts are under': 'Sprache, Seitenleiste und Töne gelten für dieses Gerät. Die Zeitzone gilt für die ganze Instanz. Farbschema, Themes und Schriften stehen unter',
   Language: 'Sprache',
   'Applies to this device. The page reloads after a change.': 'Gilt für dieses Gerät. Nach einer Änderung lädt die Seite neu.',
   'Time zone': 'Zeitzone',
@@ -498,7 +498,7 @@ export default {
   'Sign out': 'Abmelden',
   // OAuthConsent.svelte
   'Unknown error. Please reload the page.': 'Unbekannter Fehler. Bitte die Seite neu laden.',
-  'The address has no request.': 'In der Adresse fehlt die Anfrage.',
+  'This link is incomplete. Start the connection again in Claude or ChatGPT.': 'Dieser Link ist unvollständig. Starte die Verbindung in Claude oder ChatGPT neu.',
   'No access': 'Kein Zugriff',
   'Continuing to {host} …': 'Weiter zu {host} …',
   'Unknown request': 'Anfrage unbekannt',
@@ -566,7 +566,6 @@ export default {
   Display: 'Anzeige',
   'Filter by title or identifier …': 'Titel oder Kennung filtern …',
   'Remove filter': 'Filter entfernen',
-  'Reset filters': 'Filter zurücksetzen',
   // ProjectsPage.svelte
   '{team} has no projects yet. Create projects in the settings.': '{team} hat noch keine Projekte. Projekte legst du in den Einstellungen an.',
   'This team has no projects yet. Create projects in the settings.': 'Dieses Team hat noch keine Projekte. Projekte legst du in den Einstellungen an.',
@@ -835,7 +834,7 @@ export default {
     'Die Projekte sind die Etappen der Roadmap, in ihrer Reihenfolge. Die Labels einer Gruppe sind ihre Kategorien. Nur öffentlich markierte Issues erscheinen im Bild-Export.',
   'Shows "Roadmap" in the sidebar with the release view and the progress tracker.': 'Zeigt „Roadmap“ in der Seitenleiste, mit Etappen-Ansicht und Fortschritt.',
   'A label group; an exclusive group works best (one category per issue).': 'Eine Label-Gruppe; am besten eine mit Einzelauswahl (eine Kategorie je Issue).',
-  '{name} (workspace)': '{name} (Workspace)',
+  '{name} (workspace)': '{name} (Arbeitsbereich)',
   'one per issue': 'eines je Issue',
   'Order of the categories': 'Reihenfolge der Kategorien',
   'The group has no labels yet. Add them under Settings → Labels.': 'Die Gruppe hat noch keine Labels. Lege sie unter Einstellungen → Labels an.',

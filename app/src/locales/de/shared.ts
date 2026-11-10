@@ -30,7 +30,7 @@ export default {
   'In the morning of the chosen day a snoozed issue returns to the inbox.':
     'Am gewählten Tag kommt ein zurückgestelltes Issue morgens zurück in den Eingang.',
   // backend/convex/shared/roadmap.ts: STAGE_LABEL (Done and Planned exist already)
-  Testing: 'Auf Test',
+  Testing: 'Im Test',
   'In progress': 'In Arbeit',
   Tentative: 'Vorläufig',
   'Not shown': 'Nicht zeigen',

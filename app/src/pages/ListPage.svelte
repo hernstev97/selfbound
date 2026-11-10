@@ -118,7 +118,7 @@
       </span>
     {/each}
     {#if h.chips.length}
-      <button class="chip-link" onclick={() => app.main.clearFilters()}>{t('Reset filters')}</button>
+      <button class="chip-link" onclick={() => app.main.clearFilters()}>{t('Clear filters')}</button>
     {/if}
   </div>
 {/if}
