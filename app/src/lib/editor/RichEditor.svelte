@@ -61,8 +61,6 @@
 
   const n = schema.nodes;
   let view: EditorView | null = null;
-  /** Set while the editor is being removed (plain variable, not state). */
-  let closing = false;
   let source: Source | null = null;
   // Read the Svelte prop once: the editor takes over from here (value is watched below).
   // svelte-ignore state_referenced_locally
@@ -635,11 +633,13 @@
           blur: () => {
             flush();
             onblur?.();
-            // Removing the editor blurs it: its menus are gone with it, and state must not change during teardown.
-            if (closing) return false;
-            tableMenu = null;
-            kindMenu = null;
-            queueMicrotask(syncTable);
+            // Not in this tick: removing the editor blurs it while Svelte updates the page, and state
+            // may not change there (`state_unsafe_mutation`).
+            queueMicrotask(() => {
+              tableMenu = null;
+              kindMenu = null;
+              syncTable();
+            });
             return false;
           },
           focus: () => {
@@ -677,7 +677,6 @@
       editor.focus();
     }
     return () => {
-      closing = true;
       flush();
       onready?.(null);
       editor.destroy();
