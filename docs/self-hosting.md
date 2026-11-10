@@ -18,6 +18,25 @@ loads a small set of sample data and starts the app at `http://127.0.0.1:5412`. 
 `pnpm dev --seed large` loads more data and `--reset` reseeds; all options are listed at the top of
 `tooling/local.mjs`.
 
+## Quick path: the setup script
+
+After creating the accounts and keys in the Clerk, Convex and Vercel dashboards, one script does the rest:
+
+```sh
+node tooling/setup.mjs --dry-run   # shows what it would change, changes nothing
+node tooling/setup.mjs
+```
+
+It asks for the deployment name, app address, Clerk publishable key and Vercel project, writes
+`deploy/instance.json`, stores the deploy key (mode 600), sets `CLERK_JWT_ISSUER_DOMAIN` (read from the
+publishable key), `SELFBOUND_DEV_JWKS=none` and `SELFBOUND_APP_URL`, makes the first user of your Clerk
+instance the owner (`SELFBOUND_OWNER_IDS`, via one request with the Clerk secret key, which it does not
+store; or you type the user id), deploys the backend and the web app and optionally sets up push. It is safe
+to run again: each step reads the current state and changes only what differs, and a different existing
+value is only replaced after you agree. `--yes` asks nothing, `--only env,owner` runs some steps. Step by
+step for a fresh account: [Set up with the script](https://docs.selfbound.kiumu.app/start/self-hosting/setup-script/).
+The sections below describe the same setup by hand.
+
 ## What you need
 
 - Node.js 24 and pnpm (version in `package.json` → `packageManager`; `corepack enable` provides it).
