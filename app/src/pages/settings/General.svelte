@@ -39,7 +39,7 @@
 </script>
 
 <h1 class="page-title">{t('General')}</h1>
-<p class="page-lead">{t('Settings for this device. They take effect right away, without reloading. Color scheme, themes and fonts are under')} <a class="link" href="/settings/appearance" onclick={(e) => { e.preventDefault(); app.nav.go({ name: 'settings', section: 'appearance' }); }}>{t('Appearance')}</a>.</p>
+<p class="page-lead">{t('Language, sidebar and sounds apply to this device. The time zone applies to the whole instance. Color scheme, themes and fonts are under')} <a class="link" href="/settings/appearance" onclick={(e) => { e.preventDefault(); app.nav.go({ name: 'settings', section: 'appearance' }); }}>{t('Appearance')}</a>.</p>
 <h2 class="section-title">{t('Language')}</h2>
 <div class="card-list">
   <div class="card-row">

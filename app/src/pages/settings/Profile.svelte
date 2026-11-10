@@ -99,6 +99,7 @@
 
 <style>
   .who {
+    flex: 1;
     display: flex;
     align-items: center;
     gap: 14px;

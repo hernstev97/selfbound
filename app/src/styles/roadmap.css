@@ -54,10 +54,9 @@
 .rm-filters {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 10px 16px;
-  overflow-x: auto;
-  scrollbar-width: none;
   flex-shrink: 0;
 }
 .rm-chip {
@@ -93,6 +92,10 @@
   height: 18px;
   background: var(--line);
   margin: 0 4px;
+}
+/* Export options: as wide as their choices, not stretched to the column. */
+.rx-seg {
+  align-self: flex-start;
 }
 .rm-filter-note {
   font-size: var(--fs-small);
@@ -250,6 +253,13 @@
   padding: 6px 8px 10px;
   overflow-y: auto;
   min-height: 0;
+}
+.rm-card-wait {
+  height: 120px;
+  margin: 8px 0;
+  gap: 12px;
+  justify-content: center;
+  pointer-events: none;
 }
 .rm-col-empty {
   margin: 12px 8px;
@@ -657,6 +667,11 @@
   color: oklch(0.99 0 0);
   white-space: nowrap;
   text-shadow: 0 1px 1px oklch(0 0 0 / 0.25);
+}
+/* The bar is mixed with the light panel there: white on it had 2.1 : 1. */
+[data-theme='light'] .pg-bar:not(.done) .pg-bar-label {
+  color: oklch(0.25 0.04 var(--hue));
+  text-shadow: none;
 }
 .pg-plan {
   position: absolute;
