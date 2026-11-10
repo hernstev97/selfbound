@@ -45,7 +45,12 @@
   const idWidth = $derived(keyColumnWidth(list.keySamples, `${prefsSlice.current.fontSize}:${fontEpoch}`));
   // Phone: only priority, status and due date (space); everything else never reaches the DOM.
   const MOBILE_PROPS = new Set(['priority', 'status', 'due']);
-  const shownProps = $derived(new Set(viewSlice.current.display.props.filter((p) => !mobileSlice.current || MOBILE_PROPS.has(p))));
+  // A property the list is grouped by stands in the group header, not again in every row.
+  const shownProps = $derived.by(() => {
+    const d = viewSlice.current.display;
+    const grouped = (p: string) => (p === d.grouping || p === d.subGrouping) && /^(team|project|sprint)$/.test(p);
+    return new Set(d.props.filter((p) => !grouped(p) && (!mobileSlice.current || MOBILE_PROPS.has(p))));
+  });
   // Column stages: width from the ResizeObserver, stage as an attribute on the list.
   // Last measured width of this list: the first render already has the right stage
   // (otherwise the browser computes style and layout of all rows twice on mount).
@@ -311,6 +316,10 @@
     style:--id-w="{idWidth}px"
     data-stage={stage}
     onscroll={handleScroll}
+    onmousedown={(e) => {
+      // Shift-click extends the row selection, not the browser's text selection.
+      if (e.shiftKey) e.preventDefault();
+    }}
     ondragover={onDragOver}
     ondragleave={(e) => {
       if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node)) dropAt = null;

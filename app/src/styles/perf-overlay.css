@@ -1,0 +1,16 @@
+/* Measurement overlay (PerfOverlay.svelte), loaded with its chunk. */
+.perf-overlay {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 80;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  font: 12px/1.6 var(--mono);
+  color: var(--status-review);
+}
+.perf-overlay.slow {
+  color: var(--danger-text);
+}

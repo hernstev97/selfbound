@@ -26,7 +26,8 @@ async function layout(page: Page) {
     // Gap title → first visible pill per row (narrow: right behind it)
     const gaps = rows
       .map((r) => {
-        const title = r.querySelector('[data-testid="row-title"]')!.getBoundingClientRect();
+        // The unread dot sits right after the title and belongs to it.
+        const title = (r.querySelector('[data-testid="row-unseen"]') ?? r.querySelector('[data-testid="row-title"]'))!.getBoundingClientRect();
         const box = r.querySelector('.row-cols')!.getBoundingClientRect();
         // Wrapped cells (second, clipped line) don't count; in the DOM from right to left.
         const shown = [...r.querySelectorAll('.row-cols .c')].filter((c) => {
