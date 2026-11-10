@@ -474,7 +474,7 @@ export default {
   'Limit for {priority}': 'Grenze für {priority}',
   // settings/General.svelte
   'Automatic (browser language)': 'Automatisch (Sprache des Browsers)',
-  'Settings for this device. They take effect right away, without reloading. Color scheme, themes and fonts are under': 'Einstellungen für dieses Gerät. Wirken sofort, ohne Neuladen. Farbschema, Themes und Schriften stehen unter',
+  'Language, sidebar and sounds apply to this device. The time zone applies to the whole instance. Color scheme, themes and fonts are under': 'Sprache, Seitenleiste und Töne gelten für dieses Gerät. Die Zeitzone gilt für die ganze Instanz. Farbschema, Themes und Schriften stehen unter',
   Language: 'Sprache',
   'Applies to this device. The page reloads after a change.': 'Gilt für dieses Gerät. Nach einer Änderung lädt die Seite neu.',
   'Time zone': 'Zeitzone',
@@ -498,7 +498,7 @@ export default {
   'Sign out': 'Abmelden',
   // OAuthConsent.svelte
   'Unknown error. Please reload the page.': 'Unbekannter Fehler. Bitte die Seite neu laden.',
-  'The address has no request.': 'In der Adresse fehlt die Anfrage.',
+  'This link is incomplete. Start the connection again in Claude or ChatGPT.': 'Dieser Link ist unvollständig. Starte die Verbindung in Claude oder ChatGPT neu.',
   'No access': 'Kein Zugriff',
   'Continuing to {host} …': 'Weiter zu {host} …',
   'Unknown request': 'Anfrage unbekannt',

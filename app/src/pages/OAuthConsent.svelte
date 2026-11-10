@@ -32,7 +32,7 @@
 
   $effect(() => {
     if (!requestId) {
-      loadError = t('The address has no request.');
+      loadError = t('This link is incomplete. Start the connection again in Claude or ChatGPT.');
       return;
     }
     const stop = client.onUpdate(

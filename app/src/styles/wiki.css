@@ -352,6 +352,9 @@
 .wiki-source-row .input.short {
   flex: 0 0 170px;
 }
+.wiki-revisions .section-title {
+  margin-top: 8px;
+}
 .wiki-revisions {
   margin: 0 0 20px;
   padding: 4px 12px 12px;

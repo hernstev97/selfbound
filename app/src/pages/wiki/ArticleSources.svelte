@@ -2,7 +2,7 @@
   // Sources of a knowledge page: list with URL or title, author, publication and access date, note.
   // Add, edit, move up/down, remove.
   import { ICON, today, type ArticleView, type SourceInput } from '@selfbound/core';
-  import { t } from '@selfbound/core/i18n';
+  import { intlLocale, t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';
 
   type Source = ArticleView['sources'][number];
@@ -51,7 +51,9 @@
     if (ok) editing = null;
   }
 
-  const meta = (s: Source) => [s.author, s.publishedAt, t('accessed {date}', { date: s.accessedAt })].filter(Boolean).join(' · ');
+  // Full days in the language's form ("Nov 10, 2026", "10.11.2026"); a year or month stays as typed.
+  const day = (text: string) => (/^\d{4}-\d\d-\d\d$/.test(text) ? new Date(`${text}T00:00`).toLocaleDateString(intlLocale(), { dateStyle: 'medium' }) : text);
+  const meta = (s: Source) => [s.author, s.publishedAt && day(s.publishedAt), s.accessedAt && t('accessed {date}', { date: day(s.accessedAt) })].filter(Boolean).join(' · ');
 </script>
 
 {#snippet editor()}

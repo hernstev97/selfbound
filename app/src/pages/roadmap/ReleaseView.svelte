@@ -55,10 +55,14 @@
         {#if col.description}<p class="rm-goal" title={col.readyWhen ? `${t('Ready when')}: ${col.readyWhen}` : undefined}>{col.description}</p>{/if}
       </header>
       <div class="rm-col-body">
-        {#if col.groups.length === 0}
+        {#if !ui.loaded}
+          <!-- Public titles, pictures and summaries are on their way: no cards that would change size. -->
+          <div class="rm-card rm-card-wait"><div class="skeleton-bar" style="width: 62%"></div><div class="skeleton-bar" style="width: 84%"></div></div>
+          <div class="rm-card rm-card-wait"><div class="skeleton-bar" style="width: 48%"></div><div class="skeleton-bar" style="width: 70%"></div></div>
+        {:else if col.groups.length === 0}
           <p class="rm-col-empty">{ui.filters.publicOnly || ui.filters.categories.length || ui.filters.stages.length ? t('Nothing here with these filters.') : t('No issues in this stage yet.')}</p>
         {/if}
-        {#each col.groups as g (g.key)}
+        {#each ui.loaded ? col.groups : [] as g (g.key)}
           {@const closed = collapsed.has(`${col.id}:${g.key}`)}
           <div class="rm-group" data-testid="roadmap-category" data-category={g.key}>
             <button class="rm-group-head" aria-expanded={!closed} data-testid="roadmap-category-toggle" onclick={() => app.roadmap.toggleCategory(col.id, g.key)}>

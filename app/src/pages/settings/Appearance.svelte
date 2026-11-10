@@ -135,7 +135,8 @@
 <ThemePicker mode="light" />
 
 <div class="section-head">
-  <h2 class="section-title">{t('Custom themes')}</h2>
+  <h2 class="section-title inline">{t('Custom themes')}</h2>
+  <span class="bar-spacer"></span>
   {#if editing === null}
     <button class="btn small" data-testid="theme-add" onclick={() => (editing = '')}><span class="icon">{@html ICON.plus}</span>{t('Add theme')}</button>
   {/if}
