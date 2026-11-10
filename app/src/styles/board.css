@@ -185,7 +185,11 @@
   flex: none;
 }
 .card-bottom .cell:hover {
-  background: var(--bg-hover);
+  background: var(--bg-control);
+}
+/* .card-bottom clips: keep the ring inside the cell */
+.card-bottom .cell:focus-visible {
+  outline-offset: -2px;
 }
 .card-bottom .pill {
   flex: none;

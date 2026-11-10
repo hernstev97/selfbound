@@ -3,6 +3,7 @@
   // image export) and its public card: a title and a short summary for players, and a cover image
   // picked from the images of the issue or uploaded. The texts save on leaving the field; the switch
   // goes through app.edit (undo, history). Shown when the team's roadmap is on or the issue is public.
+  import '../styles/forms.css';
   import { api } from '@selfbound/backend/api';
   import { ROADMAP_LIMITS } from '@selfbound/backend/shared/roadmap';
   import { ICON, type DetailState, type IssueId } from '@selfbound/core';

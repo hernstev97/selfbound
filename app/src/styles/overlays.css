@@ -145,6 +145,7 @@
 }
 .chip:hover {
   background: var(--bg-control-on);
+  transition-duration: 0s;
 }
 .chip.unset {
   color: var(--text-muted);
@@ -292,4 +293,134 @@
 }
 .team-dialog-field .muted {
   margin-left: 6px;
+}
+
+/* ---------------------------------------------------------------- Context menu, display options */
+
+.context-menu,
+.submenu {
+  position: fixed;
+  z-index: 56;
+  min-width: 210px;
+  max-width: 300px;
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  animation: drop var(--dur-2) var(--ease-out);
+  --icon-cut: var(--bg-popover);
+}
+.submenu {
+  min-width: 170px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+.menu-sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--border-popover);
+  opacity: 0.6;
+}
+.menu-head {
+  padding: 6px 8px 4px;
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  font-variant-numeric: tabular-nums;
+}
+
+.display-pop {
+  position: absolute;
+  top: 88px;
+  right: 12px;
+  width: 340px;
+  z-index: 45;
+  padding: 14px 0 6px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  animation: drop var(--dur-2) var(--ease-out);
+}
+.dp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 35px;
+  padding: 0 16px;
+  color: var(--text-muted);
+}
+.dp-sep {
+  height: 1px;
+  background: var(--border-popover);
+  opacity: 0.6;
+  margin: 10px 0;
+}
+.dp-props {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 16px 10px;
+}
+.dp-chip {
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  font-size: var(--fs-small);
+  color: var(--text-muted);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.dp-chip:hover {
+  color: var(--text);
+}
+.dp-chip:not(.on):hover {
+  background: var(--bg-control);
+}
+.dp-chip.on {
+  background: var(--bg-control-on);
+  color: var(--text-strong);
+  box-shadow: none;
+}
+.dp-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 12px 6px;
+}
+
+@media (max-width: 768px) {
+  .context-menu {
+    left: 12px !important;
+    right: 12px;
+    top: auto !important;
+    bottom: 12px;
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 24px;
+    padding: 8px;
+  }
+  .context-menu .menu-item {
+    height: 44px;
+    font-size: 16px;
+    border-radius: 9999px;
+    padding: 0 14px;
+  }
+  .submenu {
+    left: 12px !important;
+    right: 12px;
+    top: auto !important;
+    bottom: 12px;
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 24px;
+    padding: 8px;
+  }
+  .display-pop {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    top: 100px;
+  }
 }

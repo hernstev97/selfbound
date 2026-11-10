@@ -36,8 +36,7 @@ textarea.input {
 [data-theme='dark'] .input {
   color-scheme: dark;
 }
-.btn:disabled {
-  opacity: 0.45;
-  pointer-events: none;
+.input::placeholder {
+  color: var(--text-subtle);
 }
 
