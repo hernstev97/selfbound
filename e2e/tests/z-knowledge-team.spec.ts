@@ -14,7 +14,7 @@ test('"Knowledge only" in the dialog: the card shows the wiki instead of numbers
   await expect(page).toHaveURL(/\/team\/POLI\/wiki$/);
   await expect(page.getByTestId('wiki-page')).toBeVisible();
   const nav = page.getByTestId('current-team-nav').locator('.nav-item');
-  await expect(nav).toHaveText(['Knowledge', 'Settings']);
+  await expect(nav).toHaveText(['Knowledge', 'Team settings']);
   await expect(page.locator('.team-card.current [data-testid="team-stats"]')).toHaveText('Knowledge');
   expect((await backend().query(api.meta.get, {})).teams.find((t) => t.key === 'POLI')?.wiki).toBe('only');
 

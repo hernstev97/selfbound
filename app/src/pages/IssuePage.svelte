@@ -81,7 +81,7 @@
         <button class="icon-btn plain" title={tip(d.unread ? t('Mark as read') : t('Mark as unread'), d.unread ? 'inbox.read' : 'inbox.unread')} aria-label={d.unread ? t('Mark as read') : t('Mark as unread')} data-testid="split-read" onclick={() => app.edit.markRead([d!.id], d!.unread, { undo: true })}><span class="icon">{@html ICON.eye}</span></button>
         <button class="btn ghost small" title={tip(t('Remove only the entry; the issue stays'), 'inbox.remove')} data-testid="split-remove" onclick={() => app.edit.removeFromInbox([d!.id])}><span class="icon">{@html ICON.check}</span><span class="btn-label">{t('Remove')}</span></button>
       {/if}
-      <button class="icon-btn plain" title={tip(t('Open as a page'), 'issue.open')} aria-label={t('Open as a page')} data-testid="split-open" onclick={() => app.openIssue(d!.id)}><span class="icon">{@html ICON.open}</span></button>
+      <button class="icon-btn plain" title={tip(t('Open as a page'), 'issue.open')} aria-label={t('Open as a page')} data-testid="split-open" onclick={() => app.openIssue(d!.id)}><span class="icon">{@html ICON.expand}</span></button>
     {/if}
     <button class="icon-btn plain" title={tip(t('Copy ID'), 'issue.copyKey')} aria-label={t('Copy ID')} data-testid="copy-key" onclick={() => app.edit.copyKeys([d!.id])}><span class="icon">{@html ICON.copy}</span></button>
     <button class="icon-btn plain" title={tip(t('Copy link'), 'issue.copyLink')} aria-label={t('Copy link')} data-testid="copy-link" onclick={() => app.edit.copyLink(d!.id)}><span class="icon">{@html ICON.link}</span></button>

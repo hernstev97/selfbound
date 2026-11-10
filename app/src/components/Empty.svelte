@@ -12,7 +12,7 @@
   const metaSlice = fromSlice(app.store.meta);
   const def = $derived(VIEWS[viewSlice.current.route.kind]);
   const noSprint = $derived(def.kind === 'sprint' && !metaSlice.current?.sprints.some((s) => s.state === 'active'));
-  const canCreate = $derived(!['inbox', 'trash', 'close', 'plan', 'planned'].includes(def.kind));
+  const canCreate = $derived(!['inbox', 'trash', 'close', 'plan', 'planned', 'snoozed'].includes(def.kind));
 </script>
 
 <div class="empty" data-testid="empty-state">

@@ -269,7 +269,7 @@ export default {
   'Current team: {name}': 'Aktuelles Team: {name}',
   Backlog: 'Backlog',
   Projects: 'Projekte',
-  'Team settings': 'Einstellungen des Teams',
+  'Team settings': 'Team-Einstellungen',
   Settings: 'Einstellungen',
   Teams: 'Teams',
   Inactive: 'Inaktiv',

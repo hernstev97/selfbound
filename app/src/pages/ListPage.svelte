@@ -38,7 +38,7 @@
 {:else}
   <!-- Split view (wide inbox, or opened with ⇧ space): list on the left, issue on the right. The
        wrapper is always there, so opening and closing it does not rebuild the list. -->
-  <SplitView active={split} inbox={h.kind === 'inbox'}>{@render listContent()}</SplitView>
+  <SplitView active={split && !(h.kind === 'inbox' && h.count === 0)} inbox={h.kind === 'inbox'}>{@render listContent()}</SplitView>
 {/if}
 
 {#snippet listContent()}

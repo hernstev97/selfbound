@@ -33,8 +33,8 @@ test('Enable, create a page, write title and text; still there after a reload', 
   await page.goto('/team/ORB/wiki');
   if (!enabled) await page.getByTestId('wiki-enable').click();
   await expect(page.getByTestId('nav-team-ORB-wiki')).toBeVisible();
-  // The wiki item comes before "Settings", which is last.
-  await expect(page.getByTestId('current-team-nav').locator('.nav-item').last()).toContainText('Settings');
+  // The wiki item comes before "Team settings", which is last.
+  await expect(page.getByTestId('current-team-nav').locator('.nav-item').last()).toContainText('Team settings');
 
   await page.getByTestId('wiki-new').click();
   const title = page.getByTestId('article-title');

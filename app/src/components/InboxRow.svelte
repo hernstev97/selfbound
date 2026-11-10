@@ -35,7 +35,8 @@
         {#if r.unread}<span class="unseen-dot" data-testid="inbox-unread" title={t('Unread')}></span>{/if}
         <span class="key">{r.key}</span><span class="t" data-testid="row-title">{r.title}</span>
       </span>
-      <span class="inbox-l2">{r.inboxText} · {r.team.name}</span>
+      <!-- The team is on the avatar and in the identifier. -->
+      <span class="inbox-l2">{r.inboxText}</span>
     </span>
     <span class="inbox-meta"><span class="icon">{@html statusIcon(r.status, r.statusColor)}</span><span>{r.age}</span></span>
     <!-- Removes only the entry; the issue stays as it is. -->

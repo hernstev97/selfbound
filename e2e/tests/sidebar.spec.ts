@@ -236,7 +236,7 @@ test('Nothing moves in the sidebar while loading (the first frames belong to the
 test('Settings on the current team: last navigation item, opens the settings of exactly this team', async ({ page }) => {
   await open(page);
   const items = await page.getByTestId('current-team-nav').locator('.nav-item .label').allTextContents();
-  expect(items.at(-1)).toBe('Settings');
+  expect(items.at(-1)).toBe('Team settings');
   await page.getByTestId('nav-team-ORB-settings').click();
   await expect(page).toHaveURL(/\/settings\/teams\/ORB$/);
   await expect(page.getByTestId('team-detail')).toBeVisible();
