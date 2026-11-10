@@ -80,6 +80,35 @@ Every PR that touches list rows, the store, startup, the start bundle, the keybo
 label `tempo`. The start bundle is 137.3 kB brotli on main (`node tooling/bundle-size.mjs`) and must not
 grow, so rules added to `app.css` are paid for by moving rules that only lazy pages use out of it.
 
+## Pull requests and the owner's answers
+
+State on 2026-11-10, in the evening. The plan above was written before the work; this is what came of it.
+Not every finding of a theme is in its pull request, each PR text lists what it fixes and what it leaves.
+
+| PR | Theme | Base |
+|---|---|---|
+| #68 | Shared styles: states, contrast, motion (A) | main |
+| #69 | List rows, group headers, view bar (B) | main |
+| #70 | Menus, pickers, help, key names (D) | #68 |
+| #71 | Issue page, peek, create dialog (C) | main |
+| #72 | Phone and narrow windows (G) | main |
+| #73 | Inbox, triage, sprint, sidebar (E) | #70 |
+| #74 | Knowledge, roadmap, settings (F) | main |
+| #75 | Texts in English and German (H) | main |
+| #76 | Approved: arrow keys in the knowledge tree (F5), Enter in a new page title (F8) | main |
+| #77 | Approved: Esc saves a comment edit (C3), no "Save as draft" (C1), no empty "Sub-issues" section (C10) | #71 |
+| #78 | Approved: R for a comment (C4), Shift F clears filters (D14), Esc leaves the settings (F4), picker starts on a real value (D23), first J in the inbox (E2), hint for two-key sequences (D11), key row in triage (E19) | #73 |
+| #79 | Approved: context menu submenus (D19), limit text only when reached (B6) | #78 |
+
+Merge order: #68, #70, #73, #78, #79 as one stack and #71, #77 as another. #69, #72, #74, #75 and #76
+stand alone. The stacks exist because their PRs touch the same files and share the room in the start bundle.
+
+The owner said yes to the fourteen changes in #76 to #79 and no to two: the picker opening at the property
+on the issue page (D22) and a width limit for list rows in wide windows (B20).
+
+Not asked, because one round has room for four questions, and therefore not built: E6, D12, D13, D14
+(Enter on a typed filter value), B2, B17, B18, B19, C18, F9, F14, F17 and F18.
+
 ---
 
 ## A. Shared styles
