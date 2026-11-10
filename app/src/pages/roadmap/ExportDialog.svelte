@@ -2,6 +2,7 @@
   // Image export of the roadmap (SELF-113): a PNG of the release view or the progress tracker with
   // public issues only, to share on Discord. The preview IS the file (rendered and encoded on every
   // change), so what is downloaded or copied is exactly what was looked at. Options are remembered.
+  import '../../styles/forms.css';
   import { ICON } from '@selfbound/core';
   import type { ExportData } from '@selfbound/core/app/roadmap';
   import { intlLocale, t, tn } from '@selfbound/core/i18n';

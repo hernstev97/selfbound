@@ -149,9 +149,10 @@
     flex-direction: column;
     max-height: 300px;
     padding: 4px;
-    border-radius: 10px;
+    border-radius: var(--radius-lg);
     background: var(--bg-popover);
     box-shadow: var(--shadow-popover);
+    animation: drop var(--dur-2) var(--ease-out);
     font-family: var(--font);
     font-size: var(--fs-small);
     white-space: normal;

@@ -294,6 +294,9 @@
   font-size: var(--fs-small);
   color: var(--text);
 }
+.pr-notice a {
+  color: var(--accent-text);
+}
 .pr-notice.error {
   background: color-mix(in oklch, var(--danger) 10%, var(--bg-panel));
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--danger) 35%, transparent);
@@ -618,8 +621,7 @@
 }
 .img-viewer-nav {
   position: absolute;
-  top: 50%;
-  translate: 0 -50%;
+  top: calc(50% - 20px);
   display: grid;
   place-items: center;
   width: 40px;
@@ -654,7 +656,6 @@
   .img-viewer-nav {
     top: auto;
     bottom: 18px;
-    translate: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -713,7 +714,7 @@ button.pulls-head {
   background: var(--tint);
 }
 .pulls-head-note {
-  color: var(--text-faint);
+  color: var(--text-subtle);
   font-size: var(--fs-mini);
   font-weight: 450;
 }
@@ -753,7 +754,7 @@ button.pulls-head {
   color: var(--text);
 }
 .pull-owner {
-  color: var(--text-faint);
+  color: var(--text-subtle);
 }
 .pull-title {
   grid-area: title;

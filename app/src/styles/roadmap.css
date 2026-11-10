@@ -691,6 +691,7 @@
   border: 1px solid var(--border-popover);
   box-shadow: var(--shadow-popover);
   outline: none;
+  animation: pop var(--dur-3) var(--ease-out);
 }
 .rx-head {
   display: flex;

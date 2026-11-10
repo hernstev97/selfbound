@@ -1,6 +1,7 @@
 <script lang="ts">
   // Sources of a knowledge page: list with URL or title, author, publication and access date, note.
   // Add, edit, move up/down, remove.
+  import '../../styles/forms.css';
   import { ICON, today, type ArticleView, type SourceInput } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
   import { app } from '../../app-instance.ts';

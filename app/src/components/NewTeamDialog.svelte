@@ -2,6 +2,7 @@
   // Add team (sidebar "Teams" +, O N, command menu): name, key, optionally a logo.
   // The UI checks the key first (instant feedback); the server (teams.create) has the final say.
   // Afterwards the new team is the current team.
+  import '../styles/forms.css';
   import { untrack } from 'svelte';
   import { ICON, type TeamBadge } from '@selfbound/core';
   import { t } from '@selfbound/core/i18n';
