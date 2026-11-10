@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../styles/pages.css';
   import { ICON } from '@selfbound/core';
   import { t, tn } from '@selfbound/core/i18n';
   import { PROJECT_STATE_LABEL } from '@selfbound/core/app/admin';

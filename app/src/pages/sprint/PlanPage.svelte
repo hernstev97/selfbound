@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../../styles/pages.css';
   import '../../styles/sprint.css';
   // Sprint planning: on the left the ordered backlog across all active teams, on the right the sprint
   // with its point total against the capacity, goal and date range on top. Both columns are normal

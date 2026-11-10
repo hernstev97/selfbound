@@ -114,7 +114,7 @@ export default {
   // keyboard.ts
   Ctrl: 'Strg',
   Space: 'Leertaste',
-  Backspace: 'Entf',
+  Backspace: 'Rücktaste',
   Del: 'Entf',
   then: 'dann',
 
@@ -302,6 +302,9 @@ export default {
   'Enter moves, Esc goes back': 'Enter verschiebt, Esc geht zurück',
   'Label “{name}” not created': 'Label „{name}“ nicht angelegt',
   'Type a title or text': 'Titel oder Text eingeben',
+  'Searching descriptions and comments …': 'Suche in Beschreibungen und Kommentaren …',
+  'Type to search issues and knowledge pages': 'Tippen, um Issues und Wissensseiten zu suchen',
+  'Snooze needs a day after today': 'Zurückstellen braucht einen Tag nach heute',
   'Fixed order: {names} not allowed right now': 'Feste Reihenfolge: {names} gerade nicht erlaubt',
   '{group} · pick one': '{group} · nur eins',
   'Projects belong to one team: select issues of a single team': 'Projekte gehören zu einem Team: nur Issues eines Teams auswählen',

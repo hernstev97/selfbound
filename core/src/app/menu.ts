@@ -20,6 +20,8 @@ export class ContextMenuController {
   targets() {
     return this.#targets;
   }
+  /** True while `open` collects the entries, before the state is set. */
+  building = false;
 
   open(id: IssueId, x: number, y: number) {
     this.app.palette.close();
@@ -31,6 +33,8 @@ export class ContextMenuController {
       if (this.app.nav.page.get().name === 'view') list.focus(id);
     }
     const items: MenuItem[] = [];
+    // Actions that only make sense in this menu ask for it while it is being built.
+    this.building = true;
     const sorted = ACTIONS.filter((a) => a.context).sort((a, b) => a.context![0] - b.context![0] || a.context![1] - b.context![1]);
     for (const action of sorted) {
       if (action.when && !action.when(this.app)) continue;
@@ -44,6 +48,7 @@ export class ContextMenuController {
         section: String(action.context![0]),
       });
     }
+    this.building = false;
     const count = this.#targets.length;
     this.state.set({ x, y, items, active: -1, sub: null, targetLabel: count > 1 ? tn(count, '{count} issue', '{count} issues') : (this.app.store.get(id)?.key ?? '') });
   }
