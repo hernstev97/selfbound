@@ -3,12 +3,15 @@
 import { eventCombo, isEditable } from '../keyboard.ts';
 import { KEYMAP, startsSequence, type Action } from './actions.ts';
 import type { App } from './index.ts';
+import { Slice } from '../observable.ts';
 
 const SEQUENCE_MS = 1200;
 const HOLD_MS = 350;
 
 export class KeyController {
   #sequence: { key: string; at: number } | null = null;
+  /** First key of a two-key sequence that waits for its second ("g"); the UI shows what can follow. */
+  readonly pending = new Slice<string | null>(null);
   #spaceDown: number | null = null;
 
   constructor(private app: App) {}
@@ -103,6 +106,7 @@ export class KeyController {
         if (app.detail.peekOpen.get()) return app.detail.togglePeek();
         if (app.prSplit.get()) return app.prSplit.set(null);
         if (app.nav.page.get().name === 'issue' || app.nav.page.get().name === 'pr') return app.closeIssue();
+        if (app.nav.page.get().name === 'settings') return app.nav.toLastView();
         if (app.list.selectionCount.get() > 0) return app.list.clearSelection();
         if (app.list.view.get().quickOpen) return app.list.closeQuick();
       });
@@ -127,11 +131,17 @@ export class KeyController {
     if (this.#sequence && now - this.#sequence.at < SEQUENCE_MS) {
       const full = `${this.#sequence.key} ${combo}`;
       this.#sequence = null;
+      this.pending.set(null);
       const actions = KEYMAP.get(full);
       if (actions) return this.#runFirst(e, actions);
+      // No such sequence: the second key does nothing (it used to run as a shortcut of its own,
+      // so G then S opened the status picker). Esc just cancels.
+      return e.preventDefault();
     }
     if (!combo.includes('+') && startsSequence(combo)) {
       this.#sequence = { key: combo, at: now };
+      this.pending.set(combo);
+      setTimeout(() => this.#sequence?.at === now && (this.#sequence = null, this.pending.set(null)), SEQUENCE_MS);
       e.preventDefault();
       return;
     }

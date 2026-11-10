@@ -1,3 +1,34 @@
+<script lang="ts" module>
+  import { actionById, registerAction } from '@selfbound/core';
+  import { msg } from '@selfbound/core/i18n';
+
+  /** Cursor into the comment field, once it is on the page (the issue may still be opening). */
+  function focusComment(tries = 30) {
+    const field = document.querySelector<HTMLElement>('[data-testid="comment-input"]');
+    if (!field) return void (tries > 0 && requestAnimationFrame(() => focusComment(tries - 1)));
+    field.scrollIntoView({ block: 'nearest' });
+    field.focus();
+  }
+  // Part of this chunk, not of the start bundle: by the time R is useful (an issue is shown or
+  // focused) the chunk is there, it is preloaded right after startup.
+  if (!actionById('issue.comment')) {
+    registerAction({
+      id: 'issue.comment',
+      label: msg('Write comment'),
+      section: 'Issue',
+      keys: ['r'],
+      icon: 'comment',
+      keywords: 'comment reply kommentar antworten schreiben',
+      when: (a) => a.targets().length === 1 && a.store.get(a.targets()[0])?.deletedAt === undefined,
+      run: (a) => {
+        const shown = a.nav.page.get().name === 'issue' || a.detail.splitShown();
+        if (!shown) a.openIssue(a.targets()[0]);
+        focusComment();
+      },
+    });
+  }
+</script>
+
 <script lang="ts">
   import '../styles/detail.css';
   import '../styles/overlays.css';

@@ -556,6 +556,7 @@ export default {
   [ctx('verb', 'Search')]: 'Suchen',
   'Copy link to the view': 'Link zur Ansicht kopieren',
   issue: 'Issue',
+  'Write comment': 'Kommentar schreiben',
   issues: 'Issues',
   'Show as list': 'Als Liste zeigen',
   'Show as board': 'Als Board zeigen',

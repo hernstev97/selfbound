@@ -141,6 +141,8 @@ function togglePublic(a: App) {
 function step(a: App, delta: number) {
   a.cues.emit('tap');
   if (issuePage(a)) return a.detail.step(delta);
+  // Fresh inbox: the first row is focused but the right side is still empty. Show that entry first.
+  if (a.splitLayout() && !a.detail.splitShown() && a.list.autoFocused()) return a.detail.openSplit();
   a.list.moveFocus(delta);
   if (a.splitLayout()) a.detail.openSplit();
 }
@@ -194,7 +196,7 @@ export const ACTIONS: Action[] = [
 
   // Triage: 1 accept, 2 duplicate, 3 decline
   { id: 'triage.accept', label: msg('Accept …'), section: 'Triage', keys: ['1'], icon: 'check', keywords: 'accept triage annehmen', context: [0, 1], when: (a) => inTriage(a) && realTarget(a), run: picker('move') },
-  { id: 'triage.duplicate', label: msg('Mark as duplicate …'), section: 'Triage', keys: ['2'], icon: 'duplicate', keywords: 'duplicate triage duplikat', hidden: true, when: (a) => inTriage(a) && realTarget(a), run: (a) => a.palette.openRelation('duplicate') },
+  { id: 'triage.duplicate', label: msg('Mark as duplicate …'), section: 'Triage', keys: ['2'], icon: 'duplicate', keywords: 'duplicate triage duplikat', when: (a) => inTriage(a) && realTarget(a), run: (a) => a.palette.openRelation('duplicate') },
   {
     id: 'triage.decline',
     label: msg('Decline'),
@@ -339,7 +341,7 @@ export const ACTIONS: Action[] = [
   // View
   { id: 'quick.open', label: msg('Search in this view'), section: 'View', keys: ['mod+f'], icon: 'search', keywords: 'filter quick find schnell suchen', when: listPage, run: (a) => a.list.openQuick() },
   { id: 'filter.open', label: msg('Filter …'), section: 'View', keys: ['f'], icon: 'filter', top: true, keywords: 'filter', when: listPage, run: (a) => a.palette.open('filter') },
-  { id: 'filter.clear', label: msg('Clear filters'), section: 'View', icon: 'close', keywords: 'filter reset zurücksetzen', when: (a) => listPage(a) && (a.list.header.get().filterCount > 0 || a.list.view.get().quick !== ''), run: (a) => a.list.clearFilters() },
+  { id: 'filter.clear', label: msg('Clear filters'), section: 'View', keys: ['shift+f'], icon: 'close', keywords: 'filter reset zurücksetzen', when: (a) => listPage(a) && (a.list.header.get().filterCount > 0 || a.list.view.get().quick !== ''), run: (a) => a.list.clearFilters() },
   { id: 'display.open', label: msg('Display options …'), section: 'View', keys: ['shift+v'], icon: 'display', keywords: 'display grouping ordering view gruppierung sortierung ansicht', when: listPage, run: (a) => a.toggleDisplay() },
   { id: 'layout.toggle', label: msg('Toggle board / list'), section: 'View', keys: ['mod+b'], icon: 'board', keywords: 'board kanban list liste layout columns spalten', when: boardView, run: (a) => a.list.toggleLayout() },
   { id: 'board.columns', label: msg('Board columns: toggle status / priority'), section: 'View', icon: 'board', keywords: 'board kanban columns spalten priority priorität status', when: onBoard, run: (a) => a.list.setDisplay({ boardColumns: a.list.view.get().display.boardColumns === 'priority' ? undefined : 'priority' }) },

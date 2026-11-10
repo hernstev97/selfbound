@@ -1,7 +1,8 @@
 // Regression tests for QA findings (relations, undo, pickers, notices, actions).
-import { describe, expect, test } from 'vitest';
+import { beforeAll, describe, expect, test } from 'vitest';
 import { App } from '../src/app/index.ts';
 import { KEYMAP, actionById } from '../src/app/actions.ts';
+import { loadMoveLogic } from '../src/app/palette.ts';
 import { eventCombo } from '../src/keyboard.ts';
 import { Auth } from '../src/auth.ts';
 import { labelIdsFrom, labelParam, writeLocation } from '../src/route.ts';
@@ -601,6 +602,8 @@ describe('list, URL and focus', () => {
 });
 
 describe('move to team', () => {
+  // The move plan is a chunk of its own; loaded, the picker answers at once as before.
+  beforeAll(() => loadMoveLogic());
   const withTeamLabel = { ...meta, labels: [...meta.labels, { _id: 'l9', _creationTime: 0, name: 'Release', hue: 45, teamId: 't1' }] } as never;
 
   test('shortcut Ctrl Shift M, also in the command menu and in the context menu of selections', () => {
@@ -703,5 +706,47 @@ describe('range selection (checkbox Shift+click and drag)', () => {
     app.list.toggleSelect(order[0]);
     app.list.selectRange(order[1]);
     expect(sel(app)).toEqual([order[0], order[1], order[2], order[3]].sort());
+  });
+});
+
+describe('keyboard flow (SELF-116)', () => {
+  const key = (k: string, shiftKey = false) => ({ key: k, code: `Key${k.toUpperCase()}`, ctrlKey: false, metaKey: false, altKey: false, shiftKey, isComposing: false, repeat: false, timeStamp: 0, target: null, preventDefault: () => {}, stopPropagation: () => {} }) as unknown as KeyboardEvent;
+
+  test('a two-key sequence waits visibly, and a second key that completes nothing does nothing', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    app.keys.onKeyDown(key('g'));
+    expect(app.keys.pending.get()).toBe('g');
+    // G then S is no sequence: it must not open the status picker for the focused issue.
+    app.keys.onKeyDown(key('s'));
+    expect(app.keys.pending.get()).toBeNull();
+    expect(app.palette.state.get()).toBeNull();
+    // A real sequence runs and clears the state.
+    app.keys.onKeyDown(key('g'));
+    app.keys.onKeyDown(key('i'));
+    expect(app.keys.pending.get()).toBeNull();
+    expect(app.list.view.get().route.kind).toBe('inbox');
+  });
+
+  test('Shift F clears the filters, and the filter picker offers the same', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    app.list.toggleFilter('priority', 2);
+    expect(app.list.header.get().filterCount).toBe(1);
+    app.palette.open('filter');
+    expect(app.palette.state.get()!.items.at(-1)!.id).toBe('ff:clear');
+    app.palette.close();
+    app.keys.onKeyDown(key('F', true));
+    expect(app.list.header.get().filterCount).toBe(0);
+    app.palette.open('filter');
+    expect(app.palette.state.get()!.items.some((i) => i.id === 'ff:clear')).toBe(false);
+  });
+
+  test('a picker without a value starts on the first real one, not on "none"', async () => {
+    const { app } = await setup();
+    app.nav.goView({ kind: 'all', team: null }, { group: 'none' });
+    app.palette.open('due', { target: { kind: 'issues', ids: ids('i0') } });
+    const s = app.palette.state.get()!;
+    expect(s.items[s.active].id).toBe('d:heute');
   });
 });
