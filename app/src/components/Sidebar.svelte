@@ -153,9 +153,8 @@
     <Lazy load={pages.settingsNav} quiet />
   {:else}
   <div class="ws-head">
-    <button class="ws-name" onclick={() => app.palette.open('command')} title="Selfbound">
+    <button class="ws-name" onclick={() => app.palette.open('command')} title={tip(t('Command menu'), 'palette.open')}>
       <Logo kind="lockup" height={15} />
-      <span class="icon mi ui-chevronDown" style="color: var(--text-muted); width: 12px"></span>
     </button>
     <span class="spacer"></span>
     <button class="ws-search" title={tip(t('Search'), 'search.open')} aria-label={t('Search')} onclick={() => app.palette.open('search')} data-testid="nav-search">
@@ -234,7 +233,7 @@
           </a>
         {/if}
         <a class="nav-item" href={pagePath(tp.settings)} onclick={(e) => go(e, tp.settings)} data-flip="nav:{team.key}:settings" data-testid="nav-team-{team.key}-settings" title={tip(t('Team settings'), 'team.settings')}>
-          <span class="icon mi ui-settings"></span><span class="label">{t('Settings')}</span>
+          <span class="icon mi ui-settings"></span><span class="label">{t('Team settings')}</span>
         </a>
       </div>
       {/key}

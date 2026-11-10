@@ -88,7 +88,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 28px;
-  align-items: flex-end;
+  /* From the top: the progress cell is taller (bar below its value), its label sat 10 px above the others. */
+  align-items: flex-start;
 }
 .stat {
   display: flex;

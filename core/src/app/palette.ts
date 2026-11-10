@@ -855,7 +855,7 @@ export class PaletteController {
       const id = `mv:${g.key}`;
       items.push({ id, label: g.name, icon: statusIcon(g.status, g.color), keywords: stateKeywords(g), section: acceptAs });
       run.set(id, () => {
-        this.app.edit.setState(target.ids, (issue) => g.byTeam.get(issue.teamId) as StateId | undefined, { label: t('Accepted') });
+        this.app.edit.setState(target.ids, (issue) => g.byTeam.get(issue.teamId) as StateId | undefined, { label: t('Accepted'), done: (what) => t('{what} accepted as {status}', { what, status: g.name }) });
         this.app.edit.markRead(target.ids);
       });
     }

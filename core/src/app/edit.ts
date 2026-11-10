@@ -69,6 +69,14 @@ function entryIds(entry: UndoEntry): IssueId[] {
   return entry.kind === 'patch' || entry.kind === 'move' ? entry.items.map((i) => i.id) : entry.ids;
 }
 
+/** Options of a patch: undo label, no bulk toast, the issue is meant to leave the view, own toast text for "KEY" or "3 issues". */
+interface PatchOptions {
+  label?: string;
+  quiet?: boolean;
+  expected?: boolean;
+  done?: (what: string) => string;
+}
+
 export class Editor {
   #undo: UndoEntry[] = [];
   #redo: UndoEntry[] = [];
@@ -125,7 +133,7 @@ export class Editor {
    * Same patch for several issues. Only issues where something changes.
    * Bulk changes show a toast with "Undo"; single changes do not.
    */
-  patch(ids: IssueId[], patch: IssuePatch, opts: { label?: string; quiet?: boolean; expected?: boolean } = {}) {
+  patch(ids: IssueId[], patch: IssuePatch, opts: PatchOptions = {}) {
     this.patchEach(
       ids.map((id) => ({ id, patch })),
       opts,
@@ -136,7 +144,7 @@ export class Editor {
    * Set status: `pick` returns the status of each issue's team (for a selection across teams,
    * e.g. by the same name). Issues without a matching status stay as they are.
    */
-  setState(ids: IssueId[], pick: (issue: Issue) => StateId | undefined, opts: { label?: string; quiet?: boolean; expected?: boolean } = {}) {
+  setState(ids: IssueId[], pick: (issue: Issue) => StateId | undefined, opts: PatchOptions = {}) {
     const items: { id: IssueId; patch: IssuePatch }[] = [];
     for (const id of ids) {
       const issue = this.app.store.get(id);
@@ -166,7 +174,7 @@ export class Editor {
   }
 
   /** Own patch per issue (same fields), one undo step. */
-  patchEach(list: { id: IssueId; patch: IssuePatch }[], opts: { label?: string; quiet?: boolean; expected?: boolean } = {}) {
+  patchEach(list: { id: IssueId; patch: IssuePatch }[], opts: PatchOptions = {}) {
     const first = list[0]?.patch ?? {};
     const firstField = (Object.keys(first) as PatchField[])[0];
     const items: { id: IssueId; before: IssuePatch; after: IssuePatch }[] = [];
@@ -206,7 +214,9 @@ export class Editor {
     this.#doneCue(items);
     // `expected`: the issue is meant to leave the view (e.g. planned into the sprint), no toast.
     // Bulk change: its toast with "Undo" is enough, no second "no longer in this view".
-    const bulkToast = items.length > 1 && !opts.quiet;
+    // `done`: the action names its result itself ("ORB-12 declined") instead of "no longer in this view".
+    if (opts.done) this.#undoToast(entry, opts.done(this.#what(items.map((i) => i.id))));
+    const bulkToast = items.length > 1 && !opts.quiet && !opts.done;
     if (!opts.expected && !bulkToast) this.app.list.noteOwnChange(items.map((i) => i.id));
     this.#send(entry, false).catch(() => {});
     if (bulkToast) this.#undoToast(entry, tn(items.length, '{count} issue changed', '{count} issues changed'));

@@ -302,6 +302,8 @@ export default {
   'Enter moves, Esc goes back': 'Enter verschiebt, Esc geht zurück',
   'Label “{name}” not created': 'Label „{name}“ nicht angelegt',
   'Type a title or text': 'Titel oder Text eingeben',
+  '{what} declined': '{what} abgelehnt',
+  '{what} accepted as {status}': '{what} als {status} angenommen',
   'Searching descriptions and comments …': 'Suche in Beschreibungen und Kommentaren …',
   'Type to search issues and knowledge pages': 'Tippen, um Issues und Wissensseiten zu suchen',
   'Snooze needs a day after today': 'Zurückstellen braucht einen Tag nach heute',

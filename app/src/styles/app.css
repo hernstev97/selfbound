@@ -454,6 +454,17 @@ a {
   scrollbar-width: none;
 }
 
+/* More below: a fade at the lower edge of the scroll area (no scrollbar there). It is the last
+   24 px of the content, so at the end of the list it covers nothing. */
+.nav-scroll::after {
+  content: '';
+  display: block;
+  position: sticky;
+  bottom: 0;
+  height: 24px;
+  background: linear-gradient(transparent, var(--bg-app));
+  pointer-events: none;
+}
 .nav-item {
   display: flex;
   align-items: center;
@@ -1787,6 +1798,25 @@ button.crumb:hover {
   flex: none;
   opacity: 0;
   margin-right: -6px;
+}
+/* With a pointer the button takes the place of the status icon instead of a column of its own
+   that stays empty in every other row. Touch keeps the button in the row. */
+@media (hover: hover) {
+  .inbox-remove {
+    position: absolute;
+    top: 6px;
+    right: 16px;
+  }
+  .inbox-row:hover .inbox-meta > .icon,
+  .inbox-row.focused .inbox-meta > .icon {
+    visibility: hidden;
+  }
+}
+/* The unread dot sits at the row's edge, so identifiers of read and unread entries line up. */
+.inbox-l1 .unseen-dot {
+  position: absolute;
+  left: 4px;
+  top: calc(50% - 3.5px);
 }
 .inbox-row:hover .inbox-remove,
 .inbox-row.focused .inbox-remove,

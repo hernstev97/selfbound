@@ -206,7 +206,7 @@ export const ACTIONS: Action[] = [
     when: (a) => inTriage(a) && realTarget(a),
     run: (a) => {
       const ids = a.targets();
-      a.edit.patch(ids, { status: 'canceled' }, { label: t('Declined') });
+      a.edit.patch(ids, { status: 'canceled' }, { label: t('Declined'), done: (what) => t('{what} declined', { what }) });
       a.edit.markRead(ids);
     },
   },
