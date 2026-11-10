@@ -163,14 +163,15 @@
 
         <Description detail={d} />
 
-        <div class="section-title">
-          {t('Sub-issues')} {#if d.children.length}<span class="muted">{d.children.filter((c) => c.status === 'done').length}/{d.children.length}</span>{/if}
-          <span class="bar-spacer"></span>
-          {#if !d.deleted && !d.pending}
-            <button class="btn ghost small" data-testid="add-subissue" title={tip(t('Create sub-issue'), 'issue.subissue')} onclick={() => app.create.openSubIssue(d!.id)}><span class="icon">{@html ICON.plus}</span>{t('Create sub-issue')}</button>
-          {/if}
-        </div>
+        <!-- Only with sub-issues. Without any, Ctrl ⇧ O, the "…" menu and the command menu create the first one. -->
         {#if d.children.length}
+          <div class="section-title">
+            {t('Sub-issues')} <span class="muted">{d.children.filter((c) => c.status === 'done').length}/{d.children.length}</span>
+            <span class="bar-spacer"></span>
+            {#if !d.deleted && !d.pending}
+              <button class="icon-btn plain" data-testid="add-subissue" title={tip(t('Create sub-issue'), 'issue.subissue')} aria-label={t('Create sub-issue')} onclick={() => app.create.openSubIssue(d!.id)}><span class="icon">{@html ICON.plus}</span></button>
+            {/if}
+          </div>
           <div class="sub-list" data-testid="subissues">
             {#each d.children as child (child.id)}
               <a class="sub-row" href="/issue/{child.key}" onclick={(e) => follow(e, child.id)}>

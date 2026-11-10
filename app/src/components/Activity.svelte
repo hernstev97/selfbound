@@ -153,7 +153,9 @@
                 return true;
               }}
               onescape={() => {
-                editing = null;
+                // Esc saves, as in the description. "Cancel" is the way to discard.
+                if (editText !== (item.body ?? '')) saveEdit(item.id);
+                else editing = null;
                 return true;
               }}
               upload={{ issueId: d.id }}
@@ -162,6 +164,7 @@
             />
             <div class="comment-box-foot">
               <ImageButton field={() => editInput} target={{ issueId: d.id }} />
+              <span class="desc-hint">{t('Esc or Ctrl Enter saves')}</span>
               <button class="btn ghost small" onclick={() => (editing = null)}>{t('Cancel')}</button>
               <button class="btn small primary" onclick={() => saveEdit(item.id)}>{t('Save')}</button>
             </div>

@@ -163,9 +163,15 @@ test('Create a sub-issue from the detail view', async ({ page }) => {
   await open(page, '/team/KITE');
   await page.keyboard.press('Enter');
   const parentKey = (await page.getByTestId('detail-key').textContent())!;
-  await page.getByTestId('add-subissue').click();
+  // No section while the issue has no sub-issues: the first one comes from the shortcut.
+  await expect(page.getByTestId('add-subissue')).toHaveCount(0);
+  await page.keyboard.press('Control+Shift+O');
   await expect(page.getByTestId('create-dialog')).toContainText(`Sub-issue of ${parentKey}`);
   await page.keyboard.type('E2E subtask');
   await page.keyboard.press('Control+Enter');
   await expect(page.getByTestId('subissues')).toContainText('E2E subtask');
+  // With one, the section has a plus for the next.
+  await page.getByTestId('add-subissue').click();
+  await expect(page.getByTestId('create-dialog')).toContainText(`Sub-issue of ${parentKey}`);
+  await page.keyboard.press('Escape');
 });
