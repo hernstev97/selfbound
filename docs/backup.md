@@ -38,9 +38,11 @@ documents per table and the SHA-256 of the ZIP. It holds no content and is there
    The output shows a line `Public key: age1…`: that is the **public** key.
 2. Store the **private** key (the file) in two safe places, for example as a note in a password manager
    and on paper. Without it no backup can be opened.
-3. **Convex deploy key:** in the Convex dashboard create a separate production deploy key just for the
-   backup (not the one used for deploying from your machine). Convex has no read-only keys, which is why
-   the key lives only in a protected GitHub environment.
+3. **Convex deploy key:** in the Convex dashboard open the production deployment → Settings → General →
+   Deploy Keys → Create Deploy Key. Name it `github-backup`: a separate key just for the backup, not the one
+   used for deploying from your machine. The dialog lets you limit the allowed actions; tick only the
+   **Backups** group, no function or deploy permissions (this is the tested setup). The key can still
+   create and import backups, so it lives only in a protected GitHub environment.
 4. **GitHub environment:** in the repository, Settings → Environments → create `production` (restrict it
    to the default branch) and add the secrets:
    - `CONVEX_DEPLOY_KEY`: the deploy key from step 3
@@ -51,7 +53,9 @@ Run it once by hand (Actions → Backup → Run workflow) to check the setup.
 
 After every successful run the workflow reports to the backend through the internal function
 `opsStatus:recordBackup`; the ops page in the app (Settings → Ops) then shows time, size and document count
-of the last backup. If that report fails, the backup still counts.
+of the last backup. If that report fails, the backup still counts. With the limited key from step 3 it
+always fails with a warning (`runInternalMutations` is missing); the run stays green and the state is
+visible in Actions only. Add that permission to the key if you want the ops page to show the backup.
 
 ## Where the backups are
 
