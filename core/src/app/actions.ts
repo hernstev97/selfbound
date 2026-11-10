@@ -155,7 +155,7 @@ export const ACTIONS: Action[] = [
     section: 'Issue',
     icon: 'split',
     context: [3, 1.5],
-    when: (a) => a.menu.state.get() !== null && a.splitCapable() && !a.splitLayout() && hasTarget(a),
+    when: (a) => (a.menu.building || a.menu.state.get() !== null) && a.splitCapable() && !a.splitLayout() && hasTarget(a),
     run: (a) => {
       a.list.focus(a.targets()[0]);
       a.detail.openSplit();

@@ -128,7 +128,7 @@
             {#if item.submenu}<span class="icon arrow">{@html ICON.caretRight}</span>{/if}
           </button>
         {:else}
-          <div class="palette-empty" data-testid="palette-empty">{t('No results')}</div>
+          <div class="palette-empty" data-testid="palette-empty">{p.empty ?? t('No results')}</div>
         {/each}
       </div>
       {#if p.hint}<div class="palette-hint">{p.hint}</div>{/if}

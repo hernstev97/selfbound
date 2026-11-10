@@ -2426,101 +2426,8 @@ button.crumb:hover {
   color: var(--danger-text);
 }
 
-/* ---------------------------------------------------------------- Pages */
+/* ---------------------------------------------------------------- Sign-in (pages with cards: pages.css) */
 
-.page {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-}
-.page-content {
-  max-width: 760px;
-  margin: 0 auto;
-  padding: 32px 32px 60px;
-}
-.page-title {
-  margin: 0 0 6px;
-  font-size: 24px;
-  font-weight: 590;
-  letter-spacing: -0.015em;
-  color: var(--text-strong);
-}
-.page-lead {
-  margin: 0 0 24px;
-  color: var(--text-muted);
-}
-.card-list {
-  border-radius: var(--radius-lg);
-  background: var(--bg-group);
-  box-shadow: inset 0 0 0 0.5px var(--border);
-  overflow: hidden;
-}
-[data-theme='light'] .card-list {
-  background: var(--bg-raised);
-  box-shadow: inset 0 0 0 1px var(--border);
-}
-.card-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 48px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-}
-.card-row:last-child {
-  border-bottom: 0;
-}
-.card-row:hover {
-  background: var(--bg-row-hover);
-}
-/* The card sits on --bg-group, which is lighter than the row hover in dark */
-[data-theme='dark'] .card-row:hover {
-  background: var(--bg-active);
-}
-.card-row .t {
-  flex: 1;
-  min-width: 0;
-  font-weight: 510;
-  color: var(--text-strong);
-}
-.card-row .sub {
-  color: var(--text-muted);
-  font-size: var(--fs-mini);
-}
-.progress {
-  width: 80px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--bg-control-on);
-  overflow: hidden;
-}
-.progress > div {
-  height: 100%;
-  background: var(--status-done);
-}
-.seg {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: 9999px;
-  background: var(--bg-control);
-  gap: 2px;
-}
-.seg button {
-  height: 26px;
-  padding: 0 12px;
-  border-radius: 9999px;
-  color: var(--text-muted);
-  font-weight: 510;
-}
-.seg button:hover {
-  color: var(--text);
-}
-.seg button.on {
-  background: var(--bg-control-on);
-  color: var(--text-strong);
-}
-
-/* Sign-in */
 .login {
   height: 100%;
   display: grid;
@@ -2887,9 +2794,6 @@ button.crumb:hover {
   }
   .toast {
     max-width: none;
-  }
-  .page-content {
-    padding: 16px 16px 120px;
   }
 
   /* Tap targets: at least 44 px hit area. Where the look should stay, an invisible ::after

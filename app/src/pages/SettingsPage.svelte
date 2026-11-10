@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../styles/pages.css';
   import '../styles/settings.css';
   // Settings (own chunk): navigation on the left (replaces the sidebar, SettingsNav), the section on
   // the right. Extension point: settings/sections.ts plus a case here.

@@ -141,7 +141,13 @@ export class KeyController {
 
   #runFirst(e: KeyboardEvent, actions: Action[]) {
     const action = actions.find((a) => !a.when || a.when(this.app));
-    if (action) consume(e, () => action.run(this.app));
+    if (!action) return;
+    // A button or link outside a dialog that kept the focus after a click would take the next
+    // Enter or Space instead of the list. The keyboard is back at the page now.
+    // Duck-typed: the core also runs without a DOM.
+    const el = e.target as Partial<HTMLElement> | null;
+    if (el?.blur && /^(BUTTON|A)$/.test(el.tagName ?? '') && !el.closest?.('[role="dialog"], [data-testid="list"]')) el.blur();
+    consume(e, () => action.run(this.app));
   }
 
   #leaveQuick(clear: boolean) {

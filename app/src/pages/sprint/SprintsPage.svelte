@@ -1,4 +1,5 @@
 <script lang="ts">
+  import '../../styles/pages.css';
   import '../../styles/sprint.css';
   // All sprints: active, planning, closed (cycles imported from Linear are marked) with goal, date
   // range, points done/planned and share added late.

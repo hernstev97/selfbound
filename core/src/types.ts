@@ -443,6 +443,8 @@ export interface PaletteState {
   calendar: { month: string; selected: string | null; /** First day that can be picked (snooze: the day after today) */ min?: string } | null;
   /** Hint below the input (e.g. "tomorrow → Fri, Oct 10") */
   hint: string | null;
+  /** Text of the empty list when it is not "No results" (still searching, nothing typed yet) */
+  empty?: string;
   /** Counts every opening: the UI then rebuilds the picker (focus, position), even while the previous one is still fading out. */
   seq: number;
 }

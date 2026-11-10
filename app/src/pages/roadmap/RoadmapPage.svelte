@@ -3,6 +3,7 @@
   // categories with cards) and the progress tracker (time axis), as two tabs. Data, filters, folding
   // and keyboard focus live in core/src/app/roadmap.ts. A click opens the issue beside the page in a
   // wide window (the regular issue detail, fully editable), otherwise as its own page.
+  import '../../styles/pages.css';
   import '../../styles/roadmap.css';
   import { api } from '@selfbound/backend/api';
   import { STAGES } from '@selfbound/backend/shared/roadmap';
