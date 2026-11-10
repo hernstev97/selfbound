@@ -186,7 +186,7 @@
       />
       <div class="comment-box-foot">
         <ImageButton field={() => input} target={{ issueId: d.id }} />
-        <span>{uploading(draft) ? t('Uploading image …') : t('Ctrl Enter to send')}</span>
+        {#if uploading(draft)}<span>{t('Uploading image …')}</span>{:else}<span class="desc-hint">{t('Ctrl Enter to send')}</span>{/if}
         <button class="btn small primary" data-testid="comment-send" disabled={!draft.trim() || uploading(draft)} onclick={() => void send()}>{t('Comment')}</button>
       </div>
     </div>

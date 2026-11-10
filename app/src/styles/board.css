@@ -212,4 +212,7 @@
     width: calc(100vw - 48px);
     scroll-snap-align: start;
   }
+  .column-scroll {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
 }

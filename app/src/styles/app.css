@@ -1974,10 +1974,6 @@ button.crumb:hover {
   margin: 16px 34px 4px;
   color: var(--text-muted);
 }
-.desc-offline {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-}
 
 /* Section titles (detail, settings) */
 .section-title {
@@ -2742,7 +2738,7 @@ button.crumb:hover {
   }
   .view-bar .tab {
     height: 32px;
-    padding: 0 14px;
+    padding: 0 11px;
   }
   .view-bar .tabs + .bar-count {
     display: none;

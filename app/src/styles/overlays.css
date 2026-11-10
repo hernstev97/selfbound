@@ -105,6 +105,29 @@
   flex-wrap: wrap;
 }
 
+@media (max-width: 768px) {
+  /* Anchored pickers are bottom sheets: full width and 46 px entries also for the wide ones
+     (labels, due date, model), which kept their desktop width and 32 px rows. */
+  .palette.anchored,
+  .palette.anchored.wide,
+  .palette.anchored.wide[data-kind='model'] {
+    width: auto;
+    max-width: none;
+  }
+  .anchored .menu-item {
+    height: 46px;
+  }
+  .anchored .palette-list {
+    max-height: min(60dvh, 460px);
+  }
+}
+/* Touch: no keyboard shortcuts in the context menu (the command menu hides them too). */
+@media (hover: none) {
+  .context-menu .shortcut {
+    display: none;
+  }
+}
+
 /* ---------------------------------------------------------------- Create dialog */
 
 .create {

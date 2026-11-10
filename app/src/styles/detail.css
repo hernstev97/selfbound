@@ -7,6 +7,8 @@
   flex: 1;
   min-height: 0;
   display: flex;
+  /* Width reference for the narrow layout below. */
+  container: issue / inline-size;
   /* Open: brief fade-in rising 4 px; J/K inside the detail swaps the content instantly. */
   animation: lift var(--dur-3) var(--ease-out);
 }
@@ -169,6 +171,10 @@
   opacity: 1;
 }
 
+.desc-offline {
+  margin: 8px 0 0;
+  color: var(--text-muted);
+}
 .activity {
   position: relative;
   margin-top: 8px;
@@ -188,7 +194,12 @@
   font-weight: 510;
 }
 .act-event .when {
+  flex: none;
+  white-space: nowrap;
   color: var(--text-muted);
+}
+.act-event > span:nth-child(2) {
+  min-width: 0;
 }
 .act-revert {
   margin-left: auto;
@@ -518,6 +529,13 @@ textarea.drop-target {
   .comment-box-foot {
     margin-top: 12px;
   }
+  /* Issue header: the logo stands for the team, the identifier is never cut ("Or… › ORB-…"). */
+  .location-bar:has([data-testid='detail-key']) .crumb:first-child .crumb-title {
+    display: none;
+  }
+  .location-bar .crumb:has([data-testid='detail-key']) {
+    flex: none;
+  }
 }
 
 /* Split inbox: issue to the right of the list. When space is tight, the properties sit as
@@ -548,6 +566,28 @@ textarea.drop-target {
   }
   .split-detail .detail-content {
     padding: 24px 24px 80px;
+  }
+}
+/* The page itself, narrow (window of 769 to about 1000 px): the 300 px properties column would leave
+   the text 140 to 270 px. Same layout as the narrow split view. The phone has its own rules. */
+@media (min-width: 769px) {
+  @container issue (max-width: 760px) {
+    .props-col {
+      display: none;
+    }
+    .mobile-public {
+      display: block;
+      margin-bottom: 16px;
+    }
+    .mobile-props {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 4px 0 18px;
+    }
+    .detail-content {
+      padding: 24px 24px 80px;
+    }
   }
 }
 /* Right-hand header: the title sits directly below, so the header row shows only team and identifier. */
