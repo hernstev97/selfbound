@@ -819,6 +819,11 @@ details.callout-agent > .callout-body {
 .md th a {
   overflow-wrap: anywhere;
 }
+/* `anywhere` lets a URL shrink to one character per line: give its column a start width. */
+.md td:has(a),
+.md th:has(a) {
+  min-width: min(18ch, 60cqw);
+}
 
 /* Editor: status icon widget and text of a mention (decorations, mentions.ts in lib/editor). */
 .ProseMirror .mention-icon {

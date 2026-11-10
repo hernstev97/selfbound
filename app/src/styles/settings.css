@@ -463,6 +463,15 @@
     position: absolute;
     inset: -10px 0;
   }
+  /* Rows with a wide control (time zone select, three-way switch): the control moves below the text
+     instead of squeezing it to one word per line. */
+  .card-row {
+    flex-wrap: wrap;
+    row-gap: 8px;
+  }
+  .card-row > .t {
+    flex: 1 1 180px;
+  }
   /* Workflow statuses: name, usage and buttons wrap instead of widening the page. */
   .card-row.state-row {
     flex-wrap: wrap;
