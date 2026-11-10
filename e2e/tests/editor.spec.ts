@@ -272,4 +272,18 @@ test('Comment editor: Ctrl Enter sends, a task in my own comment is clickable', 
   await page.keyboard.press('Control+Enter');
   await expect(comment).toContainText('Please check now');
   expect(await markdownOf(input)).toBe('');
+  // Esc saves an edit too, as in the description; "Cancel" discards.
+  await comment.hover();
+  await comment.getByTestId('comment-edit').click();
+  await expect(editInput).toBeFocused();
+  await page.keyboard.type(' and again');
+  await page.keyboard.press('Escape');
+  await expect(comment).toContainText('Please check now and again');
+  await comment.hover();
+  await comment.getByTestId('comment-edit').click();
+  await expect(editInput).toBeFocused();
+  await page.keyboard.type(' dropped');
+  await comment.getByRole('button', { name: 'Cancel' }).click();
+  await expect(comment).toContainText('Please check now and again');
+  await expect(comment).not.toContainText('dropped');
 });

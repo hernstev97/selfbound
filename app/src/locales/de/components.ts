@@ -164,8 +164,8 @@ export default {
   // CreateDialog.svelte
   'Choose team': 'Team wählen',
   'Sub-issue of {key}': 'Sub-Issue von {key}',
-  'Close and keep as draft': 'Schließen und als Entwurf behalten',
-  'Save as draft': 'Als Entwurf speichern',
+  'Discard draft': 'Entwurf verwerfen',
+  'Esc or Ctrl Enter saves': 'Esc oder Strg Enter speichert',
   'Close, the draft stays': 'Schließen, Entwurf bleibt',
   'Issue title': 'Titel des Issues',
   Description: 'Beschreibung',
