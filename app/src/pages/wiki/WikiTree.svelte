@@ -55,6 +55,7 @@
         aria-expanded={row.hasChildren ? row.expanded : undefined}
         aria-selected={row.id === s.articleId}
         style:--depth={row.depth}
+        tabindex={row.id === (s.rows.some((r) => r.id === s.articleId) ? s.articleId : s.rows[0].id) ? 0 : -1}
         draggable="true"
         data-testid="wiki-row"
         data-id={row.id}
@@ -68,6 +69,15 @@
             e.preventDefault();
             if (row.hasChildren && row.expanded) app.wiki.toggle(row.id);
             else if (row.parentId) document.querySelector<HTMLElement>(`[data-testid="wiki-row"][data-id="${row.parentId}"]`)?.focus();
+          } else if (!e.ctrlKey && !e.metaKey && !e.altKey && /^(ArrowDown|ArrowUp|j|k|Home|End)$/.test(e.key)) {
+            // ↓/J and ↑/K walk the visible rows, Home and End jump; Enter opens (it is a link).
+            const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="wiki-row"]')];
+            const at = rows.indexOf(e.currentTarget);
+            const next = e.key === 'Home' ? rows[0] : e.key === 'End' ? rows.at(-1) : rows[at + (e.key === 'ArrowDown' || e.key === 'j' ? 1 : -1)];
+            if (!next) return;
+            e.preventDefault();
+            e.stopPropagation();
+            next.focus();
           }
         }}
         onpointerenter={() => app.wiki.prefetch(row.id)}
@@ -100,6 +110,7 @@
         {#if row.hasChildren}
           <button
             class="wiki-caret"
+            tabindex="-1"
             aria-label={row.expanded ? tc('tree', 'Collapse') : t('Expand')}
             data-testid="wiki-toggle"
             onclick={(e) => {
@@ -114,6 +125,7 @@
         <span class="wiki-row-title">{row.title}</span>
         <button
           class="wiki-row-add"
+          tabindex="-1"
           title={t('Create subpage')}
           aria-label={t('Create subpage')}
           data-testid="wiki-add-child"

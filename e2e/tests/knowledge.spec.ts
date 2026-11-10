@@ -43,7 +43,7 @@ test('Enable, create a page, write title and text; still there after a reload', 
   await page.keyboard.press('Enter');
   await expect(page.getByTestId('wiki-row').filter({ hasText: 'Test page basics' })).toBeVisible();
 
-  await page.getByTestId('article-body').click();
+  // Enter in the title of a new page goes straight on to its text.
   const editor = page.getByTestId('article-editor');
   await expect(editor).toBeFocused();
   await page.keyboard.type('First paragraph from the test.');
@@ -55,6 +55,30 @@ test('Enable, create a page, write title and text; still there after a reload', 
   await expect(page.getByTestId('article-body')).toContainText('First paragraph from the test.');
   await expect(title).toHaveValue('Test page basics');
   await expect(page).toHaveTitle(/Test page basics · Knowledge/);
+});
+
+test('Tree by keyboard: arrows and J/K walk the rows, the tree is one tab stop', async ({ page }) => {
+  const stamp = Date.now();
+  for (const name of ['A', 'B', 'C']) await freshPage(`Tree keys ${name} ${stamp}`);
+  await page.goto('/team/ORB/wiki');
+  const rows = page.getByTestId('wiki-row');
+  await expect(rows.nth(2)).toBeVisible();
+  await rows.first().focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press('j');
+  await expect(rows.nth(2)).toBeFocused();
+  await page.keyboard.press('k');
+  await expect(rows.nth(1)).toBeFocused();
+  await page.keyboard.press('Home');
+  await expect(rows.first()).toBeFocused();
+  // Rows, carets and plus buttons no longer take one Tab each.
+  await expect(page.locator('.wiki-tree [tabindex="0"]')).toHaveCount(1);
+  // Enter opens the focused page.
+  await page.keyboard.press('ArrowDown');
+  const id = await rows.nth(1).getAttribute('data-id');
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('article')).toHaveAttribute('data-id', id!);
 });
 
 test('Image via the button: uploaded and saved in the page text', async ({ page }) => {

@@ -58,6 +58,10 @@
   cursor: default;
   position: relative;
 }
+/* The tree scrolls: keep the ring inside the row. */
+.wiki-row:focus-visible {
+  outline-offset: -2px;
+}
 .wiki-row:hover {
   background: var(--bg-row-hover);
 }
