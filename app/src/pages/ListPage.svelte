@@ -124,6 +124,9 @@
 {:else}
   <ListView scrollChange={(v) => (scrolled = v)} />
 {/if}
+{#if h.kind === 'triage' && h.count > 0}
+  <Lazy load={pages.overlays} quiet>{#snippet children(o)}<o.TriageKeys />{/snippet}</Lazy>
+{/if}
 {/snippet}
 
 {#if h.kind !== 'plan' && h.kind !== 'close'}

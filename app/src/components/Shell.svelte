@@ -58,7 +58,7 @@
   <Palette />
   {#if overlays.current}
     {@const o = overlays.current}
-    <o.ContextMenu /><o.CreateDialog /><o.NewTeamDialog />
+    <o.ContextMenu /><o.CreateDialog /><o.NewTeamDialog /><o.KeyHint />
   {/if}
   <Toasts />
   {#if perfSlice.current.enabled}

@@ -134,3 +134,28 @@ test('Shortcut tour: Shift E, Shift D (calendar), Ctrl Shift P, hold Space, Alt 
   await page.goto(`/issue/${key}`);
   await expect(page.getByTestId('detail-parent')).toContainText(parentKey);
 });
+
+test('Esc leaves the settings for the last list; R opens the focused issue with the cursor in the comment field', async ({ page }) => {
+  await open(page, '/team/ORB?prio=2');
+  await page.getByTestId('nav-settings').click();
+  await expect(page).toHaveURL(/\/settings/);
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/team\/ORB\?prio=2/);
+  await expect(page.getByTestId('issue-row').first()).toBeVisible();
+  // R comes with the issue page's chunk, which is preloaded shortly after startup.
+  await expect(async () => {
+    await page.keyboard.press('r');
+    await expect(page.getByTestId('detail')).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await expect(page.getByTestId('comment-input')).toBeFocused();
+});
+
+test('Inbox: the first J shows the first entry instead of skipping it', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, '/inbox');
+  const first = (await page.getByTestId('issue-row').first().getAttribute('data-key'))!;
+  await expect(page.getByTestId('split-bar')).toHaveCount(0);
+  await page.keyboard.press('j');
+  await expect(page.getByTestId('split-bar').getByTestId('detail-key')).toHaveText(first);
+  await expect(page.locator('[data-testid="issue-row"].focused')).toHaveAttribute('data-key', first);
+});

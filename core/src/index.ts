@@ -11,7 +11,7 @@ export { INBOX_SPLIT_DEFAULT, LIST_SPLIT_DEFAULT, SOUND_VOLUME_DEFAULT, type The
 export { Auth, LEGACY_SIGNED_IN_COOKIE, SIGNED_IN_COOKIE, signInPath, type AuthConfig, type AuthStatus } from './auth.ts';
 export { Slice, SliceFamily } from './observable.ts';
 export { STATUS_ICON, PRIORITY_ICON, CHECK_ICON, ICON, rowIconCss, statusIcon, type IconName } from './icons.ts';
-export { movePlan, moveLines, hasLoss, type MovePlan } from './move.ts';
+export type { MovePlan } from './move.ts';
 export { contextLabel, issueModel, modelIndex, modelInfo, modelKey, modelLabel, modelProblem, type EffectiveModel, type ModelChoice, type ModelInfo, type ModelSource } from './models.ts';
 export { workflowsOf, type StateView, type StateGroup } from './workflow.ts';
 export { STATUS_LABEL, PRIORITY_LABEL, STATUS_ORDER, actorName, initials, nameHue, dayLabel, monthLabel, weekdaysShort, today, timeZone, setTimeZone, addDays, parseDay, dayOf, fullDate, relativeTime } from './format.ts';

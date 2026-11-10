@@ -111,6 +111,46 @@
   flex-wrap: wrap;
 }
 
+/* ---------------------------------------------------------------- Key hints */
+
+/* What can follow the first key of a sequence (KeyHint.svelte). */
+.key-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 60;
+  translate: -50% 0;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 14px;
+  max-width: min(720px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-popover);
+  box-shadow: var(--shadow-popover);
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+  animation: fade var(--dur-2) var(--ease-out);
+  pointer-events: none;
+}
+.key-hint > span,
+.key-row > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+/* The keys of a page at the bottom of its list (triage), as in sprint planning. */
+.key-row {
+  flex: none;
+  display: flex;
+  gap: 16px;
+  padding: 8px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: var(--fs-mini);
+}
+
 @media (max-width: 768px) {
   /* Anchored pickers are bottom sheets: full width and 46 px entries also for the wide ones
      (labels, due date, model), which kept their desktop width and 32 px rows. */

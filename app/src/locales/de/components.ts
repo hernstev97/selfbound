@@ -270,6 +270,11 @@ export default {
   Backlog: 'Backlog',
   Projects: 'Projekte',
   'Team settings': 'Team-Einstellungen',
+  // TriageKeys.svelte
+  accept: 'annehmen',
+  duplicate: 'Duplikat',
+  decline: 'ablehnen',
+  snooze: 'zurückstellen',
   Settings: 'Einstellungen',
   Teams: 'Teams',
   Inactive: 'Inaktiv',

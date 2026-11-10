@@ -7,3 +7,5 @@ export { default as CreateDialog } from './CreateDialog.svelte';
 export { default as DisplayPopover } from './DisplayPopover.svelte';
 export { default as Peek } from './Peek.svelte';
 export { default as NewTeamDialog } from './NewTeamDialog.svelte';
+export { default as KeyHint } from './KeyHint.svelte';
+export { default as TriageKeys } from './TriageKeys.svelte';

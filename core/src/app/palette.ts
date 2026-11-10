@@ -22,7 +22,6 @@ import { STATE_TYPE_LABEL } from '@selfbound/backend/shared/workflow';
 import { stateGroupKey, statusFilterValue, workflowsOf, type StateGroup } from '../workflow.ts';
 import { formatShortcut } from '../keyboard.ts';
 import { contextLabel, issueModel, modelKey, modelLabel, type ModelChoice, type ModelInfo } from '../models.ts';
-import { hasLoss, moveLines, movePlan } from '../move.ts';
 import { Slice } from '../observable.ts';
 import { IssueSearch, looksLikeIdentifier, scoreText } from '../search.ts';
 import type { Issue, IssueId, IssuePatch, MenuItem, PaletteKind, PaletteState, Priority, StateId, Status } from '../types.ts';
@@ -100,6 +99,10 @@ const FILTER_FIELDS = [
 ] as const;
 type FilterField = (typeof FILTER_FIELDS)[number]['id'];
 
+/** What a move to another team drops (move.ts): needed only once a team picker is open, so not part of the start bundle. */
+let moveLogic: typeof import('../move.ts') | null = null;
+export const loadMoveLogic = () => import('../move.ts').then((m) => (moveLogic = m));
+
 /** Empty search list before anything is typed (no recently opened issues yet). */
 const idleSearch = () => t('Type to search issues and knowledge pages');
 
@@ -139,6 +142,7 @@ export class PaletteController {
   open(kind: PaletteKind, opts: { anchor?: PaletteState['anchor']; target?: PickerTarget; query?: string } = {}) {
     this.app.menu.close();
     this.#target = opts.target ?? this.#defaultTarget(kind);
+    if (kind === 'team') void loadMoveLogic();
     this.#moveConfirm = null;
     this.#articlePick = null;
     // The relation type applies only to the picker that openRelation opens right after.
@@ -153,7 +157,9 @@ export class PaletteController {
     const title = t(TITLES[kind][0]);
     const placeholder = t(TITLES[kind][1]);
     const items = kind === 'command' ? this.#commandTop() : set.items;
-    const checked = items.findIndex((i) => i.checked && !i.checkbox);
+    let checked = items.findIndex((i) => i.checked && !i.checkbox);
+    // No sprint, project or due date yet: Enter should set one, not confirm "none".
+    if (/^(sp|pr|d):none$/.test(items[checked]?.id ?? '')) checked = items.findIndex((i) => !i.id.endsWith(':none'));
     this.state.set({
       kind,
       title,
@@ -312,14 +318,17 @@ export class PaletteController {
    * Move to another team. If something gets lost (project, team labels), the UI shows that first
    * and asks; otherwise the move happens directly (with a hint and undo).
    */
-  requestMove(ids: IssueId[], teamId: string) {
+  requestMove(ids: IssueId[], teamId: string): void {
+    // Loaded with the team picker; a move from elsewhere (context submenu) waits a moment for it.
+    if (!moveLogic) return void loadMoveLogic().then(() => this.requestMove(ids, teamId));
+    const { hasLoss, moveLines, movePlan } = moveLogic;
     const store = this.app.store;
     const meta = store.meta.get();
     const team = meta?.teams.find((t) => t._id === teamId);
     const issues = ids.map((id) => store.get(id)).filter((i): i is Issue => !!i);
     const plan = movePlan(meta, issues, teamId);
     if (!team || plan.count === 0) return;
-    if (!hasLoss(plan)) return this.app.edit.moveTeam(ids, teamId);
+    if (!hasLoss(plan)) return void this.app.edit.moveTeam(ids, teamId);
     const anchor = this.#anchor;
     const moving = issues.filter((i) => i.teamId !== teamId);
     const hint = moveLines(plan, moving.map((i) => i.key), team).join('\n');
@@ -975,6 +984,10 @@ export class PaletteController {
     run.set('ff:unreviewed', () => this.app.list.toggleUnreviewed());
     items.push({ id: 'ff:snoozed', label: t('Include snoozed'), icon: ICON.snooze, checkbox: true, checked: filters.snoozed });
     run.set('ff:snoozed', () => this.app.list.toggleSnoozed());
+    if (this.app.list.header.get().filterCount > 0) {
+      items.push({ id: 'ff:clear', label: t('Clear filters'), icon: ICON.close, shortcut: formatShortcut('shift+f') });
+      run.set('ff:clear', () => this.app.list.clearFilters());
+    }
     return { items, run, multi: false };
   }
 

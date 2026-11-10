@@ -987,6 +987,11 @@ export class ListController {
     this.#setFocus(id, reveal);
   }
 
+  /** The focus is still the automatic one on the first row: nobody has moved it yet. */
+  autoFocused() {
+    return this.#autoFocus;
+  }
+
   /** The automatic focus stops following the first row (split view: the issue on the right is chosen). */
   pinFocus() {
     this.#autoFocus = false;
