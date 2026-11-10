@@ -7,8 +7,6 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  /* Width reference for the narrow layout below. */
-  container: issue / inline-size;
   /* Open: brief fade-in rising 4 px; J/K inside the detail swaps the content instantly. */
   animation: lift var(--dur-3) var(--ease-out);
 }
@@ -567,6 +565,11 @@ textarea.drop-target {
   .split-detail .detail-content {
     padding: 24px 24px 80px;
   }
+}
+/* Width reference for the narrow layout below. On the page root only: menu entries have a `.detail`
+   span too, and size containment would collapse it. */
+.detail[data-id] {
+  container: issue / inline-size;
 }
 /* The page itself, narrow (window of 769 to about 1000 px): the 300 px properties column would leave
    the text 140 to 270 px. Same layout as the narrow split view. The phone has its own rules. */
