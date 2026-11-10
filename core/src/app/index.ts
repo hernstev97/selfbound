@@ -37,7 +37,7 @@ import type { SprintController } from './sprints.ts';
 import type { WikiController } from './wiki.ts';
 import { Cues } from './cues.ts';
 import { Toasts } from './toasts.ts';
-import { budgetLabel, limitsOf, limitsSummary, overBudget, priorityBudget, type PriorityLimits } from '../budget.ts';
+import { budgetReached, limitsOf, limitsSummary, overBudget, priorityBudget, type PriorityLimits } from '../budget.ts';
 
 export interface ShellState {
   /** What the main area shows */
@@ -495,7 +495,7 @@ export class App {
     if (this.#budget?.version !== version || this.#budget.limits !== limits) {
       const labels = new Map<string, { label: string; over: boolean; title: string }>();
       const title = limitsSummary(limits);
-      for (const [teamId, b] of priorityBudget(this.store.all())) labels.set(teamId, { label: budgetLabel(b, limits), over: overBudget(b, limits), title });
+      for (const [teamId, b] of priorityBudget(this.store.all())) labels.set(teamId, { label: budgetReached(b, limits), over: overBudget(b, limits), title });
       this.#budget = { version, limits, labels };
     }
     return this.#budget.labels;

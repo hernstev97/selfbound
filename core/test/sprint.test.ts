@@ -7,7 +7,7 @@ import { App } from '../src/app/index.ts';
 import { mcpCommand, precheckLogo, siteUrl } from '../src/app/admin.ts';
 import { Auth } from '../src/auth.ts';
 import { computeList, computeVisible, emptyFilters, keyWidth } from '../src/query.ts';
-import { budgetCheck, budgetLabel, closeSummary, limitHits, overBudget, defaultSprintRange, dropNeighbors, nextMonday, priorityBudget, remainingLabel, sprintStats, sprintTotals, type SprintItem } from '../src/sprintlogic.ts';
+import { budgetCheck, budgetLabel, budgetReached, closeSummary, limitHits, overBudget, defaultSprintRange, dropNeighbors, nextMonday, priorityBudget, remainingLabel, sprintStats, sprintTotals, type SprintItem } from '../src/sprintlogic.ts';
 import type { Issue, IssueId, SprintItemKind, ViewState } from '../src/types.ts';
 import { VIEWS, planSprint } from '../src/views.ts';
 import { callName, doc, fakeClient, flush, meta } from './helpers.ts';
@@ -67,6 +67,12 @@ describe('priority budget', () => {
     expect(budgetCheck(all, ['i4' as IssueId], 1, limits)).toMatchObject([{ teamId: 't1', open: 1, budget: 0, hard: true, previous: [] }]);
     expect(budgetCheck(all, ['i4' as IssueId, 'i6' as IssueId], 2, limits)).toEqual([]);
     expect(budgetLabel(priorityBudget(all).get('t1'), limits)).toBe('Urgent 0/0 · High 3');
+    // Group header: only what is reached, nothing while a team stays under its limits.
+    expect(budgetReached(priorityBudget(all).get('t1'), limits)).toBe('');
+    expect(budgetReached(priorityBudget(all).get('t2'), limits)).toBe('Urgent 1 of 0');
+    expect(budgetReached(priorityBudget(all).get('t1'))).toBe('High 3 of 3');
+    expect(budgetReached({ urgent: 2, high: 9 })).toBe('Urgent 2 of 1 · High 9 of 3');
+    expect(budgetReached(undefined)).toBe('');
     expect(overBudget(priorityBudget(all).get('t2'), limits)).toBe(true);
     expect(overBudget(priorityBudget(all).get('t1'), limits)).toBe(false);
     // Several teams at once: each counted on its own.

@@ -1,12 +1,12 @@
 // Context menu (right click, long press on phones) with submenus.
 // Items come from the action list (field `context`), submenus from the same picker items as the
 // keyboard and the command menu.
-import { tn } from '../i18n.ts';
+import { t, tn } from '../i18n.ts';
 import { ICON } from '../icons.ts';
 import { formatShortcut } from '../keyboard.ts';
 import { Slice } from '../observable.ts';
 import type { ContextMenuState, IssueId, MenuItem } from '../types.ts';
-import { ACTIONS, actionById } from './actions.ts';
+import { ACTIONS, actionById, type Action } from './actions.ts';
 import type { App } from './index.ts';
 
 export class ContextMenuController {
@@ -36,8 +36,19 @@ export class ContextMenuController {
     // Actions that only make sense in this menu ask for it while it is being built.
     this.building = true;
     const sorted = ACTIONS.filter((a) => a.context).sort((a, b) => a.context![0] - b.context![0] || a.context![1] - b.context![1]);
+    const subs = new Map<string, Action[]>();
     for (const action of sorted) {
       if (action.when && !action.when(this.app)) continue;
+      // Relations and copying: one entry each, the actions follow in its submenu.
+      if (action.sub) {
+        const group = subs.get(action.sub);
+        if (group) group.push(action);
+        else {
+          subs.set(action.sub, [action]);
+          items.push({ id: `sub:${action.sub}`, label: action.sub === 'copy' ? t('Copy') : t('Relation'), icon: ICON[action.sub === 'copy' ? 'copy' : 'relation'], submenu: true, section: String(action.context![0]) });
+        }
+        continue;
+      }
       items.push({
         id: action.id,
         label: action.picker ? action.label.replace(/ …$/, '') : action.label,
@@ -49,6 +60,7 @@ export class ContextMenuController {
       });
     }
     this.building = false;
+    this.#subs = subs;
     const count = this.#targets.length;
     this.state.set({ x, y, items, active: -1, sub: null, targetLabel: count > 1 ? tn(count, '{count} issue', '{count} issues') : (this.app.store.get(id)?.key ?? '') });
   }
@@ -69,7 +81,14 @@ export class ContextMenuController {
     if (s.active !== index || sub !== s.sub) this.state.set({ ...s, active: index, sub });
   }
 
+  #subs = new Map<string, Action[]>();
+
   #openSub(actionId: string, y: number): ContextMenuState['sub'] {
+    const group = this.#subs.get(actionId.slice(4));
+    if (actionId.startsWith('sub:') && group) {
+      this.#subRun = new Map(group.map((a) => [a.id, () => this.app.withTargets(this.#targets, () => a.run(this.app))]));
+      return { parent: actionId, items: group.map((a) => ({ id: a.id, label: a.label, icon: a.icon ? ICON[a.icon] : undefined, shortcut: a.keys ? formatShortcut(a.keys[0]) : undefined })), active: -1, multi: false, y, plain: true };
+    }
     const action = actionById(actionId);
     if (!action?.picker) return null;
     const set = this.app.palette.pickerItems(action.picker, { kind: 'issues', ids: this.#targets });

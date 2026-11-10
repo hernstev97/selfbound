@@ -102,6 +102,8 @@ export default {
   'Took the other version, yours is in the clipboard': 'Fremde Fassung übernommen, deine liegt in der Zwischenablage',
 
   // budget.ts
+  'Urgent {count} of {max}': 'Dringend {count} von {max}',
+  'High {count} of {max}': 'Hoch {count} von {max}',
   'Urgent {count}/{max}': 'Dringend {count}/{max}',
   'Urgent {count}': 'Dringend {count}',
   'High {count}/{max}': 'Hoch {count}/{max}',

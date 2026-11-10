@@ -455,7 +455,7 @@ export interface ContextMenuState {
   items: MenuItem[];
   active: number;
   /** Open submenu */
-  sub: { parent: string; items: MenuItem[]; active: number; multi: boolean; y: number } | null;
+  sub: { parent: string; items: MenuItem[]; active: number; multi: boolean; y: number; /** Plain actions: nothing to check, so no check column */ plain?: boolean } | null;
   targetLabel: string;
 }
 

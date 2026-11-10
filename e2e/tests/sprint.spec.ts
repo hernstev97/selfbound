@@ -251,7 +251,8 @@ test('Closing: impossible without all decisions, 1/2/3 and bulk decision, carrie
 test('Priority limit (soft): notice with candidates and "Downgrade", overview per team', async ({ page }) => {
   await open(page, '/all');
   // All issues is grouped by team: the budget is in the group header.
-  await expect(page.getByTestId('group-budget').first()).toContainText(/Urgent \d+\/1 · High \d+\/3/);
+  // Only the limits that are reached, as "High 9 of 3".
+  await expect(page.getByTestId('group-budget').first()).toContainText(/(Urgent \d+ of 1|High \d+ of 3)/);
   await open(page, '/team/ORB/backlog?order=created');
   const target = page.locator('[data-testid="issue-row"]:not([data-priority="2"])').first();
   const id = (await target.getAttribute('data-id'))!;
