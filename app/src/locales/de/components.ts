@@ -17,7 +17,6 @@ export default {
   Image: 'Bild',
   // Empty.svelte
   'No issues match these filters.': 'Kein Issue passt zu diesen Filtern.',
-  'Reset filters': 'Filter zurücksetzen',
   'Plan sprint': 'Sprint planen',
   'This sprint has no issues yet.': 'Dieser Sprint hat noch keine Issues.',
   'Create issue': 'Issue anlegen',
@@ -91,6 +90,7 @@ export default {
   '{count} point': ['{count} Punkt', '{count} Punkte'],
   'No description.': 'Keine Beschreibung.',
   'Created {when} by {actor}': 'Erstellt {when} von {actor}',
+  'Created {when} by you': 'Erstellt {when} von dir',
   'Updated {when}': 'Geändert {when}',
   'Change status': 'Status ändern',
   'Set priority': 'Priorität setzen',
@@ -168,7 +168,6 @@ export default {
   'Save as draft': 'Als Entwurf speichern',
   'Close, the draft stays': 'Schließen, Entwurf bleibt',
   'Issue title': 'Titel des Issues',
-  'Add description … ("/" for blocks, images with Ctrl V)': 'Beschreibung hinzufügen … („/“ für Blöcke, Bilder mit Strg V)',
   Description: 'Beschreibung',
   Priority: 'Priorität',
   'Discard content (undo in the toast)': 'Inhalt verwerfen (Rückgängig im Hinweis)',
@@ -251,7 +250,7 @@ export default {
   'Search language …': 'Sprache suchen …',
   'Search language': 'Sprache suchen',
   Language: 'Sprache',
-  selected: 'gewählt',
+  selected: 'ausgewählt',
   // ListView.svelte
   'Offline. This device has no saved copy of this list yet; it appears once the network is back.': 'Ohne Verbindung. Auf diesem Gerät liegt noch kein Stand dieser Liste; sie erscheint, sobald das Netz zurück ist.',
   // Sidebar.svelte

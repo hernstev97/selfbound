@@ -19,7 +19,7 @@
   <div class="empty-icon"><span class="icon">{@html ICON[def.icon]}</span></div>
   {#if reason === 'filtered'}
     <div class="empty-text">{t('No issues match these filters.')}</div>
-    <button class="btn" data-testid="empty-reset" onclick={() => list.clearFilters()}>{t('Reset filters')}</button>
+    <button class="btn" data-testid="empty-reset" onclick={() => list.clearFilters()}>{t('Clear filters')}</button>
   {:else if noSprint}
     <div class="empty-text">{def.emptyText}</div>
     <button class="btn primary" data-testid="empty-plan" onclick={() => app.nav.goView({ kind: 'plan', team: null, sprint: null })}>{t('Plan sprint')}</button>

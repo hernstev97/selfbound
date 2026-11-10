@@ -59,7 +59,7 @@
       <div class="peek-desc desc-placeholder" data-testid="peek-description">{t('No description.')}</div>
     {/if}
     <div class="peek-foot">
-      <span>{t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</span><span>·</span><span>{t('Updated {when}', { when: d.updated })}</span>
+      <span>{d.createdBy === t('You') ? t('Created {when} by you', { when: d.created }) : t('Created {when} by {actor}', { when: d.created, actor: d.createdBy })}</span><span>·</span><span>{t('Updated {when}', { when: d.updated })}</span>
     </div>
   </aside>
 {/if}

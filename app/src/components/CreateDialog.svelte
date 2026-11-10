@@ -100,7 +100,7 @@
       <TextEditor
         class="create-desc"
         testid="create-description"
-        placeholder={t('Add description … ("/" for blocks, images with Ctrl V)')}
+        placeholder={t('Add description …')}
         label={t('Description')}
         value={d.description}
         onchange={(text) => app.create.update({ description: text })}

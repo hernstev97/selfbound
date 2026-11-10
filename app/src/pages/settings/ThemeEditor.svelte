@@ -103,7 +103,7 @@
     ></textarea>
     <div class="theme-editor-row">
       <label class="btn small file-btn">
-        {t('Choose file…')}
+        {t('Choose file …')}
         <input class="visually-hidden" type="file" accept=".json,.jsonc,application/json" data-testid="theme-file" onchange={(e) => void onFile(e.currentTarget.files?.[0])} />
       </label>
       <span class="sub">{t('In a theme package, the JSON is usually under')} <code>themes/</code>. {t('From VS Code: "Developer: Generate Color Theme From Current Settings".')}</span>
