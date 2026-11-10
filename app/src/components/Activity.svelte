@@ -32,6 +32,12 @@
   let editing = $state<string | null>(null);
   let editText = $state('');
   let confirmDelete = $state<string | null>(null);
+  // An armed "Really delete" disarms by itself: after 4 s, or when the pointer leaves the comment.
+  $effect(() => {
+    if (!confirmDelete) return;
+    const timer = setTimeout(() => (confirmDelete = null), 4000);
+    return () => clearTimeout(timer);
+  });
   let input = $state<ImageField | null>(null);
   let editInput = $state<ImageField | null>(null);
   /** An image still uploading (placeholder from upload.ts): send only once it is done. */
@@ -112,7 +118,8 @@
           {/if}
         </div>
       {:else}
-        <div class={['comment', item.pending && 'pending']} data-testid="comment" data-source={item.actor} data-id={item.id}>
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div class={['comment', item.pending && 'pending']} data-testid="comment" data-source={item.actor} data-id={item.id} onmouseleave={() => confirmDelete === item.id && (confirmDelete = null)}>
           <div class="comment-head">
             <span class={['act-avatar', item.actor]} style="box-shadow: none">
               {#if item.actor === OWNER_KIND}

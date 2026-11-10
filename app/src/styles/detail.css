@@ -76,6 +76,9 @@
 .desc.view:focus-visible {
   background: color-mix(in oklch, var(--bg-row-hover) 60%, transparent);
 }
+[data-returned]:focus-visible {
+  outline: none;
+}
 .desc-placeholder {
   color: var(--text-subtle);
 }
@@ -102,9 +105,18 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 2px;
+  padding: 6px 0;
   color: var(--text-muted);
   font-size: var(--fs-mini);
+  /* Long text: the save state and "Done" stay at the bottom edge instead of below the fold. */
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+}
+.desc.edit .desc-conflict {
+  margin: 8px 0 0;
 }
 .desc-conflict {
   display: flex;
@@ -156,6 +168,14 @@
   text-overflow: ellipsis;
   color: var(--text-strong);
   font-weight: 510;
+}
+.sub-link {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .sub-row .t.deleted {
   text-decoration: line-through;
@@ -270,6 +290,11 @@
   color: var(--text);
   font-weight: 510;
   font-size: var(--fs-small);
+}
+/* A ghost button turns to normal text on hover; a destructive one stays red. */
+.comment .btn.ghost.danger:hover {
+  color: var(--danger-text);
+  background: color-mix(in oklch, var(--danger) 14%, transparent);
 }
 .comment-head .tools {
   margin-left: auto;
@@ -435,6 +460,10 @@ textarea.drop-target {
   color: var(--text-muted);
   font-size: var(--fs-mini);
   line-height: 1.7;
+}
+.prop-meta .prop-row {
+  width: calc(100% + 16px);
+  margin: 0 -8px;
 }
 .round-add {
   width: 24px;
