@@ -633,9 +633,13 @@
           blur: () => {
             flush();
             onblur?.();
-            tableMenu = null;
-            kindMenu = null;
-            queueMicrotask(syncTable);
+            // Not in this tick: removing the editor blurs it while Svelte updates the page, and state
+            // may not change there (`state_unsafe_mutation`).
+            queueMicrotask(() => {
+              tableMenu = null;
+              kindMenu = null;
+              syncTable();
+            });
             return false;
           },
           focus: () => {
